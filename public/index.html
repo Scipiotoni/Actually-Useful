@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Actually Useful — HTML editor, preview &amp; deploy</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">⚡</span>
+    <span class="brand-name">Actually Useful</span>
+  </div>
+
+  <input id="project-name" class="project-name" type="text" value="Untitled page"
+         aria-label="Page name" spellcheck="false" maxlength="60">
+
+  <div class="topbar-actions">
+    <label class="toggle" title="Re-render the preview as you type">
+      <input type="checkbox" id="auto-run" checked>
+      <span>Auto-run</span>
+    </label>
+    <button id="btn-run" class="btn" title="Render preview (Ctrl/Cmd+Enter)">Run</button>
+    <button id="btn-download" class="btn" title="Download a standalone .html file">Download</button>
+    <button id="btn-deploy" class="btn btn-primary" title="Publish this page (Ctrl/Cmd+S)">Deploy</button>
+    <button id="btn-sites" class="btn btn-ghost" title="Deployed pages" aria-expanded="false">
+      Pages <span id="sites-count" class="pill">0</span>
+    </button>
+  </div>
+</header>
+
+<main class="workspace" id="workspace">
+  <section class="pane pane-editor" id="pane-editor" aria-label="Editor">
+    <div class="tabs" role="tablist">
+      <button class="tab is-active" role="tab" data-tab="html" aria-selected="true">HTML</button>
+      <button class="tab" role="tab" data-tab="css" aria-selected="false">CSS</button>
+      <button class="tab" role="tab" data-tab="js" aria-selected="false">JS</button>
+      <span class="tabs-spacer"></span>
+      <button class="tab tab-action" id="btn-format" title="Tidy up indentation">Format</button>
+      <button class="tab tab-action" id="btn-reset" title="Start from a blank page">Reset</button>
+    </div>
+    <div class="editors">
+      <div class="editor-host is-active" data-editor="html" id="ed-html"></div>
+      <div class="editor-host" data-editor="css" id="ed-css"></div>
+      <div class="editor-host" data-editor="js" id="ed-js"></div>
+    </div>
+    <footer class="statusbar">
+      <span id="save-state" class="status-item">Saved locally</span>
+      <span class="status-item status-hint">Ctrl/Cmd+Enter run · Ctrl/Cmd+S deploy</span>
+    </footer>
+  </section>
+
+  <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" tabindex="0"
+       aria-label="Resize editor and preview"></div>
+
+  <section class="pane pane-preview" id="pane-preview" aria-label="Preview">
+    <div class="preview-bar">
+      <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-green"></span>
+      <div class="preview-url" id="preview-url">preview</div>
+      <div class="viewport-picker" role="group" aria-label="Preview width">
+        <button class="chip is-active" data-width="auto">Fit</button>
+        <button class="chip" data-width="1024">1024</button>
+        <button class="chip" data-width="768">768</button>
+        <button class="chip" data-width="375">375</button>
+      </div>
+      <button class="icon-btn" id="btn-console" title="Toggle console" aria-expanded="false">
+        Console <span id="console-count" class="pill pill-quiet">0</span>
+      </button>
+    </div>
+    <div class="preview-stage" id="preview-stage">
+      <iframe id="preview" title="Live preview" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe>
+    </div>
+    <div class="console" id="console" hidden>
+      <div class="console-head">
+        <strong>Console</strong>
+        <button class="icon-btn" id="btn-clear-console">Clear</button>
+      </div>
+      <ol class="console-log" id="console-log"></ol>
+    </div>
+  </section>
+</main>
+
+<aside class="drawer" id="drawer" hidden aria-label="Deployed pages">
+  <div class="drawer-head">
+    <h2>Deployed pages</h2>
+    <button class="icon-btn" id="btn-close-drawer" aria-label="Close">✕</button>
+  </div>
+  <p class="drawer-note" id="drawer-note">Pages you deploy are served live from this server.</p>
+  <ul class="site-list" id="site-list"></ul>
+</aside>
+
+<div class="toast-stack" id="toasts" aria-live="polite"></div>
+
+<script src="compose.js"></script>
+<script src="editor.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

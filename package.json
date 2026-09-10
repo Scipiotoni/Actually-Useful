@@ -1,0 +1,17 @@
+{
+  "name": "actually-useful",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An HTML editor with live preview and one-click page deploy.",
+  "type": "commonjs",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
