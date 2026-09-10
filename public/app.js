@@ -277,8 +277,14 @@
   }
 
   // ----------------------------------------------------------------- deploy
+  var OFFLINE = location.protocol === 'file:';
+  var NO_SERVER =
+    'No deploy server here. Deploying needs the app to be running: from the project folder ' +
+    'run "npm start", then open http://127.0.0.1:3000';
+
   function api(path, options) {
     return fetch(path, Object.assign({ headers: { 'content-type': 'application/json' } }, options))
+      .catch(function () { throw new Error(NO_SERVER); })
       .then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (body) {
           if (!res.ok) throw new Error(body.error || 'Request failed (' + res.status + ')');
@@ -343,7 +349,8 @@
       }
       els.previewUrl.textContent = previewLabel(source());
     }).catch(function () {
-      els.siteList.innerHTML = '<li class="empty">Could not reach the deploy server.</li>';
+      els.sitesCount.textContent = '0';
+      els.siteList.innerHTML = '<li class="empty">' + Compose.escapeHtml(NO_SERVER) + '</li>';
     });
   }
 
@@ -607,4 +614,11 @@
   saveLocal();
   render();
   loadSites();
+
+  if (OFFLINE) {
+    els.drawer.querySelector('.drawer-note').textContent = NO_SERVER;
+    els.previewUrl.textContent = 'preview — opened from a file, deploying is off';
+    toast('Editing and preview work, but <strong>Deploy</strong> needs the server. ' +
+          'Run <code>npm start</code> and open http://127.0.0.1:3000', '', 12000);
+  }
 }());

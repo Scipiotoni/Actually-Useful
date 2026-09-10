@@ -18,6 +18,13 @@ npm start          # → http://127.0.0.1:3000
 
 Requires Node.js 18 or newer. Nothing to install.
 
+Then open **http://127.0.0.1:3000** in your browser — that is the editor. Pages
+you deploy from it live at `http://127.0.0.1:3000/p/<name>`.
+
+You *can* open `public/index.html` straight off disk and the editor and preview
+will work, but **Deploy** needs the server running, so it is disabled in that
+mode and the app tells you so.
+
 ## What it does
 
 **Editor** — three panes (HTML / CSS / JS) with syntax highlighting, line
