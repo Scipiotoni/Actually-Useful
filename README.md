@@ -93,13 +93,54 @@ curl -X POST localhost:3000/api/deploys \
 # {"slug":"from-curl", ... ,"url":"http://localhost:3000/p/from-curl"}
 ```
 
+## Password protection
+
+Set `AU_PASSWORD` and the editor asks for it:
+
+```bash
+AU_PASSWORD="something long and private" npm start
+```
+
+**Published pages stay public** — that is the point of publishing them. Only the
+editor and the write API are locked, so you can share a `/p/<slug>` link with
+anyone while nobody else can deploy, overwrite or delete your pages.
+
+Signing in sets a signed, `HttpOnly`, 7-day cookie. Wrong guesses are throttled
+per IP, with the lockout growing after five failures.
+
+With no `AU_PASSWORD` set the app runs open, which is the sensible default on
+`127.0.0.1`. Because that is *not* sensible on a public address, the server
+**refuses to start** if `HOST` is non-loopback and no password is set. Override
+with `AU_ALLOW_PUBLIC_WRITES=1` if you really mean it.
+
 ## Configuration
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `PORT` | `3000` | Port to listen on |
 | `HOST` | `127.0.0.1` | Bind address — set to `0.0.0.0` to expose it |
+| `AU_PASSWORD` | *(unset)* | Password for the editor. Unset means no login |
 | `AU_DATA_DIR` | `./data/sites` | Where deployed pages are stored |
+| `AU_ALLOW_PUBLIC_WRITES` | *(unset)* | Permit a public bind with no password |
+
+## Put it on the internet
+
+`render.yaml` is a ready Render Blueprint: **New → Blueprint**, point it at this
+repository, set `AU_PASSWORD` when prompted.
+
+**Know this before you rely on it.** Render's free plan gives every service an
+[ephemeral filesystem](https://render.com/docs/disks) and
+[spins it down after 15 minutes without traffic](https://render.com/docs/free).
+Deployed pages live on that filesystem, so **they are erased on every spin-down
+and redeploy**. Your editor draft is kept in the browser, so nothing you were
+writing is lost — but the published URLs go 404 until you press Deploy again.
+
+To keep pages permanently you need a paid instance type with a persistent disk
+(disks cannot be attached to free services). `render.yaml` has the lines to
+uncomment.
+
+Any host that runs Node works the same way: it needs `HOST=0.0.0.0`, whatever
+`PORT` the platform provides, and `AU_PASSWORD`.
 
 Each deploy is a directory holding the rendered `index.html` and a `meta.json`
 with the original panes, so nothing is locked inside the app.

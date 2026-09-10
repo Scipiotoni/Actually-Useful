@@ -1,0 +1,32 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Deploying this: in the Render dashboard choose New → Blueprint, point it at
+# this repository, and set AU_PASSWORD when it asks. Read the "Put it on the
+# internet" section of README.md first — on the free plan, published pages are
+# erased whenever the service spins down.
+services:
+  - type: web
+    name: actually-useful
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      # Render routes traffic to the container, so bind to all interfaces.
+      - key: HOST
+        value: 0.0.0.0
+      # sync:false means Render prompts you for it and never stores it in git.
+      # The server refuses to start on a public bind without it.
+      - key: AU_PASSWORD
+        sync: false
+
+    # ---------------------------------------------------------------------
+    # To keep published pages across restarts you need a paid instance type
+    # with a persistent disk. Swap `plan: free` above for `plan: starter`,
+    # then uncomment these and add AU_DATA_DIR=/var/data/sites to envVars:
+    #
+    # disk:
+    #   name: pages
+    #   mountPath: /var/data
+    #   sizeGB: 1
+    # ---------------------------------------------------------------------

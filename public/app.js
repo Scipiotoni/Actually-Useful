@@ -615,6 +615,12 @@
   render();
   loadSites();
 
+  if (!OFFLINE) {
+    api('/api/config').then(function (config) {
+      document.getElementById('logout').hidden = !config.auth;
+    }).catch(function () { /* the drawer already reports an unreachable server */ });
+  }
+
   if (OFFLINE) {
     els.drawer.querySelector('.drawer-note').textContent = NO_SERVER;
     els.previewUrl.textContent = 'preview — opened from a file, deploying is off';

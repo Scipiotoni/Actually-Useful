@@ -4,6 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { DeployStore } = require('./store.js');
+const auth = require('./auth.js');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const DATA_DIR = process.env.AU_DATA_DIR || path.join(__dirname, '..', 'data', 'sites');
@@ -64,6 +65,32 @@ function readBody(req) {
   });
 }
 
+/** Reads a login form body, accepting urlencoded (browser) or JSON (curl). */
+function readForm(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > 8 * 1024) {
+        reject(Object.assign(new Error('Login payload too large'), { status: 413 }));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8');
+      if ((req.headers['content-type'] || '').includes('application/json')) {
+        try { return resolve(JSON.parse(raw) || {}); } catch { return resolve({}); }
+      }
+      const params = new URLSearchParams(raw);
+      resolve({ password: params.get('password') || '', next: params.get('next') || '' });
+    });
+    req.on('error', reject);
+  });
+}
+
 function serveStatic(res, urlPath) {
   const rel = urlPath === '/' ? 'index.html' : urlPath.replace(/^\/+/, '');
   const file = path.resolve(PUBLIC_DIR, rel);
@@ -82,6 +109,10 @@ function serveStatic(res, urlPath) {
 
 function createApp(options = {}) {
   const store = new DeployStore(options.dataDir || DATA_DIR).init();
+  // No password configured means no login — the local-tool default.
+  const password = options.password !== undefined ? options.password : process.env.AU_PASSWORD;
+  const authOn = Boolean(password);
+  const throttle = new auth.Throttle();
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -104,7 +135,74 @@ function createApp(options = {}) {
         return res.end(html);
       }
 
+      // --- Login ----------------------------------------------------------
+      // Everything below this point is gated; /p/<slug> above stays public so
+      // pages can be shared with people who have no password.
+      if (authOn) {
+        const secure = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
+        const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+          req.socket.remoteAddress || 'unknown';
+
+        if (pathname === '/login') {
+          if (req.method === 'GET') {
+            return sendText(res, 200, auth.loginPage({ next: url.searchParams.get('next') }),
+              'text/html; charset=utf-8');
+          }
+          if (req.method === 'POST') {
+            const locked = throttle.lockedFor(ip);
+            if (locked) {
+              return sendText(res, 429,
+                auth.loginPage({ error: `Too many attempts. Try again in ${locked}s.` }),
+                'text/html; charset=utf-8');
+            }
+            const form = await readForm(req);
+            if (!auth.safeEqual(form.password || '', password)) {
+              throttle.fail(ip);
+              return sendText(res, 401, auth.loginPage({ error: 'Wrong password.', next: form.next }),
+                'text/html; charset=utf-8');
+            }
+            throttle.clear(ip);
+            const target = /^\/[^\s"'<>]*$/.test(form.next || '') ? form.next : '/';
+            res.writeHead(303, {
+              'set-cookie': auth.cookieHeader(auth.issueToken(password), {
+                secure,
+                maxAge: Math.floor(auth.TTL_MS / 1000)
+              }),
+              location: target
+            });
+            return res.end();
+          }
+          return sendText(res, 405, 'Method not allowed');
+        }
+
+        const token = auth.parseCookies(req.headers.cookie)[auth.COOKIE];
+        const signedIn = auth.verifyToken(password, token);
+
+        if (pathname === '/logout') {
+          res.writeHead(303, {
+            'set-cookie': auth.cookieHeader('', { secure, maxAge: 0 }),
+            location: '/login'
+          });
+          return res.end();
+        }
+
+        if (!signedIn) {
+          if (pathname.startsWith('/api/')) {
+            return sendJson(res, 401, { error: 'Not signed in' });
+          }
+          res.writeHead(302, { location: '/login?next=' + encodeURIComponent(url.pathname + url.search) });
+          return res.end();
+        }
+      } else if (pathname === '/login' || pathname === '/logout') {
+        res.writeHead(302, { location: '/' });
+        return res.end();
+      }
+
       // --- API ------------------------------------------------------------
+      if (pathname === '/api/config' && req.method === 'GET') {
+        return sendJson(res, 200, { auth: authOn });
+      }
+
       if (pathname === '/api/deploys' && req.method === 'GET') {
         return sendJson(res, 200, {
           deploys: store.list().map((site) => ({ ...site, url: `${origin}/p/${site.slug}` }))
@@ -166,11 +264,40 @@ a{color:#7aa2f7}</style></head><body><main>
 <p><a href="/">Back to the editor</a></p></main></body></html>`;
 }
 
+/** Loopback is safe to run open; a public bind without a password is not. */
+function isLoopback(host) {
+  return host === '127.0.0.1' || host === 'localhost' || host === '::1';
+}
+
 if (require.main === module) {
   const port = Number(process.env.PORT) || 3000;
   const host = process.env.HOST || '127.0.0.1';
+
+  if (!isLoopback(host) && !process.env.AU_PASSWORD && !process.env.AU_ALLOW_PUBLIC_WRITES) {
+    console.error([
+      '',
+      `Refusing to start: HOST is ${host}, so this server would be reachable from`,
+      'outside this machine, and AU_PASSWORD is not set. Anyone who found it could',
+      'deploy, overwrite and delete your pages.',
+      '',
+      'Fix it by setting a password:',
+      '',
+      '  AU_PASSWORD="something long and private" npm start',
+      '',
+      'On Render, add AU_PASSWORD under Environment in the dashboard.',
+      'Published pages at /p/<slug> stay public either way — only editing is locked.',
+      '',
+      'To run open on purpose anyway, set AU_ALLOW_PUBLIC_WRITES=1.',
+      ''
+    ].join('\n'));
+    process.exit(1);
+  }
+
   createApp().listen(port, host, () => {
     console.log(`Actually Useful → http://${host}:${port}`);
+    console.log(process.env.AU_PASSWORD
+      ? 'Password protection is ON (published pages stay public).'
+      : 'No AU_PASSWORD set — anyone who can reach this port can edit and deploy.');
   });
 }
 

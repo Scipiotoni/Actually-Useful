@@ -141,3 +141,124 @@ test('slugify falls back to a usable slug', () => {
   assert.strictEqual(slugify('***'), 'page');
   assert.strictEqual(slugify(''), 'page');
 });
+
+// --------------------------------------------------------------------------
+// Password protection (AU_PASSWORD). Published pages must stay public.
+// --------------------------------------------------------------------------
+
+const PASSWORD = 'correct horse battery staple';
+
+async function withLockedApp(fn) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'au-auth-'));
+  const app = createApp({ dataDir: dir, password: PASSWORD });
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  const at = `http://127.0.0.1:${app.address().port}`;
+  try {
+    await fn(at);
+  } finally {
+    app.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const signIn = async (at, password = PASSWORD) => {
+  const res = await fetch(`${at}/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ password }).toString(),
+    redirect: 'manual'
+  });
+  return { res, cookie: (res.headers.get('set-cookie') || '').split(';')[0] };
+};
+
+test('with a password set, the editor and API are closed', async () => {
+  await withLockedApp(async (at) => {
+    const editor = await fetch(at, { redirect: 'manual' });
+    assert.strictEqual(editor.status, 302);
+    assert.match(editor.headers.get('location'), /^\/login/);
+
+    const list = await fetch(`${at}/api/deploys`);
+    assert.strictEqual(list.status, 401);
+
+    const write = await fetch(`${at}/api/deploys`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Sneaky', html: '<p>x</p>' })
+    });
+    assert.strictEqual(write.status, 401);
+
+    assert.strictEqual((await fetch(`${at}/login`)).status, 200);
+  });
+});
+
+test('the right password opens it, the wrong one does not', async () => {
+  await withLockedApp(async (at) => {
+    const bad = await signIn(at, 'guess');
+    assert.strictEqual(bad.res.status, 401);
+    assert.ok(!bad.res.headers.get('set-cookie'));
+
+    const good = await signIn(at);
+    assert.strictEqual(good.res.status, 303);
+    assert.match(good.cookie, /^au_session=/);
+    const setCookie = good.res.headers.get('set-cookie');
+    assert.match(setCookie, /HttpOnly/);
+    assert.match(setCookie, /SameSite=Lax/);
+
+    const list = await fetch(`${at}/api/deploys`, { headers: { cookie: good.cookie } });
+    assert.strictEqual(list.status, 200);
+
+    const config = await (await fetch(`${at}/api/config`, { headers: { cookie: good.cookie } })).json();
+    assert.strictEqual(config.auth, true);
+  });
+});
+
+test('a forged or tampered cookie is rejected', async () => {
+  await withLockedApp(async (at) => {
+    for (const cookie of ['au_session=nonsense', `au_session=${Date.now() + 9e6}.deadbeef`]) {
+      const res = await fetch(`${at}/api/deploys`, { headers: { cookie } });
+      assert.strictEqual(res.status, 401, `cookie "${cookie}" must be rejected`);
+    }
+  });
+});
+
+test('published pages stay readable without signing in', async () => {
+  await withLockedApp(async (at) => {
+    const { cookie } = await signIn(at);
+    const site = await (await fetch(`${at}/api/deploys`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie },
+      body: JSON.stringify({ name: 'Public Page', html: '<h1>shared</h1>' })
+    })).json();
+
+    const anonymous = await fetch(`${at}/p/${site.slug}`);
+    assert.strictEqual(anonymous.status, 200);
+    assert.match(await anonymous.text(), /<h1>shared<\/h1>/);
+  });
+});
+
+test('repeated wrong guesses get throttled', async () => {
+  await withLockedApp(async (at) => {
+    let last;
+    for (let i = 0; i < 6; i += 1) last = (await signIn(at, 'wrong')).res;
+    assert.strictEqual(last.status, 429);
+    // The lockout applies to the right password too, so guessing cannot be raced.
+    assert.strictEqual((await signIn(at)).res.status, 429);
+  });
+});
+
+test('signing out clears the cookie', async () => {
+  await withLockedApp(async (at) => {
+    const { cookie } = await signIn(at);
+    const res = await fetch(`${at}/logout`, { headers: { cookie }, redirect: 'manual' });
+    assert.strictEqual(res.status, 303);
+    assert.match(res.headers.get('set-cookie'), /au_session=;/);
+    assert.match(res.headers.get('set-cookie'), /Max-Age=0/);
+  });
+});
+
+test('without a password the login page just redirects home', async () => {
+  const res = await fetch(`${base}/login`, { redirect: 'manual' });
+  assert.strictEqual(res.status, 302);
+  assert.strictEqual(res.headers.get('location'), '/');
+  assert.strictEqual((await (await fetch(`${base}/api/config`)).json()).auth, false);
+});
