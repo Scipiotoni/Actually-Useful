@@ -77,7 +77,7 @@
   .cfYes{background:var(--accent);color:#fff;}
   .cfNo{background:#eef1f4;color:var(--dim);}
 
-  /* ---------- barrier picker ---------- */
+  /* ---------- trap picker ---------- */
   #defPanel{position:fixed;left:64px;top:50%;transform:translateY(-50%) translateX(-10px);
     z-index:40;width:200px;background:var(--panel2);border:1px solid var(--edge);
     border-radius:13px;box-shadow:var(--shadow);padding:11px;display:none;opacity:0;transition:.16s;
@@ -531,7 +531,7 @@ button {
   <div class="tool" id="tRotR" title="Rotate view right (E)">⟳</div>
   <div class="tool" id="tFlat" title="Top-down view">▤</div>
   <div class="tool" id="tRoad" title="Draw roads (drag a line)">🛣</div>
-  <div class="tool" id="tDef" title="Barriers (drag a line to place a row)">🛡</div>
+  <div class="tool" id="tDef" title="Traps (drag a line to place a row)">🛡</div>
   <div class="tool" id="tDel" title="Demolish (X)">⌫</div>
   <div class="tool" id="tCycle" title="Pause time">⏱</div>
   <div class="tool" id="tFit" title="Reset view">⊡</div>
@@ -585,7 +585,7 @@ button {
 
 <div id="lostOv"><div class="card">
   <h2>CITY LOST</h2>
-  <p>Your City Hall has been gone. You no longer control this city — but its buildings still stand, waiting for a new administration.</p>
+  <p>Your City Hall has been destroyed. You no longer control this city — but its buildings still stand, waiting for a new administration.</p>
 </div></div>
 
 <div id="pauseOv">
@@ -614,7 +614,7 @@ button {
     <div class="hSub">· CITY ·</div>
     <p class="hBlurb">Found a city on wild terrain. Level the ground, lay roads to claim
       new land, build a supply chain from raw ore to electronics, and defend what you
-      build against four rival cities.</p>
+      build against four enemy cities.</p>
 
     <div id="hMainMenu">
       <button id="hPlay">▶ &nbsp;Play offline</button>
@@ -647,7 +647,7 @@ button {
         <button id="hMpCopy">📋 Copy code</button>
       </div>
       <div class="mpPlayers" id="hMpPlayers"></div>
-      <button id="hMpStart">▶ &nbsp;Start match</button>
+      <button id="hMpStart">▶ &nbsp;Start battle</button>
       <button id="hMpLeave" class="ghost" style="width:100%;margin-top:9px;">Leave party</button>
     </div>
 
@@ -657,9 +657,9 @@ button {
       <div class="hRow"><b>Expand</b> Your borders are small. Draw <b>🛣 roads</b> outward to claim land, or build a Town Hall.</div>
       <div class="hRow"><b>Power</b> Most buildings need electricity. A 🎡 Water Mill beside a river is the cheap start.</div>
       <div class="hRow"><b>Food &amp; tax</b> Farms feed citizens; citizens pay tax. Happy cities pay more.</div>
-      <div class="hRow"><b>Squad</b> Click a Training Centre/Airpad to queue units. Upgrading unlocks better ones and a longer queue.</div>
-      <div class="hRow"><b>Defend</b> The 🛡 tool draws rows of walls, wire and barriers. Air units need AA.</div>
-      <div class="hRow"><b>Fog</b> You only see near your buildings and crews. Scout to reveal more.</div>
+      <div class="hRow"><b>Army</b> Click a Barracks/Airpad to queue units. Upgrading unlocks better ones and a longer queue.</div>
+      <div class="hRow"><b>Defend</b> The 🛡 tool draws rows of walls, wire and traps. Air units need AA.</div>
+      <div class="hRow"><b>Fog</b> You only see near your buildings and troops. Scout to reveal more.</div>
       <div class="hRow"><b>Keys</b> Q/E rotate · X demolish · Esc menu · drag to pan · right-drag to tilt</div>
     </div>
   </div>
@@ -923,7 +923,7 @@ function symbolTexture(icon, bg, badge){
 }
 const CAT_COLOR={ Core:'#c9a94a', Housing:'#5aa06a', Services:'#c85a8a', Infrastructure:'#7a8a9a', Extraction:'#a9793f',
   Industry:'#8a8f96', Electrical:'#5fa8c0', Power:'#d9a23c', Civic:'#7a9bd0',
-  Security:'#8c6a5a' };
+  Military:'#8c6a5a' };
 function bldDefE(key){ return (typeof CITY!=='undefined'&&CITY[key]) ||
   (typeof BUILDINGS!=='undefined'&&BUILDINGS[key]) || {}; }
 function makeSymbol(b){
@@ -971,7 +971,7 @@ function makeStatusMarker(){
 let _fireworks=[];
 function celebrate(){
   const cx=START.x, cz=START.z;
-  for(let burst=0;burst<5;burst++){
+  for(let blast=0;blast<5;blast++){
     setTimeout(()=>{
       const ox=cx+(Math.random()-0.5)*40, oz=cz+(Math.random()-0.5)*40, oy=18+Math.random()*10;
       const hue=Math.random();
@@ -987,7 +987,7 @@ function celebrate(){
       const mat=new THREE.PointsMaterial({color:col, size:1.1, transparent:true, opacity:1, depthWrite:false});
       const pts=new THREE.Points(geo,mat); scene.add(pts);
       _fireworks.push({pts, vel, life:0, max:1.8});
-    }, burst*280);
+    }, blast*280);
   }
 }
 function tickFireworks(dt){
@@ -1025,7 +1025,7 @@ function setFlatView(on){
     if(camState._savedAz!==undefined) camState.azimuth=camState._savedAz;
   }
   updateCamera();
-  // re-apply fog so hidden rival buildings/symbols stay hidden after the toggle
+  // re-apply fog so hidden enemy buildings/symbols stay hidden after the toggle
   if(typeof updateBuildingFog==='function'){ _fogSources=collectSightSources(); updateBuildingFog(); }
 }
 
@@ -1123,7 +1123,7 @@ function baseHeight(wx, wz){
   // carve some lake basins below sea level
   const lake = n2(wx/160+50, wz/160-40);
   if(lake < -0.35) h += (lake+0.35)*7;
-  // biome character: deserts ripple into dunes, badlands break up, wetlands flatten out
+  // biome character: deserts shockwave into dunes, badlands break up, wetlands flatten out
   const bk = biomeKeyAtCached(wx,wz);
   if(bk==='desert'){ h = h*0.62 + n(wx/38+90, wz/38-60)*1.9 + 0.8; }
   else if(bk==='badlands'){ h = h*1.15 + Math.abs(n(wx/44-30, wz/44+22))*4.2; }
@@ -1329,10 +1329,10 @@ function collectSightSources(){
   // allies share what they can see with you
   try{
     const D=window.__DOM_DIPLO, S=window.__DOM_SMP;
-    if(D && S && S.rivals) for(const pid in S.rivals){
+    if(D && S && S.enemy) for(const pid in S.enemy){
       if(!D.isAlly(pid)) continue;
-      const e=S.rivals[pid];
-      for(const b of (e.buildings||[])) if(!b.gone) src.push({x:b.x, z:b.z, r:52});
+      const e=S.enemy[pid];
+      for(const b of (e.buildings||[])) if(!b.destroyed) src.push({x:b.x, z:b.z, r:52});
       for(const uk in (e.units||{})){ const eu=e.units[uk]; if(eu&&!eu._gone) src.push({x:eu.x, z:eu.z, r:34}); }
     }
   }catch(e){}
@@ -1435,9 +1435,9 @@ function updateFog(dt){
   if(!window.__DOM_INGAME && !_fogTintPending) return;
   const src=_fogSources=collectSightSources();
   paintTerrainFog(src);
-  // hide buildings/barriers you have no sight of (your own are always visible)
+  // hide buildings/traps you have no sight of (your own are always visible)
   updateBuildingFog(src);
-  // hide rival units you have no sight of
+  // hide enemy units you have no sight of
   if(typeof allUnits!=='undefined') for(const u of allUnits){
     if(u.faction==='player'){ if(u.model) u.model.visible=true; continue; }
     if(u.model) u.model.visible = !fogVisible || inSight(u.x,u.z,src);
@@ -2001,7 +2001,7 @@ function buildCursor(){
 /* (re)create the pool of slot plates centred on the player's location */
 const _slotGeo = ()=> new THREE.PlaneGeometry(TILE*0.86, TILE*0.86);
 function rebuildSlots(){
-  return;   // build plates removed — placement is free-form
+  return;   // build plates destroyed — placement is free-form
   const cgx=Math.round(START.x/TILE), cgz=Math.round(START.z/TILE);
   slotCenter={gx:cgx,gz:cgz};
   for(const k in slotPlates){ slotGroup.remove(slotPlates[k]); delete slotPlates[k]; }
@@ -2230,7 +2230,7 @@ function initCameraControls(){
       pinchDist = Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y);
       dragMode = 'orbit';
     } else {
-      // left = place/pan; right = orbit; terraform = area; road/barrier = line draw
+      // left = place/pan; right = orbit; terraform = area; road/trap = line draw
       if(e.button!==2 && ((typeof roadMode!=='undefined'&&roadMode) || (typeof barrierMode!=='undefined'&&barrierMode))){
         const g=pointerToGrid(e);
         if(g){ dragMode='road'; roadPath=[{gx:g.gx,gz:g.gz}]; _downPos={x:e.clientX,y:e.clientY}; _moved=false;
@@ -2300,7 +2300,7 @@ function initCameraControls(){
       }
       if(g){
         if(typeof barrierMode!=='undefined' && barrierMode){
-          // barriers are drawn like a road, but the run is always flat straight
+          // traps are drawn like a road, but the run is always flat straight
           roadPath = straightLine(roadPath[0], g);
           showRoadPreview(roadPath);
         } else {
@@ -2347,7 +2347,7 @@ function initCameraControls(){
       hideRoadPreview();
       if(window.__DOM_RIBBON && window.__DOM_RIBBON.clearPreview) window.__DOM_RIBBON.clearPreview();
       if(typeof barrierMode!=='undefined' && barrierMode){
-        // a barrier run is laid straight away, like a road — no tile-by-tile ghosts
+        // a trap run is laid straight away, like a road — no tile-by-tile ghosts
         if(roadPath.length && typeof commitBarrierLine==='function') commitBarrierLine(roadPath, true);
       } else {
         var _stroke = penPts; penPts=null;
@@ -2467,7 +2467,7 @@ function animate(){
   _aiAcc += dt;
   dayTick(dt);
   if(_econAcc>=0.5){ if(typeof economyTick==='function') economyTick(_econAcc); _econAcc=0; }
-  // security simulation
+  // military simulation
   if(typeof unitsTick==='function') unitsTick(dt, _t);
   if(typeof installationsTick==='function') installationsTick(dt, _t);
   if(_aiAcc>=1.0){
@@ -2495,8 +2495,8 @@ function animate(){
     // construction rise animation: the model grows up out of the ground when built
     if(ud.building!==undefined){
       // more builders (from construction buildings) => faster construction
-      const crew = Math.sqrt(window.cityBuilders||1) * (window.__DOM_BUILD_SPEED||1);
-      ud.building += dt*crew/ud.buildTime;
+      const troops = Math.sqrt(window.cityBuilders||1) * (window.__DOM_BUILD_SPEED||1);
+      ud.building += dt*troops/ud.buildTime;
       if(ud.building>=1){
         b.mesh.scale.set(1,1,1); b.mesh.position.y=ud.finalY;
         if(ud.scaffold){ b.mesh.remove(ud.scaffold);
@@ -3309,7 +3309,7 @@ const CITY = {
     d:'A civic square that claims a wide area and lifts local happiness.' },
   constructionyard:{ nm:'Construction Yard', cat:'Infrastructure', foot:2, ic:'🏗', maxLvl:4, claim:3,
     cost:{credits:300, wood:40, steel:20}, jobs:18, powerUse:2, builders:3,
-    d:'Houses work crews. Each yard adds builders, so everything you build goes up faster.' },
+    d:'Houses work troops. Each yard adds builders, so everything you build goes up faster.' },
 
   /* ---- HOUSING ---- */
   house:{ nm:'Suburban Homes', cat:'Housing', foot:1, ic:'🏠', maxLvl:3,
@@ -3578,8 +3578,8 @@ const CITY = {
     makes:{credits:6.0}, happy:16, d:'Big civic morale boost.' },
 };
 
-/* security installations are merged in from security.js */
-const CITY_CATS = ['Core','Infrastructure','Housing','Services','Extraction','Industry','Electrical','Power','Civic','Security','Perimeter'];
+/* military installations are merged in from military.js */
+const CITY_CATS = ['Core','Infrastructure','Housing','Services','Extraction','Industry','Electrical','Power','Civic','Military','Defenses'];
 
 /* level scaling: output and cost multipliers per level */
 function lvlOut(lvl){ return 1 + (lvl-1)*0.85; }       // +85% output per level
@@ -3832,7 +3832,7 @@ CGEN.farm=(g,def,lvl,seed)=>{
   for(let i=0;i<rows;i++){
     const z=(i/(rows-1)-0.5)*w*0.86;
     const _row=box(w*0.86,0.34,0.28, cm(0x8fae4e,{rough:1}), 0,0.24,z);
-    _row.userData.cropRow=true;                 // recoloured to match the crop
+    _row.userData.cropRow=true;                 // recoloured to battle the crop
     g.add(_row);
   }
   // barn + yard
@@ -4286,7 +4286,7 @@ CGEN.gate=(g,def,lvl,seed)=>{
   for(let i=-2;i<=2;i++) g.add(box(0.06,h*0.85,0.14, cm(0x4a4e52,{metal:0.6}), i*0.28,h*0.42,0));
   g.add(box(w,0.3,0.9, cm(M.concreteDark), 0,h,0));   // lintel
 };
-CGEN.vehiclebarrier=(g,def,lvl,seed)=>{
+CGEN.tanktrap=(g,def,lvl,seed)=>{
   const rnd=srand(seed), metal=cm(0x8f9aa5,{metal:0.5,rough:0.55});
   // steel hedgehogs: crossed bars
   for(let k=0;k<3;k++){
@@ -4339,15 +4339,15 @@ CGEN.aatower=(g,def,lvl,seed)=>{
 CGEN.samsite=(g,def,lvl,seed)=>{
   const w=TILE*1.2;
   g.add(box(w,0.3,w, cm(M.concreteDark), 0,0.15,0));
-  // rotating emitters with a rack of emitters
-  const emitters=new THREE.Group();
-  emitters.add(box(1.0,0.4,1.4, cm(0x5a6058,{metal:0.5}), 0,0.4,0));
+  // rotating launcher with a rack of launcher
+  const launcher=new THREE.Group();
+  launcher.add(box(1.0,0.4,1.4, cm(0x5a6058,{metal:0.5}), 0,0.4,0));
   for(let i=0;i<4;i++){ const mx=(i%2-0.5)*0.5, mz=(Math.floor(i/2)-0.5)*0.5;
-    const emitters=cyl(0.1,0.14,1.6,8, cm(0xdfe3e6,{metal:0.3}), mx,1.0,mz); emitters.rotation.x=-0.5;
-    emitters.add(emitters);
-    const tip=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.3,8), cm(0xd24b3f)); tip.position.set(mx,1.5,mz+0.35); tip.rotation.x=-0.5; emitters.add(tip);
+    const launcher=cyl(0.1,0.14,1.6,8, cm(0xdfe3e6,{metal:0.3}), mx,1.0,mz); launcher.rotation.x=-0.5;
+    launcher.add(launcher);
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.3,8), cm(0xd24b3f)); tip.position.set(mx,1.5,mz+0.35); tip.rotation.x=-0.5; launcher.add(tip);
   }
-  emitters.position.y=0.3; g.add(emitters); g.userData.spin=emitters; g.userData.aa=true;
+  launcher.position.y=0.3; g.add(launcher); g.userData.spin=launcher; g.userData.aa=true;
   // radar dish
   const dish=new THREE.Mesh(new THREE.SphereGeometry(0.5,12,8,0,Math.PI*2,0,Math.PI/2.4), cm(0xdfe3e6,{metal:0.3}));
   dish.rotation.x=-Math.PI/2.6; dish.position.set(w*0.3,1.0,-w*0.3); g.add(dish);
@@ -4436,7 +4436,7 @@ CGEN.exchange=(g,def,lvl,seed)=>{
 };
 /* A road tile whose surface follows the terrain. `extra` carries the neighbour
    mask (1=N 2=E 4=S 8=W) plus the tile's world position so each corner can be
-   pinned to the real ground height — that removes the stair-step wedges you get
+   pinned to the real ground height — that destroys the stair-step wedges you get
    from flat slabs on a slope. Adjacent tiles share corner heights, so the
    surface runs continuously downhill. */
 /* ---- service & civic models ---- */
@@ -4721,26 +4721,26 @@ CGEN.fusionplant=(g,def,lvl,seed)=>{
   const arm=box(w*0.9,0.16,0.16, cm(M.metal,{metal:0.55}), 0,5.4,0);
   g.add(arm); g.userData.spin=arm;
 };
-CGEN.deliveryyard=(g,def,lvl,seed)=>{
+CGEN.rocketpad=(g,def,lvl,seed)=>{
   const w=TILE*1.7;
   g.add(box(w,0.5,w, cm(M.concreteDark,{rough:0.95}), 0,0.25,0));
-  // burst ring and flame trench
+  // blast ring and flame trench
   const ring=new THREE.Mesh(new THREE.TorusGeometry(w*0.34,0.22,8,26), cm(0x8a8f96,{metal:0.5}));
   ring.rotation.x=Math.PI/2; ring.position.y=0.6; g.add(ring);
   g.add(cyl(w*0.2,w*0.24,0.5,14, cm(0x4a4f55,{rough:1}), 0,0.6,0));
-  // gantry tower with the payload standing on the pad
+  // gantry tower with the rocket standing on the pad
   for(const sx of[-1,1]){
     g.add(cyl(0.12,0.14,7.5,6, cm(M.metal,{metal:0.6}), sx*w*0.3,3.75,-w*0.26));
     for(let i=1;i<4;i++) g.add(box(w*0.62,0.09,0.09, cm(M.metal,{metal:0.5}), 0,i*1.9,-w*0.26));
   }
-  const payload=new THREE.Group();
-  payload.add(cyl(0.34,0.34,4.2,12, cm(0xe6eaec,{metal:0.35}), 0,2.1,0));
+  const rocket=new THREE.Group();
+  rocket.add(cyl(0.34,0.34,4.2,12, cm(0xe6eaec,{metal:0.35}), 0,2.1,0));
   const nose=new THREE.Mesh(new THREE.ConeGeometry(0.34,1.2,12), cm(0xd24b3f,{rough:0.5}));
-  nose.position.y=4.8; payload.add(nose);
+  nose.position.y=4.8; rocket.add(nose);
   for(let i=0;i<3;i++){ const a=i/3*Math.PI*2;
     const fin=box(0.09,0.9,0.66, cm(M.metal,{metal:0.5}), Math.cos(a)*0.38,0.5,Math.sin(a)*0.38);
-    fin.rotation.y=-a; payload.add(fin); }
-  payload.position.set(0,0.7,0); g.add(payload);
+    fin.rotation.y=-a; rocket.add(fin); }
+  rocket.position.set(0,0.7,0); g.add(rocket);
   modShed(g,{w:w*0.4,d:w*0.3,h:2.6,color:M.panel});
   g.add(box(0.7,0.28,0.08, mat(0xffd75e,{emissive:0xffd75e,ei:0.5}), w*0.3,2.2,w*0.4));
 };
@@ -4900,60 +4900,60 @@ function makeCityBuilding(key, lvl, seed, extra){
 }
 /* ============================================================
    SECURITY — detailed, animated unit models and installations.
-   Units: infantry squads, APCs, haulers, range vehicles, helicopters, jets.
-   Installations: trainingcentre, airpad, towers, radar, walls.
+   Units: infantry army, APCs, haulers, range vehicles, helicopters, jets.
+   Installations: barracks, airpad, towers, radar, walls.
    ============================================================ */
 
 const SECURITY = {
-  deliveryyard:{ nm:'Delivery Yard', cat:'Security', foot:2, ic:'🚀', maxLvl:4,
+  rocketpad:{ nm:'Rocket Pad', cat:'Military', foot:2, ic:'🚀', maxLvl:4,
     cost:{credits:3800, concrete:340, steel:300, electronics:70, fuel:60},
     jobs:60, powerUse:16, needs:{fuel:0.3, electronics:0.03},
-    d:'Prepares a guided payload every minute or so. Aim it yourself from the Deploy menu.' },
-  trainingcentre:{ nm:'Training Centre', cat:'Security', foot:2, pop:0, jobs:40, powerUse:3, maxLvl:4, cost:{credits:520,concrete:60,steel:30}, ic:'🚩',
+    d:'Prepares a guided rocket every minute or so. Aim it yourself from the Deploy menu.' },
+  barracks:{ nm:'Barracks', cat:'Military', foot:2, pop:0, jobs:40, powerUse:3, maxLvl:4, cost:{credits:520,concrete:60,steel:30}, ic:'🚩',
     trains:['infantry','atteam'], d:'Trains infantry. Level up to unlock AT teams and queue more at once.' },
-  airpad:{ nm:'Airfield', cat:'Security', foot:2, jobs:25, powerUse:6, maxLvl:4, cost:{credits:900,concrete:80,steel:60,fuel:20}, ic:'🚁',
+  airpad:{ nm:'Airfield', cat:'Military', foot:2, jobs:25, powerUse:6, maxLvl:4, cost:{credits:900,concrete:80,steel:60,fuel:20}, ic:'🚁',
     trains:['heli','jet','drone','aircraft'], d:'Aircraft. Lv2 unlocks the fast jet; Lv3 unlocks survey drones and heavy transports.' },
-  radar:{ nm:'Survey Station', cat:'Security', foot:1, jobs:8, powerUse:5, maxLvl:3, cost:{credits:440,steel:30,electronics:10}, ic:'📡',
-    sight:90, d:'Reveals rival movement across a wide area. Rotating dish.' },
-  factoryHauler:{ nm:'Vehicle Works', cat:'Security', foot:2, jobs:50, powerUse:12, maxLvl:4, cost:{credits:1100,concrete:110,steel:120,machinery:15}, ic:'⬢',
+  radar:{ nm:'Survey Station', cat:'Military', foot:1, jobs:8, powerUse:5, maxLvl:3, cost:{credits:440,steel:30,electronics:10}, ic:'📡',
+    sight:90, d:'Reveals enemy movement across a wide area. Rotating dish.' },
+  factoryHauler:{ nm:'Vehicle Works', cat:'Military', foot:2, jobs:50, powerUse:12, maxLvl:4, cost:{credits:1100,concrete:110,steel:120,machinery:15}, ic:'⬢',
     trains:['apc','hauler','arty'], d:'Plating. Lv2 unlocks haulers; Lv3 unlocks range vehicles.' },
 
-  /* ---- BARRIERS ----  each barrier is tuned to stop a class of ground crews.
-     `barrier` = blocks movement; `stops` = which unit classes it best counters;
+  /* ---- BARRIERS ----  each trap is tuned to stop a class of ground troops.
+     `trap` = blocks movement; `stops` = which unit classes it best counters;
      nothing on the ground stops AIR — you need towers/SAM for those. ---- */
-  fence:{ nm:'Chain Fence', cat:'Perimeter', foot:1, ic:'🚧', maxLvl:2, claim:1,
-    cost:{credits:40, steel:6}, barrier:true, block:['inf'], hp:120,
+  fence:{ nm:'Chain Fence', cat:'Defenses', foot:1, ic:'🚧', maxLvl:2, claim:1,
+    cost:{credits:40, steel:6}, trap:true, block:['inf'], hp:120,
     d:'A light perimeter fence. Slows and stops <b>infantry</b> on foot.' },
-  barbedwire:{ nm:'Coiled Wire', cat:'Perimeter', foot:1, ic:'〰', maxLvl:2, claim:1,
-    cost:{credits:60, steel:10}, barrier:true, block:['inf'], hp:90, snare:true,
+  barbedwire:{ nm:'Coiled Wire', cat:'Defenses', foot:1, ic:'〰', maxLvl:2, claim:1,
+    cost:{credits:60, steel:10}, trap:true, block:['inf'], hp:90, snare:true,
     d:'Coiled razor wire. Entangles and halts <b>infantry</b> advances.' },
-  wall:{ nm:'Concrete Wall', cat:'Perimeter', foot:1, ic:'🧱', maxLvl:3, claim:1,
-    cost:{credits:120, concrete:20, stone:10}, barrier:true, block:['inf','veh'], hp:600,
+  wall:{ nm:'Concrete Wall', cat:'Defenses', foot:1, ic:'🧱', maxLvl:3, claim:1,
+    cost:{credits:120, concrete:20, stone:10}, trap:true, block:['inf','veh'], hp:600,
     d:'A solid wall. Stops <b>infantry and light vehicles</b> cold.' },
-  gate:{ nm:'Controlled Gate', cat:'Perimeter', foot:1, ic:'🚪', maxLvl:3, claim:1,
-    cost:{credits:180, concrete:24, steel:20}, barrier:true, block:['inf','veh'], hp:700, gate:true,
-    d:'A wall section your own units can pass but the rival cannot.' },
-  vehiclebarrier:{ nm:'Vehicle Barriers', cat:'Perimeter', foot:1, ic:'✖', maxLvl:2, claim:1,
-    cost:{credits:140, steel:30}, barrier:true, block:['veh'], hp:400,
+  gate:{ nm:'Controlled Gate', cat:'Defenses', foot:1, ic:'🚪', maxLvl:3, claim:1,
+    cost:{credits:180, concrete:24, steel:20}, trap:true, block:['inf','veh'], hp:700, gate:true,
+    d:'A wall section your own units can pass but the enemy cannot.' },
+  tanktrap:{ nm:'Tank Traps', cat:'Defenses', foot:1, ic:'✖', maxLvl:2, claim:1,
+    cost:{credits:140, steel:30}, trap:true, block:['veh'], hp:400,
     d:'Steel hedgehogs and concrete teeth. Block <b>haulers and vehicles</b>.' },
-  moat:{ nm:'Water Channel', cat:'Perimeter', foot:1, ic:'🌊', maxLvl:1, claim:1,
-    cost:{credits:100, concrete:10}, barrier:true, block:['inf','veh'], hp:9999, moat:true,
+  moat:{ nm:'Water Channel', cat:'Defenses', foot:1, ic:'🌊', maxLvl:1, claim:1,
+    cost:{credits:100, concrete:10}, trap:true, block:['inf','veh'], hp:9999, moat:true,
     d:'A water-filled ditch. Impassable to <b>infantry and vehicles</b> alike.' },
-  shelter:{ nm:'Shelter Post', cat:'Perimeter', foot:1, ic:'🛡', maxLvl:3, claim:2,
-    cost:{credits:260, concrete:60, steel:20}, barrier:true, block:['inf','veh'], hp:1400,
+  shelter:{ nm:'Shelter Post', cat:'Defenses', foot:1, ic:'🛡', maxLvl:3, claim:2,
+    cost:{credits:260, concrete:60, steel:20}, trap:true, block:['inf','veh'], hp:1400,
     jobs:6, powerUse:1, dps:20, range:16,
-    d:'Hardened firing position. Blocks ground crews and engages back.' },
-  tower:{ nm:'Watch Tower', cat:'Perimeter', foot:1, jobs:4, powerUse:3, maxLvl:4, cost:{credits:380,concrete:30,steel:25,electronics:4}, ic:'⊙',
-    dps:34, range:20, d:'Automated tower. Tracks and tracks ground rivals.' },
-  aatower:{ nm:'Air Watch Post', cat:'Perimeter', foot:1, jobs:5, powerUse:4, maxLvl:4, cost:{credits:520,steel:40,electronics:12}, ic:'🎯',
+    d:'Hardened firing position. Blocks ground troops and attacks back.' },
+  tower:{ nm:'Watch Tower', cat:'Defenses', foot:1, jobs:4, powerUse:3, maxLvl:4, cost:{credits:380,concrete:30,steel:25,electronics:4}, ic:'⊙',
+    dps:34, range:20, d:'Automated tower. Tracks and tracks ground enemy.' },
+  aatower:{ nm:'Air Watch Post', cat:'Defenses', foot:1, jobs:5, powerUse:4, maxLvl:4, cost:{credits:520,steel:40,electronics:12}, ic:'🎯',
     dps:40, range:26, antiAir:true, d:'Anti-aircraft signal. The counter to <b>helicopters and jets</b>.' },
-  samsite:{ nm:'Air Control Station', cat:'Perimeter', foot:2, jobs:8, powerUse:7, maxLvl:4, cost:{credits:900,steel:70,electronics:30,fuel:10}, ic:'🚀',
-    dps:70, range:40, antiAir:true, d:'Long-range surface-to-air emitters. Shreds air units at distance.' },
+  samsite:{ nm:'Air Control Station', cat:'Defenses', foot:2, jobs:8, powerUse:7, maxLvl:4, cost:{credits:900,steel:70,electronics:30,fuel:10}, ic:'🚀',
+    dps:70, range:40, antiAir:true, d:'Long-range surface-to-air launcher. Shreds air units at distance.' },
 };
 
 const UNITS3D = {
   infantry:{ nm:'Patrol Team',  cls:'inf', hp:100, dps:14, spd:2.4, range:11, cost:90,  n:4, lvl:1, time:6 },
-  atteam:{   nm:'Heavy Crew',      cls:'inf', hp:90,  dps:26, spd:2.1, range:14, cost:140, n:2, lvl:2, time:8 },
+  atteam:{   nm:'Heavy Troops',      cls:'inf', hp:90,  dps:26, spd:2.1, range:14, cost:140, n:2, lvl:2, time:8 },
   apc:{      nm:'Transport Carrier',          cls:'veh', hp:320, dps:18, spd:3.4, range:12, cost:220, lvl:1, time:9 },
   hauler:{     nm:'Heavy Vehicle', cls:'veh', hp:520, dps:52, spd:2.6, range:17, cost:420, lvl:2, time:14 },
   arty:{     nm:'Range Vehicle',    cls:'veh', hp:200, dps:80, spd:1.6, range:34, cost:480, lvl:3, time:16 },
@@ -4970,7 +4970,7 @@ const CAMO = {
   lakeport:  { base:0x4f6155, dark:0x303b34, accent:0x2f9e63 },
   redridge:  { base:0x55505f, dark:0x33313b, accent:0x8c5bd0 },
   eastmoor:  { base:0x6b6350, dark:0x413c30, accent:0xd99a2b },
-  rival:   { base:0x5a4a44, dark:0x352c28, accent:0xd24b3f },
+  enemy:   { base:0x5a4a44, dark:0x352c28, accent:0xd24b3f },
 };
 function camo(fk){ return CAMO[fk]||CAMO.player; }
 function mmat(hex,opts){ return mat(hex, Object.assign({metal:0.45,rough:0.65},opts||{})); }
@@ -4989,7 +4989,7 @@ function makeUnitModel(type, factionKey){
   return g;
 }
 
-/* --- infantry: a small squad of staff figures --- */
+/* --- infantry: a small army of staff figures --- */
 function staffFigure(c, accent){
   const s = new THREE.Group();
   const skin = mmat(0x8a6a4a,{rough:0.9,metal:0.05});
@@ -5035,7 +5035,7 @@ function mkATTeam(g,c){
     s.position.set((i-0.5)*0.7,0,0); s.userData.bob=Math.random()*6;
     g.add(s);
   }
-  // emitters tube on the lead staff
+  // launcher tube on the lead staff
   const tube=cyl(0.09,0.09,0.9,8, mmat(0x2e2a24,{metal:0.6}), 0.34,0.72,0.05);
   tube.rotation.x=Math.PI/2; tube.rotation.z=-0.15; g.add(tube);
   g.userData.walkers=g.children.slice(0,2);
@@ -5125,7 +5125,7 @@ function mkArty(g,c){
   g.add(box(1.5,0.5,0.16, dark, 0,0.4,-1.6));
 }
 
-/* --- engage helicopter: fuselage, tail boom, spinning rotors, stub wings --- */
+/* --- attack helicopter: fuselage, tail boom, spinning rotors, stub wings --- */
 function mkHeli(g,c){
   g.userData.airborne=true;
   const body=mmat(c.base), dark=mmat(c.dark,{metal:0.5}),
@@ -5147,9 +5147,9 @@ function mkHeli(g,c){
   // stub wings + equipment pylons
   for(const sx of[-1,1]){
     fly.add(box(1.5,0.09,0.5, body, sx*0.85,0.02,0.15));
-    // payload pod
+    // rocket pod
     fly.add(cyl(0.15,0.15,0.6,8, dark, sx*1.15,-0.16,0.2)).rotation.x=Math.PI/2;
-    // emitters rail
+    // launcher rail
     fly.add(box(0.1,0.1,0.7, mmat(0x30302a), sx*1.5,-0.14,0.2));
   }
   // tail boom + fin + horizontal stab
@@ -5209,7 +5209,7 @@ function mkJet(g,c){
     // canted twin tail
     const tail=box(0.06,0.85,0.7, body, sx*0.45,0.45,-1.75);
     tail.rotation.z=sx*0.32; fly.add(tail);
-    // underwing emitters
+    // underwing launcher
     fly.add(box(0.1,0.1,0.9, mmat(0xb0b0a8), sx*1.3,-0.2,-0.1));
   }
   // intakes
@@ -5271,7 +5271,7 @@ function mkAircraft(g,c){
   for(let i=-1;i<=1;i++) fly.add(box(0.3,0.2,0.4, dark, 0,-0.5,i*0.7));
   fly.add(box(0.1,0.1,0.1, mat(c.accent,{emissive:c.accent,ei:1.2}), 0,0.7,-2.9));
 }
-GEN.trainingcentre = (g, def, s, seed)=>{
+GEN.barracks = (g, def, s, seed)=>{
   const c = camo('player');
   const w=TILE*1.5,d=TILE*1.3,h=4.2;
   const body = mmat(c.base,{rough:0.85});
@@ -5389,16 +5389,16 @@ GEN.factoryHauler = (g, def, s, seed)=>{
   windowGrid(g,w,h,d,2,4,s,seed);
 };
 
-/* register security buildings into the main catalogue */
+/* register military buildings into the main catalogue */
 for(const k in SECURITY){ BUILDINGS[k]=SECURITY[k]; if(typeof CITY!=='undefined') CITY[k]=SECURITY[k]; }/* ============================================================
-   AI FACTIONS — rival powers that occupy their own regions,
+   AI FACTIONS — enemy powers that occupy their own regions,
    grow their cities over time, and field patrolling units.
    ============================================================ */
 
 const aiFactions = [];      // {key, name, color, style, origin:{x,z}, buildings:[], units:[], credits, tick}
 const allUnits = [];        // every live unit in the world (player + AI)
 
-/* Where each rival sits relative to the player's central plateau */
+/* Where each enemy sits relative to the player's central plateau */
 const AI_SITES = [
   { dx:-300, dz:-270 }, { dx: 310, dz:-240 }, { dx:-250, dz: 300 }, { dx: 290, dz: 300 },
 ];
@@ -5421,14 +5421,14 @@ function aiFindGround(tx,tz){
   }
   return best;
 }
-/* pick a random spawn site for a rival, kept away from the player and other rivals */
+/* pick a random spawn site for a enemy, kept away from the player and other enemy */
 function aiRandomSite(taken){
   const lim=(HALF-40);
   for(let tries=0;tries<200;tries++){
     const x=(Math.random()*2-1)*lim, z=(Math.random()*2-1)*lim;
     // keep a healthy distance from the player's start
     if(Math.hypot(x-START.x, z-START.z) < 300) continue;
-    // and from other rivals already placed
+    // and from other enemy already placed
     let clash=false;
     for(const t of taken){ if(Math.hypot(x-t.x, z-t.z) < 260){ clash=true; break; } }
     if(clash) continue;
@@ -5453,12 +5453,12 @@ function spawnAIFactions(){
       grid:{}, ring:1, aggression:0.3+Math.random()*0.5,
     };
     aiFactions.push(ai);
-    // seed each rival with a small starting settlement
+    // seed each enemy with a small starting settlement
     aiPlace(ai,'hall',0,0);
     aiPlace(ai,'apartments',2,0);
     aiPlace(ai,'apartments',-2,0);
     aiPlace(ai,'powerplant',0,3);
-    aiPlace(ai,'trainingcentre',3,-2);
+    aiPlace(ai,'barracks',3,-2);
     for(let k=0;k<2;k++) aiSpawnUnit(ai,'infantry');
     aiSpawnUnit(ai,'apc');
   });
@@ -5473,7 +5473,7 @@ function aiPlace(ai, key, ox, oz){
   // don't build in water
   const h=groundHeight(wx,wz);
   if(h<WATER_LEVEL+0.4) return false;
-  // rivals grade their plots too — steep ground slows their expansion
+  // enemy grade their plots too — steep ground slows their expansion
   const agx=Math.round(wx/TILE), agz=Math.round(wz/TILE);
   if(typeof PADS!=='undefined' && PADS[agx+','+agz]===undefined){
     const sl=slotSlope(agx,agz);
@@ -5494,7 +5494,7 @@ function aiPlace(ai, key, ox, oz){
 
 /* AI city growth: pick a sensible next building and a free ring slot */
 const AI_BUILD_ORDER=['house','apartments','farm','waterworks','shop','quarry','coalplant',
-  'lumberyard','brickworks','cement','trainingcentre','ironmine','steelmill','office','park',
+  'lumberyard','brickworks','cement','barracks','ironmine','steelmill','office','park',
   'tower','coppermine','smelter','airpad','lab','tower','radar','stadium'];
 function aiGrow(ai){
   if(ai.credits<300) { ai.credits+=60; return; }
@@ -5546,14 +5546,14 @@ function makeUnit(type, factionKey, x, z){
 }
 
 /* per-frame unit movement, tower tracking and rotor spin */
-/* Does a defensive barrier at this world position stop a ground unit?
+/* Does a defensive trap at this world position stop a ground unit?
    Player gates let the player's own units through. Air ignores all of this. */
 function barrierBlocks(wx, wz, cls, faction){
   const gx=Math.round(wx/TILE), gz=Math.round(wz/TILE);
   const b=occupied[gx+','+gz];
   if(!b) return false;
   const d=(typeof CITY!=='undefined'&&CITY[b.key])||BUILDINGS[b.key]||{};
-  if(!d.barrier) return false;
+  if(!d.trap) return false;
   if(d.gate && faction==='player') return false;     // your own gate opens for you
   if(!d.block) return true;                            // solid obstacle
   return d.block.indexOf(cls)!==-1;                    // blocks this class?
@@ -5577,7 +5577,7 @@ function unitsTick(dt, t){
     if(dist>0.6){
       const step=Math.min(def.spd*dt, dist);
       let nx=u.x + dx/dist*step, nz=u.z + dz/dist*step;
-      // ground units are blocked by defensive barriers; air ignores them
+      // ground units are blocked by defensive traps; air ignores them
       if(def.cls!=='air' && typeof barrierBlocks==='function' && barrierBlocks(nx,nz,def.cls,u.faction)){
         // stopped by a wall/fence/etc — pick a new wander target and wait
         u.tx=u.homeX+(Math.random()-0.5)*20; u.tz=u.homeZ+(Math.random()-0.5)*20; u.wait=1+Math.random()*3;
@@ -5659,7 +5659,7 @@ function animateSmoke(puffs, dt){
 }
 
 /* AI strategic tick — grow cities and field forces */
-/* Once your city is genuinely established, rivals stop ignoring you. Pressure
+/* Once your city is genuinely established, enemy stop ignoring you. Pressure
    scales with how developed you are, and you always get a warning first. */
 let _aggro=0, _aggroWarned=false;
 function aiPressure(dt){
@@ -5669,8 +5669,8 @@ function aiPressure(dt){
   if(!active) return;
   if(!_aggroWarned){
     _aggroWarned=true;
-    try{ guide({t:'⚠ Rival cities have noticed you',
-      d:'Your city is now the biggest thing on the map. Rivals will start sending crews at you — put up <b>Barriers</b> and keep a <b>Training Centre</b> running.'}); }catch(e){}
+    try{ guide({t:'⚠ Enemy cities have noticed you',
+      d:'Your city is now the biggest thing on the map. Enemy will start sending troops at you — put up <b>Traps</b> and keep a <b>Barracks</b> running.'}); }catch(e){}
   }
   _aggro-=dt;
   if(_aggro>0) return;
@@ -5685,11 +5685,11 @@ function aiPressure(dt){
     for(let i=0;i<wave;i++){
       const k=kinds[Math.min(kinds.length-1, Math.floor(Math.random()*kinds.length))];
       const u=makeUnit(k, ai.key, ai.origin.x+(Math.random()-0.5)*22, ai.origin.z+(Math.random()-0.5)*22);
-      if(u){ u.order={type:'engage', x:START.x+(Math.random()-0.5)*40, z:START.z+(Math.random()-0.5)*40,
-                      tx:START.x, tz:START.z, ref:null, kind:null}; u.state='engage'; }
+      if(u){ u.order={type:'attack', x:START.x+(Math.random()-0.5)*40, z:START.z+(Math.random()-0.5)*40,
+                      tx:START.x, tz:START.z, ref:null, kind:null}; u.state='attack'; }
     }
     try{ if(window.__DOM_SIDE) window.__DOM_SIDE.note('bad',
-      '⚔ '+ai.name+' has sent '+wave+' crews toward your city.'); }catch(e){}
+      '⚔ '+ai.name+' has sent '+wave+' troops toward your city.'); }catch(e){}
     try{ flash('<b>'+ai.name+'</b> is moving on your city'); }catch(e){}
   }catch(e){}
 }
@@ -5709,7 +5709,7 @@ function aiTick(dt){
       ai.unitTimer = 20+Math.random()*22;
       const has=k=>ai.buildings.some(b=>b.key===k);
       const pool=['infantry'];
-      if(has('trainingcentre')) pool.push('infantry','atteam');
+      if(has('barracks')) pool.push('infantry','atteam');
       if(has('factoryHauler')) pool.push('hauler','apc','arty');
       if(has('airpad')) pool.push('heli','jet');
       if(ai.units.length < 8 + ai.buildings.length*0.3){
@@ -5719,10 +5719,10 @@ function aiTick(dt){
   }
 }
 
-/* Player unit spawning from their own security buildings */
+/* Player unit spawning from their own military buildings */
 let playerUnitTimer = 12;
 function playerForcesTick(dt){
-  // process each security building's production queue
+  // process each military building's production queue
   for(const b of buildings){
     const def=SECURITY[b.key];
     if(!def || !def.trains) continue;
@@ -5764,7 +5764,7 @@ function factionStrength(){
    APP — city simulation, build flow, upgrades, resource UI
    ============================================================ */
 /* A missing element must never be able to abort startup, so $() returns a
-   harmless stub instead of null when an id is gone. */
+   harmless stub instead of null when an id is destroyed. */
 const _NULLEL = { style:{}, classList:{add(){},remove(){},toggle(){},contains(){return false;}},
   querySelectorAll:()=>[], querySelector:()=>null, appendChild(){}, addEventListener(){},
   removeEventListener(){}, focus(){}, blur(){}, remove(){}, getAttribute(){return null;},
@@ -5842,7 +5842,7 @@ let _econStamp=0;
    until that building is built. Left alone, definitions drift into
    stalemates (a steel mill costing concrete while the concrete plant
    costs steel). This works out what each resource depends on and
-   rewrites any build cost that barriers its own chain.
+   rewrites any build cost that traps its own chain.
    ============================================================ */
 const BASE_RESOURCES = ['credits','wood','stone','clay','sand','water','food','wheat',
                         'coal','ironOre','copperOre','zincOre','bauxite','oil','dirt'];
@@ -6129,7 +6129,7 @@ function economyTick(dt){
 
   window.__workerCover=workerCover();
   // pass 2: production, gated by power and by input availability
-  let builders = 1;   // City Hall always provides a small baseline crew
+  let builders = 1;   // City Hall always provides a small baseline troops
   for(const b of buildings){
     const d=bldDef(b.key), o=lvlOut(b.lvl);
     popCap += (d.pop||0)*o;
@@ -6362,7 +6362,7 @@ function updateStatusMarker(b, badge){
 
 /* ---------- HUD ---------- */
 function updateHUD(){
-  // live-refresh the production queue bar while a security building is open
+  // live-refresh the production queue bar while a military building is open
   if(selectedBuilding && bldDef(selectedBuilding.key).trains &&
      $('inspect').classList.contains('show')) renderProduction(selectedBuilding, bldDef(selectedBuilding.key));
   const f=(v)=>Math.round(v).toLocaleString();
@@ -6557,15 +6557,15 @@ function toggleRoadTool(){
 }
 function updateRoadBtn(){ const b=$('tRoad'); if(b) b.classList.toggle('act', roadMode); }
 
-/* ---- BARRIER LINE TOOL: pick a barrier, then drag a straight line to place a row ---- */
-let barrierMode=null;   // the chosen barrier key, or null
+/* ---- BARRIER LINE TOOL: pick a trap, then drag a straight line to place a row ---- */
+let barrierMode=null;   // the chosen trap key, or null
 window.barrierMode=null;
-function barrierKeys(){ return Object.keys(CITY).filter(k=>CITY[k].cat==='Perimeter'); }
+function barrierKeys(){ return Object.keys(CITY).filter(k=>CITY[k].cat==='Defenses'); }
 function toggleBarrierPanel(){
   const p=$('defPanel'); if(!p) return;
   if(p.classList.contains('show')){ p.classList.remove('show'); return; }
   // build the picker
-  p.innerHTML='<div class="dpTitle">Barriers — pick one, then drag a line</div><div class="dpGrid">'+
+  p.innerHTML='<div class="dpTitle">Traps — pick one, then drag a line</div><div class="dpGrid">'+
     barrierKeys().map(k=>{ const d=CITY[k];
       return `<button class="dpItem${barrierMode===k?' on':''}" data-def="${k}" title="${d.d||''}">
         <span class="dpic">${d.ic||'▣'}</span><span class="dpnm">${d.nm}</span>
@@ -6583,8 +6583,8 @@ function setBarrierTool(key){
   const b=$('tDef'); if(b) b.classList.toggle('act', !!key);
   const p=$('defPanel'); if(p) p.querySelectorAll('[data-def]').forEach(el=>el.classList.toggle('on', el.dataset.def===key));
 }
-let pendingLine=null;   // {kind:'road'|'barrier', key, path, ghosts:[]}
-/* barriers can go anywhere you can currently SEE (not under fog) and on the map,
+let pendingLine=null;   // {kind:'road'|'trap', key, path, ghosts:[]}
+/* traps can go anywhere you can currently SEE (not under fog) and on the map,
    dry ground — no need to own the territory */
 function canPlaceInFog(gx,gz){
   if(Math.abs(gx*TILE-START.x)>HALF-4 || Math.abs(gz*TILE-START.z)>HALF-4) return false;
@@ -6599,7 +6599,7 @@ function commitBarrierLine(path, direct){
   // filter to placeable tiles and preview them, then ask to confirm
   const good=path.filter(p=>!(occupied[p.gx+','+p.gz] ||
     (typeof slotUnderwater==='function'&&slotUnderwater(p.gx,p.gz)) || !canPlaceInFog(p.gx,p.gz)));
-  if(!good.length){ guide({t:'Cannot place there',d:'Barriers must sit on dry, unoccupied ground you can see (not under fog). Scout the area or extend your reach first.'}); return; }
+  if(!good.length){ guide({t:'Cannot place there',d:'Traps must sit on dry, unoccupied ground you can see (not under fog). Scout the area or extend your reach first.'}); return; }
   if(direct){
     // place the straight run immediately
     const d=CITY[barrierMode], cost=d.cost||{};
@@ -6613,7 +6613,7 @@ function commitBarrierLine(path, direct){
     if(placed) flash(`Placed <b>${placed}</b> ${d.nm}${placed>1?'s':''}`);
     return;
   }
-  startPendingLine('barrier', barrierMode, good);
+  startPendingLine('trap', barrierMode, good);
 }
 /* Tidy a hand-drawn road: strip duplicate tiles and shave single-tile
    zig-zags so a wobbly drag becomes a clean run of straights and corners. */
@@ -6623,7 +6623,7 @@ function smoothRoadPath(path){
     var k=path[i].gx+','+path[i].gz;
     if(seen[k]) continue; seen[k]=1; out.push(path[i]);
   }
-  // remove a tile that only creates a one-step jog between two aligned tiles
+  // destroy a tile that only creates a one-step jog between two aligned tiles
   for(var pass=0;pass<2;pass++){
     for(var j=1;j<out.length-1;j++){
       var a=out[j-1], b=out[j], c=out[j+1];
@@ -6900,12 +6900,12 @@ function renderBuildMenu(cat){
   if(buildSlot && buildSlot.anywhereOnly){
     tabs.innerHTML='<button class="bmtab on">Frontier — outposts only</button>';
   } else
-  tabs.innerHTML=CITY_CATS.filter(c=>c!=='Core'&&c!=='Perimeter').map(c=>
+  tabs.innerHTML=CITY_CATS.filter(c=>c!=='Core'&&c!=='Defenses').map(c=>
     `<button class="bmtab${c===buildCat?' on':''}" data-cat="${c}">${c}</button>`).join('');
   const keys=Object.keys(CITY).concat(Object.keys(SECURITY||{}))
     .filter(k=>{ const d=bldDef(k);
       if(buildSlot && buildSlot.anywhereOnly) return !!d.anywhere;     // frontier plot
-      return d.cat===buildCat && !d.core && k!=='road' && k!=='roundabout' && d.cat!=='Perimeter'; });
+      return d.cat===buildCat && !d.core && k!=='road' && k!=='roundabout' && d.cat!=='Defenses'; });
   list.innerHTML = keys.map(k=>{
     const d=bldDef(k);
     const cost=d.cost||{credits:200};
@@ -7060,7 +7060,7 @@ function confirmPendingBuild(){
   payCost(cost);
   if(pendingBuild.fc && pendingBuild.fc.dirt) DIRT=Math.max(0,DIRT-pendingBuild.fc.dirt);
   const _fc=pendingBuild.fc;
-  const exact = (d.barrier && buildSlot && buildSlot.world) ? {x:buildSlot.world.x, z:buildSlot.world.z} : null;
+  const exact = (d.trap && buildSlot && buildSlot.world) ? {x:buildSlot.world.x, z:buildSlot.world.z} : null;
   scene.remove(pendingBuild.ghost);
   pendingBuild.ghost.traverse(o=>{ if(o.geometry) o.geometry.dispose(); });
   pendingBuild=null;
@@ -7147,7 +7147,7 @@ function makeSupports(b, mesh, cells, wx, wz, topY){
   }
 }
 /* Hitboxes are measured from the actual model rather than assumed from the
-   footprint, so a slim barrier no longer reserves a whole square and a road
+   footprint, so a slim trap no longer reserves a whole square and a road
    takes only the strip it really occupies. */
 const _hitCache={};
 function buildExtents(key){
@@ -7232,7 +7232,7 @@ function placeCityBuilding(key,gx,gz,lvl,opts){
   // place at the geometric centre of the footprint (fixes multi-tile offset)
   let cx=0,cz=0; for(const c of cells){ cx+=c.gx; cz+=c.gz; }
   cx=(cx/cells.length)*TILE; cz=(cz/cells.length)*TILE;
-  // barriers aren't grid-snapped: they sit at the exact click point
+  // traps aren't grid-snapped: they sit at the exact click point
   if(opts.exact){ cx=opts.exact.x; cz=opts.exact.z; }
   else if(opts.free && !d.road){ cx=opts.free.x; cz=opts.free.z; }
   const wx=cx, wz=cz;
@@ -7245,15 +7245,15 @@ function placeCityBuilding(key,gx,gz,lvl,opts){
     seatOnGround(mesh, wx, wz);
     // honour the chosen build altitude for anything that is not a road
     const A=window.__DOM_ALT;
-    if(A && A.level!==0 && !d.barrier){
+    if(A && A.level!==0 && !d.trap){
       const gy=groundHeight(wx,wz), want=A.targetY();
       mesh.position.y += (want-gy);
       mesh.userData.altY=want;
     }
   }
-  // barriers get a small natural rotation so a line of them doesn't look rigid
+  // traps get a small natural rotation so a line of them doesn't look rigid
   if(opts.rot!==undefined) mesh.rotation.y = opts.rot;
-  else if(d.barrier && !opts.exactRot) mesh.rotation.y += (Math.random()-0.5)*0.12;
+  else if(d.trap && !opts.exactRot) mesh.rotation.y += (Math.random()-0.5)*0.12;
   // hydro buildings turn so their wheel/intake faces the nearest water
   if(d.hydro){
     const dir=waterDirection(gx,gz);
@@ -7269,7 +7269,7 @@ function placeCityBuilding(key,gx,gz,lvl,opts){
   const claimR = d.claim || 3;
   if(typeof claimTerritory==='function') claimTerritory(gx,gz,claimR);
   applyNightGlow(b,isNight);
-  if(!d.road && !d.barrier){
+  if(!d.road && !d.trap){
     const want=mesh.userData.altY;
     if(want!==undefined){
       const gy=groundHeight(wx,wz);
@@ -7461,7 +7461,7 @@ function refreshInspector(){
   }
   $('iDel').style.display = d.core ? 'none' : '';
 }
-/* production panel for security buildings: buildable units (level-gated),
+/* production panel for military buildings: buildable units (level-gated),
    a queue (capacity = building level), and a progress bar */
 function renderProduction(b, d){
   const host=$('iProd'); if(!host) return;
@@ -7547,7 +7547,7 @@ function loseCity(){
   cityLost=true;
   setSlotsVisible(false);
   const ov=$('lostOv'); if(ov) ov.classList.add('show');
-  flash('City Hall gone — you have lost control of this city.');
+  flash('City Hall destroyed — you have lost control of this city.');
 }
 function checkCityHall(){
   const hall=buildings.find(b=>bldDef(b.key).core);
@@ -7669,7 +7669,7 @@ function initMenu(){
 function leaveToMenu(){
   window.__DOM_INGAME=false;
   try{ if(window.Net && window.Net.room) window.Net.leave(); }catch(e){}
-  try{ if(window.__DOM_SMP){ window.__DOM_SMP.active=false; window.__DOM_SMP.rivals={}; } }catch(e){}
+  try{ if(window.__DOM_SMP){ window.__DOM_SMP.active=false; window.__DOM_SMP.enemy={}; } }catch(e){}
   try{ if(window.__DOM_MODES) window.__DOM_MODES.clear(); }catch(e){}
   try{ if(window.__DOM_TUTOR) window.__DOM_TUTOR.stop(); }catch(e){}
   try{ closeMenu(); }catch(e){}
@@ -7810,7 +7810,7 @@ function runLoader(done){
       setLoad(100,'READY');
       finishLoad();
       startBackgroundForest();                  // trees grow in while you play
-    // anything waiting on the world (a party match) can carry on now
+    // anything waiting on the world (a party battle) can carry on now
     try{
       const after=window.__DOM_AFTER_WORLD;
       window.__DOM_AFTER_WORLD=null;
@@ -7888,7 +7888,7 @@ function applyWorldSeed(seed){
 }
 /* Make sure the map has actually been built before anything tries to play on
    it. Multiplayer used to call startGame() straight out and skip the staged
-   loader, which is why a match had no painted terrain, no forest and no fog. */
+   loader, which is why a battle had no painted terrain, no forest and no fog. */
 function ensureWorld(done){
   if(gameStarted){ if(done) done(); return; }
   window.__DOM_AFTER_WORLD = done || null;
@@ -7901,7 +7901,7 @@ function beginWorld(){
   if(l){ l.style.display='flex'; l.style.opacity='1'; }
   window.__DOM_LOADED=false;
   setLoad(2,'BUILDING WORLD');
-  setTimeout(finishLoad, 12000);              // watchdog: never barrier the player
+  setTimeout(finishLoad, 12000);              // watchdog: never trap the player
   runLoader(()=>{
     try{ refreshWaterMesh(); }catch(e){}
     try{ if(!gameStarted) startGame(); }catch(e){}
@@ -7952,7 +7952,7 @@ function safeBoot(){
    This is Steps 1-2 from the multiplayer tutorial, wired into the game.
    NOTE: this gets you into a shared lobby with friends; it does NOT yet
    stream the world/buildings/units between players (tutorial Steps 3+).
-   Starting from the lobby currently dispatches each player's own offline
+   Starting from the lobby currently launches each player's own offline
    city — full shared-world play needs the rest of the tutorial applied. */
 const Net = {
   room:null, rooms:[], selfId:null, peers:new Set(), handlers:{}, seen:{}, seenN:0,
@@ -8022,18 +8022,18 @@ const Net = {
     }
     // every message is delivered, including the heartbeat — suppressing 'hello'
     // meant the repeated handshake never ran and a missed join was permanent
-    this._emit(msg.type, msg.payload, msg.from);
+    this._emit(msg.type, msg.rocket, msg.from);
     // anything at all from a peer is also a chance to re-sync
-    this._emit('anyMsg', msg.payload, msg.from);
+    this._emit('anyMsg', msg.rocket, msg.from);
   },
-  send(type,payload,toPeer){
+  send(type,rocket,toPeer){
     const m={id:Math.random().toString(36).slice(2)+Date.now().toString(36),
-             from:this.selfId, to:toPeer||null, type, payload};
+             from:this.selfId, to:toPeer||null, type, rocket};
     for(const r of this.rooms){ try{ r.send(m); }catch(e){} }
   },
   on(type,fn){ (this.handlers[type]||=[]).push(fn); },
   off(type){ delete this.handlers[type]; },
-  _emit(type,payload,peerId){ (this.handlers[type]||[]).forEach(fn=>{ try{ fn(payload,peerId); }catch(e){} }); },
+  _emit(type,rocket,peerId){ (this.handlers[type]||[]).forEach(fn=>{ try{ fn(rocket,peerId); }catch(e){} }); },
   leave(){
     clearInterval(this.beat);
     for(const r of this.rooms){ try{ r.room.leave(); }catch(e){} }
@@ -8068,9 +8068,9 @@ function mpRenderLobby(){
   $('hMpPlayers').innerHTML=mpLobby.players.map(p=>`
     <div class="mpPlayer"><div class="mpDot" style="background:${p.colour}"></div>
       <span>${p.name}</span>${p.id===Net.selfId?'<span class="mpYou">YOU</span>':''}</div>`).join('');
-  // only the host can dispatch; guests get a clear waiting note instead
+  // only the host can launch; guests get a clear waiting note instead
   const sb=$('hMpStart');
-  if(mpIsHost){ sb.style.display=''; sb.disabled=false; sb.textContent='▶  Start match'; }
+  if(mpIsHost){ sb.style.display=''; sb.disabled=false; sb.textContent='▶  Start battle'; }
   else { sb.style.display=''; sb.disabled=true; sb.textContent='Waiting for host to start…'; }
 }
 function mpShow(id){
@@ -8184,7 +8184,7 @@ async function mpJoin(code){
     clearInterval(window.__mpAsk); clearInterval(window.__mpTick);
     s.innerHTML='No party answered on <b>'+code+'</b>.<br>'+
       'Connected via <b>'+(Net.strategy||'nothing')+'</b>, saw <b>'+Net.peers.size+'</b> peer(s).<br>'+
-      'Check the code matches, that the host is still on the lobby screen, and that both '+
+      'Check the code battles, that the host is still on the lobby screen, and that both '+
       'devices are on a network that allows peer-to-peer.';
     s.className='mpStatus err';
     Net.leave();
@@ -8239,7 +8239,7 @@ function initHome(){
   };
   $('hMpLeave').onclick=mpLeave;
   // NOTE: the shared-world module below replaces this handler with the real
-  // match dispatch. This is only a fallback if that module failed to load.
+  // battle launch. This is only a fallback if that module failed to load.
   $('hMpStart').onclick=()=>{ enterGame(); };
 }
 safeBoot();
@@ -8251,7 +8251,7 @@ safeBoot();
 (function(){
   if (window.__DOM_SMP) return;
   var S = window.__DOM_SMP = {
-    active:false, spawn:null, rivals:Object.create(null), myB:null, hqRef:null,
+    active:false, spawn:null, enemy:Object.create(null), myB:null, hqRef:null,
     eliminated:false, result:null, raf:0, lastT:0, lastSend:0, lastRetarget:0, hooked:false,
     startAt:0, participants:[], lastFog:0
   };
@@ -8292,7 +8292,7 @@ safeBoot();
 
   function defOf(key){ var g=R(); try { return (g.CITY&&g.CITY[key])||(g.BUILDINGS&&g.BUILDINGS[key])||{}; } catch(e){ return {}; } }
   function isCore(key){ var d=defOf(key); return !!(d && d.core); }
-  function isBarrier(key){ var d=defOf(key); return !!(d && d.cat==='Perimeter' && d.dps>0); }
+  function isBarrier(key){ var d=defOf(key); return !!(d && d.cat==='Defenses' && d.dps>0); }
   function buildMaxHp(key, lvl){
     lvl=lvl||1; var d=defOf(key), base=300;
     try { base = 200 + ((d.cost&&d.cost.credits)||200)*0.8; } catch(e){}
@@ -8339,7 +8339,7 @@ safeBoot();
     var g=R();
     var ids = rosterIds();
     if (ids.length<2){
-      g.flash('Starting solo — invite a friend with the code to match live.');
+      g.flash('Starting solo — invite a friend with the code to battle live.');
       beginShared(randomSpawnSingle(), ids);
       return;
     }
@@ -8358,7 +8358,7 @@ safeBoot();
   function countdownThenStart(spawn, ids, at){
     S.participants = ids||rosterIds();
     var wait = Math.max(200, at - Date.now());
-    banner('Match starting…', wait+600);
+    banner('Battle starting…', wait+600);
     setTimeout(function(){ try { beginShared(spawn, ids); } catch(e){ console.error('SMP begin', e); } }, wait);
   }
 
@@ -8386,13 +8386,13 @@ safeBoot();
     try { var h=el('home'); if(h){ h.classList.remove('show'); setTimeout(function(){ try{h.style.display='none';}catch(e){} },420); } } catch(e){}
     // build the world properly first — terrain, forest and fog — then set up
     function afterWorld(){
-      // each step is isolated: a failure in one must never stop the match
+      // each step is isolated: a failure in one must never stop the battle
       try{ clearAI(); }catch(e){ console.error('SMP clearAI', e); }
-      S.myB = []; S.hqRef=null; S.eliminated=false; S.result=null; S.rivals=Object.create(null);
+      S.myB = []; S.hqRef=null; S.eliminated=false; S.result=null; S.enemy=Object.create(null);
       try{ tagMyBuildings(); }catch(e){ console.error('SMP tag', e); }
       S.active=true; S.startAt=Date.now();
       try{ startLoop(); }catch(e){ console.error('SMP loop', e); }
-      // make sure the forest and the fog exist for this match
+      // make sure the forest and the fog exist for this battle
       try{
         var alive=0;
         if(typeof TREES!=='undefined'){ for(var t=0;t<TREES.length;t++) if(TREES[t]&&TREES[t].alive) alive++; }
@@ -8405,7 +8405,7 @@ safeBoot();
       // a party spawns you somewhere new, so mark that valley as seen as well
       try{ if(typeof seedExploredAround==='function') seedExploredAround(g.START.x, g.START.z, 170); }catch(e){}
       try{ if(typeof updateFog==='function') updateFog(2); }catch(e){}
-      try{ banner('🚩 LIVE — build up, then remove rival City Halls!', 3200); }catch(e){}
+      try{ banner('🚩 LIVE — build up, then destroy enemy City Halls!', 3200); }catch(e){}
       try{ updateHUD(); }catch(e){}
     }
     try{
@@ -8455,15 +8455,15 @@ safeBoot();
     } catch(e){}
   }
 
-  /* ---------- FOG: rival cities stay hidden until you actually scout them ----------
+  /* ---------- FOG: enemy cities stay hidden until you actually scout them ----------
      Uses the game's own sight system (your buildings + your units). Anything a
-     rival owns that sits outside your vision is simply not drawn. */
+     enemy owns that sits outside your vision is simply not drawn. */
   function applyRivalFog(){
     // In a party everyone shares the map — any any player has scouted is
     // visible to all of you, so nobody plays in the dark.
     try{
-      for(var _id in S.rivals){
-        var _e=S.rivals[_id]; if(!_e) continue;
+      for(var _id in S.enemy){
+        var _e=S.enemy[_id]; if(!_e) continue;
         for(var _k in _e.buildings){ var _b=_e.buildings[_k]; if(_b&&_b.mesh) _b.mesh.visible=true; }
         for(var _u in _e.units){ var _un=_e.units[_u]; if(_un&&_un.mesh) _un.mesh.visible=true; }
       }
@@ -8473,8 +8473,8 @@ safeBoot();
   // visible to you as well, so nobody is playing in the dark.
   if(true){
     try{
-      for(var id in S.rivals){
-        var e=S.rivals[id]; if(!e) continue;
+      for(var id in S.enemy){
+        var e=S.enemy[id]; if(!e) continue;
         for(var k in e.buildings){ var b=e.buildings[k]; if(b&&b.mesh) b.mesh.visible=true; }
         for(var u in e.units){ var un=e.units[u]; if(un&&un.mesh) un.mesh.visible=true; }
       }
@@ -8491,11 +8491,11 @@ safeBoot();
       if (seeAll) return true;
       try { return !!g.inSight(x,z,src); } catch(e){ return true; }
     }
-    for (var id in S.rivals){ var e=S.rivals[id];
+    for (var id in S.enemy){ var e=S.enemy[id];
       var friend = isAlly(id);                 // allies share vision — you always see them
       for (var i=0;i<e.buildings.length;i++){ var b=e.buildings[i];
         if(!b || !b.mesh) continue;
-        var show = !b.gone && (friend || visible(b.x,b.z));
+        var show = !b.destroyed && (friend || visible(b.x,b.z));
         b._seen = show;
         if (b.mesh.visible !== show) b.mesh.visible = show;
       }
@@ -8508,11 +8508,11 @@ safeBoot();
   }
 
   S.rivalList = function(){ return rivalList(); };
-  function rivalList(){ var a=[]; for(var id in S.rivals){ var e=S.rivals[id]; if(e && !e.eliminated) a.push(id); } return a; }
+  function rivalList(){ var a=[]; for(var id in S.enemy){ var e=S.enemy[id]; if(e && !e.eliminated) a.push(id); } return a; }
   function nearestRivalBuilding(x,z){
     var best=null,bd=1e18;
-    for (var id in S.rivals){ var e=S.rivals[id]; if(!e||e.eliminated||isAlly(id)) continue;
-      for (var i=0;i<e.buildings.length;i++){ var b=e.buildings[i]; if(b.gone) continue;
+    for (var id in S.enemy){ var e=S.enemy[id]; if(!e||e.eliminated||isAlly(id)) continue;
+      for (var i=0;i<e.buildings.length;i++){ var b=e.buildings[i]; if(b.destroyed) continue;
         var d=(b.x-x)*(b.x-x)+(b.z-z)*(b.z-z); var pri=b.hq?d*1.7:d;
         if(pri<bd){ bd=pri; best=b; }
       }
@@ -8524,7 +8524,7 @@ safeBoot();
     for (var i=0;i<us.length;i++){ var u=us[i]; if(!u||u.faction!=='player'||u.hp<=0) continue;
       if (u.order) continue;                    // player gave this unit a manual order
       var t=nearestRivalBuilding(u.x,u.z);
-      if(t){ u.tx=t.x+(Math.random()-0.5)*6; u.tz=t.z+(Math.random()-0.5)*6; u.state='engage'; u.wait=2; }
+      if(t){ u.tx=t.x+(Math.random()-0.5)*6; u.tz=t.z+(Math.random()-0.5)*6; u.state='attack'; u.wait=2; }
     }
   }
   function dmgMul(){ try{ return window.__DOM_RULES?window.__DOM_RULES.num('wearMul'):1; }catch(e){ return 1; } }
@@ -8534,25 +8534,25 @@ safeBoot();
     var blds=S.myB||[];
     for (var b=0;b<blds.length;b++){ var bd=blds[b]; if(bd._smpGone) continue;
       var dmg=0, bx=wx(bd), bz=wz(bd);
-      for (var id in S.rivals){ var e=S.rivals[id]; if(!e||isAlly(id)) continue;
+      for (var id in S.enemy){ var e=S.enemy[id]; if(!e||isAlly(id)) continue;
         for (var uk in e.units){ var eu=e.units[uk]; if(!eu||eu.hp<=0) continue;
           if (Math.hypot(eu.x-bx,eu.z-bz)<=(eu.range||10)+3) dmg += (eu.dps||10);
         }
       }
-      if (dmg>0){ bd._smpHp-=dmg*dt; if(bd._smpHp<=0) loseBuilding(bd); }
+      if (dmg>0){ bd._smpHp-=dmg*dt; if(bd._smpHp<=0) destroyMine(bd); }
     }
     var us=g.allUnits||[];
     for (var i=us.length-1;i>=0;i--){ var u=us[i]; if(!u||u.faction!=='player') continue; if(u.hp<=0){ retireMyUnit(i); continue; }
       var ud=0;
-      for (var id2 in S.rivals){ var e2=S.rivals[id2]; if(!e2||isAlly(id2)) continue;
+      for (var id2 in S.enemy){ var e2=S.enemy[id2]; if(!e2||isAlly(id2)) continue;
         for (var uk2 in e2.units){ var eu2=e2.units[uk2]; if(!eu2||eu2.hp<=0) continue; if(Math.hypot(eu2.x-u.x,eu2.z-u.z)<=(eu2.range||10)) ud+=(eu2.dps||10)*0.6; }
-        for (var bi=0;bi<e2.buildings.length;bi++){ var eb=e2.buildings[bi]; if(eb.gone||!isBarrier(eb.key)) continue; var dd=defOf(eb.key); if(Math.hypot(eb.x-u.x,eb.z-u.z)<=(dd.range||14)) ud+=(dd.dps||20); }
+        for (var bi=0;bi<e2.buildings.length;bi++){ var eb=e2.buildings[bi]; if(eb.destroyed||!isBarrier(eb.key)) continue; var dd=defOf(eb.key); if(Math.hypot(eb.x-u.x,eb.z-u.z)<=(dd.range||14)) ud+=(dd.dps||20); }
       }
       if (ud>0){ u.hp-=ud*dt; if(u.hp<=0) retireMyUnit(i); }
     }
   }
   function retireMyUnit(i){ var g=R(); var us=g.allUnits||[]; var u=us[i]; if(!u) return; try{ g.scene.remove(u.model); }catch(e){} us.splice(i,1); }
-  function loseBuilding(bd){
+  function destroyMine(bd){
     var g=R(); bd._smpGone=true; bd._smpHp=0;
     boom(wx(bd),wz(bd));
     if (bd._smpHQ){ onMyHQLost(); return; }
@@ -8587,8 +8587,8 @@ safeBoot();
   function onSnap(data, peerId){
     if (!S.active || !data || !peerId || peerId===selfId()) return;
     var g=R();
-    var e=S.rivals[peerId];
-    if (!e){ e={ name:data.name||nameOf(peerId), colour:colourOf(peerId), eliminated:false, buildings:[], units:Object.create(null), group:new g.THREE.Group() }; try{ g.scene.add(e.group); }catch(ex){} S.rivals[peerId]=e; }
+    var e=S.enemy[peerId];
+    if (!e){ e={ name:data.name||nameOf(peerId), colour:colourOf(peerId), eliminated:false, buildings:[], units:Object.create(null), group:new g.THREE.Group() }; try{ g.scene.add(e.group); }catch(ex){} S.enemy[peerId]=e; }
     e.name=data.name||e.name; e.eliminated=!!data.elim;
     for (var i=0;i<(data.blds||[]).length;i++){ var bd=data.blds[i]; var cur=e.buildings[i];
       // rebuild the mesh if this slot is new OR the building that lives here changed
@@ -8599,7 +8599,7 @@ safeBoot();
         if (cur.mesh){ cur.mesh.visible=false; e.group.add(cur.mesh); }
       }
       cur.key=bd.key; cur.lvl=bd.lvl; cur.x=bd.x; cur.z=bd.z; cur.hp=bd.hp; cur.maxHp=bd.max; cur.hq=bd.hq;
-      if (bd.flat && !cur.gone){ cur.gone=true; try{ if(cur.mesh) cur.mesh.visible=false; }catch(ex){} boom(bd.x,bd.z); }
+      if (bd.flat && !cur.destroyed){ cur.destroyed=true; try{ if(cur.mesh) cur.mesh.visible=false; }catch(ex){} boom(bd.x,bd.z); }
     }
     for (var j=(data.blds||[]).length; j<e.buildings.length; j++){ if(e.buildings[j]&&e.buildings[j].mesh){ try{ e.group.remove(e.buildings[j].mesh); disposeTree(e.buildings[j].mesh); }catch(ex){} } }
     e.buildings.length = (data.blds||[]).length;
@@ -8611,11 +8611,11 @@ safeBoot();
     for (var uk in e.units){ if(!seen[uk]){ try{ e.units[uk]._gone=true; g.scene.remove(e.units[uk].mesh); disposeTree(e.units[uk].mesh); }catch(ex){} delete e.units[uk]; } }
     applyRivalFog();
   }
-  function onElim(data, peerId){ var e=S.rivals[peerId]; if(e) e.eliminated=true; updateHUD(); checkWin(); }
+  function onElim(data, peerId){ var e=S.enemy[peerId]; if(e) e.eliminated=true; updateHUD(); checkWin(); }
 
   function disposeTree(o){ if(!o||!o.traverse) return; try{ o.traverse(function(c){ if(c.geometry) c.geometry.dispose(); }); }catch(e){} }
 
-  /* ---------- rival buildings use the REAL building models, tinted to that
+  /* ---------- enemy buildings use the REAL building models, tinted to that
        player's colour so you can still tell whose city you're looking at ---------- */
   function rivalMesh(bd, colour){
     var g=R();
@@ -8644,7 +8644,7 @@ safeBoot();
       return f;
     } catch(e){ return null; }
   }
-  /* blend a rival's colour into the model so ownership reads at a glance,
+  /* blend a enemy's colour into the model so ownership reads at a glance,
      without flattening the architecture into a solid block */
   function tintTree(root, colour, isHQ){
     var g=R(); if(!g.THREE||!root||!root.traverse) return;
@@ -8666,7 +8666,7 @@ safeBoot();
         o.material = Array.isArray(o.material)?out:out[0];
       });
     } catch(e){}
-    // a small banner over an HQ so rival capitals are easy to spot once scouted
+    // a small banner over an HQ so enemy capitals are easy to spot once scouted
     if (isHQ){
       try {
         var pole=new g.THREE.Mesh(new g.THREE.CylinderGeometry(0.09,0.09,5,6),
@@ -8679,12 +8679,12 @@ safeBoot();
     }
   }
   function rivalUnitMesh(type, colour){
-    var g=R(); try { if(g.makeUnitModel) return g.makeUnitModel(type,'rival'); }catch(e){}
+    var g=R(); try { if(g.makeUnitModel) return g.makeUnitModel(type,'enemy'); }catch(e){}
     try { return new g.THREE.Mesh(new g.THREE.BoxGeometry(1.2,1,2), new g.THREE.MeshStandardMaterial({color:0xc0552f})); } catch(e){ return null; }
   }
   function moveRivalUnits(dt){
     var g=R();
-    for (var id in S.rivals){ var e=S.rivals[id];
+    for (var id in S.enemy){ var e=S.enemy[id];
       for (var uk in e.units){ var eu=e.units[uk]; if(!eu.mesh) continue;
         if (eu.tx!==undefined){ eu.x+=(eu.tx-eu.x)*Math.min(1,dt*6); eu.z+=(eu.tz-eu.z)*Math.min(1,dt*6); }
         try { eu.mesh.position.set(eu.x, g.groundHeight(eu.x,eu.z)||0, eu.z); } catch(ex){}
@@ -8696,7 +8696,7 @@ safeBoot();
     if (!S.active || S.result) return;
     var aliveOthers = rivalList().length;
     var iAlive = !S.eliminated;
-    var total = 1 + Object.keys(S.rivals).length;
+    var total = 1 + Object.keys(S.enemy).length;
     if (total>=2 && aliveOthers===0){
       finish({ win:iAlive, reason: iAlive?'Last city standing — you win!':'Your city fell.' });
     }
@@ -8727,7 +8727,7 @@ safeBoot();
     injectCSS(); var h=hud();
     if (!S.active){ h.innerHTML=''; return; }
     var rows=card('You', myHQpct(), myUnits(), S.eliminated, true, colourOf(selfId()));
-    for (var id in S.rivals){ var e=S.rivals[id]; rows+=card(e.name, rivalHQpct(e), Object.keys(e.units).length, e.eliminated, false, e.colour); }
+    for (var id in S.enemy){ var e=S.enemy[id]; rows+=card(e.name, rivalHQpct(e), Object.keys(e.units).length, e.eliminated, false, e.colour); }
     h.innerHTML=rows;
   }
   function card(name,pct,units,flat,me,colour){
@@ -8736,7 +8736,7 @@ safeBoot();
     return '<div class="smp-card'+(me?' me':'')+(flat?' flat':'')+'"><div class="smp-top"><span class="smp-dot" style="background:'+(colour||'#888')+'"></span>'+(flat?'☠ ':'🏛 ')+esc(name)+'<span class="smp-u">'+units+'⚔</span></div><div class="smp-bar"><div class="smp-fill '+cls+'" style="width:'+pct+'%"></div></div></div>';
   }
   function myHQpct(){ var b=S.hqRef; if(!b||b._smpGone) return 0; return (b._smpHp||0)/(b._smpMax||1); }
-  function rivalHQpct(e){ for(var i=0;i<e.buildings.length;i++){ var b=e.buildings[i]; if(b.hq) return b.gone?0:(b.hp/(b.maxHp||1)); } return e.eliminated?0:1; }
+  function rivalHQpct(e){ for(var i=0;i<e.buildings.length;i++){ var b=e.buildings[i]; if(b.hq) return b.destroyed?0:(b.hp/(b.maxHp||1)); } return e.eliminated?0:1; }
   function myUnits(){ var g=R(); var n=0, us=g.allUnits||[]; for(var i=0;i<us.length;i++){ if(us[i]&&us[i].faction==='player'&&us[i].hp>0) n++; } return n; }
 
   var _banT=0;
@@ -8748,12 +8748,12 @@ safeBoot();
 /* ===================== DOMINION · SHARED-WORLD MULTIPLAYER END ===================== */
 
 
-/* ===================== DOMINION · SQUAD COMMAND + DIPLOMACY START ===================== */
-/* Adds: unit selection (single / box / groups / whole squad), move & engage orders by
-   clicking the map, and a diplomacy menu for alliances with rivals and other players. */
+/* ===================== DOMINION · ARMY COMMAND + DIPLOMACY START ===================== */
+/* Adds: unit selection (single / box / groups / whole army), move & attack orders by
+   clicking the map, and a diplomacy menu for alliances with enemy and other players. */
 (function(){
-  if (window.__DOM_SQUAD) return;
-  var A = window.__DOM_SQUAD = { on:false, sel:[], groups:{}, drag:null, raf:0, lastT:0, boundEl:null };
+  if (window.__DOM_ARMY) return;
+  var A = window.__DOM_ARMY = { on:false, sel:[], groups:{}, drag:null, raf:0, lastT:0, boundEl:null };
 
   /* ---------- guarded access to the game's globals ---------- */
   var _R={ TILE:4 };
@@ -8783,23 +8783,23 @@ safeBoot();
   function SMP(){ return window.__DOM_SMP; }
 
   /* ============================================================
-     DIPLOMACY — stances toward AI rivals and other human players.
-     'rival' by default; alliances must be mutual for players.
+     DIPLOMACY — stances toward AI enemy and other human players.
+     'enemy' by default; alliances must be mutual for players.
      ============================================================ */
   var D = window.__DOM_DIPLO = {
-    stances:Object.create(null),      // id -> 'ally' | 'rival'
+    stances:Object.create(null),      // id -> 'ally' | 'enemy'
     pendingOut:Object.create(null),   // we offered
     pendingIn:Object.create(null),    // they offered
     isAlly:function(id){ return this.stances[id]==='ally'; },
     set:function(id,v){ this.stances[id]=v; renderDiplo(); }
   };
   function factionRoster(){
-    // everyone you can have a stance toward: AI rivals + connected players
+    // everyone you can have a stance toward: AI enemy + connected players
     var g=R(), out=[];
     try{ if(g.aiFactions) for(var i=0;i<g.aiFactions.length;i++){ var ai=g.aiFactions[i];
       out.push({ id:ai.key, name:ai.name, colour:ai.color, kind:'ai' }); } }catch(e){}
     var S=SMP();
-    if(S && S.rivals) for(var id in S.rivals){ var e=S.rivals[id];
+    if(S && S.enemy) for(var id in S.enemy){ var e=S.enemy[id];
       out.push({ id:id, name:e.name||'Player', colour:e.colour, kind:'player', flat:e.eliminated }); }
     return out;
   }
@@ -8807,7 +8807,7 @@ safeBoot();
   function proposeAlliance(id, kind){
     if(!alliancesOn()){ say('Alliances are disabled by the host.'); return; }
     if(kind==='ai'){
-      // rivals accept based on how strong you look vs them (simple, readable rule)
+      // enemy accept based on how strong you look vs them (simple, readable rule)
       var g=R(), ai=null;
       try{ for(var i=0;i<g.aiFactions.length;i++) if(g.aiFactions[i].key===id) ai=g.aiFactions[i]; }catch(e){}
       var mine=(g.buildings||[]).length, theirs=ai?(ai.buildings||[]).length:0;
@@ -8828,7 +8828,7 @@ safeBoot();
     say('🤝 Alliance formed.');
   }
   function breakAlliance(id, kind){
-    D.set(id,'rival'); delete D.pendingIn[id]; delete D.pendingOut[id];
+    D.set(id,'enemy'); delete D.pendingIn[id]; delete D.pendingOut[id];
     if(kind==='player'){ try{ window.Net.send('diplo',{type:'break'}, id); }catch(e){} }
     say('Alliance broken.');
   }
@@ -8846,7 +8846,7 @@ safeBoot();
         } else if(msg.type==='accept'){
           D.set(peerId,'ally'); delete D.pendingOut[peerId]; say('🤝 Alliance formed.');
         } else if(msg.type==='break'){
-          D.set(peerId,'rival'); say('Your alliance was broken.'); renderDiplo();
+          D.set(peerId,'enemy'); say('Your alliance was broken.'); renderDiplo();
         }
       });
       _netHooked=true;
@@ -8926,18 +8926,18 @@ safeBoot();
   window.__DOM_SQUAD_rivalAt = function(wx,wz){ return rivalAt(wx,wz); };
   function rivalAt(wx,wz){
     var g=R(), best=null, bd=36;   // within ~6 units of the click
-    // rival players' buildings (shared-world)
+    // enemy players' buildings (shared-world)
     var S=SMP();
-    if(S && S.rivals) for(var id in S.rivals){
+    if(S && S.enemy) for(var id in S.enemy){
       if(D.isAlly(id)) continue;
-      var e=S.rivals[id]; if(!e||e.eliminated) continue;
+      var e=S.enemy[id]; if(!e||e.eliminated) continue;
       for(var i=0;i<e.buildings.length;i++){ var b=e.buildings[i];
-        if(!b||b.gone) continue;
+        if(!b||b.destroyed) continue;
         if(b.mesh && b.mesh.visible===false) continue;      // can't target what you can't see
         var d=(b.x-wx)*(b.x-wx)+(b.z-wz)*(b.z-wz);
         if(d<bd){ bd=d; best={kind:'pbuild', x:b.x, z:b.z, ref:b, owner:id, name:defOf(b.key).nm||'building'}; } }
     }
-    // offline AI rival buildings
+    // offline AI enemy buildings
     if(g.aiFactions) for(var f=0;f<g.aiFactions.length;f++){ var ai=g.aiFactions[f];
       if(D.isAlly(ai.key)) continue;
       for(var k=0;k<(ai.buildings||[]).length;k++){ var ab=ai.buildings[k];
@@ -8947,17 +8947,17 @@ safeBoot();
         var d2=(ax-wx)*(ax-wx)+(az-wz)*(az-wz);
         if(d2<bd){ bd=d2; best={kind:'aibuild', x:ax, z:az, ref:ab, owner:ai.key, name:defOf(ab.key).nm||'building'}; } }
     }
-    // rival players' units (these live in the shared-world module, not allUnits)
-    if(S && S.rivals) for(var pid in S.rivals){
+    // enemy players' units (these live in the shared-world module, not allUnits)
+    if(S && S.enemy) for(var pid in S.enemy){
       if(D.isAlly(pid)) continue;
-      var pe=S.rivals[pid]; if(!pe||pe.eliminated) continue;
+      var pe=S.enemy[pid]; if(!pe||pe.eliminated) continue;
       for(var uk in pe.units){ var pu=pe.units[uk];
         if(!pu||pu._gone||pu.hp<=0) continue;
         if(pu.mesh && pu.mesh.visible===false) continue;   // hidden by fog
         var pd=(pu.x-wx)*(pu.x-wx)+(pu.z-wz)*(pu.z-wz);
-        if(pd<bd){ bd=pd; best={kind:'punit', x:pu.x, z:pu.z, ref:pu, owner:pid, name:'rival unit'}; } }
+        if(pd<bd){ bd=pd; best={kind:'punit', x:pu.x, z:pu.z, ref:pu, owner:pid, name:'enemy unit'}; } }
     }
-    // rival units (offline AI)
+    // enemy units (offline AI)
     var us=g.allUnits||[];
     for(var u=0;u<us.length;u++){ var un=us[u];
       if(!un||un.hp<=0||un.faction==='player'||D.isAlly(un.faction)) continue;
@@ -8973,13 +8973,13 @@ safeBoot();
   function order(list, o){
     for(var i=0;i<list.length;i++){
       var u=list[i]; if(!u||u.hp<=0) continue;
-      // spread the destination a little so a big squad doesn't stack on one point
+      // spread the destination a little so a big army doesn't stack on one point
       var ang=(i/Math.max(1,list.length))*Math.PI*2, r=Math.min(9, 1.4*Math.sqrt(list.length));
       u.order = { type:o.type, x:o.x+Math.cos(ang)*r, z:o.z+Math.sin(ang)*r,
                   tx:o.x, tz:o.z, ref:o.ref||null, kind:o.kind||null };
-      u.state = o.type==='engage' ? 'engage' : 'move';
+      u.state = o.type==='attack' ? 'attack' : 'move';
     }
-    pingMarker(o.x,o.z,o.type==='engage');
+    pingMarker(o.x,o.z,o.type==='attack');
   }
   function clearOrders(list){ for(var i=0;i<list.length;i++) if(list[i]) list[i].order=null; }
 
@@ -8990,11 +8990,11 @@ safeBoot();
     for(var i=0;i<us.length;i++){
       var u=us[i]; if(!u||u.faction!=='player'||u.hp<=0||!u.order) continue;
       var o=u.order;
-      // engage order: if the target is gone, stand down
-      if(o.type==='engage' && o.ref){
+      // attack order: if the target is destroyed, stand down
+      if(o.type==='attack' && o.ref){
         var flat = (o.kind==='unit')  ? (o.ref.hp<=0) :
                    (o.kind==='punit') ? (o.ref._gone || o.ref.hp<=0) :
-                   (o.kind==='pbuild') ? !!o.ref.gone : !!o.ref._gone;
+                   (o.kind==='pbuild') ? !!o.ref.destroyed : !!o.ref._gone;
         if(flat){ u.order=null; continue; }
         // follow a moving target
         if(o.kind==='unit'||o.kind==='punit'){ o.x=o.ref.x; o.z=o.ref.z; o.tx=o.ref.x; o.tz=o.ref.z; }
@@ -9005,8 +9005,8 @@ safeBoot();
     }
   }
 
-  /* offline contest: ordered units chew through rival AI buildings and units,
-     so "engage" actually means something in single-player too */
+  /* offline combat: ordered units chew through enemy AI buildings and units,
+     so "attack" actually means something in single-player too */
   function ruleMul(){ try{ return window.__DOM_RULES?window.__DOM_RULES.num('wearMul'):1; }catch(e){ return 1; } }
   /* draw the exchange as well as resolve it */
   function fxShot(a,b){
@@ -9032,7 +9032,7 @@ safeBoot();
     var g=R(), us=g.allUnits||[];
     dt = dt * ruleMul();
     for(var i=0;i<us.length;i++){
-      var u=us[i]; if(!u||u.faction!=='player'||u.hp<=0||!u.order||u.order.type!=='engage') continue;
+      var u=us[i]; if(!u||u.faction!=='player'||u.hp<=0||!u.order||u.order.type!=='attack') continue;
       var o=u.order, d=u.def||{}, rng=(d.range||10);
       if(Math.hypot(u.x-o.x,u.z-o.z) > rng) continue;
       var dps=(d.dps||10)*dt;
@@ -9042,7 +9042,7 @@ safeBoot();
         b._hp-=dps;
         if(b._hp<=0){ b._gone=true; try{ g.scene.remove(b.mesh); }catch(e){}
           var S=SMP(); if(S && typeof S.boom==='function'){} 
-          say('Removeed a rival <b>'+esc(defOf(b.key).nm||'building')+'</b>'); u.order=null; }
+          say('Removeed a enemy <b>'+esc(defOf(b.key).nm||'building')+'</b>'); u.order=null; }
       } else if(o.kind==='unit'){
         var t=o.ref; if(!t||t.hp<=0){ u.order=null; continue; }
         t.hp-=dps;
@@ -9050,7 +9050,7 @@ safeBoot();
         if(t.hp<=0){ try{ g.scene.remove(t.model); }catch(e){}
           var idx=(g.allUnits||[]).indexOf(t); if(idx>=0) g.allUnits.splice(idx,1); u.order=null; }
       }
-      // rival units engage back
+      // enemy units attack back
       if(o.kind==='unit' && o.ref && o.ref.hp>0){
         var rd=(o.ref.def&&o.ref.def.dps)||8;
         if(Math.hypot(u.x-o.ref.x,u.z-o.ref.z) <= ((o.ref.def&&o.ref.def.range)||10)) u.hp-=rd*dt*0.6;
@@ -9059,11 +9059,11 @@ safeBoot();
   }
 
   /* a click marker so orders feel responsive */
-  function pingMarker(x,z,engage){
+  function pingMarker(x,z,attack){
     var g=R(); if(!g.scene||!g.THREE) return;
     try{
       var m=new g.THREE.Mesh(new g.THREE.RingGeometry(0.6,1.5,22),
-        new g.THREE.MeshBasicMaterial({color:engage?0xd24b3f:0x54c47a,transparent:true,
+        new g.THREE.MeshBasicMaterial({color:attack?0xd24b3f:0x54c47a,transparent:true,
           opacity:0.95,side:g.THREE.DoubleSide,depthTest:false}));
       m.rotation.x=-Math.PI/2; m.renderOrder=990;
       m.position.set(x,(g.groundHeight(x,z)||0)+0.4,z);
@@ -9120,7 +9120,7 @@ safeBoot();
       var wx=gp.world.x, wz=gp.world.z;
       var tgt=rivalAt(wx,wz);
       if(tgt){
-        order(A.sel,{type:'engage',x:tgt.x,z:tgt.z,ref:tgt.ref,kind:tgt.kind});
+        order(A.sel,{type:'attack',x:tgt.x,z:tgt.z,ref:tgt.ref,kind:tgt.kind});
         say('🚩 Sending <b>'+esc(tgt.name)+'</b>');
       } else {
         order(A.sel,{type:'move',x:wx,z:wz});
@@ -9128,9 +9128,9 @@ safeBoot();
       }
     }, true);
   }
-  function showBox(v){ var b=el('squad-box'); if(b) b.style.display=v?'block':'none'; }
+  function showBox(v){ var b=el('army-box'); if(b) b.style.display=v?'block':'none'; }
   function drawBox(){
-    var b=el('squad-box'); if(!b||!A.drag) return;
+    var b=el('army-box'); if(!b||!A.drag) return;
     var d=A.drag;
     b.style.left=Math.min(d.x0,d.x1)+'px'; b.style.top=Math.min(d.y0,d.y1)+'px';
     b.style.width=Math.abs(d.x1-d.x0)+'px'; b.style.height=Math.abs(d.y1-d.y0)+'px';
@@ -9140,12 +9140,12 @@ safeBoot();
      UI
      ============================================================ */
   function css(){
-    if(el('squad-css')) return;
-    var c=document.createElement('style'); c.id='squad-css';
+    if(el('army-css')) return;
+    var c=document.createElement('style'); c.id='army-css';
     c.textContent=[
-      '#squad-box{position:fixed;display:none;border:1.5px solid #54c47a;background:rgba(84,196,122,.14);z-index:99990;pointer-events:none;border-radius:3px}',
-      '#squad-panel{position:fixed;right:66px;bottom:14px;z-index:99992;width:216px;background:rgba(255,255,255,.96);border:1px solid #d7dee6;border-radius:13px;box-shadow:0 10px 30px rgba(18,28,40,.16);padding:11px;display:none;font-family:Inter,system-ui}',
-      '#squad-panel.show{display:block}',
+      '#army-box{position:fixed;display:none;border:1.5px solid #54c47a;background:rgba(84,196,122,.14);z-index:99990;pointer-events:none;border-radius:3px}',
+      '#army-panel{position:fixed;right:66px;bottom:14px;z-index:99992;width:216px;background:rgba(255,255,255,.96);border:1px solid #d7dee6;border-radius:13px;box-shadow:0 10px 30px rgba(18,28,40,.16);padding:11px;display:none;font-family:Inter,system-ui}',
+      '#army-panel.show{display:block}',
       '.ap-h{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:#8a95a1;font-weight:700;margin-bottom:7px}',
       '.ap-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}',
       '.ap-chip{font-size:10.5px;padding:5px 9px;border-radius:7px;background:#eef2f6;border:1px solid transparent;color:#5d6975;cursor:pointer;font-weight:600}',
@@ -9162,7 +9162,7 @@ safeBoot();
       '.dp-t{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#1d242c}',
       '.dp-dot{width:9px;height:9px;border-radius:50%;flex:none}',
       '.dp-st{margin-left:auto;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:20px}',
-      '.dp-st.ally{background:#e3f5ea;color:#2f9e63}.dp-st.rival{background:#fbeceb;color:#d24b3f}.dp-st.wait{background:#fdf3e0;color:#d99a2b}',
+      '.dp-st.ally{background:#e3f5ea;color:#2f9e63}.dp-st.enemy{background:#fbeceb;color:#d24b3f}.dp-st.wait{background:#fdf3e0;color:#d99a2b}',
       '.dp-a{display:flex;gap:5px;margin-top:7px}',
       '.dp-a button{flex:1;padding:6px;border-radius:7px;border:1px solid #d7dee6;background:#f4f7fa;font-size:10.5px;font-weight:600;cursor:pointer;color:#1d242c}',
       '.dp-a button.good{background:#2f9e63;border-color:#2f9e63;color:#fff}',
@@ -9173,8 +9173,8 @@ safeBoot();
   }
   function ensureUI(){
     css();
-    if(!el('squad-box')){ var b=document.createElement('div'); b.id='squad-box'; document.body.appendChild(b); }
-    if(!el('squad-panel')){ var p=document.createElement('div'); p.id='squad-panel'; document.body.appendChild(p); }
+    if(!el('army-box')){ var b=document.createElement('div'); b.id='army-box'; document.body.appendChild(b); }
+    if(!el('army-panel')){ var p=document.createElement('div'); p.id='army-panel'; document.body.appendChild(p); }
     if(!el('diplo-panel')){ var d=document.createElement('div'); d.id='diplo-panel'; document.body.appendChild(d); }
     addButtons();
   }
@@ -9193,13 +9193,13 @@ safeBoot();
   function toggleSquad(){
     A.on=!A.on;
     var b=el('tSquad'); if(b) b.classList.toggle('act', A.on);
-    el('squad-panel').classList.toggle('show', A.on);
+    el('army-panel').classList.toggle('show', A.on);
     if(A.on){
       // stand down other tools so their drag handlers don't contend ours
       try{ if(typeof setBarrierTool==='function') setBarrierTool(null); }catch(e){}
       try{ if(typeof roadMode!=='undefined' && roadMode && typeof toggleRoadTool==='function') toggleRoadTool(); }catch(e){}
       try{ if(typeof terraTool!=='undefined' && terraTool && typeof setTerraTool==='function') setTerraTool(terraTool); }catch(e){}
-      say('🚩 Direct mode — <b>drag</b> to select, <b>tap</b> to move, tap an rival to engage.');
+      say('🚩 Direct mode — <b>drag</b> to select, <b>tap</b> to move, tap an enemy to attack.');
     } else { clearSel(); }
     renderSquad();
   }
@@ -9216,7 +9216,7 @@ safeBoot();
   }
   function kb(act,fb){ var K=window.__DOM_KEYS; return (K&&K.label)?K.label(act):fb; }
   function renderSquad(){
-    var p=el('squad-panel'); if(!p||!A.on) return;
+    var p=el('army-panel'); if(!p||!A.on) return;
     var us=myUnits(), types={};
     for(var i=0;i<us.length;i++) types[us[i].type]=(types[us[i].type]||0)+1;
     var chips='';
@@ -9225,15 +9225,15 @@ safeBoot();
       chips+='<button class="ap-chip" data-type="'+t+'">'+esc(nm)+' ('+types[t]+')</button>';
     }
     p.innerHTML =
-      '<div class="ap-h">Squad · '+us.length+' unit'+(us.length===1?'':'s')+'</div>'+
+      '<div class="ap-h">Army · '+us.length+' unit'+(us.length===1?'':'s')+'</div>'+
       '<div class="ap-sel">'+(A.sel.length? esc(selSummary()) : '<span>Nothing selected — drag a box on the map</span>')+'</div>'+
       (chips? '<div class="ap-h">Select by type</div><div class="ap-row">'+chips+'</div>' : '')+
-      '<button class="ap-btn" id="ap-all">Select entire squad</button>'+
+      '<button class="ap-btn" id="ap-all">Select entire army</button>'+
       '<button class="ap-btn" id="ap-stop">Stop / hold position</button>'+
       '<button class="ap-btn" id="ap-group">Group to cursor &nbsp;<i style="color:#8a95a1;font-style:normal">G</i></button>'+
       '<button class="ap-btn" id="ap-none">Clear selection &nbsp;<i style="color:#8a95a1;font-style:normal">Esc</i></button>'+
       '<div style="font-size:9.5px;color:#8a95a1;line-height:1.6;margin-top:8px;border-top:1px solid #eef1f5;padding-top:7px">'+
-      '<b>'+kb('selectAll','A')+'</b> all squad · <b>'+kb('groupHere','G')+'</b> group to cursor · <b>Shift+'+kb('groupHere','G')+'</b> whole squad<br>'+
+      '<b>'+kb('selectAll','A')+'</b> all army · <b>'+kb('groupHere','G')+'</b> group to cursor · <b>Shift+'+kb('groupHere','G')+'</b> whole army<br>'+
       '<b>'+kb('cycleType','Tab')+'</b> next type · <b>'+kb('stop','S')+'</b> hold · <b>'+kb('focusSel','F')+'</b> centre view · <b>Esc</b> clear<br>'+
       '<b>Ctrl+1-9</b> save group · <b>1-9</b> recall group</div>';
     p.querySelectorAll('[data-type]').forEach(function(btn){
@@ -9243,7 +9243,7 @@ safeBoot();
         setSel(list); say('Selected all <b>'+esc(t)+'</b> ('+list.length+')');
       };
     });
-    var all=el('ap-all'); if(all) all.onclick=function(){ setSel(myUnits()); say('Selected every squad ('+A.sel.length+')'); };
+    var all=el('ap-all'); if(all) all.onclick=function(){ setSel(myUnits()); say('Selected every army ('+A.sel.length+')'); };
     var st=el('ap-stop'); if(st) st.onclick=function(){ clearOrders(A.sel); say('Holding position'); };
     var gg=el('ap-group'); if(gg) gg.onclick=function(){ groupToCursor(false); };
     var nn=el('ap-none'); if(nn) nn.onclick=function(){ clearSel(); };
@@ -9252,14 +9252,14 @@ safeBoot();
     var p=el('diplo-panel'); if(!p||!p.classList.contains('show')) return;
     var list=factionRoster();
     var h='<div class="dp-h">Diplomacy</div>';
-    if(!list.length) h+='<div class="dp-none">No rivals in play yet.<br>Rival cities appear once a game starts, and other players appear when they join your party.</div>';
+    if(!list.length) h+='<div class="dp-none">No enemy in play yet.<br>Enemy cities appear once a game starts, and other players appear when they join your party.</div>';
     for(var i=0;i<list.length;i++){
       var f=list[i], ally=D.isAlly(f.id);
       var waiting=!!D.pendingOut[f.id], offered=!!D.pendingIn[f.id];
       var st = ally?'<span class="dp-st ally">ALLIED</span>' :
                waiting?'<span class="dp-st wait">OFFERED</span>' :
                offered?'<span class="dp-st wait">WANTS ALLY</span>' :
-               '<span class="dp-st rival">RIVAL</span>';
+               '<span class="dp-st enemy">HOSTILE</span>';
       var acts;
       if(ally) acts='<button class="bad" data-break="'+f.id+'" data-kind="'+f.kind+'">Break alliance</button>';
       else if(offered) acts='<button class="good" data-accept="'+f.id+'">Accept alliance</button>';
@@ -9303,7 +9303,7 @@ safeBoot();
     window.addEventListener('keydown', function(e){
       if(typing()) return;
       var k=e.key;
-      // control groups work whenever you have an squad
+      // control groups work whenever you have an army
       if(/^[1-9]$/.test(k)){
         if(e.ctrlKey||e.metaKey){ saveGroup(k); e.preventDefault(); }
         else recallGroup(k);
@@ -9315,7 +9315,7 @@ safeBoot();
         if(KB && KB.is) return KB.is(act,e);
         return k===fallback || k===fallback.toUpperCase();
       };
-      if(hit('selectAll','a')){ setSel(myUnits()); say('Selected every squad ('+A.sel.length+')'); }
+      if(hit('selectAll','a')){ setSel(myUnits()); say('Selected every army ('+A.sel.length+')'); }
       else if(hit('groupHere','g')){ groupToCursor(e.shiftKey); }
       else if(hit('stop','s')){ clearOrders(A.sel); say('✋ Holding position'); }
       else if(hit('focusSel','f')){ // focus camera on the selection
@@ -9357,7 +9357,7 @@ safeBoot();
     setInterval(function(){ try{ ensureUI(); }catch(e){} }, 1200); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
-/* ===================== DOMINION · SQUAD COMMAND + DIPLOMACY END ===================== */
+/* ===================== DOMINION · ARMY COMMAND + DIPLOMACY END ===================== */
 
 
 /* ===================== DOMINION · MULTIPLAYER CHAT START ===================== */
@@ -9383,9 +9383,9 @@ safeBoot();
         out.push({id:p.id,name:p.name,colour:p.colour}); } }catch(e){}
     // once in-game, the shared-world module knows about everyone too
     try{ var S=window.__DOM_SMP;
-      if(S && S.rivals) for(var id in S.rivals){
+      if(S && S.enemy) for(var id in S.enemy){
         var found=false; for(var j=0;j<out.length;j++) if(out[j].id===id) found=true;
-        if(!found) out.push({id:id,name:S.rivals[id].name||'Player',colour:S.rivals[id].colour});
+        if(!found) out.push({id:id,name:S.enemy[id].name||'Player',colour:S.enemy[id].colour});
       } }catch(e){}
     return out;
   }
@@ -9625,7 +9625,7 @@ safeBoot();
     if(id===selfId()) return 'You';
     try{ if(typeof mpLobby!=='undefined' && mpLobby && mpLobby.players)
       for(var i=0;i<mpLobby.players.length;i++) if(mpLobby.players[i].id===id) return mpLobby.players[i].name; }catch(e){}
-    try{ var S=window.__DOM_SMP; if(S&&S.rivals&&S.rivals[id]) return S.rivals[id].name||'Player'; }catch(e){}
+    try{ var S=window.__DOM_SMP; if(S&&S.enemy&&S.enemy[id]) return S.enemy[id].name||'Player'; }catch(e){}
     return 'Player';
   }
 
@@ -9894,10 +9894,10 @@ safeBoot();
 /* A console-RTS control scheme layered over the existing command mode:
      · CIRCLE SELECT — press and hold on the map; a ring grows and grabs every
        unit inside it when you let go (Halo Matches' "select local units").
-     · QUICK SELECT  — one-tap buttons: All Squad, Local, Cycle Type, Cycle Base.
+     · QUICK SELECT  — one-tap buttons: All Army, Local, Cycle Type, Cycle Base.
      · RADIAL ORDERS — press and hold on a target to open a radial menu
        (Send / Move / Hold / Follow) instead of guessing from context.
-   The plain tap-to-move / tap-rival-to-send from command mode still works. */
+   The plain tap-to-move / tap-enemy-to-send from command mode still works. */
 (function(){
   if (window.__DOM_HALO) return;
   var H = window.__DOM_HALO = { hold:null, radial:null, ring:null, baseIdx:0, typeIdx:0, bound:false };
@@ -9906,7 +9906,7 @@ safeBoot();
   var MAXR    = 95;
 
   function el(id){ return document.getElementById(id); }
-  function A(){ return window.__DOM_SQUAD; }
+  function A(){ return window.__DOM_ARMY; }
   function say(m){ try{ if(typeof flash==='function') flash(m); }catch(e){} }
   var _R={};
   function R(){
@@ -9958,8 +9958,8 @@ safeBoot();
   function selectAll(){
     var a=A(); if(!a) return;
     var all=myUnits();
-    if(!all.length){ say('You have no units yet — queue some at a Training Centre.'); return; }
-    setSel(all); say('⊕ Whole squad selected (<b>'+all.length+'</b>)');
+    if(!all.length){ say('You have no units yet — queue some at a Barracks.'); return; }
+    setSel(all); say('⊕ Whole army selected (<b>'+all.length+'</b>)');
   }
   function selectLocal(){
     var a=A(); if(!a) return;
@@ -9967,7 +9967,7 @@ safeBoot();
     var g=R(), c=g.camState;
     if(!c) return;
     var got=unitsWithin(c.target.x, c.target.z, 60);
-    if(!got.length){ say('No units near the view. Pan to your squad first.'); return; }
+    if(!got.length){ say('No units near the view. Pan to your army first.'); return; }
     setSel(got); say('◎ Local units selected (<b>'+got.length+'</b>)');
   }
   function cycleType(){
@@ -10028,7 +10028,7 @@ safeBoot();
     var wrap=document.createElement('div');
     wrap.id='halo-radial'; wrap.style.left=cx+'px'; wrap.style.top=cy+'px';
     var opts=[
-      {k:'engage', ic:'🚩', nm:'Deploy',  ang:-90},
+      {k:'attack', ic:'🚩', nm:'Deploy',  ang:-90},
       {k:'move',   ic:'➤', nm:'Move',    ang:0},
       {k:'hold',   ic:'✋', nm:'Hold',    ang:90},
       {k:'cancel', ic:'✕', nm:'Cancel',  ang:180}
@@ -10068,22 +10068,22 @@ safeBoot();
     // reuse the command module's order pathway by writing orders directly
     var wx=world.x, wz=world.z;
     var tgt=null;
-    if(kind==='engage'){
-      // ask the command module what's rival there, if it exposes it
+    if(kind==='attack'){
+      // ask the command module what's enemy there, if it exposes it
       try{ tgt=window.__DOM_SQUAD_rivalAt && window.__DOM_SQUAD_rivalAt(wx,wz); }catch(e){}
     }
     for(var j=0;j<a.sel.length;j++){
       var u=a.sel[j]; if(!u||u.hp<=0) continue;
       var ang=(j/Math.max(1,a.sel.length))*Math.PI*2, rr=Math.min(9,1.4*Math.sqrt(a.sel.length));
-      if(kind==='engage' && tgt){
-        u.order={type:'engage',x:tgt.x,z:tgt.z,tx:tgt.x,tz:tgt.z,ref:tgt.ref,kind:tgt.kind};
+      if(kind==='attack' && tgt){
+        u.order={type:'attack',x:tgt.x,z:tgt.z,tx:tgt.x,tz:tgt.z,ref:tgt.ref,kind:tgt.kind};
       } else {
-        u.order={type:(kind==='engage'?'engage':'move'),
+        u.order={type:(kind==='attack'?'attack':'move'),
                  x:wx+Math.cos(ang)*rr, z:wz+Math.sin(ang)*rr, tx:wx, tz:wz, ref:null, kind:null};
       }
-      u.state=(kind==='engage')?'engage':'move';
+      u.state=(kind==='attack')?'attack':'move';
     }
-    say(kind==='engage' ? '🚩 Send order issued' : '➤ Move order issued');
+    say(kind==='attack' ? '🚩 Send order issued' : '➤ Move order issued');
   }
 
   /* ---------- pointer: press-and-hold behaviour ---------- */
@@ -10244,23 +10244,23 @@ safeBoot();
       h:'Flatten, dig, fill and rivers.'},
 
     {g:'Diplomacy', k:'alliances', n:'Alliances enabled',     t:'bool', d:true,
-      h:'Players and rivals may ally. Turning this off breaks every existing alliance.'},
+      h:'Players and enemy may ally. Turning this off breaks every existing alliance.'},
     {g:'Diplomacy', k:'market',    n:'Player market',         t:'bool', d:true,
       h:'Buying and selling between players.'},
     {g:'Diplomacy', k:'chat',      n:'Party chat',            t:'bool', d:true,
       h:'Messaging other players.'},
 
-    {g:'Contest', k:'wearMul',    n:'Wear multiplier',     t:'num',  d:1,
+    {g:'Combat', k:'wearMul',    n:'Wear multiplier',     t:'num',  d:1,
       opts:[0,0.25,0.5,1,2,4,10], fmt:function(v){ return v===0?'OFF (no wear)':(v+'×'); },
-      h:'Scales all contest wear. 0 disables competing entirely.'},
-    {g:'Contest', k:'unitSpeed',    n:'Unit speed',            t:'num',  d:1,
+      h:'Scales all combat wear. 0 disables competing entirely.'},
+    {g:'Combat', k:'unitSpeed',    n:'Unit speed',            t:'num',  d:1,
       opts:[0.5,0.75,1,1.5,2,3], fmt:function(v){ return v+'×'; },
       h:'How fast every unit moves.'},
-    {g:'Contest', k:'queueMax',     n:'Extra queue slots',     t:'num',  d:0,
+    {g:'Combat', k:'queueMax',     n:'Extra queue slots',     t:'num',  d:0,
       opts:[0,1,2,3,5], fmt:function(v){ return v===0?'none':('+'+v); },
-      h:'Added to every security building on top of its level.'},
-    {g:'Contest', k:'barriers',     n:'Barriers buildable',    t:'bool', d:true,
-      h:'Walls, barriers and watch towers.'},
+      h:'Added to every military building on top of its level.'},
+    {g:'Combat', k:'traps',     n:'Traps buildable',    t:'bool', d:true,
+      h:'Walls, traps and watch towers.'},
 
     {g:'Economy', k:'incomeMul',   n:'Building income',       t:'num',  d:1,
       opts:[0.5,1,2,3,5,10], fmt:function(v){ return v+'×'; },
@@ -10272,11 +10272,11 @@ safeBoot();
       opts:[0.5,1,2,4,10], fmt:function(v){ return v+'×'; },
       h:'How fast buildings go up.'},
 
-    {g:'Rivals', k:'aiEnabled',    n:'AI rival cities',       t:'bool', d:true,
-      h:'Computer-run rival cities exist.'},
-    {g:'Rivals', k:'aiSpeed',      n:'AI growth speed',       t:'num',  d:1,
+    {g:'Enemy', k:'aiEnabled',    n:'AI enemy cities',       t:'bool', d:true,
+      h:'Computer-run enemy cities exist.'},
+    {g:'Enemy', k:'aiSpeed',      n:'AI growth speed',       t:'num',  d:1,
       opts:[0.25,0.5,1,2,4], fmt:function(v){ return v+'×'; },
-      h:'How quickly rival cities expand and field units.'}
+      h:'How quickly enemy cities expand and field units.'}
   ];
   G.RULES = RULES;
   function def(k){ for(var i=0;i<RULES.length;i++) if(RULES[i].k===k) return RULES[i]; return null; }
@@ -10316,7 +10316,7 @@ safeBoot();
     try{
       if(!G.is('alliances') && window.__DOM_DIPLO){
         var D=window.__DOM_DIPLO;
-        for(var id in D.stances) D.stances[id]='rival';
+        for(var id in D.stances) D.stances[id]='enemy';
         D.pendingIn={}; D.pendingOut={};
       }
     }catch(e){}
@@ -10456,7 +10456,7 @@ safeBoot();
   }
   function build(){
     css();
-    /* no in-game rules button: rules are chosen before a match, in Settings */
+    /* no in-game rules button: rules are chosen before a battle, in Settings */
 
     if(!el('rules-panel')){
       var p=document.createElement('div'); p.id='rules-panel';
@@ -10467,7 +10467,7 @@ safeBoot();
     }
   }
   function toggle(){
-    if(inGame()){ say('Game rules are chosen before the match starts.'); return; }
+    if(inGame()){ say('Game rules are chosen before the battle starts.'); return; }
     G.open=!G.open;
     el('rules-panel').classList.toggle('show', G.open);
     if(G.open) render();
@@ -10506,7 +10506,7 @@ safeBoot();
     var note=el('rl-note');
     note.className='rl-note'+(host?' host':'');
     note.innerHTML = host
-      ? (connected()? '👑 You are the host — these apply to <b>everyone</b> once the match starts.'
+      ? (connected()? '👑 You are the host — these apply to <b>everyone</b> once the battle starts.'
                     : '👑 Set these before you start. They lock in for the whole game.')
       : '🔒 Only the host sets the rules. This is what you will be playing with.';
     var h='', lastG=null;
@@ -10547,7 +10547,7 @@ safeBoot();
       var mk=el('mkt-btn'); if(mk) mk.style.display = G.is('market')?'':'none';
       var ch=el('chat-btn'); if(ch && !G.is('chat')) ch.style.display='none';
       var dp=el('tDiplo'); if(dp) dp.style.display = G.is('alliances')?'':'none';
-      var df=el('tDef');  if(df) df.style.display = G.is('barriers')?'':'none';
+      var df=el('tDef');  if(df) df.style.display = G.is('traps')?'':'none';
       var tr=el('terra'); if(tr) tr.style.display = G.is('terraform')?'':'none';
     }catch(e){}
   }
@@ -10570,7 +10570,7 @@ safeBoot();
 /* ===================== DOMINION · SETTINGS + KEYBINDS START ===================== */
 /* A pre-game settings screen reached from the title menu. Holds the rebindable
    controls and hosts the game-rules panel, which is only editable before a
-   match starts (once you are playing, rules are locked for everyone). */
+   battle starts (once you are playing, rules are locked for everyone). */
 (function(){
   if (window.__DOM_SETTINGS) return;
   var S = window.__DOM_SETTINGS = { open:false, tab:'controls', listening:null };
@@ -10581,7 +10581,7 @@ safeBoot();
     menu:'Escape', chat:'Enter'
   };
   var LABELS = {
-    selectAll:'Select all squads', groupCursor:'Group to cursor', hold:'Hold position',
+    selectAll:'Select all army', groupCursor:'Group to cursor', hold:'Hold position',
     centre:'Centre on selection', cycleType:'Cycle unit type', selectLocal:'Select local units',
     nextBase:'Jump to next base', demolish:'Demolish tool', rotateL:'Rotate view left',
     rotateR:'Rotate view right', menu:'Pause menu', chat:'Open chat'
@@ -10689,7 +10689,7 @@ safeBoot();
       var rs=el('st-reset');
       if(rs) rs.onclick=function(){ for(var d in DEFAULTS) K[d]=DEFAULTS[d]; persist(); render(); };
     } else {
-      // game rules live here now, and are only editable before a match
+      // game rules live here now, and are only editable before a battle
       var h2='';
       if(playing()) h2+='<div class="st-lock">🔒 Rules are locked once a game is running. '+
         'Leave the game from the pause menu to change them.</div>';
@@ -10721,10 +10721,10 @@ safeBoot();
 /* ===================== DOMINION · LOGISTICS (LINES & CONVOYS) START ===================== */
 /* Ship resources or power from your city to an allied town.
      · SUPPLY LINE  — pylons + cable. Continuous flow, arrives instantly, but a
-       rival unit near any pylon BREAKS the line until a crew repairs it, and
+       enemy unit near any pylon BREAKS the line until a troops repairs it, and
        everything stops while it is down.
      · CONVOY ROUTE — trucks carry a batch along a drawn road. Slower and only
-       pays out on arrival, but if one is holduped you lose that single load
+       pays out on impact, but if one is holduped you lose that single load
        instead of the whole flow.
    Routes are drawn by clicking waypoints, then smoothed and snapped. */
 (function(){
@@ -10775,11 +10775,11 @@ safeBoot();
       out.push({id:ai.key, name:ai.name, colour:ai.color, kind:'ai',
                 x:ai.origin.x, z:ai.origin.z}); } }catch(e){}
     try{ var S=window.__DOM_SMP;
-      if(S && S.rivals) for(var id in S.rivals){
+      if(S && S.enemy) for(var id in S.enemy){
         if(!isAlly(id)) continue;
-        var e2=S.rivals[id]; if(!e2||e2.eliminated) continue;
+        var e2=S.enemy[id]; if(!e2||e2.eliminated) continue;
         var hq=null;
-        for(var b=0;b<e2.buildings.length;b++) if(e2.buildings[b].hq && !e2.buildings[b].gone) hq=e2.buildings[b];
+        for(var b=0;b<e2.buildings.length;b++) if(e2.buildings[b].hq && !e2.buildings[b].destroyed) hq=e2.buildings[b];
         if(hq) out.push({id:id, name:e2.name||'Player', colour:e2.colour, kind:'player', x:hq.x, z:hq.z});
       } }catch(e){}
     return out;
@@ -10954,7 +10954,7 @@ safeBoot();
     }
   }
 
-  /* ---------- rivals ---------- */
+  /* ---------- enemy ---------- */
   function rivalNear(x,z,r){
     var g=R(), r2=r*r;
     var us=g.allUnits||[];
@@ -10963,13 +10963,13 @@ safeBoot();
       var d=(u.x-x)*(u.x-x)+(u.z-z)*(u.z-z); if(d<r2) return u;
     }
     try{ var S=window.__DOM_SMP;
-      if(S&&S.rivals) for(var id in S.rivals){ if(isAlly(id)) continue;
-        var e=S.rivals[id]; if(!e) continue;
+      if(S&&S.enemy) for(var id in S.enemy){ if(isAlly(id)) continue;
+        var e=S.enemy[id]; if(!e) continue;
         for(var uk in e.units){ var eu=e.units[uk]; if(!eu||eu._gone) continue;
           var dd=(eu.x-x)*(eu.x-x)+(eu.z-z)*(eu.z-z); if(dd<r2) return eu; }
-        // rival barricades sitting on the route also stop a convoy
+        // enemy barricades sitting on the route also stop a convoy
         for(var b=0;b<e.buildings.length;b++){ var eb=e.buildings[b];
-          if(!eb||eb.gone) continue;
+          if(!eb||eb.destroyed) continue;
           var db=(eb.x-x)*(eb.x-x)+(eb.z-z)*(eb.z-z);
           if(db<r2*0.4) return eb;
         }
@@ -10989,7 +10989,7 @@ safeBoot();
   }
   function tickLine(lk, dt, S){
     var g=R();
-    // a rival stood next to any pylon cuts the line
+    // a enemy stood next to any pylon cuts the line
     if(!lk.broken){
       for(var p=0;p<(lk.pylons||[]).length;p++){
         if(rivalNear(lk.pylons[p].x, lk.pylons[p].z, 14)){
@@ -11000,7 +11000,7 @@ safeBoot();
         }
       }
     } else {
-      // crews only repair once the area is clear
+      // troops only repair once the area is clear
       var blocked=false;
       for(var q=0;q<(lk.pylons||[]).length;q++)
         if(rivalNear(lk.pylons[q].x, lk.pylons[q].z, 14)){ blocked=true; break; }
@@ -11036,9 +11036,9 @@ safeBoot();
     if((S[lk.res]||0) < batch){ lk.timer=3; return; }
     S[lk.res]-=batch;
     lk.timer=Math.max(6, pathLength(lk.path)/26);
-    sendConvoy(lk, batch);
+    launchConvoy(lk, batch);
   }
-  function sendConvoy(lk, batch){
+  function launchConvoy(lk, batch){
     var g=R();
     var col=0xd9a23c;
     try{ var Rz=g.RESOURCES[lk.res]; if(Rz&&Rz.col) col=parseInt(Rz.col.slice(1),16); }catch(e){}
@@ -11065,7 +11065,7 @@ safeBoot();
         c.link.lost+=c.cargo;
         L.convoys.splice(i,1);
         say('🚨 A convoy carrying <b>'+Math.round(c.cargo)+' '+esc((g.RESOURCES[c.res]||{}).nm||c.res)+
-            '</b> was <b>intercepted</b>. That load is gone.');
+            '</b> was <b>intercepted</b>. That load is destroyed.');
         continue;
       }
       if(c.t>=1){
@@ -11196,8 +11196,8 @@ safeBoot();
          '<button class="lg-btn" id="lg-line">🔌 Draw supply line</button>'+
          '<button class="lg-btn alt" id="lg-conv">🚚 Draw convoy route</button></div>';
       h+='<div class="lg-sub" style="margin:-4px 0 12px;line-height:1.6">'+
-         '<b>Supply line</b> — flows continuously and arrives instantly, but a rival beside a pylon cuts it until repaired.<br>'+
-         '<b>Convoy</b> — slower and pays on arrival, but an holdup costs you only that one load.</div>';
+         '<b>Supply line</b> — flows continuously and arrives instantly, but a enemy beside a pylon cuts it until repaired.<br>'+
+         '<b>Convoy</b> — slower and pays on impact, but an holdup costs you only that one load.</div>';
       if(L.mode==='draw'){
         h+='<div class="lg-row"><span class="lg-ic">✏</span><span class="lg-nm"><b>Drawing…</b>'+
            '<span class="lg-sub">'+(L.draft&&L.draft.from?'click waypoints, then an allied town':'click your town hall to start')+'</span></span>'+
@@ -11524,7 +11524,7 @@ safeBoot();
       // stand other drag tools down so they do not contend for the pointer
       try{ if(typeof setBarrierTool==='function') setBarrierTool(null); }catch(e){}
       try{ if(typeof roadMode!=='undefined' && roadMode && typeof toggleRoadTool==='function') toggleRoadTool(); }catch(e){}
-      try{ if(window.__DOM_SQUAD && window.__DOM_SQUAD.on){ window.__DOM_SQUAD.on=false; } }catch(e){}
+      try{ if(window.__DOM_ARMY && window.__DOM_ARMY.on){ window.__DOM_ARMY.on=false; } }catch(e){}
       T.roadEdit=false;
       say('🏗 <b>'+esc(def(T.build).nm||T.build)+'</b> — click to place. Keep clicking to place more. Esc to stop.');
     }
@@ -11663,7 +11663,7 @@ safeBoot();
         if(typeof payCost==='function') payCost(def('road').cost||{});
         placeCityBuilding('road',gx,gz,1,{animate:false});
         if(typeof refreshRoadNetwork==='function') refreshRoadNetwork();
-        say('Roundabout removed.');
+        say('Roundabout destroyed.');
       }catch(e){}
       return;
     }
@@ -11789,7 +11789,7 @@ safeBoot();
   }
   function renderPanel(){
     var p=el('ct-panel'); if(!p||!T.open) return;
-    var g=R(), cats=(g.CATS||[]).filter(function(c){ return c!=='Core'&&c!=='Perimeter'; });
+    var g=R(), cats=(g.CATS||[]).filter(function(c){ return c!=='Core'&&c!=='Defenses'; });
     var tabs=el('ct-tabs');
     tabs.innerHTML=cats.map(function(c){
       return '<button data-c="'+esc(c)+'"'+(c===T.cat?' class="on"':'')+'>'+esc(c)+'</button>'; }).join('');
@@ -11798,7 +11798,7 @@ safeBoot();
       var d=g.CITY[k];
       if(d.core) continue;
       if(d.cat!==T.cat) continue;
-      if(d.cat==='Perimeter') continue;
+      if(d.cat==='Defenses') continue;
       keys.push(k);
     }
     var list=el('ct-list');
@@ -12762,13 +12762,13 @@ safeBoot();
   }
 
   function renderBuild(body){
-    var C=CITY_(), cats=CATS().filter(function(c){ return c!=='Core'&&c!=='Perimeter'; });
+    var C=CITY_(), cats=CATS().filter(function(c){ return c!=='Core'&&c!=='Defenses'; });
     var t=T();
     var h='<div class="cu-sub">'+cats.map(function(c){
       return '<button data-c="'+esc(c)+'"'+(c===U.cat?' class="on"':'')+'>'+esc(c)+'</button>'; }).join('')+'</div>';
     var keys=[];
     for(var k in C){ var d=C[k];
-      if(d.core||d.cat!==U.cat||d.cat==='Perimeter') continue;
+      if(d.core||d.cat!==U.cat||d.cat==='Defenses') continue;
       keys.push(k); }
     h+='<div class="cu-grid">'+keys.map(function(k){
       var d=C[k], ok=true; try{ ok=canAfford(d.cost||{}); }catch(e){}
@@ -13220,7 +13220,7 @@ safeBoot();
     P.key=key; P.rot=0;
     try{ if(typeof setBarrierTool==='function') setBarrierTool(null); }catch(e){}
     try{ if(typeof roadMode!=='undefined' && roadMode && typeof toggleRoadTool==='function') toggleRoadTool(); }catch(e){}
-    try{ if(window.__DOM_SQUAD) window.__DOM_SQUAD.on=false; }catch(e){}
+    try{ if(window.__DOM_ARMY) window.__DOM_ARMY.on=false; }catch(e){}
     try{ if(window.__DOM_TOOLS) window.__DOM_TOOLS.build=null; }catch(e){}
     showHitboxes(true);
     say('📐 Placing <b>'+(D(key).nm||key)+'</b> — <b>R</b> rotate · it snaps beside the same building · <b>Esc</b> to stop');
@@ -13307,7 +13307,7 @@ safeBoot();
       else{
         seatOnGround(P.ghost,x,z);
         var A=window.__DOM_ALT;
-        if(A && A.level!==0 && !d.barrier) P.ghost.position.y += (A.targetY()-(g.groundHeight(x,z)||0));
+        if(A && A.level!==0 && !d.trap) P.ghost.position.y += (A.targetY()-(g.groundHeight(x,z)||0));
       }
     }catch(e){}
     P.ghost.rotation.y=P.rot;
@@ -13452,7 +13452,7 @@ safeBoot();
       ':root{--ui-bg:rgba(255,255,255,.96);--ui-edge:#e2e7ee;--ui-ink:#26303a;',
       ' --ui-dim:#7c8894;--ui-accent:#2f7fd0;--ui-shadow:0 8px 26px rgba(18,28,40,.12)}',
       '#buildMenu,#inspect,#ponder .pmodal,#mkt-panel,#logi-panel,#rules-panel,#set-panel,',
-      '#cu-panel,#hudMenu,#defPanel,#bpick,#diplo-panel,#squad-panel,#chat-panel{',
+      '#cu-panel,#hudMenu,#defPanel,#bpick,#diplo-panel,#army-panel,#chat-panel{',
       ' border-radius:15px !important;border:1px solid var(--ui-edge) !important;',
       ' box-shadow:var(--ui-shadow) !important;background:var(--ui-bg) !important}',
       /* keep every floating surface out of everyone else\'s way */
@@ -13467,7 +13467,7 @@ safeBoot();
       '#set-panel{z-index:100100 !important}',
       '#chat-panel{right:14px;bottom:150px;z-index:35}',
       '#diplo-panel{right:14px;top:96px;transform:none;z-index:34}',
-      '#squad-panel{right:14px;bottom:150px;z-index:34}',
+      '#army-panel{right:14px;bottom:150px;z-index:34}',
       '#defPanel{left:246px;z-index:34}',
       '#hudMenu{z-index:37}',
       '#hud{z-index:38}',
@@ -13526,18 +13526,18 @@ safeBoot();
   /* ---------- menu contents ---------- */
   function MENUS(){
     return {
-      engage:{ title:'Deploy', items:[
-        {ic:'🚩', nm:'Direct teams', sub:'select & order', act:function(){ try{ window.__DOM_SQUAD.on=!window.__DOM_SQUAD.on; }catch(e){} },
-          isOn:function(){ try{ return !!window.__DOM_SQUAD.on; }catch(e){ return false; } }},
-        {ic:'🚀', nm:'Aim payload', sub:'click a target', act:function(){
+      attack:{ title:'Deploy', items:[
+        {ic:'🚩', nm:'Direct teams', sub:'select & order', act:function(){ try{ window.__DOM_ARMY.on=!window.__DOM_ARMY.on; }catch(e){} },
+          isOn:function(){ try{ return !!window.__DOM_ARMY.on; }catch(e){ return false; } }},
+        {ic:'🚀', nm:'Aim rocket', sub:'click a target', act:function(){
           try{ window.__DOM_FX.aiming ? window.__DOM_FX.cancelAim() : window.__DOM_FX.beginAim(); }catch(e){} },
           isOn:function(){ try{ return !!window.__DOM_FX.aiming; }catch(e){ return false; } }},
-        {ic:'🛡', nm:'Barriers', sub:'draw a row', act:function(){ hit('tDef'); }, isOn:function(){ return on('tDef'); }},
+        {ic:'🛡', nm:'Traps', sub:'draw a row', act:function(){ hit('tDef'); }, isOn:function(){ return on('tDef'); }},
         {ic:'🎯', nm:'Select whole team', sub:'A', act:function(){
-          try{ window.__DOM_SQUAD.on=true; }catch(e){}
+          try{ window.__DOM_ARMY.on=true; }catch(e){}
           try{ document.getElementById('hb-all').onclick(); }catch(e){} }},
         {ic:'✋', nm:'Hold position', sub:'S', act:function(){
-          try{ var A=window.__DOM_SQUAD; for(var i=0;i<A.sel.length;i++) A.sel[i].order=null; say('Holding position'); }catch(e){} }}
+          try{ var A=window.__DOM_ARMY; for(var i=0;i<A.sel.length;i++) A.sel[i].order=null; say('Holding position'); }catch(e){} }}
       ]},
       manage:{ title:'Manage', items:[
         {ic:'💾', nm:'Save city', sub:'F5 quick-save', act:function(){
@@ -13586,7 +13586,7 @@ safeBoot();
         {ic:'🛣', nm:'Draw roads', sub:'freehand', act:function(){ hit('tRoad'); }, isOn:function(){ return on('tRoad'); }},
         {ic:'🖊', nm:'Pen mode', sub:'follow the cursor', act:function(){ toggleFlag('__DOM_PEN'); }, isOn:function(){ return !!window.__DOM_PEN; }},
         {ic:'〰', nm:'Auto-smooth', sub:'hide hand jitter', act:function(){ toggleFlag('__DOM_SMOOTH'); }, isOn:function(){ return window.__DOM_SMOOTH!==false; }},
-        {ic:'🛠', nm:'Track edit', sub:'reshape · extend · remove', act:function(){
+        {ic:'🛠', nm:'Track edit', sub:'reshape · extend · destroy', act:function(){
           try{ window.__DOM_RAIL.editMode(); }catch(e){} },
           isOn:function(){ try{ return !!window.__DOM_RAIL.edit; }catch(e){ return false; } }},
         {ic:'🚆', nm:'Rail', sub:'draw a line', act:function(){
@@ -13628,7 +13628,7 @@ safeBoot();
           '<button class="hudBtn hudMini" id="hu-fit"  title="Reset view">⊡</button>'+
         '</div>'+
         '<div class="hudRow">'+
-          '<button class="hudBtn" id="hu-engage"><b>🚩</b>Deploy</button>'+
+          '<button class="hudBtn" id="hu-attack"><b>🚩</b>Deploy</button>'+
           '<button class="hudBtn" id="hu-manage"><b>🏙</b>Manage</button>'+
           '<button class="hudBtn" id="hu-edit"><b>✏</b>Edit</button>'+
         '</div>';
@@ -13638,7 +13638,7 @@ safeBoot();
       el('hu-rotR').onclick=function(){ hit('tRotR'); };
       el('hu-top').onclick =function(){ hit('tFlat'); };
       el('hu-fit').onclick =function(){ hit('tFit'); };
-      el('hu-engage').onclick=function(){ open('engage'); };
+      el('hu-attack').onclick=function(){ open('attack'); };
       el('hu-manage').onclick=function(){ open('manage'); };
       el('hu-edit').onclick  =function(){ open('edit'); };
       document.addEventListener('pointerdown', function(e){
@@ -13658,7 +13658,7 @@ safeBoot();
 
   function render(){
     var m=el('hudMenu'); if(!m) return;
-    ['engage','manage','edit'].forEach(function(k){
+    ['attack','manage','edit'].forEach(function(k){
       var b=el('hu-'+k); if(b) b.classList.toggle('on', H.menu===k);
     });
     if(!H.menu){ return; }
@@ -13739,13 +13739,13 @@ safeBoot();
   function renderPicker(){
     var p=el('bpick'); if(!p||p.style.display==='none') return;
     var C={}, cats=[];
-    try{ C=CITY; cats=CITY_CATS.filter(function(c){ return c!=='Core'&&c!=='Perimeter'; }); }catch(e){}
+    try{ C=CITY; cats=CITY_CATS.filter(function(c){ return c!=='Core'&&c!=='Defenses'; }); }catch(e){}
     var hh=el('bpH'), ll=el('bpL');
     hh.innerHTML=cats.map(function(c){
       return '<button data-c="'+c+'"'+(c===H.bcat?' class="on"':'')+'>'+c+'</button>'; }).join('');
     var keys=[];
     for(var k in C){ var d=C[k];
-      if(d.core||d.cat!==H.bcat||d.cat==='Perimeter'||k==='road'||k==='roundabout') continue;
+      if(d.core||d.cat!==H.bcat||d.cat==='Defenses'||k==='road'||k==='roundabout') continue;
       keys.push(k); }
     ll.innerHTML=keys.map(function(k){
       var d=C[k], ok=true; try{ ok=canAfford(d.cost||{}); }catch(e){}
@@ -14027,7 +14027,7 @@ safeBoot();
     warn:   {c:'#c9922b', bg:'#fdf5e3', ic:'⚠'},
     bad:    {c:'#d24b3f', bg:'#fdecea', ic:'✖'},
     money:  {c:'#a8791f', bg:'#fbf3df', ic:'₡'},
-    contest: {c:'#8c4bd0', bg:'#f4ecfd', ic:'🚩'}
+    combat: {c:'#8c4bd0', bg:'#f4ecfd', ic:'🚩'}
   };
   S.note=function(kind, text){
     S.notes.unshift({k:(KINDS[kind]?kind:'info'), t:String(text||''), at:Date.now()});
@@ -14037,11 +14037,11 @@ safeBoot();
   /* classify the game's own toasts so they land in the feed with the right colour */
   function classify(msg){
     var m=msg.toLowerCase();
-    if(/remove|lost|fell|intercept|shortage|cut|broke|unemploy|declin|starv/.test(m)) return 'bad';
+    if(/destroy|lost|fell|intercept|shortage|cut|broke|unemploy|declin|starv/.test(m)) return 'bad';
     if(/warn|no |not enough|cannot|blocked|full|steep/.test(m)) return 'warn';
     if(/built|placed|laid|complete|repair|resurf|upgrad|alliance|milestone|victory|sold|bought|received/.test(m)) return 'good';
     if(/credit|₡|tax|market|sold|bought|export/.test(m)) return 'money';
-    if(/engage|convoy|squad|unit|defen|crew/.test(m)) return 'contest';
+    if(/attack|convoy|army|unit|defen|troops/.test(m)) return 'combat';
     return 'info';
   }
   S.hook=function(){
@@ -14098,7 +14098,7 @@ safeBoot();
         g.fillRect(x-s/2, y-s/2, s, s);
       }
     }catch(e){}
-    // rivals
+    // enemy
     try{
       for(var a=0;a<aiFactions.length;a++){
         var ai=aiFactions[a];
@@ -14152,7 +14152,7 @@ safeBoot();
     if(el('side-css')) return;
     var s=document.createElement('style'); s.id='side-css';
     s.textContent=[
-      /* the old left stack is gone */
+      /* the old left stack is destroyed */
       '#leftStack{display:none !important}',
       '#side{position:fixed;left:14px;top:56px;bottom:14px;width:214px;z-index:32;display:flex;',
       ' flex-direction:column;gap:9px;font-family:Inter,system-ui;pointer-events:none}',
@@ -14270,7 +14270,7 @@ safeBoot();
   }
   /* each mode owns a panel; leaving the mode puts that panel away too */
   function closePanels(except){
-    var map={ place:'bpick', barrier:'defPanel', direct:'squad-panel' };
+    var map={ place:'bpick', trap:'defPanel', direct:'army-panel' };
     for(var k in map){
       if(k===except) continue;
       var p=document.getElementById(map[k]);
@@ -14295,10 +14295,10 @@ safeBoot();
       for(var i=0;i<tb.length;i++) tb[i].classList.remove('on');
     } }catch(e){}
     try{ if(except!=='road'  && typeof roadMode!=='undefined' && roadMode) toggleRoadTool(); }catch(e){}
-    try{ if(except!=='barrier' && typeof barrierMode!=='undefined' && barrierMode) setBarrierTool(null); }catch(e){}
+    try{ if(except!=='trap' && typeof barrierMode!=='undefined' && barrierMode) setBarrierTool(null); }catch(e){}
     try{ if(except!=='place' && window.__DOM_PLACE && window.__DOM_PLACE.key) window.__DOM_PLACE.stop(); }catch(e){}
     try{ if(except!=='roundabout' && window.__DOM_TOOLS && window.__DOM_TOOLS.roadEdit) window.__DOM_TOOLS.toggleRoadEdit(); }catch(e){}
-    try{ if(except!=='direct' && window.__DOM_SQUAD && window.__DOM_SQUAD.on) window.__DOM_SQUAD.on=false; }catch(e){}
+    try{ if(except!=='direct' && window.__DOM_ARMY && window.__DOM_ARMY.on) window.__DOM_ARMY.on=false; }catch(e){}
     try{ if(except!=='demolish' && typeof toolMode!=='undefined' && toolMode==='delete'){ toolMode='move'; updateTools(); } }catch(e){}
     M._quiet=false;
   }
@@ -14339,7 +14339,7 @@ safeBoot();
       if(typeof setBarrierTool==='function' && !setBarrierTool.__m){
         var od=setBarrierTool;
         window.setBarrierTool=function(k){ od(k);
-          try{ if(k) M.set('barrier','Barrier','drag a straight run'); else if(M.current==='barrier') M.clear(); }catch(e){} };
+          try{ if(k) M.set('trap','Trap','drag a straight run'); else if(M.current==='trap') M.clear(); }catch(e){} };
         window.setBarrierTool.__m=1;
       }
       if(window.__DOM_PLACE && !window.__DOM_PLACE.__m){
@@ -14377,17 +14377,17 @@ safeBoot();
     try{ if(window.__DOM_PLACE && window.__DOM_PLACE.key)
       return ['place','Build','R rotate · Shift snap']; }catch(e){}
     try{ if(typeof barrierMode!=='undefined' && barrierMode)
-      return ['barrier','Barrier','drag a straight run']; }catch(e){}
+      return ['trap','Trap','drag a straight run']; }catch(e){}
     try{ if(typeof terraTool!=='undefined' && terraTool)
       return ['terra', ({flatten:'Flatten',dig:'Dig',fill:'Fill',river:'Carve river'})[terraTool]||'Terraform','drag an area']; }catch(e){}
     try{ if(typeof roadMode!=='undefined' && roadMode)
       return ['road','Road','drag to draw · Shift for straight']; }catch(e){}
     try{ if(window.__DOM_TOOLS && window.__DOM_TOOLS.roadEdit)
       return ['roundabout','Junction','click a junction or worn road']; }catch(e){}
-    try{ if(window.__DOM_SQUAD && window.__DOM_SQUAD.on)
+    try{ if(window.__DOM_ARMY && window.__DOM_ARMY.on)
       return ['direct','Direct teams','drag to select · click to order']; }catch(e){}
     try{ if(typeof toolMode!=='undefined' && toolMode==='delete')
-      return ['demolish','Demolish','click a building to remove it']; }catch(e){}
+      return ['demolish','Demolish','click a building to destroy it']; }catch(e){}
     return null;
   }
   function poll(){
@@ -14421,7 +14421,7 @@ safeBoot();
 /* ===================== DOMINION · TUTORIAL + HELP START =====================
    An optional guided start for offline games. It highlights the exact control
    to press and waits until you have done each step, walking you through power,
-   bricks, concrete, steel and your first crew. Also adds a hover tooltip that
+   bricks, concrete, steel and your first troops. Also adds a hover tooltip that
    explains why an idle building is idle.
    ========================================================================== */
 (function(){
@@ -14466,15 +14466,15 @@ safeBoot();
       d:'Steel needs iron ore and coal. Place an <b>Iron Mine</b>, a <b>Coal Mine</b>, then a <b>Steel Mill</b> (Industry).',
       hl:['[data-c="Extraction"]','[data-c="Industry"]','[data-b="ironmine"]','[data-b="coalmine"]','[data-b="steelmill"]'],
       ok:function(){ return has('steelmill'); } },
-    { t:'Train your first crew',
-      d:'In <b>Security</b>, place a <b>Training Centre</b>, then click it and queue a <b>Patrol Team</b>.',
-      hl:['[data-c="Security"]','[data-b="trainingcentre"]'],
-      ok:function(){ return has('trainingcentre'); } },
+    { t:'Train your first troops',
+      d:'In <b>Military</b>, place a <b>Barracks</b>, then click it and queue a <b>Patrol Team</b>.',
+      hl:['[data-c="Military"]','[data-b="barracks"]'],
+      ok:function(){ return has('barracks'); } },
     { t:'Queue a Patrol Team',
-      d:'Click your Training Centre. Its panel has a production list — add a <b>Patrol Team</b> to the queue.',
+      d:'Click your Barracks. Its panel has a production list — add a <b>Patrol Team</b> to the queue.',
       hl:['#iProd .prodItem','#iProd'],
       ok:function(){ try{ for(var i=0;i<buildings.length;i++){ var b=buildings[i];
-          if(b.key==='trainingcentre' && b.queue && b.queue.length) return true; } }catch(e){}
+          if(b.key==='barracks' && b.queue && b.queue.length) return true; } }catch(e){}
         try{ for(var j=0;j<allUnits.length;j++) if(allUnits[j].faction==='player') return true; }catch(e){}
         return false; } }
   ];
@@ -14554,7 +14554,7 @@ safeBoot();
     if(T.step>=STEPS.length){
       highlight(null);
       el('tTitle').textContent='All done';
-      el('tDesc').innerHTML='You have power, materials and your first crew. From here: lay roads, add housing and services, and keep an eye on the notifications on the left.';
+      el('tDesc').innerHTML='You have power, materials and your first troops. From here: lay roads, add housing and services, and keep an eye on the notifications on the left.';
       el('tFill').style.width='100%';
       el('tStep').textContent='complete';
       T.done=true;
@@ -14996,14 +14996,14 @@ safeBoot();
       if(f.sign){ f.sign.position.y=13+Math.sin(X.t*2.4)*0.5;
         f.sign.material.opacity=0.75+Math.abs(Math.sin(X.t*3))*0.25; }
       f.smoke.scale.setScalar(1+Math.sin(X.t*0.5)*0.15);
-      // fire crews put it out; without cover it burns the building down
+      // fire troops put it out; without cover it burns the building down
       var p=bxz(f.b);
       var cover=fireCoverAt(p.x,p.z);
       f.hp -= dt*(cover>0 ? 0.16*cover*3 : -0.05);
       if(cover>0 && f.hp<=0){
         try{ g.scene.remove(f.g); }catch(e){}
         X.fires.splice(i,1);
-        note('good','🚒 Fire crews put out the fire at a '+(D(f.b.key).nm||'building')+'.');
+        note('good','🚒 Fire troops put out the fire at a '+(D(f.b.key).nm||'building')+'.');
         continue;
       }
       if(f.hp>1.9){
@@ -15021,7 +15021,7 @@ safeBoot();
     X.next=260+Math.random()*380;
     try{
       var cands=buildings.filter(function(b){ var d=D(b.key);
-        return !d.core && !d.road && !d.barrier && (d.jobs||d.pop); });
+        return !d.core && !d.road && !d.trap && (d.jobs||d.pop); });
       if(!cands.length || X.fires.length>2) return;
       var b=cands[Math.floor(Math.random()*cands.length)];
       var p=bxz(b);
@@ -15065,7 +15065,7 @@ safeBoot();
     {id:'elec',    t:'Silicon age',       d:'Produce electronics.',         ok:function(s){ return s.stock.electronics>20; }},
     {id:'serve',   t:'Well served',       d:'Reach 80% service coverage.',  ok:function(s){ return s.svc>0.8; }},
     {id:'rich',    t:'Treasury',          d:'Hold 100,000 credits.',        ok:function(s){ return s.stock.credits>1e5; }},
-    {id:'squad',    t:'Standing crew',     d:'Field five teams.',            ok:function(s){ return s.units>=5; }},
+    {id:'army',    t:'Standing troops',     d:'Field five teams.',            ok:function(s){ return s.units>=5; }},
     {id:'ally',    t:'Diplomat',          d:'Form an alliance.',            ok:function(s){ return s.allies>0; }},
     {id:'tour',    t:'Destination',       d:'Draw serious tourism.',        ok:function(s){ return X.tour>40; }}
   ];
@@ -15294,7 +15294,7 @@ safeBoot();
     if(R.edit){
       if(!R.lines.length){ R.edit=false; say('No rail lines to edit yet.'); return; }
       say('🛠 <b>Track edit</b> — click a line to select it, drag the markers to reshape, '+
-          '<b>E</b> to extend from an end, <b>Delete</b> to remove it. <b>Esc</b> exits.');
+          '<b>E</b> to extend from an end, <b>Delete</b> to destroy it. <b>Esc</b> exits.');
     } else { R.select(null); }
   };
   function nodeMat(colour){
@@ -15350,8 +15350,8 @@ safeBoot();
     try{ g.scene.remove(L.mesh); g.scene.remove(L.train); }catch(e){}
     R.lines.splice(i,1);
     R.select(null);
-    note('info','🛠 Rail line removed.');
-    say('Line removed');
+    note('info','🛠 Rail line destroyed.');
+    say('Line destroyed');
   };
   /* extend a selected line from whichever end you drag off */
   R.beginExtend=function(){
@@ -15837,13 +15837,13 @@ safeBoot();
 })();
 /* ===================== DOMINION · GOVERNANCE END ===================== */
 
-/* ===================== DOMINION · PROJECTILES, PAYLOADS & ARRIVALS START =====
-   Visible shots between units, a payload pad you aim yourself, and new residents
+/* ===================== DOMINION · PROJECTILES, ROCKETS & ARRIVALS START =====
+   Visible shots between units, a rocket pad you aim yourself, and new residents
    who travel in from the edge of the map instead of appearing out of thin air.
    =========================================================================== */
 (function(){
   if (window.__DOM_FX) return;
-  var F = window.__DOM_FX = { shots:[], payloads:[], arrivals:[], aiming:false, t:0 };
+  var F = window.__DOM_FX = { shots:[], rockets:[], arrivals:[], aiming:false, t:0 };
 
   var _R={};
   function G(){
@@ -15868,7 +15868,7 @@ safeBoot();
     F.sparkGeo=new g.THREE.SphereGeometry(0.28,7,6);
     F.sparkMat=new g.THREE.MeshBasicMaterial({color:0xffb347,transparent:true,opacity:0.9});
   }
-  /* Called by the fighting code whenever one unit engages another. */
+  /* Called by the fighting code whenever one unit attacks another. */
   F.shot=function(ax,ay,az,bx,by,bz,colour){
     if(!ingame()) return;
     var g=G(); if(!g.scene||!g.THREE) return;
@@ -15918,26 +15918,26 @@ safeBoot();
     }
   }
 
-  /* ---------------- payload pad ---------------- */
+  /* ---------------- rocket pad ---------------- */
   function pads(){
     var out=[];
-    try{ for(var i=0;i<buildings.length;i++) if(buildings[i].key==='deliveryyard') out.push(buildings[i]); }catch(e){}
+    try{ for(var i=0;i<buildings.length;i++) if(buildings[i].key==='rocketpad') out.push(buildings[i]); }catch(e){}
     return out;
   }
   F.beginAim=function(){
     var p=pads();
-    if(!p.length){ say('Build a <b>🚀 Delivery Yard</b> first.'); return; }
-    var ready=p.filter(function(b){ return (b.payloadReady||0)>=1; });
-    if(!ready.length){ say('No payload is ready yet — the pad is still preparing one.'); return; }
+    if(!p.length){ say('Build a <b>🚀 Rocket Pad</b> first.'); return; }
+    var ready=p.filter(function(b){ return (b.rocketReady||0)>=1; });
+    if(!ready.length){ say('No rocket is ready yet — the pad is still preparing one.'); return; }
     F.aiming=true;
     say('🚀 <b>Aiming</b> — click a target on the map. <b>Esc</b> cancels.');
   };
   F.cancelAim=function(){ F.aiming=false; };
-  function sendPayload(tx,tz){
+  function launch(tx,tz){
     var g=G();
-    var p=pads().filter(function(b){ return (b.payloadReady||0)>=1; })[0];
-    if(!p){ say('No payload ready.'); F.aiming=false; return; }
-    p.payloadReady=0;
+    var p=pads().filter(function(b){ return (b.rocketReady||0)>=1; })[0];
+    if(!p){ say('No rocket ready.'); F.aiming=false; return; }
+    p.rocketReady=0;
     var sx=(p.cx!==undefined?p.cx:p.gx*g.TILE), sz=(p.cz!==undefined?p.cz:p.gz*g.TILE);
     var sy=(g.groundHeight(sx,sz)||0)+3;
     var body=new g.THREE.Group();
@@ -15959,21 +15959,21 @@ safeBoot();
     flame.position.y=-2.2; flame.rotation.x=Math.PI; body.add(flame);
     body.position.set(sx,sy,sz);
     g.scene.add(body);
-    F.payloads.push({m:body, flame:flame, sx:sx, sy:sy, sz:sz,
+    F.rockets.push({m:body, flame:flame, sx:sx, sy:sy, sz:sz,
                     tx:tx, tz:tz, ty:(g.groundHeight(tx,tz)||0), t:0, arc:34});
     F.aiming=false;
-    note('info','🚀 Payload away.');
+    note('info','🚀 Rocket away.');
     say('🚀 Away');
   }
   function tickPayloads(dt){
     var g=G();
-    for(var i=F.payloads.length-1;i>=0;i--){
-      var r=F.payloads[i];
+    for(var i=F.rockets.length-1;i>=0;i--){
+      var r=F.rockets[i];
       r.t+=dt*0.42;
       if(r.t>=1){
         try{ g.scene.remove(r.m); }catch(e){}
-        F.payloads.splice(i,1);
-        landAt(r.tx,r.ty,r.tz);
+        F.rockets.splice(i,1);
+        impact(r.tx,r.ty,r.tz);
         continue;
       }
       var x=r.sx+(r.tx-r.sx)*r.t, z=r.sz+(r.tz-r.sz)*r.t;
@@ -15986,9 +15986,9 @@ safeBoot();
       r.flame.scale.setScalar(0.8+Math.random()*0.5);
     }
   }
-  function landAt(x,y,z){
+  function impact(x,y,z){
     var g=G();
-    // a bright flash and a ripple ring
+    // a bright flash and a shockwave ring
     var fl=new g.THREE.Mesh(new g.THREE.SphereGeometry(2.4,12,10),
       new g.THREE.MeshBasicMaterial({color:0xffd08a,transparent:true,opacity:0.95}));
     fl.position.set(x,y+2,z); g.scene.add(fl);
@@ -16008,13 +16008,13 @@ safeBoot();
     }catch(e){}
     try{
       var S=window.__DOM_SMP;
-      if(S&&S.rivals) for(var id in S.rivals){
-        var e2=S.rivals[id]; if(!e2) continue;
+      if(S&&S.enemy) for(var id in S.enemy){
+        var e2=S.enemy[id]; if(!e2) continue;
         for(var k in e2.units){ var eu=e2.units[k]; if(!eu) continue;
           if(Math.hypot(eu.x-x,eu.z-z)<R) eu.hp=(eu.hp||100)-90; }
       }
     }catch(e){}
-    note('contest','💥 Payload arrival.');
+    note('combat','💥 Rocket impact.');
   }
   function tickBursts(dt){
     if(!F.bursts) return;
@@ -16028,13 +16028,13 @@ safeBoot();
       if(b.t>=1){ try{ g.scene.remove(b.fl); g.scene.remove(b.ring); }catch(e){} F.bursts.splice(i,1); }
     }
   }
-  /* pads slowly prepare the next payload */
+  /* pads slowly prepare the next rocket */
   function tickPads(dt){
     var p=pads();
     for(var i=0;i<p.length;i++){
       var b=p[i];
       if(b.unpowered) continue;
-      b.payloadReady=Math.min(1,(b.payloadReady||0)+dt/70);
+      b.rocketReady=Math.min(1,(b.rocketReady||0)+dt/70);
     }
   }
 
@@ -16097,7 +16097,7 @@ safeBoot();
       if(!F.aiming||e.button===2) return;
       e.stopPropagation();
       var gp=null; try{ gp=g.pointerToGrid(e); }catch(err){}
-      if(gp&&gp.world) sendPayload(gp.world.x, gp.world.z);
+      if(gp&&gp.world) launch(gp.world.x, gp.world.z);
     }, true);
     window.addEventListener('keydown', function(e){
       if(e.key==='Escape' && F.aiming){ F.cancelAim(); say('Aim cancelled'); }
@@ -16115,7 +16115,7 @@ safeBoot();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', loop); else loop();
 })();
-/* ===================== DOMINION · PROJECTILES, PAYLOADS & ARRIVALS END ====== */
+/* ===================== DOMINION · PROJECTILES, ROCKETS & ARRIVALS END ====== */
 
 /* ===================== DOMINION · SAVE & LOAD START =====================
    Write the whole city out to a .dominion file and load it back in another
@@ -16307,8 +16307,8 @@ safeBoot();
 
 /* ===================== DOMINION · UNIT ANIMATION START =====================
    Every unit gets moving parts: legs that stride, wheels and tracks that roll,
-   rotors that spin up, and mounts that turn to face whatever that unit is
-   engaging. A vehicle with two mounts aims each one independently.
+   rotors that spin up, and guns that turn to face whatever that unit is
+   attacking. A vehicle with two guns aims each one independently.
    ========================================================================== */
 (function(){
   if (window.__DOM_UNITFX) return;
@@ -16330,19 +16330,19 @@ safeBoot();
     var root=nodeOf(u);
     if(!u || !root || u._fx) return;
     var g=G();
-    var fx={ mounts:[], legs:[], wheels:[], rotors:[], body:null, recoil:0 };
+    var fx={ guns:[], legs:[], wheels:[], rotors:[], body:null, recoil:0 };
     var i=0;
     root.traverse(function(o){
       if(!o.isMesh && !o.isGroup) return;
       var d=o.userData||{};
-      if(d.turret || d.mount) fx.mounts.push(o);
+      if(d.turret || d.guns) fx.guns.push(o);
       else if(d.leg) fx.legs.push(o);
       else if(d.wheel) fx.wheels.push(o);
       else if(d.rotor || d.spin) fx.rotors.push(o);
     });
     // fall back on geometry when the model has no tags: thin uprights read as
     // legs, flat cylinders as wheels, long flat boxes as rotors
-    if(!fx.mounts.length && !fx.legs.length && !fx.wheels.length){
+    if(!fx.guns.length && !fx.legs.length && !fx.wheels.length){
       root.traverse(function(o){
         if(!o.isMesh || !o.geometry || !o.geometry.parameters) return;
         var p=o.geometry.parameters, t=o.geometry.type;
@@ -16353,13 +16353,13 @@ safeBoot();
         else if(t==='BoxGeometry' && p.width>2.4 && p.height<0.14)
           fx.rotors.push(o);
         else if(t==='CylinderGeometry' && p.height>0.7 && p.radiusTop<0.16 && o.position.y>0.6)
-          fx.mounts.push(o);
+          fx.guns.push(o);
       });
     }
-    // remember each mount's rest position so aiming is relative to the hull
-    for(var m=0;m<fx.mounts.length;m++){
-      fx.mounts[m].userData._rest=fx.mounts[m].rotation.y;
-      fx.mounts[m].userData._off=(m/Math.max(1,fx.mounts.length))*0.9;
+    // remember each guns's rest position so aiming is relative to the hull
+    for(var m=0;m<fx.guns.length;m++){
+      fx.guns[m].userData._rest=fx.guns[m].rotation.y;
+      fx.guns[m].userData._off=(m/Math.max(1,fx.guns.length))*0.9;
     }
     u._fx=fx; U.tagged++;
   }
@@ -16367,7 +16367,7 @@ safeBoot();
   /* What is this unit currently pointed at? */
   function targetOf(u){
     if(u.target && u.target.hp>0) return u.target;
-    if(u.order && (u.order.type==='engage') && u.order.ref) return u.order.ref;
+    if(u.order && (u.order.type==='attack') && u.order.ref) return u.order.ref;
     // otherwise look for the nearest thing on the other side
     var g=G(), us=g.allUnits||[], best=null, bd=44*44;
     for(var i=0;i<us.length;i++){
@@ -16379,8 +16379,8 @@ safeBoot();
     if(best) return best;
     try{
       var S=window.__DOM_SMP;
-      if(S&&S.rivals) for(var id in S.rivals){
-        var e=S.rivals[id]; if(!e) continue;
+      if(S&&S.enemy) for(var id in S.enemy){
+        var e=S.enemy[id]; if(!e) continue;
         for(var k in e.units){ var eu=e.units[k]; if(!eu||eu._gone) continue;
           var dd=(eu.x-u.x)*(eu.x-u.x)+(eu.z-u.z)*(eu.z-u.z);
           if(dd<bd){ bd=dd; best=eu; } }
@@ -16405,21 +16405,21 @@ safeBoot();
     // rotors spin up while airborne
     for(var r=0;r<fx.rotors.length;r++) fx.rotors[r].rotation.y += dt*(moving?26:14);
 
-    // each mount tracks its own target
+    // each guns tracks its own target
     var tgt=targetOf(u);
-    for(var m=0;m<fx.mounts.length;m++){
-      var mt=fx.mounts[m];
+    for(var m=0;m<fx.guns.length;m++){
+      var mt=fx.guns[m];
       var want=mt.userData._rest||0;
       if(tgt){
-        // spread the mounts slightly so a twin-mount vehicle does not look
-        // like one mount drawn twice
+        // spread the guns slightly so a twin-guns vehicle does not look
+        // like one guns drawn twice
         var ang=Math.atan2(tgt.x-u.x, tgt.z-u.z) - (root.rotation.y||0);
         want = ang + (mt.userData._off||0)*0.12 - 0.06;
       }
       var cur=mt.rotation.y;
       var diff=((want-cur+Math.PI*3)%(Math.PI*2))-Math.PI;
       mt.rotation.y = cur + diff*Math.min(1, dt*4.5);      // swings round, not snaps
-      // a small kick when the unit is engaging
+      // a small kick when the unit is attacking
       if(u._firing>0){
         mt.position.z = (mt.userData._z===undefined? (mt.userData._z=mt.position.z) : mt.userData._z) - u._firing*0.22;
       } else if(mt.userData._z!==undefined){
@@ -16446,10 +16446,10 @@ safeBoot();
         if(!u._fx) tag(u);
         animate(u, dt);
       }
-      // rival units in a party get the same treatment
+      // enemy units in a party get the same treatment
       var S=window.__DOM_SMP;
-      if(S&&S.rivals) for(var id in S.rivals){
-        var e=S.rivals[id]; if(!e) continue;
+      if(S&&S.enemy) for(var id in S.enemy){
+        var e=S.enemy[id]; if(!e) continue;
         for(var k in e.units){ var eu=e.units[k];
           if(!eu||!nodeOf(eu)) continue;
           if(!eu._fx) tag(eu);
@@ -16464,7 +16464,7 @@ safeBoot();
 /* ===================== DOMINION · UNIT MODELS START =====================
    Purpose-built model for every unit type, with its moving parts tagged so
    the animator can stride the legs, roll the wheels, spin the rotors and aim
-   each mount at its own target.
+   each guns at its own target.
    ======================================================================= */
 (function(){
   if (window.__DOM_UMODELS) return;
@@ -16487,7 +16487,7 @@ safeBoot();
   function sph(r,m,x,y,z){ var s=new (T().Mesh)(new (T().SphereGeometry)(r,10,8),m);
     s.position.set(x||0,y||0,z||0); s.castShadow=true; return s; }
 
-  /* ---- a walking figure: legs and arms tagged, plus a shoulder mount ---- */
+  /* ---- a walking figure: legs and arms tagged, plus a shoulder guns ---- */
   function figure(c, scale){
     var g=new (T().Group)(), s=scale||1;
     var skin=M(0x8a6a4a,{rough:0.9}), uni=M(c.base,{rough:0.85}), gear=M(c.dark,{rough:0.75,metal:0.25});
@@ -16504,11 +16504,11 @@ safeBoot();
       arm.userData.leg=true; g.add(arm);                            // arms swing too
     }
     // a shouldered tool that turns toward whatever the unit faces
-    var mount=new (T().Group)();
-    mount.add(box(0.07*s,0.07*s,0.72*s, M(0x33383d,{metal:0.55,rough:0.4}), 0,0,0.3*s));
-    mount.add(box(0.1*s,0.16*s,0.2*s, gear, 0,-0.04*s,0));
-    mount.position.set(0.24*s,1.06*s,0);
-    mount.userData.mount=true; g.add(mount);
+    var guns=new (T().Group)();
+    guns.add(box(0.07*s,0.07*s,0.72*s, M(0x33383d,{metal:0.55,rough:0.4}), 0,0,0.3*s));
+    guns.add(box(0.1*s,0.16*s,0.2*s, gear, 0,-0.04*s,0));
+    guns.position.set(0.24*s,1.06*s,0);
+    guns.userData.guns=true; g.add(guns);
     return g;
   }
 
@@ -16535,30 +16535,30 @@ safeBoot();
       var an=a/3*Math.PI*2;
       g.add(cyl(0.04,0.05,0.75,5, metal, Math.cos(an)*0.24,0.36,0.45+Math.sin(an)*0.24));
     }
-    var mount=new (T().Group)();
-    mount.add(cyl(0.09,0.09,1.5,8, metal, 0,0,0.6));
-    mount.add(box(0.22,0.2,0.4, M(c.dark,{metal:0.4}), 0,0,0));
-    mount.add(cyl(0.14,0.14,0.2,8, metal, 0,0.14,0.1));
-    mount.position.set(0,0.78,0.45);
-    mount.userData.mount=true; g.add(mount);
+    var guns=new (T().Group)();
+    guns.add(cyl(0.09,0.09,1.5,8, metal, 0,0,0.6));
+    guns.add(box(0.22,0.2,0.4, M(c.dark,{metal:0.4}), 0,0,0));
+    guns.add(cyl(0.14,0.14,0.2,8, metal, 0,0.14,0.1));
+    guns.position.set(0,0.78,0.45);
+    guns.userData.guns=true; g.add(guns);
     g.userData.footed=true;
   };
   window.mkAPC=function(g,c){
     var hull=M(c.base,{rough:0.7,metal:0.3}), dark=M(c.dark,{rough:0.6,metal:0.4});
     var tyre=M(0x1e1f22,{rough:0.95});
     g.add(box(1.5,0.62,3.0, hull, 0,0.78,0));
-    g.add(box(1.34,0.4,1.1, hull, 0,1.24,-0.5));                  // raised crew bay
+    g.add(box(1.34,0.4,1.1, hull, 0,1.24,-0.5));                  // raised troops bay
     g.add(box(1.2,0.3,0.1, M(0x1e2a33,{metal:0.8,rough:0.15}), 0,1.2,1.44));
     for(var i=0;i<3;i++) for(var s=-1;s<=1;s+=2){
       var w=cyl(0.34,0.34,0.24,12, tyre, s*0.8,0.36,1.0-i*1.0);
       w.rotation.z=Math.PI/2; w.userData.wheel=true; g.add(w);
     }
-    // small remote mount on the roof
-    var mount=new (T().Group)();
-    mount.add(box(0.34,0.26,0.34, dark, 0,0,0));
-    mount.add(cyl(0.06,0.06,0.9,7, M(0x33383d,{metal:0.6}), 0,0.04,0.5));
-    mount.position.set(0,1.5,-0.4);
-    mount.userData.mount=true; g.add(mount);
+    // small remote guns on the roof
+    var guns=new (T().Group)();
+    guns.add(box(0.34,0.26,0.34, dark, 0,0,0));
+    guns.add(cyl(0.06,0.06,0.9,7, M(0x33383d,{metal:0.6}), 0,0.04,0.5));
+    guns.position.set(0,1.5,-0.4);
+    guns.userData.guns=true; g.add(guns);
   };
   window.mkHauler=function(g,c){
     var hull=M(c.base,{rough:0.65,metal:0.35}), dark=M(c.dark,{rough:0.55,metal:0.45});
@@ -16572,14 +16572,14 @@ safeBoot();
         r.rotation.z=Math.PI/2; r.userData.wheel=true; g.add(r);
       }
     }
-    // main mount: a proper turret with a long barrel
-    var mount=new (T().Group)();
-    mount.add(cyl(0.62,0.7,0.44,10, hull, 0,0,0));
-    mount.add(box(0.9,0.34,1.0, hull, 0,0.1,-0.2));
-    mount.add(cyl(0.1,0.11,2.4,10, M(0x33383d,{metal:0.6,rough:0.35}), 0,0.06,1.3));
-    mount.add(cyl(0.16,0.16,0.3,10, M(0x2a2d31,{metal:0.6}), 0,0.06,2.4));
-    mount.position.set(0,1.32,-0.1);
-    mount.userData.mount=true; g.add(mount);
+    // main guns: a proper turret with a long barrel
+    var guns=new (T().Group)();
+    guns.add(cyl(0.62,0.7,0.44,10, hull, 0,0,0));
+    guns.add(box(0.9,0.34,1.0, hull, 0,0.1,-0.2));
+    guns.add(cyl(0.1,0.11,2.4,10, M(0x33383d,{metal:0.6,rough:0.35}), 0,0.06,1.3));
+    guns.add(cyl(0.16,0.16,0.3,10, M(0x2a2d31,{metal:0.6}), 0,0.06,2.4));
+    guns.position.set(0,1.32,-0.1);
+    guns.userData.guns=true; g.add(guns);
   };
   window.mkArty=function(g,c){
     var hull=M(c.base,{rough:0.7,metal:0.3}), dark=M(c.dark,{rough:0.6,metal:0.4});
@@ -16594,13 +16594,13 @@ safeBoot();
       g.add(box(0.18,0.16,0.9, dark, s*0.9,0.4,-1.7));
     }
     // a very long elevating tube
-    var mount=new (T().Group)();
-    mount.add(box(0.9,0.4,0.9, dark, 0,0,0));
+    var guns=new (T().Group)();
+    guns.add(box(0.9,0.4,0.9, dark, 0,0,0));
     var tube=cyl(0.11,0.13,3.8,10, M(0x33383d,{metal:0.6,rough:0.35}), 0,0.24,1.9);
-    tube.rotation.x=-0.18; mount.add(tube);
-    mount.add(box(0.6,0.3,0.5, dark, 0,0.1,-0.5));
-    mount.position.set(0,1.06,-0.2);
-    mount.userData.mount=true; g.add(mount);
+    tube.rotation.x=-0.18; guns.add(tube);
+    guns.add(box(0.6,0.3,0.5, dark, 0,0.1,-0.5));
+    guns.position.set(0,1.06,-0.2);
+    guns.userData.guns=true; g.add(guns);
   };
   window.mkHeli=function(g,c){
     var body=M(c.base,{rough:0.6,metal:0.35}), dark=M(c.dark,{metal:0.5});
@@ -16627,12 +16627,12 @@ safeBoot();
       tb.rotation.y=t2*Math.PI/1.5; tail.add(tb); }
     tail.position.set(0.16,0.35,-2.75); tail.rotation.z=Math.PI/2;
     tail.userData.rotor=true; fly.add(tail);
-    // a chin mount that tracks independently
-    var mount=new (T().Group)();
-    mount.add(box(0.3,0.24,0.4, dark, 0,0,0));
-    mount.add(cyl(0.05,0.05,0.8,6, M(0x33383d,{metal:0.6}), 0,0,0.45));
-    mount.position.set(0,-0.34,1.0);
-    mount.userData.mount=true; fly.add(mount);
+    // a chin guns that tracks independently
+    var guns=new (T().Group)();
+    guns.add(box(0.3,0.24,0.4, dark, 0,0,0));
+    guns.add(cyl(0.05,0.05,0.8,6, M(0x33383d,{metal:0.6}), 0,0,0.45));
+    guns.position.set(0,-0.34,1.0);
+    guns.userData.guns=true; fly.add(guns);
   };
   window.mkJet=function(g,c){
     var body=M(c.base,{rough:0.4,metal:0.55}), dark=M(c.dark,{metal:0.6});
@@ -16650,10 +16650,10 @@ safeBoot();
     fly.add(box(0.09,0.8,0.7, dark, 0,0.45,-1.9));
     // exhaust glow
     fly.add(cyl(0.2,0.24,0.4,10, M(0xff9a4a,{emissive:0xff7a2a,ei:0.9}), 0,0,-2.3));
-    var mount=new (T().Group)();
-    mount.add(box(0.24,0.16,0.7, dark, 0,0,0));
-    mount.position.set(0,-0.28,0.6);
-    mount.userData.mount=true; fly.add(mount);
+    var guns=new (T().Group)();
+    guns.add(box(0.24,0.16,0.7, dark, 0,0,0));
+    guns.position.set(0,-0.28,0.6);
+    guns.userData.guns=true; fly.add(guns);
   };
   window.mkDrone=function(g,c){
     var body=M(c.base,{rough:0.5,metal:0.4}), dark=M(c.dark,{metal:0.5});
@@ -16669,11 +16669,11 @@ safeBoot();
       r.userData.rotor=true; fly.add(r);
     }
     // a gimbal camera that always looks at what it is watching
-    var mount=new (T().Group)();
-    mount.add(sph(0.14, dark, 0,0,0));
-    mount.add(cyl(0.06,0.06,0.2,8, M(0x1e2a33,{metal:0.9,rough:0.1}), 0,0,0.14));
-    mount.position.set(0,-0.2,0.1);
-    mount.userData.mount=true; fly.add(mount);
+    var guns=new (T().Group)();
+    guns.add(sph(0.14, dark, 0,0,0));
+    guns.add(cyl(0.06,0.06,0.2,8, M(0x1e2a33,{metal:0.9,rough:0.1}), 0,0,0.14));
+    guns.position.set(0,-0.2,0.1);
+    guns.userData.guns=true; fly.add(guns);
   };
   window.mkAircraft=function(g,c){
     var body=M(c.base,{rough:0.55,metal:0.4}), dark=M(c.dark,{metal:0.5});
@@ -16700,10 +16700,10 @@ safeBoot();
     fly.add(box(0.12,1.1,0.9, dark, 0,0.6,-2.7));
     // cargo bay doors underneath
     fly.add(box(0.9,0.1,2.0, dark, 0,-0.5,-0.2));
-    var mount=new (T().Group)();
-    mount.add(box(0.3,0.22,0.5, dark, 0,0,0));
-    mount.position.set(0,-0.5,1.4);
-    mount.userData.mount=true; fly.add(mount);
+    var guns=new (T().Group)();
+    guns.add(box(0.3,0.22,0.5, dark, 0,0,0));
+    guns.position.set(0,-0.5,1.4);
+    guns.userData.guns=true; fly.add(guns);
   };
 })();
 /* ===================== DOMINION · UNIT MODELS END ===================== */
