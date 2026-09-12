@@ -492,6 +492,7 @@ button {
     <div class="stat"><span class="ic">😊</span><div class="col"><span class="v" id="sHappy">70%</span><span class="l">Happy</span></div></div>
     <div class="stat"><span class="ic">🍞</span><div class="col"><span class="v" id="sFood">0</span><span class="l">Food</span></div></div>
     <div class="stat"><span class="ic">🏗</span><div class="col"><span class="v" id="sBuilders">1</span><span class="l">Builders</span></div></div>
+    <div class="stat" id="dateStat" title="City calendar"><span class="ic">📅</span><div class="col"><span class="v" id="sDate">1 Jan</span><span class="l" id="sYear">Year 1</span></div></div>
     <div class="stat" id="wxStat" title="Weather and season"><span class="ic" id="wxIc">☀</span><div class="col"><span class="v" id="wxV">Clear</span><span class="l" id="wxL">summer</span></div></div>
     <div class="stat" id="svcStat" title="Service coverage: health, fire, police, education, transit"><span class="ic">⚕</span><div class="col"><span class="v" id="sSvc">—</span><span class="l">Services</span></div></div>
     <div class="stat"><span class="ic">🏙</span><div class="col"><span class="v" id="sBuild">0</span><span class="l">Built</span></div></div>
@@ -3510,9 +3511,12 @@ const CITY = {
     cost:{credits:420, concrete:70, steel:24}, jobs:22, powerUse:6,
     needs:{water:0.4}, makes:{water:1.4}, pollute:3, cleans:6,
     d:'Reclaims water and cuts the pollution your city produces.' },
+  landfill:{ nm:'Landfill', cat:'Infrastructure', foot:2, ic:'🗑', maxLvl:4,
+    cost:{credits:260, concrete:40}, jobs:14, powerUse:2, handlesWaste:2.2, pollute:6,
+    d:'Somewhere for the rubbish to go. Cheap, but it smells.' },
   recycling:{ nm:'Recycling Centre', cat:'Infrastructure', foot:2, ic:'🗑', maxLvl:4,
     cost:{credits:480, concrete:60, steel:40}, jobs:30, powerUse:7,
-    makes:{steel:0.25, plastic:0.25, credits:2.0}, cleans:8,
+    makes:{steel:0.25, plastic:0.25, credits:2.0}, cleans:8, handlesWaste:3.4,
     d:'Turns city waste back into materials and cleans the air.' },
   warehouse:{ nm:'Warehouse', cat:'Infrastructure', foot:2, ic:'📦', maxLvl:4,
     cost:{credits:300, concrete:40, steel:30}, jobs:16, powerUse:2, storage:true,
@@ -5979,6 +5983,21 @@ function farmOutput(b){
   const crop=CROPS[b.crop||'wheat']||CROPS.wheat;
   const lay=FIELD_LAYOUTS[b.layout||'rows']||FIELD_LAYOUTS.rows;
   let mul=lay.yield;
+  try{
+    const CV=window.__DOM_CIVIC;
+    if(CV){ set('sDate', CV.day+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][(CV.month-1)%12]);
+      set('sYear','Year '+CV.year);
+      const ds=$('dateStat');
+      if(ds) ds.title='Date: '+CV.dateText()+' · upkeep '+CV.upkeep.toFixed(1)+'/s · '+
+        'births '+CV.births+' · deaths '+CV.deaths+
+        (CV.waste>5?(' · rubbish '+Math.round(CV.waste)):'');
+    }
+    const Z=window.__DOM_ZONE;
+    if(Z){ const zs=$('svcStat');
+      if(zs) zs.title=(zs.title||'')+' · demand R'+Math.round(Z.demand.res*100)+
+        '% C'+Math.round(Z.demand.com*100)+'% I'+Math.round(Z.demand.ind*100)+
+        '% O'+Math.round(Z.demand.off*100)+'%'; }
+  }catch(e){}
   try{
     const W=window.__DOM_WEATHER;
     if(W){
@@ -12197,15 +12216,85 @@ safeBoot();
   function phaseNow(co){
     var t=0.4; try{ t=dayTime; }catch(e){}
     var h=t*24;
-    if(h<6.5||h>=21.5) return 'home';
+    // a fuller day: sleep, wake and eat, travel, work, errands, then home
+    if(h<6) return 'sleep';
+    if(h<7) return 'eat';
+    if(h>=22.5) return 'sleep';
+    if(h>=21) return 'home';
     if(h<9) return 'commute';
     if(h<16.5) return co.work? 'work' : (co.school? 'school':'home');
     if(h<18.5) return 'commute';
-    if(h<20.5) return 'leisure';
+    if(h<19.5) return 'shop';
+    if(h<21) return 'leisure';
     return 'home';
   }
 
   /* ---------- road colouring: green / yellow / red ---------- */
+  /* ---- TRAFFIC LIGHTS ----
+     Any tile where three or more roads meet gets a signal. It cycles between
+     the two axes, and vehicles crossing against it have to wait, which is what
+     turns a busy junction into a genuine bottleneck. ---- */
+  var LIGHT_CYCLE=9;                       // seconds per phase
+  function junctions(){
+    if(!M.graph) return [];
+    if(M._junc && M._juncFor===M.roadCount) return M._junc;
+    var out=[];
+    for(var id in M.graph){
+      var n=M.graph[id];
+      var orth=0;
+      if(M.graph[(n.gx+1)+','+n.gz]) orth++;
+      if(M.graph[(n.gx-1)+','+n.gz]) orth++;
+      if(M.graph[n.gx+','+(n.gz+1)]) orth++;
+      if(M.graph[n.gx+','+(n.gz-1)]) orth++;
+      if(orth>=3) out.push(n);
+    }
+    M._junc=out; M._juncFor=M.roadCount;
+    buildLightPosts(out);
+    return out;
+  }
+  /* green along the east-west axis, or north-south? */
+  function lightPhase(){ return (Math.floor(M.lightT/LIGHT_CYCLE)%2)===0 ? 'ew' : 'ns'; }
+  M.lightT=0;
+  function buildLightPosts(list){
+    var g=R(); if(!g.scene||!g.THREE) return;
+    if(M.lights){ try{ g.scene.remove(M.lights); }catch(e){} }
+    M.lights=new g.THREE.Group();
+    M.lampMats=[];
+    var post=new g.THREE.MeshStandardMaterial({color:0x4a4f55,metalness:0.5,roughness:0.5});
+    for(var i=0;i<list.length && i<160;i++){
+      var n=list[i], x=n.gx*g.TILE, z=n.gz*g.TILE;
+      var y=(g.groundHeight(x,z)||0);
+      for(var c=0;c<2;c++){
+        var sx=(c? 1:-1)*g.TILE*0.42, sz=(c? -1:1)*g.TILE*0.42;
+        var p=new g.THREE.Mesh(new g.THREE.CylinderGeometry(0.07,0.09,2.6,6), post);
+        p.position.set(x+sx, y+1.3, z+sz); M.lights.add(p);
+        var head=new g.THREE.Mesh(new g.THREE.BoxGeometry(0.22,0.5,0.22),
+          new g.THREE.MeshStandardMaterial({color:0x23262a}));
+        head.position.set(x+sx, y+2.75, z+sz); M.lights.add(head);
+        var lamp=new g.THREE.Mesh(new g.THREE.SphereGeometry(0.09,7,6),
+          new g.THREE.MeshBasicMaterial({color:0x2f9e63}));
+        lamp.position.set(x+sx, y+2.75, z+sz+0.13); M.lights.add(lamp);
+        M.lampMats.push({m:lamp.material, axis:(c?'ns':'ew')});
+      }
+    }
+    g.scene.add(M.lights);
+  }
+  function tickLights(dt){
+    M.lightT+=dt;
+    if(!M.lampMats) return;
+    var ph=lightPhase();
+    for(var i=0;i<M.lampMats.length;i++){
+      var L=M.lampMats[i];
+      L.m.color.setHex(L.axis===ph ? 0x2f9e63 : 0xd24b3f);
+    }
+  }
+  M.lightPhase=lightPhase;
+  M.isJunction=function(gx,gz){
+    var js=junctions();
+    for(var i=0;i<js.length;i++) if(js[i].gx===gx && js[i].gz===gz) return true;
+    return false;
+  };
+
   function colourRoads(){
     if(!M.graph) return;
     var g=R();
@@ -12245,13 +12334,24 @@ safeBoot();
       if(v.t>=1 || !v.path.length){ try{ g.scene.remove(v.mesh); }catch(e){} M.vehicles.splice(i,1); continue; }
       var idx=Math.min(v.path.length-1, Math.floor(v.t*(v.path.length-1)));
       var n=M.graph[v.path[idx]]; if(!n) continue;
-      var nx=n.gx*g.TILE, nz=n.gz*g.TILE;
+      // drive on the right-hand side of the road rather than down the middle
+      var nxt=M.graph[v.path[Math.min(v.path.length-1, idx+1)]] || n;
+      var hx=nxt.gx-n.gx, hz=nxt.gz-n.gz;
+      var hl=Math.hypot(hx,hz)||1; hx/=hl; hz/=hl;
+      var lane=v.lane||0.45;
+      var nx=n.gx*g.TILE + (-hz)*lane, nz=n.gz*g.TILE + (hx)*lane;
+      // hold at a red signal
+      var axis=(Math.abs(hx)>Math.abs(hz))? 'ew' : 'ns';
+      if(M.isJunction(n.gx,n.gz) && axis!==lightPhase()){
+        v.wait=(v.wait||0)+dt;
+        if(v.wait<3.5){ v.spd=0; }
+      } else { v.wait=0; }
       v.mesh.position.x += (nx-v.mesh.position.x)*Math.min(1,dt*4);
       v.mesh.position.z += (nz-v.mesh.position.z)*Math.min(1,dt*4);
       v.mesh.position.y = (g.groundHeight(v.mesh.position.x,v.mesh.position.z)||0)+0.25;
       // slow down where the road is busy — visible congestion
       var cong=n.ema/Math.max(1,n.cap);
-      v.spd = v.base*(1-Math.min(0.8,Math.max(0,cong-0.4)));
+      if(!v.wait) v.spd = v.base*(1-Math.min(0.8,Math.max(0,cong-0.4)));
     }
     while(M.vehicles.length<want && M.cohorts.length){
       var co=M.cohorts[Math.floor(Math.random()*M.cohorts.length)];
@@ -12259,17 +12359,31 @@ safeBoot();
       var trip=tripCost(wx(co.home),wz(co.home),co.work.x,co.work.z);
       if(!trip.path||trip.path.length<2) break;
       if(!M.carGeo){
-        M.carGeo=new g.THREE.BoxGeometry(0.8,0.55,1.7);
-        M.carMats=[0x3d6f9e,0xb0453a,0xd9c34a,0xe8e4d8,0x4a7a52].map(function(c){
+        // three kinds of road user, each behaving differently
+        M.VEHICLES={
+          car:  {geo:new g.THREE.BoxGeometry(0.8,0.55,1.7),  spd:1.0,  w:0.45, share:0.72,
+                 cols:[0x3d6f9e,0xb0453a,0xd9c34a,0xe8e4d8,0x4a7a52]},
+          bus:  {geo:new g.THREE.BoxGeometry(1.0,0.95,3.6),  spd:0.72, w:0.5,  share:0.12,
+                 cols:[0x2f9e63,0x3d8fe0]},
+          truck:{geo:new g.THREE.BoxGeometry(1.0,0.9,3.0),   spd:0.62, w:0.5,  share:0.16,
+                 cols:[0x8a8f96,0xc9922b,0x6a5b8a]}
+        };
+        M.carGeo=M.VEHICLES.car.geo;
+        M.carMats=M.VEHICLES.car.cols.map(function(c){
           return new g.THREE.MeshStandardMaterial({color:c,metalness:0.35,roughness:0.5}); });
       }
-      var mesh=new g.THREE.Mesh(M.carGeo, M.carMats[Math.floor(Math.random()*M.carMats.length)]);
+      // pick a type by share
+      var roll=Math.random(), kind='car', acc=0;
+      for(var vk in M.VEHICLES){ acc+=M.VEHICLES[vk].share; if(roll<=acc){ kind=vk; break; } }
+      var VT=M.VEHICLES[kind];
+      var mesh=new g.THREE.Mesh(VT.geo, new g.THREE.MeshStandardMaterial({
+        color:VT.cols[(Math.random()*VT.cols.length)|0], metalness:0.35, roughness:0.5}));
       mesh.castShadow=true;
       var s=M.graph[trip.path[0]];
       mesh.position.set(s.gx*g.TILE,(g.groundHeight(s.gx*g.TILE,s.gz*g.TILE)||0)+0.25,s.gz*g.TILE);
       g.scene.add(mesh);
       var base=0.12+Math.random()*0.1;
-      M.vehicles.push({mesh:mesh,path:trip.path,t:0,spd:base,base:base});
+      M.vehicles.push({mesh:mesh,path:trip.path,t:0,spd:base*VT.spd,base:base*VT.spd,kind:kind,lane:VT.w,wait:0});
     }
     while(M.vehicles.length>want){
       var v2=M.vehicles.pop(); try{ g.scene.remove(v2.mesh); }catch(e){}
@@ -12412,6 +12526,7 @@ safeBoot();
       }
     }
     applyTrafficLoad(dt);
+    tickLights(dt);
     tickVehicles(dt);
     colourRoads();
     computeStats(ctx, totalJobs, capacity, residents, cong);
@@ -12883,7 +12998,18 @@ safeBoot();
     var b=null;
     if(phase==='work'||phase==='commute') b = co.work? co.work.b : (co.school||co.home);
     else if(phase==='school') b = co.school||co.home;
-    else if(phase==='leisure') b = co.shop||co.home;
+    else if(phase==='shop' || phase==='leisure'){
+      // pick a nearby shop or park once, then keep using it
+      if(!co.shop){
+        try{
+          var opts=buildings.filter(function(x){ var d=CITY[x.key]||{};
+            return d.cat==='Civic' || x.key==='shop' || x.key==='market'; });
+          if(opts.length) co.shop=opts[(Math.random()*opts.length)|0];
+        }catch(e){}
+      }
+      b = co.shop || co.home;
+    }
+    else if(phase==='eat' || phase==='sleep') b = co.home;
     else b = co.home;
     if(!b) b=co.home;
     if(!b) return null;
@@ -13442,6 +13568,17 @@ safeBoot();
           isOn:function(){ try{ return terraTool==='fill'; }catch(e){ return false; } }},
         {ic:'🌊', nm:'Carve river', sub:'drag a line', act:function(){ try{ setTerraTool('river'); }catch(e){} },
           isOn:function(){ try{ return terraTool==='river'; }catch(e){ return false; } }},
+        {sep:true},
+        {ic:'🏠', nm:'Zone homes', sub:'residential', act:function(){ try{ window.__DOM_ZONE.setTool('res'); }catch(e){} },
+          isOn:function(){ try{ return window.__DOM_ZONE.tool==='res'; }catch(e){ return false; } }},
+        {ic:'🏪', nm:'Zone shops', sub:'commercial', act:function(){ try{ window.__DOM_ZONE.setTool('com'); }catch(e){} },
+          isOn:function(){ try{ return window.__DOM_ZONE.tool==='com'; }catch(e){ return false; } }},
+        {ic:'🏭', nm:'Zone industry', sub:'industrial', act:function(){ try{ window.__DOM_ZONE.setTool('ind'); }catch(e){} },
+          isOn:function(){ try{ return window.__DOM_ZONE.tool==='ind'; }catch(e){ return false; } }},
+        {ic:'🏢', nm:'Zone offices', sub:'offices', act:function(){ try{ window.__DOM_ZONE.setTool('off'); }catch(e){} },
+          isOn:function(){ try{ return window.__DOM_ZONE.tool==='off'; }catch(e){ return false; } }},
+        {ic:'🧽', nm:'Clear zoning', sub:'erase', act:function(){ try{ window.__DOM_ZONE.setTool('clear'); }catch(e){} },
+          isOn:function(){ try{ return window.__DOM_ZONE.tool==='clear'; }catch(e){ return false; } }},
         {sep:true},
         {ic:'🏗', nm:'Build', sub:'place buildings', act:function(){ toggleBuildPicker(); },
           isOn:function(){ var p=document.getElementById('bpick'); return !!(p&&p.style.display!=='none'); }},
@@ -16570,6 +16707,374 @@ safeBoot();
   };
 })();
 /* ===================== DOMINION · UNIT MODELS END ===================== */
+
+/* ===================== DOMINION · ZONING START =====================
+   Paint districts and let them build themselves. Zoned land next to a road
+   develops when there is demand for it, upgrades as the district matures,
+   and is abandoned again when demand collapses.
+   =================================================================== */
+(function(){
+  if (window.__DOM_ZONE) return;
+  var Z = window.__DOM_ZONE = {
+    map:Object.create(null),        // "gx,gz" -> zone id
+    tool:null, painting:false, brush:2,
+    demand:{res:0.5, com:0.3, ind:0.3, off:0.1},
+    overlay:null, dirty:true, t:0, grow:0
+  };
+
+  var ZONES = {
+    res:{ nm:'Residential', ic:'🏠', col:0x4fae5f,
+          tiers:[['house',1],['house',2],['apartments',1],['apartments',2],['skyscraper',1]] },
+    com:{ nm:'Commercial',  ic:'🏪', col:0x3d8fe0,
+          tiers:[['shop',1],['market',1],['shop',3],['cinema',1],['mall',1]] },
+    ind:{ nm:'Industrial',  ic:'🏭', col:0xd9a23c,
+          tiers:[['workshop',1],['brickworks',1],['concreteplant',1],['steelmill',1]] },
+    off:{ nm:'Offices',     ic:'🏢', col:0x8c5bd0,
+          tiers:[['office',1],['office',2],['corptower',1]] }
+  };
+  Z.ZONES=ZONES;
+
+  var _R={};
+  function G(){
+    try{ if(_R.scene===undefined && typeof scene!=='undefined') _R.scene=scene; }catch(e){}
+    try{ if(_R.THREE===undefined && typeof THREE!=='undefined') _R.THREE=THREE; }catch(e){}
+    try{ if(_R.renderer===undefined && typeof renderer!=='undefined') _R.renderer=renderer; }catch(e){}
+    try{ if(!_R._t && typeof TILE==='number'){ _R.TILE=TILE; _R._t=1; } }catch(e){}
+    try{ if(!_R._gh && typeof groundHeight==='function'){ _R.groundHeight=groundHeight; _R._gh=1; } }catch(e){}
+    try{ if(!_R._p && typeof pointerToGrid==='function'){ _R.pointerToGrid=pointerToGrid; _R._p=1; } }catch(e){}
+    return _R;
+  }
+  function ingame(){ try{ return !!gameStarted && !document.body.classList.contains('inMenu'); }catch(e){ return false; } }
+  function say(m){ try{ flash(m); }catch(e){} }
+  function note(k,t){ try{ if(window.__DOM_SIDE) window.__DOM_SIDE.note(k,t); }catch(e){} }
+  function exists(k){ try{ return !!CITY[k]; }catch(e){ return false; } }
+
+  /* ---------- painting ---------- */
+  Z.setTool=function(id){
+    Z.tool = (Z.tool===id)? null : id;
+    if(Z.tool) say((ZONES[Z.tool]?ZONES[Z.tool].ic+' '+ZONES[Z.tool].nm:'Clear')+
+      ' zoning — drag to paint. Zoned land beside a road builds itself. <b>Esc</b> exits.');
+    Z.dirty=true;
+  };
+  function paintAt(gx,gz){
+    var r=Z.brush;
+    for(var dx=-r;dx<=r;dx++) for(var dz=-r;dz<=r;dz++){
+      if(dx*dx+dz*dz>r*r) continue;
+      var x=gx+dx, z=gz+dz, key=x+','+z;
+      try{
+        if(occupied[key]) continue;                       // something is already there
+        if(terrainHeightAt(x*TILE,z*TILE) < WATER_LEVEL+0.6) continue;
+        if(typeof canPlaceInFog==='function' && !canPlaceInFog(x,z)) continue;
+      }catch(e){}
+      if(Z.tool==='clear') delete Z.map[key];
+      else Z.map[key]=Z.tool;
+    }
+    Z.dirty=true;
+  }
+
+  /* ---------- the coloured overlay ---------- */
+  function rebuildOverlay(){
+    var g=G(); if(!g.scene||!g.THREE) return;
+    if(Z.overlay){ try{ g.scene.remove(Z.overlay); }catch(e){} Z.overlay=null; }
+    var keys=Object.keys(Z.map);
+    if(!keys.length) return;
+    var grp=new g.THREE.Group();
+    var mats={};
+    for(var id in ZONES) mats[id]=new g.THREE.MeshBasicMaterial({
+      color:ZONES[id].col, transparent:true, opacity:0.3, depthWrite:false,
+      side:g.THREE.DoubleSide });
+    var geo=new g.THREE.PlaneGeometry(g.TILE*0.9, g.TILE*0.9);
+    var byZone={};
+    for(var i=0;i<keys.length;i++){
+      var id=Z.map[keys[i]];
+      (byZone[id]=byZone[id]||[]).push(keys[i]);
+    }
+    for(var zid in byZone){
+      var list=byZone[zid];
+      var im=new g.THREE.InstancedMesh(geo, mats[zid], list.length);
+      var m=new g.THREE.Matrix4(), q=new g.THREE.Quaternion();
+      q.setFromAxisAngle(new g.THREE.Vector3(1,0,0), -Math.PI/2);
+      for(var j=0;j<list.length;j++){
+        var p=list[j].split(','), x=(+p[0])*g.TILE, z=(+p[1])*g.TILE;
+        m.compose(new g.THREE.Vector3(x,(g.groundHeight(x,z)||0)+0.12,z), q,
+                  new g.THREE.Vector3(1,1,1));
+        im.setMatrixAt(j,m);
+      }
+      im.instanceMatrix.needsUpdate=true;
+      im.renderOrder=3;
+      grp.add(im);
+    }
+    g.scene.add(grp); Z.overlay=grp;
+  }
+
+  /* ---------- demand ---------- */
+  function recalcDemand(){
+    var pop=0, jobs=0, homes=0, shops=0, ind=0, off=0, educated=0;
+    try{
+      pop=cityPop;
+      for(var i=0;i<buildings.length;i++){
+        var b=buildings[i], d=CITY[b.key]||{};
+        if(d.pop) homes+=d.pop*lvlOut(b.lvl);
+        if(d.jobs) jobs+=d.jobs*lvlOut(b.lvl);
+        if(d.cat==='Civic'&&d.makes&&d.makes.credits) shops+=d.jobs||0;
+        if(d.cat==='Industry') ind+=d.jobs||0;
+        if(b.key==='office'||b.key==='corptower') off+=d.jobs||0;
+      }
+      educated=(typeof cityCover!=='undefined'? cityCover.education : 0.3)*pop;
+    }catch(e){}
+    var workforce=pop*0.62;
+    // people want homes when there is work; business wants staff when there are people
+    Z.demand.res = clamp((jobs-workforce)/Math.max(40,jobs+40) + (homes<pop?0.5:0) + 0.15);
+    Z.demand.com = clamp((pop/Math.max(60,shops*16+60)) - 0.35);
+    Z.demand.ind = clamp((shops+pop*0.1)/Math.max(60,ind*14+60) - 0.35);
+    Z.demand.off = clamp(educated/Math.max(50,off*12+50) - 0.4);
+    Z.demand.res = Math.max(Z.demand.res, homes<pop? 0.8 : Z.demand.res);
+  }
+  function clamp(v){ return Math.max(-1, Math.min(1, v)); }
+
+  /* ---------- growth ---------- */
+  function nearRoad(gx,gz){
+    try{
+      for(var d=1;d<=2;d++)
+        if(isRoad(gx+d,gz)||isRoad(gx-d,gz)||isRoad(gx,gz+d)||isRoad(gx,gz-d)) return true;
+    }catch(e){}
+    return false;
+  }
+  function tierFor(zid, gx, gz){
+    var t=ZONES[zid].tiers;
+    // denser buildings appear where the district is already busy and well served
+    var score=0;
+    try{
+      var svc=(typeof cityServices!=='undefined')? cityServices : 0;
+      var neigh=0;
+      for(var dx=-4;dx<=4;dx++) for(var dz=-4;dz<=4;dz++)
+        if(occupied[(gx+dx)+','+(gz+dz)]) neigh++;
+      score = Math.min(1, neigh/26)*0.6 + svc*0.4;
+    }catch(e){}
+    var idx=Math.min(t.length-1, Math.floor(score*t.length));
+    while(idx>0 && !exists(t[idx][0])) idx--;
+    return t[idx];
+  }
+  function growOne(){
+    var keys=Object.keys(Z.map);
+    if(!keys.length) return;
+    for(var tries=0;tries<40;tries++){
+      var key=keys[(Math.random()*keys.length)|0];
+      var zid=Z.map[key];
+      if(!ZONES[zid]) continue;
+      if(Z.demand[zid]<=0.05) continue;                  // nobody wants to build here
+      var p=key.split(','), gx=+p[0], gz=+p[1];
+      try{ if(occupied[key]) continue; }catch(e){}
+      if(!nearRoad(gx,gz)) continue;
+      var pick=tierFor(zid,gx,gz);
+      if(!exists(pick[0])) continue;
+      var d=CITY[pick[0]];
+      // developers pay for it, not you — you only zone the land
+      try{
+        var wx=gx*TILE, wz=gz*TILE;
+        if(typeof buildingOverlaps==='function' && buildingOverlaps(wx,wz,buildRadius(pick[0]),null,pick[0])) continue;
+        var b=placeCityBuilding(pick[0], gx, gz, pick[1]||1, {animate:true, free:{x:wx,z:wz}});
+        if(b){ b.zoned=zid; return true; }
+      }catch(e){}
+    }
+    return false;
+  }
+  function abandonOne(){
+    // when demand is deeply negative, a zoned building shuts up shop
+    try{
+      var cands=buildings.filter(function(b){ return b.zoned && Z.demand[b.zoned]<-0.45; });
+      if(!cands.length) return;
+      var b=cands[(Math.random()*cands.length)|0];
+      removeBuilding(b, true);
+      note('warn','🏚 A '+(CITY[b.key]||{}).nm+' has been abandoned — no demand for it.');
+    }catch(e){}
+  }
+
+  /* ---------- input ---------- */
+  function bind(){
+    var g=G(); if(Z._bound||!g.renderer||!g.renderer.domElement) return;
+    Z._bound=true;
+    var el=g.renderer.domElement;
+    el.addEventListener('pointerdown', function(e){
+      if(!Z.tool||e.button===2) return;
+      e.stopPropagation();
+      Z.painting=true;
+      var gp=null; try{ gp=g.pointerToGrid(e); }catch(err){}
+      if(gp) paintAt(gp.gx,gp.gz);
+    }, true);
+    el.addEventListener('pointermove', function(e){
+      if(!Z.tool||!Z.painting) return;
+      var gp=null; try{ gp=g.pointerToGrid(e); }catch(err){}
+      if(gp) paintAt(gp.gx,gp.gz);
+    }, true);
+    el.addEventListener('pointerup', function(){ Z.painting=false; }, true);
+    window.addEventListener('keydown', function(e){
+      if(e.key==='Escape' && Z.tool){ Z.tool=null; say('Zoning off'); }
+      if(!Z.tool) return;
+      if(e.key==='['){ Z.brush=Math.max(0,Z.brush-1); say('Brush '+(Z.brush*2+1)); }
+      if(e.key===']'){ Z.brush=Math.min(6,Z.brush+1); say('Brush '+(Z.brush*2+1)); }
+    }, true);
+  }
+
+  var last=Date.now();
+  function loop(){
+    requestAnimationFrame(loop);
+    var now=Date.now(), dt=Math.min(0.2,(now-last)/1000)||0.016; last=now;
+    if(!ingame()) return;
+    Z.t+=dt;
+    try{
+      bind();
+      if(Z.dirty){ Z.dirty=false; rebuildOverlay(); }
+      if(Z.t>1.5){
+        Z.t=0;
+        recalcDemand();
+        Z.grow+=1;
+        if(Z.grow>=2){ Z.grow=0; growOne(); abandonOne(); }
+      }
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', loop); else loop();
+})();
+/* ===================== DOMINION · ZONING END ===================== */
+
+/* ===================== DOMINION · CALENDAR, LIFE & UPKEEP START ===========
+   A real calendar, people being born and dying, buildings that cost money to
+   keep running, and rubbish that has to go somewhere.
+   ========================================================================= */
+(function(){
+  if (window.__DOM_CIVIC) return;
+  var C = window.__DOM_CIVIC = {
+    day:1, month:1, year:1, lastDay:-1,
+    births:0, deaths:0, waste:0, wasteCap:0, upkeep:0, t:0
+  };
+  var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  C.dateText=function(){ return C.day+' '+MONTHS[(C.month-1)%12]+' Yr '+C.year; };
+
+  function ingame(){ try{ return !!gameStarted && !document.body.classList.contains('inMenu'); }catch(e){ return false; } }
+  function note(k,t){ try{ if(window.__DOM_SIDE) window.__DOM_SIDE.note(k,t); }catch(e){} }
+
+  /* ---------- the calendar turns with the day cycle ---------- */
+  function tickCalendar(){
+    var t=0; try{ t=dayTime; }catch(e){ return; }
+    var d=Math.floor(t*1000);
+    if(C.lastDay<0){ C.lastDay=d; return; }
+    if(d<C.lastDay){                      // the clock wrapped: a new day
+      C.day++;
+      if(C.day>30){ C.day=1; C.month++;
+        if(C.month>12){ C.month=1; C.year++;
+          note('good','📅 A new year begins — Year '+C.year+'.');
+        } else note('info','📅 '+MONTHS[C.month-1]+' begins.');
+        endOfMonth();
+      }
+      endOfDay();
+    }
+    C.lastDay=d;
+  }
+
+  /* ---------- births and deaths ---------- */
+  function endOfDay(){
+    var S=window.__DOM_SIM;
+    if(!S || !S.cohorts) return;
+    var food=1, housingRoom=0, health=0, happy=60;
+    try{ food=(STOCK.food||0)>0?1:0; }catch(e){}
+    try{ health=(typeof cityCover!=='undefined')? cityCover.health : 0; }catch(e){}
+    try{ happy=cityHappy; }catch(e){}
+    try{ housingRoom=(S.stats&&S.stats.vacancy)||0; }catch(e){}
+
+    var born=0, died=0;
+    for(var i=S.cohorts.length-1;i>=0;i--){
+      var co=S.cohorts[i];
+      // people grow older
+      co.years=(co.years||0)+1;
+      if(co.years>26 && co.age==='child'){ co.age='young'; co.years=0; }
+      else if(co.years>90 && co.age==='young'){ co.age='adult'; co.years=0; }
+      else if(co.years>160 && co.age==='adult'){ co.age='senior'; co.years=0; }
+
+      // a settled, fed household with room to grow has children
+      if((co.age==='young'||co.age==='adult') && food && housingRoom>1 && happy>32){
+        // a modest base rate, rising with contentment
+        if(Math.random() < 0.06 + Math.max(0,(happy-32))/700){
+          co.size+=1; born++; housingRoom--;
+        }
+      }
+      // seniors pass away, sooner without healthcare
+      if(co.age==='senior'){
+        var risk=0.018*(1-health*0.75);
+        if(Math.random()<risk){
+          co.size-=1; died++;
+          if(co.size<=0){ S.cohorts.splice(i,1); }
+        }
+      }
+    }
+    if(born||died){
+      C.births+=born; C.deaths+=died;
+      try{ cityPop=Math.max(0, cityPop + born - died); }catch(e){}
+    }
+    if(born>2) note('good','👶 '+born+' children born today.');
+    if(died>2) note('warn','🕯 '+died+' residents passed away'+(health<0.3?' — healthcare is thin.':'.'));
+  }
+
+  /* ---------- monthly bills ---------- */
+  function endOfMonth(){
+    try{
+      var bill=Math.round(C.upkeep*30);
+      if(bill>0){
+        STOCK.credits=(STOCK.credits||0)-bill;
+        if(STOCK.credits<0){
+          STOCK.credits=0;
+          note('bad','💸 The city could not pay its upkeep of '+bill+'₡. Services are suffering.');
+          try{ cityHappy=Math.max(0, cityHappy-6); }catch(e){}
+        } else note('money','💸 Monthly upkeep paid: '+bill+'₡.');
+      }
+    }catch(e){}
+  }
+
+  /* ---------- upkeep and rubbish ---------- */
+  function tickCosts(dt){
+    var up=0, waste=0, cap=0;
+    try{
+      for(var i=0;i<buildings.length;i++){
+        var b=buildings[i], d=CITY[b.key]||{};
+        if(d.core) continue;
+        // running costs scale with size and level
+        var base=(d.jobs||2)*0.02 + (d.powerUse||0)*0.03 + (d.foot||1)*0.05;
+        if(d.mega) base*=1.6;
+        up += base*lvlOut(b.lvl);
+        // households and businesses put out rubbish; some buildings take it away
+        if(d.pop) waste += d.pop*lvlOut(b.lvl)*0.004;
+        else if(d.jobs) waste += d.jobs*lvlOut(b.lvl)*0.002;
+        if(d.handlesWaste) cap += d.handlesWaste*lvlOut(b.lvl)*(b.eff===undefined?1:b.eff);
+      }
+    }catch(e){}
+    C.upkeep=up; C.wasteCap=cap;
+    // rubbish piles up when collection cannot keep pace
+    C.waste = Math.max(0, C.waste + (waste-cap)*dt);
+    if(C.waste>60 && !C._wasteWarned){
+      C._wasteWarned=true;
+      note('bad','🗑 Rubbish is piling up in the streets. Build a Recycling Centre or Landfill.');
+    }
+    if(C.waste<20) C._wasteWarned=false;
+    // and it makes people miserable
+    try{
+      if(C.waste>25) cityHappy=Math.max(0, cityHappy - Math.min(0.04, C.waste*0.0004)*dt*60);
+    }catch(e){}
+    window.__DOM_WASTE=C.waste;
+  }
+
+  var last=Date.now();
+  function loop(){
+    requestAnimationFrame(loop);
+    var now=Date.now(), dt=Math.min(0.3,(now-last)/1000)||0.016; last=now;
+    if(!ingame()) return;
+    C.t+=dt;
+    try{
+      tickCalendar();
+      if(C.t>0.5){ tickCosts(C.t); C.t=0; }
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', loop); else loop();
+})();
+/* ===================== DOMINION · CALENDAR, LIFE & UPKEEP END ============= */
 </script>
 <script>
 var lines = ['You are doing great.', 'Ship it.', 'That looks sharp.'];
