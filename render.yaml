@@ -1,9 +1,11 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 #
 # Deploying this: in the Render dashboard choose New → Blueprint, point it at
-# this repository, and set AU_PASSWORD when it asks. Read the "Put it on the
-# internet" section of README.md first — on the free plan, published pages are
-# erased whenever the service spins down.
+# this repository, and fill in the values it asks for.
+#
+# Set AU_GITHUB_TOKEN and AU_GITHUB_REPO to keep published pages permanently
+# (see "Never lose a published page" in README.md). Without them, pages are
+# written to the container's disk, which the free plan erases on every restart.
 services:
   - type: web
     name: actually-useful
@@ -16,17 +18,12 @@ services:
       - key: HOST
         value: 0.0.0.0
       # sync:false means Render prompts you for it and never stores it in git.
-      # The server refuses to start on a public bind without it.
+      # The server refuses to start on a public bind without a password.
       - key: AU_PASSWORD
         sync: false
-
-    # ---------------------------------------------------------------------
-    # To keep published pages across restarts you need a paid instance type
-    # with a persistent disk. Swap `plan: free` above for `plan: starter`,
-    # then uncomment these and add AU_DATA_DIR=/var/data/sites to envVars:
-    #
-    # disk:
-    #   name: pages
-    #   mountPath: /var/data
-    #   sizeGB: 1
-    # ---------------------------------------------------------------------
+      # A fine-grained GitHub token with Contents: read and write on the repo
+      # below. Leave blank to fall back to the (erasable) container disk.
+      - key: AU_GITHUB_TOKEN
+        sync: false
+      - key: AU_GITHUB_REPO
+        value: Scipiotoni/Actually-Useful

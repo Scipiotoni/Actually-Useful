@@ -120,7 +120,10 @@ with `AU_ALLOW_PUBLIC_WRITES=1` if you really mean it.
 | `PORT` | `3000` | Port to listen on |
 | `HOST` | `127.0.0.1` | Bind address — set to `0.0.0.0` to expose it |
 | `AU_PASSWORD` | *(unset)* | Password for the editor. Unset means no login |
-| `AU_DATA_DIR` | `./data/sites` | Where deployed pages are stored |
+| `AU_DATA_DIR` | `./data/sites` | Where deployed pages are stored on disk |
+| `AU_GITHUB_TOKEN` | *(unset)* | Fine-grained token; enables GitHub storage |
+| `AU_GITHUB_REPO` | *(unset)* | `owner/repo` to store published pages in |
+| `AU_GITHUB_BRANCH` | *(repo default)* | Branch to commit pages to |
 | `AU_ALLOW_PUBLIC_WRITES` | *(unset)* | Permit a public bind with no password |
 
 ## Open it on your phone
@@ -142,6 +145,42 @@ Actually Useful is running. Open one of these:
 
 Both devices must be on the same network, and your firewall has to allow the
 port. This does not reach beyond the local network — for that, publish it.
+
+## Never lose a published page
+
+By default pages are written to `data/sites/` on local disk. On a host with an
+ephemeral filesystem — Render's free plan among them — that disk is wiped on
+every restart, taking the published pages with it.
+
+Point the app at a GitHub repository instead and they stop being erasable:
+
+```bash
+AU_GITHUB_TOKEN="github_pat_..." AU_GITHUB_REPO="owner/repo" npm start
+```
+
+Each publish becomes one commit writing three files:
+
+```
+published/index.json          the list of pages
+published/<slug>/page.json    metadata and the three editor panes
+published/<slug>/index.html   the composed page
+```
+
+So you also get a full history: every version of every page is a commit you can
+read or restore. Everything is cached in memory after the first read, so serving
+a page costs no API calls.
+
+Turn on **GitHub Pages** for the repository and those pages are served straight
+from GitHub, permanently and without a cold start, at
+`https://<owner>.github.io/<repo>/published/<slug>/`. The app reports that
+address as `permanentUrl` and the editor links to it. GitHub Pages rebuilds
+[about ten times an hour](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits),
+so publishing in a tight loop makes the last few appear late — nothing is lost.
+
+The token should be a **fine-grained** personal access token, scoped to that one
+repository, with **Contents: read and write** and nothing else. Note that pages
+published this way are stored in the repository, so on a public repo they are
+publicly readable — which is what publishing means, but worth knowing.
 
 ## Put it on the internet
 
@@ -196,11 +235,14 @@ capped at 8 MB and each pane at 2 MB.
 ```
 server/index.js    HTTP server: static files, JSON API, /p/<slug> hosting
 server/store.js    File-backed deploy storage, slugging and validation
+server/github-store.js  The same, backed by commits to a GitHub repository
+server/auth.js     Optional password gate: cookies, throttling, login page
 public/compose.js  Panes → one HTML document (shared by client and server)
 public/editor.js   MiniEditor: the dependency-free highlighting editor
 public/app.js      Editor wiring: tabs, preview, console, deploy, drawer
 public/styles.css  Everything visual
-test/api.test.js   node:test suite over the API and compose rules
+test/api.test.js   node:test suite over the API, auth and compose rules
+test/github-store.test.js  GitHub storage, against a stand-in GitHub API
 ```
 
 ## License

@@ -6,6 +6,7 @@ const os = require('os');
 const path = require('path');
 const { DeployStore } = require('./store.js');
 const auth = require('./auth.js');
+const { GitHubStore } = require('./github-store.js');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const DATA_DIR = process.env.AU_DATA_DIR || path.join(__dirname, '..', 'data', 'sites');
@@ -108,8 +109,24 @@ function serveStatic(res, urlPath) {
   });
 }
 
+/** GitHub storage when a token is configured, local disk otherwise. */
+function createStore(options) {
+  const token = options.githubToken !== undefined ? options.githubToken : process.env.AU_GITHUB_TOKEN;
+  const repo = options.githubRepo !== undefined ? options.githubRepo : process.env.AU_GITHUB_REPO;
+  if (token && repo) {
+    return new GitHubStore({
+      token,
+      repo,
+      branch: options.githubBranch || process.env.AU_GITHUB_BRANCH,
+      api: options.githubApi || process.env.AU_GITHUB_API,
+      fetchImpl: options.fetchImpl
+    }).init();
+  }
+  return new DeployStore(options.dataDir || DATA_DIR).init();
+}
+
 function createApp(options = {}) {
-  const store = new DeployStore(options.dataDir || DATA_DIR).init();
+  const store = createStore(options);
   // No password configured means no login — the local-tool default.
   const password = options.password !== undefined ? options.password : process.env.AU_PASSWORD;
   const authOn = Boolean(password);
@@ -124,7 +141,7 @@ function createApp(options = {}) {
       // --- Deployed pages -------------------------------------------------
       const pageMatch = pathname.match(/^\/p\/([^/]+)\/?$/);
       if (pageMatch) {
-        const html = store.html(pageMatch[1]);
+        const html = await store.html(pageMatch[1]);
         if (html === null) {
           return sendText(res, 404, notFoundPage(pageMatch[1]), 'text/html; charset=utf-8');
         }
@@ -201,35 +218,36 @@ function createApp(options = {}) {
 
       // --- API ------------------------------------------------------------
       if (pathname === '/api/config' && req.method === 'GET') {
-        return sendJson(res, 200, { auth: authOn });
+        return sendJson(res, 200, {
+          auth: authOn,
+          storage: typeof store.pagesUrl === 'function' ? 'github' : 'disk'
+        });
       }
 
       if (pathname === '/api/deploys' && req.method === 'GET') {
+        const deploys = await store.list();
         return sendJson(res, 200, {
-          deploys: store.list().map((site) => ({ ...site, url: `${origin}/p/${site.slug}` }))
+          deploys: deploys.map((site) => decorate(site, origin, store))
         });
       }
 
       if (pathname === '/api/deploys' && req.method === 'POST') {
         const body = await readBody(req);
-        const result = store.save(body);
+        const result = await store.save(body);
         if (!result.ok) return sendJson(res, result.status, { error: result.error });
-        return sendJson(res, result.created ? 201 : 200, {
-          ...result.site,
-          url: `${origin}/p/${result.site.slug}`
-        });
+        return sendJson(res, result.created ? 201 : 200, decorate(result.site, origin, store));
       }
 
       const oneMatch = pathname.match(/^\/api\/deploys\/([^/]+)$/);
       if (oneMatch) {
         const slug = oneMatch[1];
         if (req.method === 'GET') {
-          const site = store.get(slug);
+          const site = await store.get(slug);
           if (!site) return sendJson(res, 404, { error: 'Not found' });
-          return sendJson(res, 200, { ...site, url: `${origin}/p/${slug}` });
+          return sendJson(res, 200, decorate(site, origin, store));
         }
         if (req.method === 'DELETE') {
-          if (!store.remove(slug)) return sendJson(res, 404, { error: 'Not found' });
+          if (!(await store.remove(slug))) return sendJson(res, 404, { error: 'Not found' });
           return sendJson(res, 200, { deleted: slug });
         }
         return sendJson(res, 405, { error: 'Method not allowed' });
@@ -253,6 +271,16 @@ function createApp(options = {}) {
 
   server.store = store;
   return server;
+}
+
+/**
+ * Adds the addresses a page is reachable at: `url` is served by this app,
+ * `permanentUrl` is the GitHub Pages copy that outlives a restart.
+ */
+function decorate(site, origin, store) {
+  const out = { ...site, url: `${origin}/p/${site.slug}` };
+  if (typeof store.pagesUrl === 'function') out.permanentUrl = store.pagesUrl(site.slug);
+  return out;
 }
 
 function notFoundPage(slug) {

@@ -9,6 +9,33 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,59}$/;
 const MAX_SOURCE_BYTES = 2 * 1024 * 1024; // per pane
 
 /**
+ * Checks the three panes a deploy carries.
+ * @returns {{ok: true} | {ok: false, status: number, error: string}}
+ */
+function validateSource({ html = '', css = '', js = '' }) {
+  for (const [field, value] of Object.entries({ html, css, js })) {
+    if (typeof value !== 'string') {
+      return { ok: false, status: 400, error: `"${field}" must be a string` };
+    }
+    if (Buffer.byteLength(value, 'utf8') > MAX_SOURCE_BYTES) {
+      return { ok: false, status: 413, error: `"${field}" exceeds the 2 MB limit` };
+    }
+  }
+  return { ok: true };
+}
+
+/** Picks a free slug from `taken`, appending -2, -3 ... on collision. */
+function nextFreeSlug(base, taken) {
+  const root = slugify(base);
+  if (!taken.has(root)) return root;
+  for (let n = 2; n < 1000; n += 1) {
+    const candidate = `${root}-${n}`.slice(0, 60).replace(/-+$/, '');
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${root}-${crypto.randomBytes(3).toString('hex')}`.slice(0, 60);
+}
+
+/**
  * File-backed storage for deployed pages.
  * Layout: <root>/<slug>/{index.html,meta.json}
  */
@@ -67,13 +94,7 @@ class DeployStore {
 
   /** Picks a free slug, appending -2, -3 ... on collision. */
   availableSlug(base) {
-    const root = slugify(base);
-    if (!this.get(root)) return root;
-    for (let n = 2; n < 1000; n += 1) {
-      const candidate = `${root}-${n}`.slice(0, 60).replace(/-+$/, '');
-      if (!this.get(candidate)) return candidate;
-    }
-    return `${root}-${crypto.randomBytes(3).toString('hex')}`.slice(0, 60);
+    return nextFreeSlug(base, new Set(this.list().map((site) => site.slug)));
   }
 
   /**
@@ -81,14 +102,8 @@ class DeployStore {
    * @returns {{ok: true, site: object} | {ok: false, error: string, status: number}}
    */
   save({ name, slug, html = '', css = '', js = '' }) {
-    for (const [field, value] of Object.entries({ html, css, js })) {
-      if (typeof value !== 'string') {
-        return { ok: false, status: 400, error: `"${field}" must be a string` };
-      }
-      if (Buffer.byteLength(value, 'utf8') > MAX_SOURCE_BYTES) {
-        return { ok: false, status: 413, error: `"${field}" exceeds the 2 MB limit` };
-      }
-    }
+    const invalid = validateSource({ html, css, js });
+    if (!invalid.ok) return invalid;
 
     const title = String(name || '').trim() || 'Untitled page';
     let target = slug;
@@ -131,4 +146,4 @@ class DeployStore {
   }
 }
 
-module.exports = { DeployStore, SLUG_RE, MAX_SOURCE_BYTES };
+module.exports = { DeployStore, SLUG_RE, MAX_SOURCE_BYTES, validateSource, nextFreeSlug };

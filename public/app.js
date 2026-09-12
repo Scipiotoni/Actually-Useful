@@ -86,7 +86,7 @@
   };
 
   var editors = {};
-  var state = { slug: null, deployed: null, renderTimer: null, saveTimer: null, consoleCount: 0 };
+  var state = { slug: null, deployed: null, storage: 'disk', renderTimer: null, saveTimer: null, consoleCount: 0 };
 
   // ---------------------------------------------------------------- editors
   PANES.forEach(function (pane) {
@@ -315,11 +315,13 @@
       state.deployed = { name: parts.name, html: parts.html, css: parts.css, js: parts.js };
       saveLocal();
       els.previewUrl.textContent = previewLabel(parts);
+      var shareUrl = site.permanentUrl || site.url;
       toast(
-        'Deployed v' + site.version + ' → <a href="' + site.url + '" target="_blank" rel="noopener">' +
-        Compose.escapeHtml(site.url) + '</a>',
+        'Deployed v' + site.version + ' → <a href="' + shareUrl + '" target="_blank" rel="noopener">' +
+        Compose.escapeHtml(shareUrl) + '</a>' +
+        (site.permanentUrl ? '<br><small>GitHub Pages takes a moment to build the first time.</small>' : ''),
         'ok',
-        9000
+        site.permanentUrl ? 12000 : 9000
       );
       return loadSites();
     }).catch(function (err) {
@@ -362,11 +364,15 @@
     }
     els.siteList.innerHTML = sites.map(function (site) {
       var live = site.slug === state.slug ? ' · editing' : '';
-      return '<li class="site" data-slug="' + site.slug + '">' +
+      var share = site.permanentUrl || site.url;
+      return '<li class="site" data-slug="' + site.slug + '" data-share="' + Compose.escapeHtml(share) + '">' +
         '<div class="site-title"><strong>' + Compose.escapeHtml(site.name) + '</strong>' +
         '<span class="site-meta">v' + site.version + ' · ' + relTime(site.updatedAt) + live + '</span></div>' +
-        '<a class="site-url" href="' + site.url + '" target="_blank" rel="noopener">' +
-        Compose.escapeHtml(site.url) + '</a>' +
+        '<a class="site-url" href="' + share + '" target="_blank" rel="noopener">' +
+        Compose.escapeHtml(share) + '</a>' +
+        (site.permanentUrl
+          ? '<span class="site-meta">also at ' + Compose.escapeHtml(site.url) + ' while this server is awake</span>'
+          : '') +
         '<div class="site-actions">' +
         '<button class="icon-btn" data-action="open">Open</button>' +
         '<button class="icon-btn" data-action="copy">Copy link</button>' +
@@ -381,7 +387,7 @@
     if (!button) return;
     var item = button.closest('.site');
     var slug = item.dataset.slug;
-    var url = item.querySelector('.site-url').href;
+    var url = item.dataset.share || item.querySelector('.site-url').href;
 
     if (button.dataset.action === 'open') return void window.open(url, '_blank', 'noopener');
 
@@ -618,6 +624,12 @@
   if (!OFFLINE) {
     api('/api/config').then(function (config) {
       document.getElementById('logout').hidden = !config.auth;
+      state.storage = config.storage || 'disk';
+      if (state.storage === 'github') {
+        els.drawer.querySelector('.drawer-note').textContent =
+          'Pages are committed to your GitHub repository and served by GitHub Pages, ' +
+          'so they survive restarts. A new page can take a minute to appear the first time.';
+      }
     }).catch(function () { /* the drawer already reports an unreachable server */ });
   }
 
