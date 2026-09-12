@@ -123,6 +123,26 @@ with `AU_ALLOW_PUBLIC_WRITES=1` if you really mean it.
 | `AU_DATA_DIR` | `./data/sites` | Where deployed pages are stored |
 | `AU_ALLOW_PUBLIC_WRITES` | *(unset)* | Permit a public bind with no password |
 
+## Open it on your phone
+
+On the same Wi-Fi, bind to every interface and set a password (the server
+refuses a non-loopback bind without one):
+
+```bash
+AU_PASSWORD="a password" HOST=0.0.0.0 npm start
+```
+
+It prints the address to type on the other device:
+
+```
+Actually Useful is running. Open one of these:
+  On this computer   http://127.0.0.1:3000
+  On the same Wi-Fi  http://192.168.1.42:3000
+```
+
+Both devices must be on the same network, and your firewall has to allow the
+port. This does not reach beyond the local network — for that, publish it.
+
 ## Put it on the internet
 
 `render.yaml` is a ready Render Blueprint: **New → Blueprint**, point it at this

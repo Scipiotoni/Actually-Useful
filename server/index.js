@@ -2,6 +2,7 @@
 
 const http = require('http');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { DeployStore } = require('./store.js');
 const auth = require('./auth.js');
@@ -269,6 +270,18 @@ function isLoopback(host) {
   return host === '127.0.0.1' || host === 'localhost' || host === '::1';
 }
 
+/** This machine's addresses on the local network, for opening it on a phone. */
+function lanAddresses() {
+  const found = [];
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === 'IPv4' && !iface.internal) found.push(iface.address);
+    }
+  }
+  return found;
+}
+
 if (require.main === module) {
   const port = Number(process.env.PORT) || 3000;
   const host = process.env.HOST || '127.0.0.1';
@@ -294,7 +307,22 @@ if (require.main === module) {
   }
 
   createApp().listen(port, host, () => {
-    console.log(`Actually Useful → http://${host}:${port}`);
+    if (isLoopback(host)) {
+      console.log(`Actually Useful → http://${host}:${port}`);
+      console.log('Only this computer can reach that address. To open it on your phone,');
+      console.log(`restart with:  AU_PASSWORD="a password" HOST=0.0.0.0 npm start`);
+    } else {
+      console.log('Actually Useful is running. Open one of these:');
+      console.log(`  On this computer   http://127.0.0.1:${port}`);
+      const lan = lanAddresses();
+      if (lan.length) {
+        lan.forEach((address, i) => {
+          console.log(`  ${i === 0 ? 'On the same Wi-Fi  ' : '                   '}http://${address}:${port}`);
+        });
+      } else {
+        console.log('  No local network address found — is this machine online?');
+      }
+    }
     console.log(process.env.AU_PASSWORD
       ? 'Password protection is ON (published pages stay public).'
       : 'No AU_PASSWORD set — anyone who can reach this port can edit and deploy.');
