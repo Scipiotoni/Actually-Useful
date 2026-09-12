@@ -90,18 +90,37 @@
     workspace: $('workspace'),
     splitter: $('splitter'),
     saveState: $('save-state'),
+    caretPos: $('caret-pos'),
+    wrap: $('btn-wrap'),
+    shortcuts: $('btn-shortcuts'),
+    shortcutDrawer: $('shortcut-drawer'),
+    closeShortcuts: $('btn-close-shortcuts'),
+    shortcutList: $('shortcut-list'),
+    findbar: $('findbar'),
+    findInput: $('find-input'),
+    findCount: $('find-count'),
+    findPrev: $('find-prev'),
+    findNext: $('find-next'),
+    findCase: $('find-case'),
+    findClose: $('find-close'),
+    replaceInput: $('replace-input'),
+    replaceOne: $('replace-one'),
+    replaceAll: $('replace-all'),
     toasts: $('toasts')
   };
 
   var editors = {};
-  var state = { slug: null, deployed: null, storage: 'disk', renderTimer: null, saveTimer: null, consoleCount: 0 };
+  var state = { slug: null, deployed: null, storage: 'disk', pane: 'html', wrapped: false, renderTimer: null, saveTimer: null, consoleCount: 0 };
 
   // ---------------------------------------------------------------- editors
   PANES.forEach(function (pane) {
     editors[pane] = new MiniEditor(document.getElementById('ed-' + pane), {
       mode: pane,
       ariaLabel: pane.toUpperCase() + ' source',
-      onChange: onEdit
+      onChange: onEdit,
+      onCaret: function (at) {
+        els.caretPos.textContent = 'Ln ' + at.line + ', Col ' + at.column;
+      }
     });
   });
 
@@ -137,8 +156,10 @@
       document.querySelectorAll('.editor-host').forEach(function (host) {
         host.classList.toggle('is-active', host.dataset.editor === target);
       });
+      state.pane = target;
       editors[target].refresh();
       editors[target].focus();
+      if (!els.findbar.hidden) runFind();
     });
   });
 
@@ -472,6 +493,180 @@
     return Math.round(hours / 24) + 'd ago';
   }
 
+  // ------------------------------------------------------------------- find
+  function activeEditor() { return editors[state.pane]; }
+
+  function findOptions() {
+    return { caseSensitive: els.findCase.getAttribute('aria-pressed') === 'true' };
+  }
+
+  function runFind(step) {
+    var query = els.findInput.value;
+    var total = activeEditor().findAll(query, findOptions());
+
+    els.findInput.classList.toggle('no-match', Boolean(query) && total === 0);
+    if (!query) {
+      els.findCount.textContent = 'no results';
+      return 0;
+    }
+    if (!total) {
+      els.findCount.textContent = 'not found';
+      return 0;
+    }
+    if (step !== false) {
+      var index = activeEditor().stepMatch(false, activeEditor().getSelection().start);
+      els.findCount.textContent = (index + 1) + ' of ' + total;
+    } else {
+      els.findCount.textContent = total + (total === 1 ? ' result' : ' results');
+    }
+    return total;
+  }
+
+  function stepFind(backwards) {
+    var total = activeEditor().matches.length;
+    if (!total) { if (!runFind()) return; total = activeEditor().matches.length; }
+    var index = activeEditor().stepMatch(backwards);
+    els.findCount.textContent = (index + 1) + ' of ' + total;
+  }
+
+  function openFind(withReplace) {
+    var selection = activeEditor().getSelection();
+    if (selection.end > selection.start) {
+      var picked = activeEditor().getValue().slice(selection.start, selection.end);
+      if (picked.indexOf('\n') === -1) els.findInput.value = picked;
+    }
+    els.findbar.hidden = false;
+    runFind(false);
+    (withReplace ? els.replaceInput : els.findInput).focus();
+    els.findInput.select();
+  }
+
+  function closeFind() {
+    els.findbar.hidden = true;
+    PANES.forEach(function (pane) { editors[pane].clearFind(); });
+    activeEditor().focus();
+  }
+
+  function replaceCurrent() {
+    var editor = activeEditor();
+    if (!editor.matches.length) { runFind(); return; }
+    var selection = editor.getSelection();
+    var current = editor.matches[editor.matchIndex];
+
+    // Only replace a hit the caret is actually sitting on.
+    if (!current || selection.start !== current.start || selection.end !== current.end) {
+      return void stepFind(false);
+    }
+    editor.replaceRange(current.start, current.end, els.replaceInput.value);
+    runFind(false);
+    editor.stepMatch(false, current.start + els.replaceInput.value.length);
+    els.findCount.textContent = editor.matches.length
+      ? (editor.matchIndex + 1) + ' of ' + editor.matches.length
+      : 'not found';
+  }
+
+  function replaceEverything() {
+    var editor = activeEditor();
+    var query = els.findInput.value;
+    if (!query) return;
+
+    var total = editor.findAll(query, findOptions());
+    if (!total) return void toast('Nothing to replace.', 'err');
+
+    var value = editor.getValue();
+    var replacement = els.replaceInput.value;
+    var out = '';
+    var last = 0;
+    editor.matches.forEach(function (match) {
+      out += value.slice(last, match.start) + replacement;
+      last = match.end;
+    });
+    out += value.slice(last);
+
+    editor.replaceRange(0, value.length, out);
+    editor.clearFind();
+    els.findCount.textContent = 'not found';
+    onEdit();
+    toast('Replaced ' + total + ' occurrence' + (total === 1 ? '' : 's') + '.', 'ok');
+  }
+
+  els.findInput.addEventListener('input', function () { runFind(false); });
+  els.findCase.addEventListener('click', function () {
+    var on = els.findCase.getAttribute('aria-pressed') === 'true';
+    els.findCase.setAttribute('aria-pressed', String(!on));
+    runFind(false);
+  });
+  els.findNext.addEventListener('click', function () { stepFind(false); });
+  els.findPrev.addEventListener('click', function () { stepFind(true); });
+  els.findClose.addEventListener('click', closeFind);
+  els.replaceOne.addEventListener('click', replaceCurrent);
+  els.replaceAll.addEventListener('click', replaceEverything);
+
+  els.findbar.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') { event.preventDefault(); return closeFind(); }
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    if (event.target === els.replaceInput) return replaceCurrent();
+    stepFind(event.shiftKey);
+  });
+
+  // ------------------------------------------------------------- word wrap
+  els.wrap.addEventListener('click', function () {
+    state.wrapped = !state.wrapped;
+    els.wrap.setAttribute('aria-pressed', String(state.wrapped));
+    PANES.forEach(function (pane) { editors[pane].setWrap(state.wrapped); });
+    try { localStorage.setItem('actually-useful:wrap', state.wrapped ? '1' : '0'); } catch (err) { /* ignore */ }
+  });
+
+  // ------------------------------------------------------------- shortcuts
+  var SHORTCUTS = [
+    ['Editing', [
+      ['Tab', 'Indent the selected lines'],
+      ['Shift Tab', 'Outdent the selected lines'],
+      ['Ctrl /', 'Comment or uncomment the lines'],
+      ['Alt ↑ / Alt ↓', 'Move the lines up or down'],
+      ['Ctrl D', 'Duplicate the line or selection'],
+      ['Ctrl Shift K', 'Delete the line'],
+      ['Home', 'Jump to the first character, then the margin'],
+      ['Ctrl Z / Ctrl Shift Z', 'Undo and redo']
+    ]],
+    ['Searching', [
+      ['Ctrl F', 'Find'],
+      ['Ctrl H', 'Find and replace'],
+      ['Enter / Shift Enter', 'Next and previous result'],
+      ['Ctrl G', 'Go to a line number'],
+      ['Esc', 'Close the find bar']
+    ]],
+    ['The page', [
+      ['Ctrl Enter', 'Render the preview now'],
+      ['Ctrl S', 'Deploy']
+    ]]
+  ];
+
+  function renderShortcuts() {
+    els.shortcutList.innerHTML = SHORTCUTS.map(function (group) {
+      return '<div class="group">' + group[0] + '</div>' + group[1].map(function (row) {
+        var keys = row[0].split(' / ').map(function (combo) {
+          return combo.split(' ').map(function (key) {
+            return '<kbd>' + Compose.escapeHtml(key) + '</kbd>';
+          }).join(' ');
+        }).join(' <span>or</span> ');
+        return '<dt>' + keys + '</dt><dd>' + Compose.escapeHtml(row[1]) + '</dd>';
+      }).join('');
+    }).join('');
+  }
+
+  els.shortcuts.addEventListener('click', function () {
+    var show = els.shortcutDrawer.hidden;
+    if (show) {
+      renderShortcuts();
+      els.drawer.hidden = true;
+      els.imageDrawer.hidden = true;
+    }
+    els.shortcutDrawer.hidden = !show;
+  });
+  els.closeShortcuts.addEventListener('click', function () { els.shortcutDrawer.hidden = true; });
+
   // ----------------------------------------------------------------- images
   function loadImages() {
     return api('/api/assets').then(function (data) {
@@ -718,8 +913,10 @@
   });
   document.addEventListener('keydown', function (event) {
     if (event.key !== 'Escape') return;
+    if (!els.findbar.hidden) return closeFind();
     if (!els.drawer.hidden) els.closeDrawer.click();
     if (!els.imageDrawer.hidden) els.closeImages.click();
+    if (!els.shortcutDrawer.hidden) els.shortcutDrawer.hidden = true;
   });
 
   // --------------------------------------------------------------- splitter
@@ -784,11 +981,26 @@
 
   document.addEventListener('keydown', function (event) {
     if (!(event.ctrlKey || event.metaKey)) return;
-    if (event.key === 's') { event.preventDefault(); deploy(); }
-    if (event.key === 'Enter') { event.preventDefault(); render(); }
+    var key = event.key.toLowerCase();
+
+    if (key === 's') { event.preventDefault(); return deploy(); }
+    if (event.key === 'Enter') { event.preventDefault(); return render(); }
+    if (key === 'f') { event.preventDefault(); return openFind(false); }
+    if (key === 'h') { event.preventDefault(); return openFind(true); }
+    if (key === 'g') {
+      event.preventDefault();
+      var answer = window.prompt('Go to line');
+      var line = parseInt(answer, 10);
+      if (line > 0) activeEditor().gotoLine(line);
+      return;
+    }
   });
 
   window.addEventListener('resize', refreshEditors);
+
+  try {
+    if (localStorage.getItem('actually-useful:wrap') === '1') els.wrap.click();
+  } catch (err) { /* no storage, no preference */ }
 
   load(loadLocal() || STARTER);
   saveLocal();

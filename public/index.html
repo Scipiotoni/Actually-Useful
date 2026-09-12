@@ -46,6 +46,26 @@
       <button class="tab tab-action" id="btn-format" title="Tidy up indentation">Format</button>
       <button class="tab tab-action" id="btn-reset" title="Start from a blank page">Reset</button>
     </div>
+    <div class="findbar" id="findbar" hidden>
+      <div class="find-row">
+        <input id="find-input" class="find-input" type="text" placeholder="Find" aria-label="Find" spellcheck="false">
+        <span class="find-count" id="find-count">no results</span>
+      </div>
+      <div class="find-row">
+        <button class="find-btn" id="find-prev" title="Previous (Shift+Enter)">↑</button>
+        <button class="find-btn" id="find-next" title="Next (Enter)">↓</button>
+        <button class="find-btn" id="find-case" aria-pressed="false" title="Match case">Aa</button>
+        <button class="find-btn" id="find-close" title="Close (Esc)">✕</button>
+      </div>
+      <div class="find-row">
+        <input id="replace-input" class="find-input" type="text" placeholder="Replace with" aria-label="Replace with" spellcheck="false">
+      </div>
+      <div class="find-row">
+        <button class="find-btn" id="replace-one">Replace</button>
+        <button class="find-btn" id="replace-all">All</button>
+      </div>
+    </div>
+
     <div class="editors">
       <div class="editor-host is-active" data-editor="html" id="ed-html"></div>
       <div class="editor-host" data-editor="css" id="ed-css"></div>
@@ -53,7 +73,12 @@
     </div>
     <footer class="statusbar">
       <span id="save-state" class="status-item">Saved locally</span>
-      <span class="status-item status-hint">Ctrl/Cmd+Enter run · Ctrl/Cmd+S deploy</span>
+      <span class="status-item status-pos" id="caret-pos">Ln 1, Col 1</span>
+      <span class="status-item status-hint">
+        <button type="button" class="status-btn" id="btn-wrap" aria-pressed="false">Wrap</button>
+        ·
+        <button type="button" class="status-btn" id="btn-shortcuts">Shortcuts</button>
+      </span>
     </footer>
   </section>
 
@@ -112,6 +137,15 @@
   </div>
 
   <ul class="image-list" id="image-list"></ul>
+</aside>
+
+<aside class="drawer" id="shortcut-drawer" hidden aria-label="Keyboard shortcuts">
+  <div class="drawer-head">
+    <h2>Shortcuts</h2>
+    <button class="icon-btn" id="btn-close-shortcuts" aria-label="Close">✕</button>
+  </div>
+  <p class="drawer-note">Ctrl on Windows and Linux, Cmd on a Mac.</p>
+  <dl class="shortcuts" id="shortcut-list"></dl>
 </aside>
 
 <div class="toast-stack" id="toasts" aria-live="polite"></div>

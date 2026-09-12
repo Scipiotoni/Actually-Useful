@@ -3,7 +3,8 @@
  *
  * A transparent <textarea> sits on top of a syntax-highlighted <pre> that
  * mirrors its content, so the browser keeps native editing, selection, undo
- * and IME behaviour while we only paint the colours.
+ * and IME behaviour while we only paint the colours. A third layer behind
+ * both paints search hits and the active line.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -102,39 +103,204 @@
     js: function (src) { return scan(src, JS_RULES); }
   };
 
+  // How each language spells a comment.
+  var COMMENTS = {
+    html: { block: ['<!--', '-->'] },
+    css: { block: ['/*', '*/'] },
+    js: { line: '//' }
+  };
+
   var PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
   var CLOSERS = ')]}"\'`';
   var INDENT = '  ';
+
+
+  /**
+   * Pure text operations. Each takes the document and a selection and returns
+   * a minimal edit — {from, to, insert, selStart, selEnd} — or null when there
+   * is nothing to do. Keeping them free of the DOM makes the edge cases (empty
+   * lines, the last line, no trailing newline) testable on their own.
+   */
+  var Edits = {
+    /** The offsets of the whole lines a selection touches. */
+    lineSpan: function (text, start, end) {
+      var from = text.lastIndexOf('\n', start - 1) + 1;
+      var to = text.indexOf('\n', end);
+      if (to === -1) to = text.length;
+      // A selection ending exactly at a line start should not drag in the next line.
+      if (end > start && end === text.lastIndexOf('\n', end - 1) + 1) to = end - 1;
+      return { from: from, to: to, text: text.slice(from, to) };
+    },
+
+    indent: function (text, start, end, outward) {
+      var span = Edits.lineSpan(text, start, end);
+      var shifted = outward
+        ? span.text.replace(/^ {1,2}/gm, '')
+        : span.text.replace(/^/gm, INDENT);
+      if (shifted === span.text) return null;
+
+      var firstLine = span.text.slice(0, (span.text + '\n').indexOf('\n'));
+      var firstDelta = outward
+        ? -(firstLine.length - firstLine.replace(/^ {1,2}/, '').length)
+        : INDENT.length;
+
+      return {
+        from: span.from,
+        to: span.to,
+        insert: shifted,
+        selStart: Math.max(span.from, start + firstDelta),
+        selEnd: Math.max(span.from, end + (shifted.length - span.text.length))
+      };
+    },
+
+    toggleComment: function (text, start, end, mode) {
+      var span = Edits.lineSpan(text, start, end);
+      var style = COMMENTS[mode];
+      var body = span.text;
+      var next;
+
+      if (style.line) {
+        var lines = body.split('\n');
+        var allCommented = lines.every(function (line) {
+          return !line.trim() || line.trimStart().indexOf(style.line) === 0;
+        });
+        next = lines.map(function (line) {
+          if (!line.trim()) return line;
+          if (allCommented) return line.replace(new RegExp('^(\\s*)' + style.line + ' ?'), '$1');
+          return line.replace(/^(\s*)/, '$1' + style.line + ' ');
+        }).join('\n');
+      } else {
+        var open = style.block[0];
+        var close = style.block[1];
+        var trimmed = body.trim();
+        if (trimmed.indexOf(open) === 0 && trimmed.slice(-close.length) === close) {
+          next = body
+            .replace(open + ' ', '')
+            .replace(open, '')
+            .replace(new RegExp(' ' + close.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$'), '')
+            .replace(new RegExp(close.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '$'), '');
+        } else {
+          next = open + ' ' + body + ' ' + close;
+        }
+      }
+
+      if (next === body) return null;
+      return { from: span.from, to: span.to, insert: next, selStart: span.from, selEnd: span.from + next.length };
+    },
+
+    moveLines: function (text, start, end, down) {
+      var span = Edits.lineSpan(text, start, end);
+
+      if (down) {
+        if (span.to >= text.length) return null;
+        var nextEnd = text.indexOf('\n', span.to + 1);
+        if (nextEnd === -1) nextEnd = text.length;
+        var below = text.slice(span.to + 1, nextEnd);
+        var shift = below.length + 1;
+        return {
+          from: span.from,
+          to: nextEnd,
+          insert: below + '\n' + span.text,
+          selStart: start + shift,
+          selEnd: end + shift
+        };
+      }
+
+      if (span.from === 0) return null;
+      var prevStart = text.lastIndexOf('\n', span.from - 2) + 1;
+      var above = text.slice(prevStart, span.from - 1);
+      var back = above.length + 1;
+      return {
+        from: prevStart,
+        to: span.to,
+        insert: span.text + '\n' + above,
+        selStart: start - back,
+        selEnd: end - back
+      };
+    },
+
+    duplicate: function (text, start, end) {
+      if (start !== end) {
+        var picked = text.slice(start, end);
+        return { from: end, to: end, insert: picked, selStart: end, selEnd: end + picked.length };
+      }
+      var span = Edits.lineSpan(text, start, end);
+      var moved = start + span.text.length + 1;
+      return { from: span.to, to: span.to, insert: '\n' + span.text, selStart: moved, selEnd: moved };
+    },
+
+    deleteLines: function (text, start, end) {
+      var span = Edits.lineSpan(text, start, end);
+      var from = span.from;
+      var to = span.to;
+      // Take the newline after the block, or — on the last line, which has
+      // none — the one before it, so no blank line is left behind.
+      if (to < text.length) to += 1;
+      else if (from > 0) from -= 1;
+      if (from === to) return null;
+      return { from: from, to: to, insert: '', selStart: from, selEnd: from };
+    },
+
+    findMatches: function (text, query, caseSensitive) {
+      var found = [];
+      if (!query) return found;
+      var haystack = caseSensitive ? text : text.toLowerCase();
+      var needle = caseSensitive ? query : query.toLowerCase();
+      var at = haystack.indexOf(needle);
+      while (at !== -1) {
+        found.push({ start: at, end: at + needle.length });
+        at = haystack.indexOf(needle, at + Math.max(1, needle.length));
+      }
+      return found;
+    }
+  };
 
   function MiniEditor(host, options) {
     options = options || {};
     this.mode = options.mode || 'html';
     this.onChange = options.onChange || function () {};
+    this.onCaret = options.onCaret || function () {};
 
     host.classList.add('ed');
     host.innerHTML =
       '<div class="ed-gutter" aria-hidden="true"><div class="ed-nums"></div></div>' +
       '<div class="ed-body">' +
+      '<div class="ed-layer">' +
+      '<div class="ed-active" aria-hidden="true"></div>' +
+      '<pre class="ed-marks" aria-hidden="true"></pre>' +
       '<pre class="ed-paint" aria-hidden="true"></pre>' +
       '<textarea class="ed-input" spellcheck="false" autocapitalize="off" autocorrect="off" wrap="off"></textarea>' +
+      '</div>' +
       '</div>';
 
     this.host = host;
     this.gutter = host.querySelector('.ed-gutter');
     this.nums = host.querySelector('.ed-nums');
     this.body = host.querySelector('.ed-body');
+    this.layer = host.querySelector('.ed-layer');
+    this.activeLine = host.querySelector('.ed-active');
+    this.marks = host.querySelector('.ed-marks');
     this.paint = host.querySelector('.ed-paint');
     this.input = host.querySelector('.ed-input');
     if (options.ariaLabel) this.input.setAttribute('aria-label', options.ariaLabel);
 
+    this.matches = [];
+    this.matchIndex = -1;
+
     var self = this;
+    var caret = function () { self._syncCaret(); };
     this.input.addEventListener('input', function () { self._sync(); self.onChange(); });
     this.input.addEventListener('keydown', function (e) { self._onKey(e); });
-    this.input.addEventListener('scroll', function () { self._syncScroll(); });
+    this.input.addEventListener('keyup', caret);
+    this.input.addEventListener('click', caret);
+    this.input.addEventListener('select', caret);
+    this.input.addEventListener('focus', caret);
     this.body.addEventListener('scroll', function () { self._syncScroll(); });
 
     this.setValue(options.value || '');
   }
+
+  // ---------------------------------------------------------------- basics
 
   MiniEditor.prototype.getValue = function () { return this.input.value; };
 
@@ -147,10 +313,12 @@
 
   MiniEditor.prototype.refresh = function () { this._syncScroll(); };
 
-  /** Drops text in at the caret, keeping undo intact. */
-  MiniEditor.prototype.insertAtCursor = function (text) {
-    this.input.focus();
-    this._insert(text);
+  /** Wrapping and the line-number gutter cannot both be right; pick one. */
+  MiniEditor.prototype.setWrap = function (on) {
+    this.wrapped = Boolean(on);
+    this.host.classList.toggle('is-wrapped', this.wrapped);
+    this.input.setAttribute('wrap', this.wrapped ? 'soft' : 'off');
+    this._sync();
   };
 
   MiniEditor.prototype._sync = function () {
@@ -164,14 +332,68 @@
       for (var i = 0; i < lines; i += 1) buf[i] = i + 1;
       this.nums.textContent = buf.join('\n');
     }
-    // Match the textarea's scrollable box to the painted content.
-    this.input.style.height = this.paint.scrollHeight + 'px';
-    this.input.style.width = Math.max(this.paint.scrollWidth, this.body.clientWidth) + 'px';
-    this._syncScroll();
+    this._paintMarks();
+    this._syncCaret();
   };
 
   MiniEditor.prototype._syncScroll = function () {
     this.nums.style.transform = 'translateY(' + -this.body.scrollTop + 'px)';
+  };
+
+  MiniEditor.prototype._metrics = function () {
+    if (!this._cachedMetrics) {
+      var style = getComputedStyle(this.paint);
+      this._cachedMetrics = {
+        lineHeight: parseFloat(style.lineHeight) || 20,
+        padTop: parseFloat(style.paddingTop) || 0
+      };
+    }
+    return this._cachedMetrics;
+  };
+
+  /** Position of a character offset, as a 1-based line and column. */
+  MiniEditor.prototype.positionAt = function (offset) {
+    var before = this.input.value.slice(0, offset);
+    var line = before.split('\n').length;
+    return { line: line, column: offset - (before.lastIndexOf('\n') + 1) + 1 };
+  };
+
+  MiniEditor.prototype._syncCaret = function () {
+    var at = this.positionAt(this.input.selectionStart);
+    if (!this.wrapped) {
+      var m = this._metrics();
+      this.activeLine.style.transform = 'translateY(' + (m.padTop + (at.line - 1) * m.lineHeight) + 'px)';
+      this.activeLine.style.height = m.lineHeight + 'px';
+    }
+    this.onCaret(at);
+  };
+
+  // ------------------------------------------------------------- selection
+
+  MiniEditor.prototype.getSelection = function () {
+    return { start: this.input.selectionStart, end: this.input.selectionEnd };
+  };
+
+  MiniEditor.prototype.select = function (start, end) {
+    this.input.focus();
+    this.input.setSelectionRange(start, end === undefined ? start : end);
+    this.reveal(start);
+    this._syncCaret();
+  };
+
+  /** Scrolls an offset into view with a little room around it. */
+  MiniEditor.prototype.reveal = function (offset) {
+    if (this.wrapped) return;
+    var m = this._metrics();
+    var line = this.positionAt(offset).line - 1;
+    var top = m.padTop + line * m.lineHeight;
+    var viewTop = this.body.scrollTop;
+    var viewBottom = viewTop + this.body.clientHeight;
+    if (top < viewTop + m.lineHeight) {
+      this.body.scrollTop = Math.max(0, top - m.lineHeight * 3);
+    } else if (top + m.lineHeight > viewBottom - m.lineHeight) {
+      this.body.scrollTop = top - this.body.clientHeight + m.lineHeight * 4;
+    }
   };
 
   /** Replaces the selection while keeping the browser's native undo stack. */
@@ -191,30 +413,188 @@
     this.onChange();
   };
 
+  MiniEditor.prototype.insertAtCursor = function (text) {
+    this.input.focus();
+    this._insert(text);
+  };
+
+  /** Replaces an explicit range, leaving the caret after the new text. */
+  MiniEditor.prototype.replaceRange = function (start, end, text) {
+    this.input.focus();
+    this.input.setSelectionRange(start, end);
+    this._insert(text);
+    this.input.setSelectionRange(start + text.length, start + text.length);
+    this._syncCaret();
+  };
+
+  // -------------------------------------------------------- line utilities
+
+  MiniEditor.prototype.lineSpan = function () {
+    var span = Edits.lineSpan(this.input.value, this.input.selectionStart, this.input.selectionEnd);
+    return { start: span.from, end: span.to, text: span.text };
+  };
+
+  /** Applies one of the edits above, keeping the native undo stack. */
+  MiniEditor.prototype._apply = function (edit) {
+    if (!edit) return;
+    this.input.focus();
+    this.input.setSelectionRange(edit.from, edit.to);
+    this._insert(edit.insert);
+    this.input.setSelectionRange(edit.selStart, edit.selEnd);
+    this._syncCaret();
+  };
+
+  /** Tab and Shift+Tab over one or many lines. */
+  MiniEditor.prototype.indent = function (outward) {
+    this._apply(Edits.indent(this.input.value, this.input.selectionStart, this.input.selectionEnd, outward));
+  };
+
+  /** Comments or uncomments the touched lines, in this pane's language. */
+  MiniEditor.prototype.toggleComment = function () {
+    this._apply(Edits.toggleComment(this.input.value, this.input.selectionStart, this.input.selectionEnd, this.mode));
+  };
+
+  /** Moves the touched lines up or down by one. */
+  MiniEditor.prototype.moveLines = function (down) {
+    this._apply(Edits.moveLines(this.input.value, this.input.selectionStart, this.input.selectionEnd, down));
+  };
+
+  /** Duplicates the selection, or the whole line when nothing is selected. */
+  MiniEditor.prototype.duplicate = function () {
+    this._apply(Edits.duplicate(this.input.value, this.input.selectionStart, this.input.selectionEnd));
+  };
+
+  MiniEditor.prototype.deleteLines = function () {
+    this._apply(Edits.deleteLines(this.input.value, this.input.selectionStart, this.input.selectionEnd));
+  };
+
+  MiniEditor.prototype.gotoLine = function (number) {
+    var lines = this.input.value.split('\n');
+    var index = Math.min(Math.max(1, number), lines.length) - 1;
+    var offset = 0;
+    for (var i = 0; i < index; i += 1) offset += lines[i].length + 1;
+    this.select(offset, offset + lines[index].length);
+  };
+
+  /** Home goes to the first non-blank character before the line start. */
+  MiniEditor.prototype.smartHome = function (extend) {
+    var value = this.input.value;
+    var caret = this.input.selectionStart;
+    var lineStart = value.lastIndexOf('\n', caret - 1) + 1;
+    var firstText = lineStart + (value.slice(lineStart).match(/^[ \t]*/) || [''])[0].length;
+    var target = caret === firstText ? lineStart : firstText;
+    if (extend) this.input.setSelectionRange(Math.min(target, this.input.selectionEnd), Math.max(target, this.input.selectionEnd));
+    else this.input.setSelectionRange(target, target);
+    this._syncCaret();
+  };
+
+  // ----------------------------------------------------------------- find
+
+  /**
+   * Finds every occurrence of `query` and paints them.
+   * @returns {number} how many were found
+   */
+  MiniEditor.prototype.findAll = function (query, options) {
+    options = options || {};
+    this.matches = [];
+    this.matchIndex = -1;
+
+    this.matches = Edits.findMatches(this.input.value, query, options.caseSensitive);
+    this._paintMarks();
+    return this.matches.length;
+  };
+
+  /** Moves to the next (or previous) hit, wrapping around the ends. */
+  MiniEditor.prototype.stepMatch = function (backwards, fromOffset) {
+    if (!this.matches.length) return -1;
+    // Step off the current hit: forward from where it ends, back from where
+    // it starts, or the search keeps landing on the same one.
+    var from = fromOffset;
+    if (from === undefined) {
+      from = backwards ? this.input.selectionStart : this.input.selectionEnd;
+    }
+    var index;
+
+    if (backwards) {
+      index = -1;
+      for (var i = this.matches.length - 1; i >= 0; i -= 1) {
+        if (this.matches[i].start < from) { index = i; break; }
+      }
+      if (index === -1) index = this.matches.length - 1;
+    } else {
+      index = this.matches.findIndex(function (match) { return match.start >= from; });
+      if (index === -1) index = 0;
+    }
+
+    this.matchIndex = index;
+    var match = this.matches[index];
+    this.select(match.start, match.end);
+    this._paintMarks();
+    return index;
+  };
+
+  MiniEditor.prototype.clearFind = function () {
+    this.matches = [];
+    this.matchIndex = -1;
+    this._paintMarks();
+  };
+
+  MiniEditor.prototype._paintMarks = function () {
+    if (!this.matches.length) {
+      this.marks.innerHTML = '';
+      return;
+    }
+    var value = this.input.value;
+    var out = '';
+    var last = 0;
+    var self = this;
+    this.matches.forEach(function (match, i) {
+      out += esc(value.slice(last, match.start));
+      out += '<mark class="' + (i === self.matchIndex ? 'on' : '') + '">' +
+        esc(value.slice(match.start, match.end)) + '</mark>';
+      last = match.end;
+    });
+    this.marks.innerHTML = out + esc(value.slice(last)) + '\n';
+  };
+
+  // ------------------------------------------------------------------ keys
+
   MiniEditor.prototype._onKey = function (event) {
     var el = this.input;
     var value = el.value;
     var start = el.selectionStart;
     var end = el.selectionEnd;
+    var mod = event.ctrlKey || event.metaKey;
 
     if (event.key === 'Tab') {
       event.preventDefault();
-      var lineStart = value.lastIndexOf('\n', start - 1) + 1;
-      if (start !== end || event.shiftKey) {
-        // Indent or outdent every touched line.
-        var block = value.slice(lineStart, end);
-        var shifted = event.shiftKey
-          ? block.replace(/^ {1,2}/gm, '')
-          : block.replace(/^/gm, INDENT);
-        el.selectionStart = lineStart;
-        el.selectionEnd = end;
-        this._insert(shifted);
-        el.selectionStart = lineStart;
-        el.selectionEnd = lineStart + shifted.length;
-        return;
-      }
-      this._insert(INDENT);
-      return;
+      if (start !== end || event.shiftKey) return void this.indent(event.shiftKey);
+      return void this._insert(INDENT);
+    }
+
+    if (mod && !event.shiftKey && !event.altKey && (event.key === '/' || event.code === 'Slash')) {
+      event.preventDefault();
+      return void this.toggleComment();
+    }
+
+    if (event.altKey && !mod && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+      event.preventDefault();
+      return void this.moveLines(event.key === 'ArrowDown');
+    }
+
+    if (mod && !event.shiftKey && event.key.toLowerCase() === 'd') {
+      event.preventDefault();
+      return void this.duplicate();
+    }
+
+    if (mod && event.shiftKey && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      return void this.deleteLines();
+    }
+
+    if (event.key === 'Home' && !mod) {
+      event.preventDefault();
+      return void this.smartHome(event.shiftKey);
     }
 
     if (event.key === 'Enter') {
@@ -241,7 +621,7 @@
       return;
     }
 
-    if (PAIRS[event.key] && !event.ctrlKey && !event.metaKey) {
+    if (PAIRS[event.key] && !mod && !event.altKey) {
       var nextChar = value[end] || '';
       // Skip over a closer we just typed rather than doubling it.
       if (start === end && event.key === nextChar && CLOSERS.indexOf(event.key) >= 0 && '([{'.indexOf(event.key) < 0) {
@@ -268,5 +648,7 @@
   };
 
   MiniEditor.highlight = function (mode, src) { return MODES[mode](src); };
+  MiniEditor.COMMENTS = COMMENTS;
+  MiniEditor.edits = Edits;
   return MiniEditor;
 });

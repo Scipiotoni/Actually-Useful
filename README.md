@@ -28,9 +28,14 @@ mode and the app tells you so.
 ## What it does
 
 **Editor** — three panes (HTML / CSS / JS) with syntax highlighting, line
-numbers, auto-indent, bracket and tag closing, and block indent/outdent with
-Tab. Native undo, selection and IME still work, because the editor is a real
+numbers, the active line marked, and a status bar showing where the caret is.
+Native undo, selection and IME all still work, because the editor is a real
 `<textarea>` with a highlighted layer painted underneath it.
+
+**Find and replace** — `Ctrl+F` opens it, `Ctrl+H` starts on the replace field.
+Every hit is highlighted at once with the current one picked out, `Enter` and
+`Shift+Enter` step through them, `Aa` toggles case sensitivity, and *All*
+replaces the lot. Whatever you had selected becomes the search term.
 
 **Live preview** — renders into a sandboxed iframe, debounced while you type
 (or on demand with Auto-run off). Resize the split, or preview at 1024 / 768 /
@@ -51,12 +56,31 @@ off. The preview URL says whether what you see matches what is live
 
 ### Keyboard
 
+The **Shortcuts** button in the status bar lists these in the app. `Ctrl` on
+Windows and Linux, `Cmd` on a Mac.
+
 | Shortcut | Action |
 | --- | --- |
-| `Ctrl`/`Cmd` + `Enter` | Render the preview |
-| `Ctrl`/`Cmd` + `S` | Deploy |
-| `Tab` / `Shift`+`Tab` | Indent / outdent the selection |
-| `Esc` | Close the Pages drawer |
+| `Tab` / `Shift`+`Tab` | Indent / outdent every line the selection touches |
+| `Ctrl`+`/` | Comment or uncomment the lines, in the pane's language |
+| `Alt`+`↑` / `Alt`+`↓` | Move the lines up or down |
+| `Ctrl`+`D` | Duplicate the line, or the selection |
+| `Ctrl`+`Shift`+`K` | Delete the line |
+| `Home` | Jump to the first character, then to the margin |
+| `Ctrl`+`F` / `Ctrl`+`H` | Find / find and replace |
+| `Enter` / `Shift`+`Enter` | Next and previous result |
+| `Ctrl`+`G` | Go to a line number |
+| `Ctrl`+`Enter` | Render the preview now |
+| `Ctrl`+`S` | Deploy |
+| `Esc` | Close the find bar or any drawer |
+
+Enter keeps the current indent, and adds a level inside a bracket or between a
+tag pair. Brackets and quotes close themselves; typing the closer skips over it
+instead of doubling it, and backspace between an empty pair removes both.
+
+**Wrap** in the status bar turns on soft wrapping, which helps on a phone. The
+line-number gutter is hidden while it is on, since wrapped lines and a 1:1
+gutter cannot both be honest.
 
 ## How a page is composed
 
@@ -243,9 +267,12 @@ npm test
 
 Covers deploy/redeploy/versioning, slug collisions, listing and deletion, path
 traversal (including percent-encoded attempts) and payload limits, the password
-gate, image upload and serving, GitHub storage against a stand-in API, and the
+gate, image upload and serving, GitHub storage against a stand-in API, the
 compose rules (fragment wrapping, full-document injection, `</script>`
-escaping).
+escaping), and every editing command — indent, comment, move, duplicate,
+delete and find — as pure functions over text and a selection, so their edge
+cases (blank lines, the last line, no trailing newline) are pinned down without
+needing a browser.
 
 ## Security notes
 
@@ -272,10 +299,11 @@ server/github-store.js  The same, backed by commits to a GitHub repository
 server/auth.js     Optional password gate: cookies, throttling, login page
 server/assets.js   Image validation: format sniffing, naming, size limits
 public/compose.js  Panes → one HTML document (shared by client and server)
-public/editor.js   MiniEditor: the dependency-free highlighting editor
+public/editor.js   MiniEditor: highlighting, find, and the editing commands
 public/app.js      Editor wiring: tabs, preview, console, deploy, drawer
 public/styles.css  Everything visual
 test/api.test.js   node:test suite over the API, auth and compose rules
+test/editor.test.js        The editor's text operations, as pure functions
 test/github-store.test.js  GitHub storage, against a stand-in GitHub API
 ```
 

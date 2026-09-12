@@ -201,7 +201,16 @@ button { font-family: inherit; }
   overflow: auto;
 }
 
+/* The layer is sized by the painted text; every other layer covers it. */
+.ed-layer {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+  width: max-content;
+}
+
 .ed-paint,
+.ed-marks,
 .ed-input {
   margin: 0;
   padding: 12px 16px;
@@ -216,16 +225,37 @@ button { font-family: inherit; }
 .ed-paint {
   display: block;
   min-height: 100%;
-  min-width: 100%;
-  width: max-content;
   color: var(--text);
   pointer-events: none;
 }
 
-.ed-input {
+.ed-marks {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  pointer-events: none;
+}
+.ed-marks mark {
+  background: rgba(251, 191, 36, .28);
+  border-radius: 2px;
+  color: transparent;
+}
+.ed-marks mark.on { background: rgba(251, 191, 36, .6); }
+
+.ed-active {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  min-width: 100%;
+  background: rgba(255, 255, 255, .035);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.ed-input {
+  position: absolute;
+  inset: 0;
   min-height: 100%;
   background: transparent;
   color: transparent;
@@ -235,6 +265,14 @@ button { font-family: inherit; }
   outline: none;
 }
 .ed-input::selection { background: rgba(110, 168, 254, .3); }
+
+/* Wrapped lines and a 1:1 number gutter cannot both be true. */
+.ed.is-wrapped .ed-gutter { display: none; }
+.ed.is-wrapped .ed-active { display: none; }
+.ed.is-wrapped .ed-layer { width: 100%; }
+.ed.is-wrapped .ed-paint,
+.ed.is-wrapped .ed-marks,
+.ed.is-wrapped .ed-input { white-space: pre-wrap; overflow-wrap: break-word; }
 
 /* Syntax colours */
 .t-comment { color: #6b7a90; font-style: italic; }
@@ -260,6 +298,17 @@ button { font-family: inherit; }
   flex: 0 0 auto;
 }
 .status-hint { margin-left: auto; }
+.status-pos { font-variant-numeric: tabular-nums; }
+.status-btn {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.status-btn:hover { color: var(--text); }
 .status-item.is-dirty { color: var(--warn); }
 
 /* ---------- Preview ---------- */
@@ -420,6 +469,61 @@ button { font-family: inherit; }
 .icon-btn.danger:hover { color: var(--err); border-color: var(--err); }
 .empty { color: var(--text-dim); font-size: 12.5px; text-align: center; padding: 28px 8px; }
 
+/* ---------- Find bar ---------- */
+.findbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 8px;
+  padding: 8px 10px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.findbar[hidden] { display: none !important; }
+
+.find-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+
+.find-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 9px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+.find-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.find-input.no-match { border-color: var(--err); }
+
+.find-count {
+  flex: 0 0 auto;
+  min-width: 74px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.find-btn {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.find-btn:hover { background: #232b37; color: var(--text); }
+.find-btn[aria-pressed="true"] {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #fff;
+}
+
 /* ---------- Images ---------- */
 .dropzone {
   display: grid;
@@ -465,6 +569,41 @@ button { font-family: inherit; }
 .image-size { color: var(--text-dim); font-size: 11px; }
 .image-actions { display: grid; gap: 4px; }
 .image-actions .icon-btn { font-size: 11px; justify-content: center; }
+
+/* ---------- Shortcuts ---------- */
+.shortcuts { margin: 0; display: grid; gap: 0; }
+.shortcuts dt {
+  display: flex;
+  gap: 4px;
+  padding-top: 12px;
+  font-size: 12px;
+}
+.shortcuts dd {
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+.shortcuts kbd {
+  padding: 2px 6px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.shortcuts .group {
+  margin: 18px 0 2px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
 
 /* ---------- Toasts ---------- */
 .toast-stack {
