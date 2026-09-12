@@ -1,11 +1,12 @@
 'use strict';
 
-const { compose } = require('../public/compose.js');
+const { compose, escapeHtml } = require('../public/compose.js');
 const { SLUG_RE, validateSource, nextFreeSlug } = require('./store.js');
 
 const DEFAULT_API = 'https://api.github.com';
 const ROOT = 'published';
 const MANIFEST = `${ROOT}/index.json`;
+const DIRECTORY = `${ROOT}/index.html`;
 const BLOB_MODE = '100644';
 
 class GitHubError extends Error {
@@ -21,6 +22,7 @@ class GitHubError extends Error {
  *
  * Each publish is one commit writing three files:
  *   published/index.json          the list of pages (metadata only)
+ *   published/index.html          a browsable directory of those pages
  *   published/<slug>/page.json    metadata plus the three editor panes
  *   published/<slug>/index.html   the composed page, which GitHub Pages serves
  *
@@ -218,6 +220,7 @@ class GitHubStore {
         `Publish ${target} (v${meta.version})`,
         [
           { path: MANIFEST, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
+          { path: DIRECTORY, content: renderDirectory(Array.from(nextIndex.values())) },
           { path: `${ROOT}/${target}/page.json`, content: JSON.stringify({ meta, source }, null, 2) },
           { path: `${ROOT}/${target}/index.html`, content: compose({ html, css, js, title }) }
         ]
@@ -243,6 +246,7 @@ class GitHubStore {
       `Unpublish ${slug}`,
       [
         { path: MANIFEST, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
+        { path: DIRECTORY, content: renderDirectory(Array.from(nextIndex.values())) },
         { path: `${ROOT}/${slug}/page.json`, remove: true },
         { path: `${ROOT}/${slug}/index.html`, remove: true }
       ]
@@ -254,6 +258,59 @@ class GitHubStore {
   }
 }
 
+/**
+ * A plain directory of everything published, so /published/ is a useful page
+ * rather than a 404 when someone trims the address back.
+ */
+function renderDirectory(pages) {
+  const sorted = pages.slice().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  const items = sorted.length
+    ? sorted.map((page) => `    <li>
+      <a href="./${encodeURIComponent(page.slug)}/">${escapeHtml(page.name)}</a>
+      <span>v${page.version} · ${escapeHtml(String(page.updatedAt).slice(0, 10))}</span>
+    </li>`).join('\n')
+    : '    <li class="empty">Nothing published yet.</li>';
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Published pages</title>
+<style>
+:root { color-scheme: dark }
+body {
+  margin: 0; padding: 48px 20px; background: #0e1116; color: #e6e9ef;
+  font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+main { max-width: 40rem; margin: 0 auto }
+h1 { margin: 0 0 4px; font-size: 1.5rem; letter-spacing: -0.01em }
+p.sub { margin: 0 0 28px; color: #97a1b2; font-size: .9rem }
+ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px }
+li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+  padding: 14px 0; border-bottom: 1px solid #262e3a;
+}
+li a { color: #6ea8fe; font-weight: 500; text-decoration: none }
+li a:hover { text-decoration: underline }
+li span { margin-left: auto; color: #77839a; font-size: .8rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace }
+li.empty { color: #77839a; justify-content: center; padding: 32px 0 }
+</style>
+</head>
+<body>
+<main>
+  <h1>Published pages</h1>
+  <p class="sub">${sorted.length} page${sorted.length === 1 ? '' : 's'}, published with Actually Useful.</p>
+  <ul>
+${items}
+  </ul>
+</main>
+</body>
+</html>
+`;
+}
+
 /** Turns a GitHub failure into something a person can act on. */
 function githubHint(err) {
   if (err.status === 401) return 'GitHub rejected the token. Check AU_GITHUB_TOKEN has not expired.';
@@ -262,4 +319,4 @@ function githubHint(err) {
   return err.message || 'Could not reach GitHub.';
 }
 
-module.exports = { GitHubStore, GitHubError, ROOT, MANIFEST };
+module.exports = { GitHubStore, GitHubError, ROOT, MANIFEST, DIRECTORY, renderDirectory };

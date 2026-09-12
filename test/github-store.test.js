@@ -112,7 +112,7 @@ test('a fresh repository starts with no pages', async () => {
   });
 });
 
-test('publishing writes three files in a single commit', async () => {
+test('publishing writes the page, its source and the indexes in one commit', async () => {
   await withFake({}, async ({ make, files, commits }) => {
     const store = make();
     const result = await store.save({
@@ -128,6 +128,7 @@ test('publishing writes three files in a single commit', async () => {
     assert.deepStrictEqual(commits, ['Publish mi-primera-pagina (v1)']);
 
     assert.deepStrictEqual(Array.from(files.keys()).sort(), [
+      'published/index.html',
       'published/index.json',
       'published/mi-primera-pagina/index.html',
       'published/mi-primera-pagina/page.json'
@@ -192,7 +193,10 @@ test('unpublishing removes the files and the manifest entry', async () => {
     await store.save({ name: 'Temporal', html: '<p>x</p>' });
     assert.strictEqual(await store.remove('temporal'), true);
 
-    assert.deepStrictEqual(Array.from(files.keys()), ['published/index.json']);
+    assert.deepStrictEqual(Array.from(files.keys()).sort(), [
+      'published/index.html',
+      'published/index.json'
+    ]);
     assert.deepStrictEqual(JSON.parse(files.get('published/index.json')).pages, []);
     assert.strictEqual(commits[1], 'Unpublish temporal');
     assert.strictEqual(await store.get('temporal'), null);
@@ -288,5 +292,50 @@ test('the app serves pages straight from GitHub storage', async () => {
     } finally {
       app.close();
     }
+  });
+});
+
+test('a browsable directory is written beside the pages', async () => {
+  await withFake({}, async ({ make, files }) => {
+    const store = make();
+    await store.save({ name: 'Primera', html: '<p>1</p>' });
+    await store.save({ name: 'Segunda & <otra>', html: '<p>2</p>' });
+
+    const directory = files.get('published/index.html');
+    assert.ok(directory, 'published/index.html must exist');
+    assert.match(directory, /^<!doctype html>/);
+    assert.match(directory, /<title>Published pages<\/title>/);
+    assert.match(directory, /2 pages/);
+    assert.match(directory, /href="\.\/primera\/"/);
+    assert.match(directory, /href="\.\/segunda-otra\/"/);
+    // The page name is escaped, not injected as markup.
+    assert.match(directory, /Segunda &amp; &lt;otra&gt;/);
+    assert.ok(!directory.includes('<otra>'));
+
+    // Newest first.
+    assert.ok(directory.indexOf('./segunda-otra/') < directory.indexOf('./primera/'));
+  });
+});
+
+test('the directory is rewritten when a page is unpublished', async () => {
+  await withFake({}, async ({ make, files }) => {
+    const store = make();
+    await store.save({ name: 'Se queda', html: '<p>a</p>' });
+    await store.save({ name: 'Se va', html: '<p>b</p>' });
+    await store.remove('se-va');
+
+    const directory = files.get('published/index.html');
+    assert.match(directory, /1 page,/);
+    assert.match(directory, /href="\.\/se-queda\/"/);
+    assert.ok(!directory.includes('./se-va/'));
+  });
+});
+
+test('the directory says so when nothing is published', async () => {
+  await withFake({}, async ({ make, files }) => {
+    const store = make();
+    await store.save({ name: 'Solitaria', html: '<p>x</p>' });
+    await store.remove('solitaria');
+    assert.match(files.get('published/index.html'), /Nothing published yet/);
   });
 });
