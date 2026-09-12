@@ -262,3 +262,27 @@ test('without a password the login page just redirects home', async () => {
   assert.strictEqual(res.headers.get('location'), '/');
   assert.strictEqual((await (await fetch(`${base}/api/config`)).json()).auth, false);
 });
+
+test('behind an HTTPS proxy the session cookie is marked Secure', async () => {
+  await withLockedApp(async (at) => {
+    const plain = await fetch(`${at}/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ password: PASSWORD }).toString(),
+      redirect: 'manual'
+    });
+    assert.ok(!/Secure/.test(plain.headers.get('set-cookie')), 'plain http must not claim Secure');
+
+    // Render and friends terminate TLS and forward this header.
+    const proxied = await fetch(`${at}/login`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        'x-forwarded-proto': 'https'
+      },
+      body: new URLSearchParams({ password: PASSWORD }).toString(),
+      redirect: 'manual'
+    });
+    assert.match(proxied.headers.get('set-cookie'), /Secure/);
+  });
+});
