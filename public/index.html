@@ -26,6 +26,9 @@
     <button id="btn-run" class="btn" title="Render preview (Ctrl/Cmd+Enter)">Run</button>
     <button id="btn-download" class="btn" title="Download a standalone .html file">Download</button>
     <button id="btn-deploy" class="btn btn-primary" title="Publish this page (Ctrl/Cmd+S)">Deploy</button>
+    <button id="btn-images" class="btn btn-ghost" title="Uploaded images" aria-expanded="false">
+      Images <span id="images-count" class="pill pill-quiet">0</span>
+    </button>
     <button id="btn-sites" class="btn btn-ghost" title="Deployed pages" aria-expanded="false">
       Pages <span id="sites-count" class="pill">0</span>
     </button>
@@ -91,6 +94,24 @@
   </div>
   <p class="drawer-note" id="drawer-note">Pages you deploy are served live from this server.</p>
   <ul class="site-list" id="site-list"></ul>
+</aside>
+
+<aside class="drawer" id="image-drawer" hidden aria-label="Uploaded images">
+  <div class="drawer-head">
+    <h2>Images</h2>
+    <button class="icon-btn" id="btn-close-images" aria-label="Close">✕</button>
+  </div>
+  <p class="drawer-note" id="image-note">
+    Upload an image, then click it to copy a tag you can paste into your HTML.
+  </p>
+
+  <div class="dropzone" id="dropzone">
+    <input type="file" id="image-input" accept="image/*" multiple hidden>
+    <button class="btn" type="button" id="btn-pick">Choose images…</button>
+    <p>or drag them here · PNG, JPEG, GIF, WebP, AVIF, SVG · up to 5 MB</p>
+  </div>
+
+  <ul class="image-list" id="image-list"></ul>
 </aside>
 
 <div class="toast-stack" id="toasts" aria-live="polite"></div>

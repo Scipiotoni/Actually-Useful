@@ -77,6 +77,14 @@
     consoleLog: $('console-log'),
     clearConsole: $('btn-clear-console'),
     drawer: $('drawer'),
+    imageDrawer: $('image-drawer'),
+    images: $('btn-images'),
+    imagesCount: $('images-count'),
+    closeImages: $('btn-close-images'),
+    dropzone: $('dropzone'),
+    imageInput: $('image-input'),
+    pick: $('btn-pick'),
+    imageList: $('image-list'),
     closeDrawer: $('btn-close-drawer'),
     siteList: $('site-list'),
     workspace: $('workspace'),
@@ -135,6 +143,8 @@
   });
 
   // ---------------------------------------------------------------- preview
+  var PREVIEW_BASE = '<base href="' + location.origin + '/p/">';
+
   var CONSOLE_BRIDGE = [
     '<script>',
     '(function () {',
@@ -170,7 +180,7 @@
       css: parts.css,
       js: parts.js,
       title: parts.name,
-      head: CONSOLE_BRIDGE
+      head: PREVIEW_BASE + '\n' + CONSOLE_BRIDGE
     });
     els.previewUrl.textContent = previewLabel(parts);
   }
@@ -462,6 +472,164 @@
     return Math.round(hours / 24) + 'd ago';
   }
 
+  // ----------------------------------------------------------------- images
+  function loadImages() {
+    return api('/api/assets').then(function (data) {
+      renderImages(data.assets || []);
+    }).catch(function () {
+      els.imageList.innerHTML = '<li class="empty">' + Compose.escapeHtml(NO_SERVER) + '</li>';
+    });
+  }
+
+  function renderImages(assets) {
+    els.imagesCount.textContent = String(assets.length);
+    els.imagesCount.classList.toggle('pill-quiet', assets.length === 0);
+
+    if (!assets.length) {
+      els.imageList.innerHTML = '<li class="empty">No images yet.</li>';
+      return;
+    }
+    els.imageList.innerHTML = assets.map(function (asset) {
+      var src = '/assets/' + encodeURIComponent(asset.name);
+      return '<li class="image" data-name="' + Compose.escapeHtml(asset.name) + '" ' +
+        'data-path="' + Compose.escapeHtml(asset.path) + '">' +
+        '<span class="image-thumb" style="background-image:url(' + src + ')"></span>' +
+        '<span class="image-meta">' +
+        '<span class="image-name">' + Compose.escapeHtml(asset.name) + '</span>' +
+        '<span class="image-size">' + formatSize(asset.size) + '</span>' +
+        '</span>' +
+        '<span class="image-actions">' +
+        '<button class="icon-btn" data-action="insert">Insert</button>' +
+        '<button class="icon-btn" data-action="copy">Copy tag</button>' +
+        '<button class="icon-btn danger" data-action="delete">Delete</button>' +
+        '</span></li>';
+    }).join('');
+  }
+
+  function formatSize(bytes) {
+    if (!bytes && bytes !== 0) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function imageTag(path, name) {
+    return '<img src="' + path + '" alt="' + name.replace(/\.[^.]*$/, '').replace(/-/g, ' ') + '">';
+  }
+
+  /** Uploads one file and returns its stored path. */
+  function uploadImage(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error('Could not read ' + file.name)); };
+      reader.onload = function () {
+        api('/api/assets', {
+          method: 'POST',
+          body: JSON.stringify({ name: file.name, data: reader.result })
+        }).then(resolve, reject);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function uploadAll(files) {
+    var list = Array.prototype.slice.call(files);
+    if (!list.length) return;
+
+    toast('Uploading ' + list.length + ' image' + (list.length === 1 ? '' : 's') + '…', '', 2000);
+    var done = [];
+    var failed = [];
+
+    list.reduce(function (chain, file) {
+      return chain.then(function () {
+        return uploadImage(file).then(function (asset) { done.push(asset); },
+          function (err) { failed.push(file.name + ': ' + err.message); });
+      });
+    }, Promise.resolve()).then(function () {
+      loadImages();
+      if (done.length) {
+        var first = done[0];
+        toast(
+          'Added ' + done.length + ' image' + (done.length === 1 ? '' : 's') +
+          '. Use <code>' + Compose.escapeHtml(first.path) + '</code> in your HTML.',
+          'ok',
+          8000
+        );
+      }
+      failed.forEach(function (message) { toast(message, 'err', 8000); });
+    });
+  }
+
+  els.pick.addEventListener('click', function () { els.imageInput.click(); });
+  els.imageInput.addEventListener('change', function () {
+    uploadAll(els.imageInput.files);
+    els.imageInput.value = '';
+  });
+
+  ['dragenter', 'dragover'].forEach(function (type) {
+    els.dropzone.addEventListener(type, function (event) {
+      event.preventDefault();
+      els.dropzone.classList.add('is-over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (type) {
+    els.dropzone.addEventListener(type, function (event) {
+      event.preventDefault();
+      els.dropzone.classList.remove('is-over');
+    });
+  });
+  els.dropzone.addEventListener('drop', function (event) {
+    if (event.dataTransfer && event.dataTransfer.files) uploadAll(event.dataTransfer.files);
+  });
+
+  els.imageList.addEventListener('click', function (event) {
+    var button = event.target.closest('button[data-action]');
+    if (!button) return;
+    var item = button.closest('.image');
+    var name = item.dataset.name;
+    var path = item.dataset.path;
+    var tag = imageTag(path, name);
+
+    if (button.dataset.action === 'insert') {
+      // Switch first: the pane has to be visible for the caret to land.
+      document.querySelector('.tab[data-tab="html"]').click();
+      editors.html.insertAtCursor('\n' + tag + '\n');
+      return void toast('Inserted into your HTML.', 'ok');
+    }
+
+    if (button.dataset.action === 'copy') {
+      return void copyText(tag).then(function (ok) {
+        toast(ok ? 'Copied ' + Compose.escapeHtml(tag) : 'Copy failed — the path is ' + path,
+          ok ? 'ok' : 'err');
+      });
+    }
+
+    if (button.dataset.action === 'delete') {
+      if (!window.confirm('Delete ' + name + '? Pages already using it will show a broken image.')) return;
+      return void api('/api/assets/' + encodeURIComponent(name), { method: 'DELETE' })
+        .then(function () {
+          toast('Deleted ' + name, 'ok');
+          return loadImages();
+        })
+        .catch(function (err) { toast(err.message, 'err'); });
+    }
+  });
+
+  els.images.addEventListener('click', function () {
+    var show = els.imageDrawer.hidden;
+    els.imageDrawer.hidden = !show;
+    els.images.setAttribute('aria-expanded', String(show));
+    if (show) {
+      els.drawer.hidden = true;
+      els.sites.setAttribute('aria-expanded', 'false');
+      loadImages();
+    }
+  });
+  els.closeImages.addEventListener('click', function () {
+    els.imageDrawer.hidden = true;
+    els.images.setAttribute('aria-expanded', 'false');
+  });
+
   // --------------------------------------------------------------- download
   els.download.addEventListener('click', function () {
     var parts = source();
@@ -538,14 +706,20 @@
     var show = els.drawer.hidden;
     els.drawer.hidden = !show;
     els.sites.setAttribute('aria-expanded', String(show));
-    if (show) loadSites();
+    if (show) {
+      els.imageDrawer.hidden = true;
+      els.images.setAttribute('aria-expanded', 'false');
+      loadSites();
+    }
   });
   els.closeDrawer.addEventListener('click', function () {
     els.drawer.hidden = true;
     els.sites.setAttribute('aria-expanded', 'false');
   });
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape' && !els.drawer.hidden) els.closeDrawer.click();
+    if (event.key !== 'Escape') return;
+    if (!els.drawer.hidden) els.closeDrawer.click();
+    if (!els.imageDrawer.hidden) els.closeImages.click();
   });
 
   // --------------------------------------------------------------- splitter
@@ -620,6 +794,7 @@
   saveLocal();
   render();
   loadSites();
+  if (!OFFLINE) loadImages();
 
   if (!OFFLINE) {
     api('/api/config').then(function (config) {

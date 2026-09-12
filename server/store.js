@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { compose, slugify } = require('../public/compose.js');
+const { ASSET_NAME_RE, assetName, nextFreeName, decodeUpload } = require('./assets.js');
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,59}$/;
 const MAX_SOURCE_BYTES = 2 * 1024 * 1024; // per pane
@@ -46,7 +47,69 @@ class DeployStore {
 
   init() {
     fs.mkdirSync(this.root, { recursive: true });
+    fs.mkdirSync(this.assetsDir, { recursive: true });
     return this;
+  }
+
+  /** Images live beside the pages; "_assets" can never collide with a slug. */
+  get assetsDir() {
+    return path.join(this.root, '_assets');
+  }
+
+  assetPath(name) {
+    if (!ASSET_NAME_RE.test(name)) return null;
+    const file = path.resolve(this.assetsDir, name);
+    return file === path.join(this.assetsDir, name) ? file : null;
+  }
+
+  listAssets() {
+    let names = [];
+    try {
+      names = fs.readdirSync(this.assetsDir);
+    } catch {
+      return [];
+    }
+    return names
+      .filter((name) => ASSET_NAME_RE.test(name))
+      .map((name) => {
+        const stat = fs.statSync(path.join(this.assetsDir, name));
+        return { name, size: stat.size, updatedAt: stat.mtime.toISOString() };
+      })
+      .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  }
+
+  readAsset(name) {
+    const file = this.assetPath(name);
+    if (!file) return null;
+    try {
+      return fs.readFileSync(file);
+    } catch {
+      return null;
+    }
+  }
+
+  saveAsset({ name, data }) {
+    const decoded = decodeUpload(data);
+    if (!decoded.ok) return decoded;
+
+    const taken = new Set(this.listAssets().map((asset) => asset.name));
+    const target = nextFreeName(assetName(name, decoded.extension), taken);
+    const file = this.assetPath(target);
+    if (!file) return { ok: false, status: 400, error: 'Invalid file name' };
+
+    fs.mkdirSync(this.assetsDir, { recursive: true });
+    fs.writeFileSync(file, decoded.buffer);
+    return {
+      ok: true,
+      asset: { name: target, size: decoded.buffer.length, updatedAt: new Date().toISOString() }
+    };
+  }
+
+  removeAsset(name) {
+    const file = this.assetPath(name);
+    if (!file || !fs.existsSync(file)) return false;
+    fs.rmSync(file);
+    return true;
   }
 
   /** Resolves a slug to a directory, refusing anything that escapes the root. */

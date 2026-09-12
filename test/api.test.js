@@ -95,7 +95,8 @@ test('rejects path traversal in slugs', async () => {
     assert.strictEqual(res.status, 400, `slug ${slug} should be rejected`);
   }
 
-  assert.strictEqual((await fetch(`${base}/p/..%2F..%2Fetc`)).status, 404);
+  // Denied either as an unknown page or by the static guard; both are fine.
+  assert.ok([403, 404].includes((await fetch(`${base}/p/..%2F..%2Fetc`)).status));
   assert.deepStrictEqual(fs.readdirSync(dataDir).sort(), before, 'no directory was created');
 
   const store = new DeployStore(dataDir);
@@ -112,6 +113,33 @@ test('rejects oversized sources and non-string panes', async () => {
 test('static files are not readable outside public/', async () => {
   const res = await fetch(`${base}/../server/store.js`);
   assert.ok(res.status === 403 || res.status === 404);
+});
+
+test('percent-encoded traversal cannot escape public/', async () => {
+  // fetch() normalises a literal "../", so the encoded forms are the ones
+  // that actually reach the server — and the ones that used to get through.
+  const attempts = [
+    '/assets/..%2F..%2Fpackage.json',
+    '/..%2Fserver%2Fauth.js',
+    '/..%2F..%2F..%2Fetc%2Fpasswd',
+    '/%2e%2e%2fserver%2findex.js',
+    '/public%2F..%2F..%2FREADME.md',
+    '/..%2fdata'
+  ];
+
+  for (const attempt of attempts) {
+    const res = await fetch(`${base}${attempt}`);
+    assert.ok(res.status === 403 || res.status === 404, `${attempt} returned ${res.status}`);
+    const body = await res.text();
+    assert.ok(!body.includes('actually-useful'), `${attempt} leaked package.json`);
+    assert.ok(!body.includes('use strict'), `${attempt} leaked server source`);
+  }
+});
+
+test('the editor\'s own assets still load', async () => {
+  for (const file of ['/', '/app.js', '/styles.css', '/editor.js', '/compose.js']) {
+    assert.strictEqual((await fetch(`${base}${file}`)).status, 200, `${file} should be served`);
+  }
 });
 
 test('compose wraps fragments and injects into full documents', () => {
@@ -285,4 +313,87 @@ test('behind an HTTPS proxy the session cookie is marked Secure', async () => {
     });
     assert.match(proxied.headers.get('set-cookie'), /Secure/);
   });
+});
+
+// --------------------------------------------------------------------------
+// Uploaded images
+// --------------------------------------------------------------------------
+
+const PIXEL = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.from('not a real image body, but the signature is what counts')
+]);
+
+const upload = (name, buffer = PIXEL, mime = 'image/png') =>
+  fetch(`${base}/api/assets`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name, data: `data:${mime};base64,${buffer.toString('base64')}` })
+  });
+
+test('an uploaded image is stored and served back byte for byte', async () => {
+  const res = await upload('Mi Foto.png');
+  assert.strictEqual(res.status, 201);
+  const asset = await res.json();
+  assert.strictEqual(asset.name, 'mi-foto.png');
+  assert.strictEqual(asset.path, '../assets/mi-foto.png');
+
+  const served = await fetch(`${base}/assets/mi-foto.png`);
+  assert.strictEqual(served.status, 200);
+  assert.strictEqual(served.headers.get('content-type'), 'image/png');
+  assert.strictEqual(served.headers.get('x-content-type-options'), 'nosniff');
+  assert.ok(Buffer.from(await served.arrayBuffer()).equals(PIXEL));
+});
+
+test('the path an image reports resolves from a published page', async () => {
+  await upload('enlace.png');
+  const site = await (await fetch(`${base}/api/deploys`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name: 'Usa Imagen', html: '<img src="../assets/enlace.png">' })
+  })).json();
+
+  // "../assets/x" from /p/<slug> is /assets/x, which the server serves.
+  const resolved = new URL('../assets/enlace.png', `${base}/p/${site.slug}`);
+  assert.strictEqual(resolved.pathname, '/assets/enlace.png');
+  assert.strictEqual((await fetch(resolved)).status, 200);
+});
+
+test('an SVG is served with a sandbox so it cannot script the editor', async () => {
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+  const asset = await (await upload('icono.svg', svg, 'image/svg+xml')).json();
+  const served = await fetch(`${base}/assets/${asset.name}`);
+  assert.strictEqual(served.headers.get('content-type'), 'image/svg+xml');
+  assert.strictEqual(served.headers.get('content-security-policy'), 'sandbox');
+});
+
+test('non-images and oversized uploads are refused', async () => {
+  const notAnImage = await upload('trampa.png', Buffer.from('MZ definitely an executable'));
+  assert.strictEqual(notAnImage.status, 415);
+
+  const huge = await upload('enorme.png', Buffer.concat([PIXEL, Buffer.alloc(5 * 1024 * 1024)]));
+  assert.strictEqual(huge.status, 413);
+
+  assert.strictEqual((await fetch(`${base}/api/assets`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name: 'x.png', data: 'not-a-data-url' })
+  })).status, 400);
+});
+
+test('images are listed and can be deleted', async () => {
+  await upload('listada.png');
+  const { assets } = await (await fetch(`${base}/api/assets`)).json();
+  assert.ok(assets.some((a) => a.name === 'listada.png'));
+
+  assert.strictEqual((await fetch(`${base}/api/assets/listada.png`, { method: 'DELETE' })).status, 200);
+  assert.strictEqual((await fetch(`${base}/assets/listada.png`)).status, 404);
+  assert.strictEqual((await fetch(`${base}/api/assets/listada.png`, { method: 'DELETE' })).status, 404);
+});
+
+test('image names cannot escape the assets directory', async () => {
+  for (const name of ['..%2F..%2Fpackage.json', '.hidden', 'UPPER.png']) {
+    const res = await fetch(`${base}/assets/${name}`);
+    assert.ok([403, 404].includes(res.status), `${name} returned ${res.status}`);
+  }
 });

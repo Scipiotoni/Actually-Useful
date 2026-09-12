@@ -7,6 +7,7 @@ const path = require('path');
 const { DeployStore } = require('./store.js');
 const auth = require('./auth.js');
 const { GitHubStore } = require('./github-store.js');
+const { contentType, ASSET_NAME_RE } = require('./assets.js');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const DATA_DIR = process.env.AU_DATA_DIR || path.join(__dirname, '..', 'data', 'sites');
@@ -94,9 +95,14 @@ function readForm(req) {
 }
 
 function serveStatic(res, urlPath) {
+  if (urlPath.includes('\0')) return sendText(res, 400, 'Bad request');
+
   const rel = urlPath === '/' ? 'index.html' : urlPath.replace(/^\/+/, '');
   const file = path.resolve(PUBLIC_DIR, rel);
-  if (file !== path.join(PUBLIC_DIR, rel) && !file.startsWith(PUBLIC_DIR + path.sep)) {
+  // resolve() has already collapsed any "..", so containment is the only
+  // check that means anything here — comparing against path.join of the same
+  // input proves nothing, because it collapses ".." identically.
+  if (file !== PUBLIC_DIR && !file.startsWith(PUBLIC_DIR + path.sep)) {
     return sendText(res, 403, 'Forbidden');
   }
   fs.readFile(file, (err, data) => {
@@ -151,6 +157,26 @@ function createApp(options = {}) {
           'cache-control': 'no-cache'
         });
         return res.end(html);
+      }
+
+      // --- Uploaded images -------------------------------------------------
+      // Public like the pages that embed them, so this sits above the gate.
+      const assetMatch = pathname.match(/^\/assets\/([^/]+)$/);
+      if (assetMatch && (req.method === 'GET' || req.method === 'HEAD')) {
+        const name = assetMatch[1];
+        const bytes = ASSET_NAME_RE.test(name) ? await store.readAsset(name) : null;
+        if (!bytes) return sendText(res, 404, 'Not found');
+
+        const type = contentType(name);
+        res.writeHead(200, {
+          'content-type': type,
+          'content-length': bytes.length,
+          'x-content-type-options': 'nosniff',
+          // An SVG can carry script, so deny it an origin to run against.
+          ...(type === 'image/svg+xml' ? { 'content-security-policy': 'sandbox' } : {}),
+          'cache-control': 'public, max-age=300'
+        });
+        return res.end(req.method === 'HEAD' ? undefined : bytes);
       }
 
       // --- Login ----------------------------------------------------------
@@ -236,6 +262,26 @@ function createApp(options = {}) {
         const result = await store.save(body);
         if (!result.ok) return sendJson(res, result.status, { error: result.error });
         return sendJson(res, result.created ? 201 : 200, decorate(result.site, origin, store));
+      }
+
+      if (pathname === '/api/assets' && req.method === 'GET') {
+        const assets = await store.listAssets();
+        return sendJson(res, 200, {
+          assets: assets.map((asset) => ({ ...asset, path: `../assets/${asset.name}` }))
+        });
+      }
+
+      if (pathname === '/api/assets' && req.method === 'POST') {
+        const body = await readBody(req);
+        const result = await store.saveAsset(body);
+        if (!result.ok) return sendJson(res, result.status, { error: result.error });
+        return sendJson(res, 201, { ...result.asset, path: `../assets/${result.asset.name}` });
+      }
+
+      const assetOne = pathname.match(/^\/api\/assets\/([^/]+)$/);
+      if (assetOne && req.method === 'DELETE') {
+        if (!(await store.removeAsset(assetOne[1]))) return sendJson(res, 404, { error: 'Not found' });
+        return sendJson(res, 200, { deleted: assetOne[1] });
       }
 
       const oneMatch = pathname.match(/^\/api\/deploys\/([^/]+)$/);

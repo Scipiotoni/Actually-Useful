@@ -81,6 +81,10 @@ The UI is just a client of this API.
 | `GET` | `/api/deploys/:slug` | Fetch one page and its source |
 | `DELETE` | `/api/deploys/:slug` | Remove a deployed page |
 | `GET` | `/p/:slug` | The deployed page itself |
+| `GET` | `/api/assets` | List uploaded images |
+| `POST` | `/api/assets` | Upload. Body: `{name, data}` where data is a data: URL |
+| `DELETE` | `/api/assets/:name` | Remove an image |
+| `GET` | `/assets/:name` | The image itself (public) |
 
 Omit `slug` on `POST` to create a new page — the slug is derived from the name
 and de-duplicated (`my-page`, `my-page-2`, …). Pass `slug` to overwrite that
@@ -92,6 +96,33 @@ curl -X POST localhost:3000/api/deploys \
   -d '{"name":"From curl","html":"<h1>hi</h1>","css":"h1{color:rebeccapurple}"}'
 # {"slug":"from-curl", ... ,"url":"http://localhost:3000/p/from-curl"}
 ```
+
+## Images
+
+The **Images** drawer takes uploads by button or drag-and-drop and stores them
+next to your pages. Each one reports a path like `../assets/my-photo.png`,
+which you drop into an `<img src="...">` — *Insert* puts the whole tag in your
+HTML for you.
+
+That path is relative on purpose, because a published page is served from two
+places and both have to work:
+
+```
+the app          /p/<slug>                     → ../assets/x.png = /assets/x.png
+GitHub Pages     /published/<slug>/index.html  → ../assets/x.png = /published/assets/x.png
+```
+
+The live preview gets a matching `<base>`, so what you see while editing is what
+the published page shows.
+
+PNG, JPEG, GIF, WebP, AVIF and SVG are accepted, up to 5 MB each. Uploads are
+identified by their actual bytes rather than by filename, so renaming something
+to `.png` will not get it in. SVG is served with a `sandbox` CSP, since an SVG
+can carry script and would otherwise run on the editor's own origin.
+
+Images live in `published/assets/` in the repository (GitHub storage) or
+`_assets/` beside the pages (disk storage), and they are public, like the pages
+that embed them.
 
 ## Password protection
 
@@ -211,8 +242,10 @@ npm test
 ```
 
 Covers deploy/redeploy/versioning, slug collisions, listing and deletion, path
-traversal and payload limits, and the compose rules (fragment wrapping,
-full-document injection, `</script>` escaping).
+traversal (including percent-encoded attempts) and payload limits, the password
+gate, image upload and serving, GitHub storage against a stand-in API, and the
+compose rules (fragment wrapping, full-document injection, `</script>`
+escaping).
 
 ## Security notes
 
@@ -237,6 +270,7 @@ server/index.js    HTTP server: static files, JSON API, /p/<slug> hosting
 server/store.js    File-backed deploy storage, slugging and validation
 server/github-store.js  The same, backed by commits to a GitHub repository
 server/auth.js     Optional password gate: cookies, throttling, login page
+server/assets.js   Image validation: format sniffing, naming, size limits
 public/compose.js  Panes → one HTML document (shared by client and server)
 public/editor.js   MiniEditor: the dependency-free highlighting editor
 public/app.js      Editor wiring: tabs, preview, console, deploy, drawer

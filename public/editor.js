@@ -147,6 +147,12 @@
 
   MiniEditor.prototype.refresh = function () { this._syncScroll(); };
 
+  /** Drops text in at the caret, keeping undo intact. */
+  MiniEditor.prototype.insertAtCursor = function (text) {
+    this.input.focus();
+    this._insert(text);
+  };
+
   MiniEditor.prototype._sync = function () {
     var value = this.input.value;
     // The trailing newline needs a character after it or <pre> collapses it.

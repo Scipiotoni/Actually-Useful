@@ -2,11 +2,13 @@
 
 const { compose, escapeHtml } = require('../public/compose.js');
 const { SLUG_RE, validateSource, nextFreeSlug } = require('./store.js');
+const { ASSET_NAME_RE, assetName, nextFreeName, decodeUpload } = require('./assets.js');
 
 const DEFAULT_API = 'https://api.github.com';
 const ROOT = 'published';
 const MANIFEST = `${ROOT}/index.json`;
 const DIRECTORY = `${ROOT}/index.html`;
+const ASSETS = `${ROOT}/assets`;
 const BLOB_MODE = '100644';
 
 class GitHubError extends Error {
@@ -25,6 +27,7 @@ class GitHubError extends Error {
  *   published/index.html          a browsable directory of those pages
  *   published/<slug>/page.json    metadata plus the three editor panes
  *   published/<slug>/index.html   the composed page, which GitHub Pages serves
+ *   published/assets/<file>       uploaded images, reached as ../assets/<file>
  *
  * Everything is cached in memory after the first read, so serving a page costs
  * no API calls.
@@ -46,6 +49,7 @@ class GitHubStore {
 
     this.pages = new Map();     // slug -> {meta, source}
     this.index = null;          // slug -> metadata, from the manifest
+    this.assets = new Map();    // name -> {meta, bytes}
     this.loading = null;
   }
 
@@ -129,6 +133,74 @@ class GitHubStore {
       const page = await this.readJson(`${ROOT}/${meta.slug}/page.json`);
       if (page) this.pages.set(meta.slug, page);
     }));
+
+    await this.loadAssets();
+  }
+
+  /** Lists the uploaded images. Their bytes are fetched only when asked for. */
+  async loadAssets() {
+    const branch = await this.resolveBranch();
+    const listing = await this.request('GET', `/contents/${ASSETS}?ref=${encodeURIComponent(branch)}`);
+    if (!Array.isArray(listing)) return;
+    listing.forEach((entry) => {
+      if (entry.type !== 'file' || !ASSET_NAME_RE.test(entry.name)) return;
+      const known = this.assets.get(entry.name);
+      this.assets.set(entry.name, {
+        meta: { name: entry.name, size: entry.size, updatedAt: known ? known.meta.updatedAt : null },
+        bytes: known ? known.bytes : null
+      });
+    });
+  }
+
+  async listAssets() {
+    await this.ready();
+    return Array.from(this.assets.values())
+      .map((asset) => asset.meta)
+      .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')) || a.name.localeCompare(b.name));
+  }
+
+  async readAsset(name) {
+    if (!ASSET_NAME_RE.test(name)) return null;
+    await this.ready();
+    const asset = this.assets.get(name);
+    if (!asset) return null;
+    if (asset.bytes) return asset.bytes;
+
+    const branch = await this.resolveBranch();
+    const file = await this.request('GET', `/contents/${ASSETS}/${name}?ref=${encodeURIComponent(branch)}`);
+    if (!file || !file.content) return null;
+    asset.bytes = Buffer.from(file.content, 'base64');
+    return asset.bytes;
+  }
+
+  async saveAsset({ name, data }) {
+    const decoded = decodeUpload(data);
+    if (!decoded.ok) return decoded;
+
+    await this.ready();
+    const target = nextFreeName(assetName(name, decoded.extension), new Set(this.assets.keys()));
+
+    try {
+      await this.commit(`Add image ${target}`, [
+        { path: `${ASSETS}/${target}`, bytes: decoded.buffer }
+      ]);
+    } catch (err) {
+      return { ok: false, status: err.status === 403 ? 403 : 502, error: githubHint(err) };
+    }
+
+    const meta = { name: target, size: decoded.buffer.length, updatedAt: new Date().toISOString() };
+    this.assets.set(target, { meta, bytes: decoded.buffer });
+    return { ok: true, asset: meta };
+  }
+
+  async removeAsset(name) {
+    if (!ASSET_NAME_RE.test(name)) return false;
+    await this.ready();
+    if (!this.assets.has(name)) return false;
+
+    await this.commit(`Remove image ${name}`, [{ path: `${ASSETS}/${name}`, remove: true }]);
+    this.assets.delete(name);
+    return true;
   }
 
   /** Writes several files as a single commit. */
@@ -139,11 +211,21 @@ class GitHubStore {
 
     const head = ref.object.sha;
     const parent = await this.request('GET', `/git/commits/${head}`);
+    const entries = await Promise.all(changes.map(async (change) => {
+      if (change.remove) return { path: change.path, mode: BLOB_MODE, type: 'blob', sha: null };
+      if (change.bytes) {
+        const blob = await this.request('POST', '/git/blobs', {
+          content: change.bytes.toString('base64'),
+          encoding: 'base64'
+        });
+        return { path: change.path, mode: BLOB_MODE, type: 'blob', sha: blob.sha };
+      }
+      return { path: change.path, mode: BLOB_MODE, type: 'blob', content: change.content };
+    }));
+
     const tree = await this.request('POST', '/git/trees', {
       base_tree: parent.tree.sha,
-      tree: changes.map((change) => (change.remove
-        ? { path: change.path, mode: BLOB_MODE, type: 'blob', sha: null }
-        : { path: change.path, mode: BLOB_MODE, type: 'blob', content: change.content }))
+      tree: entries
     });
     const commit = await this.request('POST', '/git/commits', {
       message,
@@ -319,4 +401,4 @@ function githubHint(err) {
   return err.message || 'Could not reach GitHub.';
 }
 
-module.exports = { GitHubStore, GitHubError, ROOT, MANIFEST, DIRECTORY, renderDirectory };
+module.exports = { GitHubStore, GitHubError, ROOT, MANIFEST, DIRECTORY, ASSETS, renderDirectory };

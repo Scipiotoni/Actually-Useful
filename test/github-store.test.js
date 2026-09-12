@@ -13,6 +13,7 @@ const { createApp } = require('../server/index.js');
  */
 function fakeGitHub({ defaultBranch = 'main' } = {}) {
   const files = new Map();
+  const blobs = new Map();
   const commits = [];
   let seq = 0;
 
@@ -36,12 +37,25 @@ function fakeGitHub({ defaultBranch = 'main' } = {}) {
 
     const contents = rest.match(/^\/contents\/(.+)$/);
     if (contents && req.method === 'GET') {
-      const file = decodeURIComponent(contents[1]);
-      if (!files.has(file)) return send(404, { message: 'Not Found' });
+      const target = decodeURIComponent(contents[1]);
+
+      if (!files.has(target)) {
+        // Maybe it names a directory; list what sits directly under it.
+        const children = [];
+        files.forEach((value, key) => {
+          if (!key.startsWith(`${target}/`)) return;
+          const name = key.slice(target.length + 1);
+          if (name.includes('/')) return;
+          children.push({ name, path: key, type: 'file', size: Buffer.from(value).length });
+        });
+        if (children.length) return send(200, children);
+        return send(404, { message: 'Not Found' });
+      }
+
       return send(200, {
-        content: Buffer.from(files.get(file), 'utf8').toString('base64'),
+        content: Buffer.from(files.get(target)).toString('base64'),
         encoding: 'base64',
-        sha: `blob-${file}`
+        sha: `blob-${target}`
       });
     }
 
@@ -54,11 +68,21 @@ function fakeGitHub({ defaultBranch = 'main' } = {}) {
       return send(200, { tree: { sha: `tree-${commits.length}` } });
     }
 
+    if (rest === '/git/blobs' && req.method === 'POST') {
+      return readBody(req, (body) => {
+        seq += 1;
+        const sha = `blob-${seq}`;
+        blobs.set(sha, Buffer.from(body.content, body.encoding || 'utf8'));
+        send(201, { sha });
+      });
+    }
+
     if (rest === '/git/trees' && req.method === 'POST') {
       return readBody(req, (body) => {
         (body.tree || []).forEach((entry) => {
           if (entry.sha === null) files.delete(entry.path);
-          else files.set(entry.path, entry.content);
+          else if (entry.content !== undefined) files.set(entry.path, entry.content);
+          else files.set(entry.path, blobs.get(entry.sha));
         });
         seq += 1;
         send(201, { sha: `tree-${seq}` });
@@ -337,5 +361,96 @@ test('the directory says so when nothing is published', async () => {
     await store.save({ name: 'Solitaria', html: '<p>x</p>' });
     await store.remove('solitaria');
     assert.match(files.get('published/index.html'), /Nothing published yet/);
+  });
+});
+
+// --------------------------------------------------------------------------
+// Uploaded images
+// --------------------------------------------------------------------------
+
+const RED_PNG = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.from('fake pixel data for the test')
+]);
+const PNG_UPLOAD = `data:image/png;base64,${RED_PNG.toString('base64')}`;
+
+test('an uploaded image is committed as a binary blob', async () => {
+  await withFake({}, async ({ make, files, commits }) => {
+    const store = make();
+    const result = await store.saveAsset({ name: 'Mi Logo.PNG', data: PNG_UPLOAD });
+
+    assert.ok(result.ok, result.error);
+    assert.strictEqual(result.asset.name, 'mi-logo.png');
+    assert.strictEqual(result.asset.size, RED_PNG.length);
+    assert.deepStrictEqual(commits, ['Add image mi-logo.png']);
+
+    // Stored under published/assets so "../assets/x" resolves from a page.
+    const stored = files.get('published/assets/mi-logo.png');
+    assert.ok(stored, 'the image must be written to published/assets');
+    assert.ok(Buffer.from(stored).equals(RED_PNG), 'bytes must survive the round trip');
+  });
+});
+
+test('a page and its image sit at the paths the relative link needs', async () => {
+  await withFake({}, async ({ make, files }) => {
+    const store = make();
+    await store.saveAsset({ name: 'foto.png', data: PNG_UPLOAD });
+    await store.save({ name: 'Con Foto', html: '<img src="../assets/foto.png">' });
+
+    // published/con-foto/index.html + ../assets/foto.png -> published/assets/foto.png
+    assert.ok(files.has('published/con-foto/index.html'));
+    assert.ok(files.has('published/assets/foto.png'));
+    assert.match(files.get('published/con-foto/index.html'), /src="\.\.\/assets\/foto\.png"/);
+  });
+});
+
+test('images are found again after a restart', async () => {
+  await withFake({}, async ({ make }) => {
+    await make().saveAsset({ name: 'persistente.png', data: PNG_UPLOAD });
+
+    const restarted = make();
+    const list = await restarted.listAssets();
+    assert.deepStrictEqual(list.map((a) => a.name), ['persistente.png']);
+
+    const bytes = await restarted.readAsset('persistente.png');
+    assert.ok(bytes.equals(RED_PNG));
+  });
+});
+
+test('repeated image names do not overwrite each other', async () => {
+  await withFake({}, async ({ make }) => {
+    const store = make();
+    const a = await store.saveAsset({ name: 'foto.png', data: PNG_UPLOAD });
+    const b = await store.saveAsset({ name: 'foto.png', data: PNG_UPLOAD });
+    assert.strictEqual(a.asset.name, 'foto.png');
+    assert.strictEqual(b.asset.name, 'foto-2.png');
+  });
+});
+
+test('deleting an image removes it from the repository', async () => {
+  await withFake({}, async ({ make, files, commits }) => {
+    const store = make();
+    await store.saveAsset({ name: 'temporal.png', data: PNG_UPLOAD });
+    assert.strictEqual(await store.removeAsset('temporal.png'), true);
+
+    assert.ok(!files.has('published/assets/temporal.png'));
+    assert.strictEqual(commits[1], 'Remove image temporal.png');
+    assert.strictEqual(await store.readAsset('temporal.png'), null);
+    assert.strictEqual(await store.removeAsset('temporal.png'), false);
+  });
+});
+
+test('a file that is not an image is refused before any commit', async () => {
+  await withFake({}, async ({ make, files, commits }) => {
+    const store = make();
+    const disguised = `data:image/png;base64,${Buffer.from('MZ this is not a picture').toString('base64')}`;
+
+    const result = await store.saveAsset({ name: 'trampa.png', data: disguised });
+    assert.strictEqual(result.ok, false);
+    assert.strictEqual(result.status, 415);
+    assert.strictEqual(files.size, 0);
+    assert.deepStrictEqual(commits, []);
+
+    assert.strictEqual(await store.readAsset('../../secret'), null);
   });
 });
