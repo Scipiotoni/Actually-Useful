@@ -27,7 +27,13 @@ mode and the app tells you so.
 
 ## What it does
 
-**Editor** — three panes (HTML / CSS / JS) with syntax highlighting, line
+**Files** — a project holds as many files as you like. **＋** asks what kind
+(HTML page, CSS stylesheet, JavaScript) and what to call it; tabs switch
+between them, double-click a tab to rename, × to delete. Refer to one from
+another by its plain name: `<a href="about.html">`. Stylesheets and scripts are
+linked into every page for you, so you rarely write those tags at all.
+
+**Editor** — syntax highlighting that follows the open file's type, line
 numbers, the active line marked, and a status bar showing where the caret is.
 Native undo, selection and IME all still work, because the editor is a real
 `<textarea>` with a highlighted layer painted underneath it.
@@ -42,13 +48,15 @@ replaces the lot. Whatever you had selected becomes the search term.
 375 px to check a layout. `console.log` and uncaught errors from your page are
 forwarded to a console panel.
 
-**Deploy** — one click publishes the composed page to `/p/<slug>`, served live
-by the same server. Deploying again to the same slug replaces it and bumps the
-version; the URL never changes. The **Pages** drawer lists everything you have
-deployed, and can reopen any of them back into the editor or delete them.
+**Deploy** — one click publishes every file in the project to `/p/<slug>/`,
+served live by the same server, so `/p/<slug>/about.html` is a real address and
+the links between your pages work. Deploying again to the same slug replaces it
+and bumps the version; the URL never changes, and a file you removed stops
+being served. The **Pages** drawer lists everything you have deployed, and can
+reopen any of them back into the editor or delete them.
 
-**Download** — saves the composed page as a standalone `.html` file with the
-CSS and JS inlined.
+**Download** — saves the page you are looking at as a standalone `.html` file,
+with its stylesheets and scripts folded in so it works on its own.
 
 Your draft is autosaved to `localStorage`, so a reload picks up where you left
 off. The preview URL says whether what you see matches what is live
@@ -82,17 +90,34 @@ instead of doubling it, and backspace between an empty pair removes both.
 line-number gutter is hidden while it is on, since wrapped lines and a 1:1
 gutter cannot both be honest.
 
-## How a page is composed
+## How files fit together
 
-`public/compose.js` turns the three panes into one document, and it is the
-*same* module the browser uses for the preview and the server uses for the
-deploy — so what you preview is byte-for-byte what gets published.
+`public/compose.js` decides what each file is served as, and it is the *same*
+module the browser uses for the preview and the server uses for the deploy — so
+what you preview is what gets published.
 
-If your HTML is a fragment, it is wrapped in a full document with the CSS in
-`<head>` and the JS before `</body>`. If it is already a complete document
-(it contains an `<html>` tag), your markup is left alone and the CSS and JS
-are injected into it instead. That means you can paste an entire page in and
-it will still work.
+One rule covers it: **write a fragment and it gets wired up for you; write a
+full document and you are in charge.**
+
+- An HTML file that is a *fragment* (no `<html>` tag) is wrapped in a page
+  skeleton, with every stylesheet and script in the project linked into it.
+- An HTML file that is a *complete document* is published exactly as written.
+  Nothing is added, so its own `<link>` and `<script>` tags decide what loads.
+- CSS and JS files are published as they are.
+
+Links between files are plain relative names, which is why a deploy lives at
+`/p/<slug>/` with the trailing slash — `about.html` in a page has to resolve to
+its sibling, here and on GitHub Pages alike. Requests to `/p/<slug>` are
+redirected so that holds either way. Images use `../assets/<name>` for the same
+reason, and the app serves them at `/p/assets/<name>` to mirror the layout
+GitHub Pages has.
+
+While you are drafting, nothing is served yet, so the preview folds the
+project's own stylesheets and scripts into the page instead of linking them,
+and following a link between your pages switches which one it shows.
+
+The original three-pane shape (`{html, css, js}`) is still accepted by the API
+and still loads, arriving as `index.html`, `styles.css` and `app.js`.
 
 ## HTTP API
 
@@ -101,10 +126,11 @@ The UI is just a client of this API.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/deploys` | List deployed pages, newest first (includes source) |
-| `POST` | `/api/deploys` | Deploy. Body: `{name, slug?, html, css, js}` |
+| `POST` | `/api/deploys` | Deploy. Body: `{name, slug?, files: [{name, content}]}` |
 | `GET` | `/api/deploys/:slug` | Fetch one page and its source |
 | `DELETE` | `/api/deploys/:slug` | Remove a deployed page |
-| `GET` | `/p/:slug` | The deployed page itself |
+| `GET` | `/p/:slug/` | The deploy's entry page |
+| `GET` | `/p/:slug/:file` | Any file in the deploy |
 | `GET` | `/api/assets` | List uploaded images |
 | `POST` | `/api/assets` | Upload. Body: `{name, data}` where data is a data: URL |
 | `DELETE` | `/api/assets/:name` | Remove an image |
@@ -117,9 +143,15 @@ page in place.
 ```bash
 curl -X POST localhost:3000/api/deploys \
   -H 'content-type: application/json' \
-  -d '{"name":"From curl","html":"<h1>hi</h1>","css":"h1{color:rebeccapurple}"}'
-# {"slug":"from-curl", ... ,"url":"http://localhost:3000/p/from-curl"}
+  -d '{"name":"From curl","files":[
+        {"name":"index.html","content":"<h1>hi</h1><a href=\"two.html\">two</a>"},
+        {"name":"two.html","content":"<h1>page two</h1>"},
+        {"name":"styles.css","content":"h1{color:rebeccapurple}"}]}'
+# {"slug":"from-curl", ... ,"url":"http://localhost:3000/p/from-curl/"}
 ```
+
+A project holds up to 40 files, each up to 2 MB. Names must end in `.html`,
+`.css` or `.js`, and at least one `.html` file is required.
 
 ## Images
 
@@ -298,7 +330,7 @@ server/store.js    File-backed deploy storage, slugging and validation
 server/github-store.js  The same, backed by commits to a GitHub repository
 server/auth.js     Optional password gate: cookies, throttling, login page
 server/assets.js   Image validation: format sniffing, naming, size limits
-public/compose.js  Panes → one HTML document (shared by client and server)
+public/compose.js  What each file is served as (shared by client and server)
 public/editor.js   MiniEditor: highlighting, find, and the editing commands
 public/app.js      Editor wiring: tabs, preview, console, deploy, drawer
 public/styles.css  Everything visual

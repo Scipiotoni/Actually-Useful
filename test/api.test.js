@@ -45,16 +45,38 @@ test('deploys a page and serves it at its slug', async () => {
   const site = await res.json();
   assert.strictEqual(site.slug, 'my-test-page');
   assert.strictEqual(site.version, 1);
-  assert.strictEqual(site.url, `${base}/p/my-test-page`);
+  assert.strictEqual(site.url, `${base}/p/my-test-page/`);
+  assert.deepStrictEqual(site.files, ['index.html', 'styles.css', 'app.js']);
 
   const page = await fetch(site.url);
   assert.strictEqual(page.status, 200);
   assert.match(page.headers.get('content-type'), /text\/html/);
   const html = await page.text();
   assert.match(html, /<h1>hi<\/h1>/);
-  assert.match(html, /color:red/);
-  assert.match(html, /console\.log\(1\)/);
   assert.match(html, /<title>My Test Page<\/title>/);
+
+  // The stylesheet and script are siblings the page links to, not inlined.
+  assert.match(html, /href="styles\.css"/);
+  assert.match(html, /src="app\.js"/);
+
+  const sheet = await fetch(`${base}/p/my-test-page/styles.css`);
+  assert.strictEqual(sheet.status, 200);
+  assert.match(sheet.headers.get('content-type'), /text\/css/);
+  assert.strictEqual(await sheet.text(), 'h1{color:red}');
+
+  const script = await fetch(`${base}/p/my-test-page/app.js`);
+  assert.match(script.headers.get('content-type'), /javascript/);
+  assert.strictEqual(await script.text(), 'console.log(1)');
+});
+
+test('the slug without a trailing slash redirects, so siblings resolve', async () => {
+  await post({ name: 'Redirects', html: '<p>x</p>', css: 'p{}' });
+  const res = await fetch(`${base}/p/redirects`, { redirect: 'manual' });
+  assert.strictEqual(res.status, 302);
+  assert.strictEqual(res.headers.get('location'), '/p/redirects/');
+
+  // Without the redirect, "styles.css" in the page would resolve to /p/styles.css.
+  assert.strictEqual(new URL('styles.css', `${base}/p/redirects/`).pathname, '/p/redirects/styles.css');
 });
 
 test('redeploying the same slug bumps the version instead of forking', async () => {
@@ -79,7 +101,7 @@ test('lists deploys newest first and can delete one', async () => {
   const { deploys } = await (await fetch(`${base}/api/deploys`)).json();
   assert.ok(deploys.length >= 1);
   assert.strictEqual(deploys[0].slug, 'listed-page');
-  assert.ok(deploys[0].source.html.includes('<p>x</p>'));
+  assert.ok(deploys[0].source.some((file) => file.content.includes('<p>x</p>')));
 
   const del = await fetch(`${base}/api/deploys/listed-page`, { method: 'DELETE' });
   assert.strictEqual(del.status, 200);
@@ -396,4 +418,109 @@ test('image names cannot escape the assets directory', async () => {
     const res = await fetch(`${base}/assets/${name}`);
     assert.ok([403, 404].includes(res.status), `${name} returned ${res.status}`);
   }
+});
+
+
+// --------------------------------------------------------------------------
+// Projects with more than one file
+// --------------------------------------------------------------------------
+
+const SITE = [
+  { name: 'index.html', content: '<h1>Home</h1><a href="about.html">About</a>' },
+  { name: 'about.html', content: '<h1>About</h1><a href="index.html">Home</a>' },
+  { name: 'styles.css', content: 'h1 { color: rebeccapurple }' },
+  { name: 'app.js', content: 'console.log("hi")' }
+];
+
+test('a project can publish several pages, each at its own address', async () => {
+  const site = await (await post({ name: 'Mini Site', files: SITE })).json();
+  assert.deepStrictEqual(site.files, ['index.html', 'about.html', 'styles.css', 'app.js']);
+  assert.strictEqual(site.entry, 'index.html');
+
+  const home = await fetch(`${base}/p/mini-site/`);
+  assert.match(await home.text(), /<h1>Home<\/h1>/);
+
+  const about = await fetch(`${base}/p/mini-site/about.html`);
+  assert.strictEqual(about.status, 200);
+  assert.match(await about.text(), /<h1>About<\/h1>/);
+
+  // A link written as a plain file name resolves to its sibling.
+  assert.strictEqual(
+    new URL('about.html', `${base}/p/mini-site/`).toString(),
+    `${base}/p/mini-site/about.html`
+  );
+});
+
+test('every page in a project links the project stylesheets and scripts', async () => {
+  await post({ name: 'Linked', files: SITE });
+  for (const page of ['', 'about.html']) {
+    const html = await (await fetch(`${base}/p/linked/${page}`)).text();
+    assert.match(html, /href="styles\.css"/, `${page || 'index.html'} should link the stylesheet`);
+    assert.match(html, /src="app\.js"/, `${page || 'index.html'} should link the script`);
+  }
+});
+
+test('a full HTML document is published as written, with no tags added', async () => {
+  const mine = '<!doctype html><html><head><title>Mine</title></head><body><p>as written</p></body></html>';
+  await post({
+    name: 'Full Doc',
+    files: [{ name: 'index.html', content: mine }, { name: 'styles.css', content: 'p{}' }]
+  });
+  const html = await (await fetch(`${base}/p/full-doc/`)).text();
+  assert.strictEqual(html, mine);
+  assert.ok(!html.includes('href="styles.css"'), 'a full document controls its own links');
+});
+
+test('renaming a file removes the old one from the deploy', async () => {
+  await post({ name: 'Renamed', files: [
+    { name: 'index.html', content: '<p>x</p>' },
+    { name: 'old.html', content: '<p>old</p>' }
+  ] });
+  assert.strictEqual((await fetch(`${base}/p/renamed/old.html`)).status, 200);
+
+  await post({ name: 'Renamed', slug: 'renamed', files: [
+    { name: 'index.html', content: '<p>x</p>' },
+    { name: 'new.html', content: '<p>new</p>' }
+  ] });
+  assert.strictEqual((await fetch(`${base}/p/renamed/new.html`)).status, 200);
+  assert.strictEqual((await fetch(`${base}/p/renamed/old.html`)).status, 404, 'the old file must be gone');
+});
+
+test('an image path resolves the same from a page as it does on GitHub Pages', async () => {
+  await upload('compartida.png');
+  await post({ name: 'Con Imagen', files: [
+    { name: 'index.html', content: '<img src="../assets/compartida.png">' }
+  ] });
+
+  // /p/<slug>/ + ../assets/x mirrors /published/<slug>/ + ../assets/x
+  const resolved = new URL('../assets/compartida.png', `${base}/p/con-imagen/`);
+  assert.strictEqual(resolved.pathname, '/p/assets/compartida.png');
+  assert.strictEqual((await fetch(resolved)).status, 200);
+});
+
+test('bad file names and duplicates are refused', async () => {
+  const cases = [
+    [[{ name: '../escape.html', content: '' }], 'a path'],
+    [[{ name: 'no-extension', content: '' }], 'no extension'],
+    [[{ name: 'thing.php', content: '' }], 'an unsupported type'],
+    [[{ name: 'a.html', content: '' }, { name: 'a.html', content: '' }], 'a duplicate'],
+    [[{ name: 'styles.css', content: 'p{}' }], 'no HTML file at all']
+  ];
+  for (const [files, why] of cases) {
+    const res = await post({ name: 'Bad', files });
+    assert.strictEqual(res.status, 400, `should reject ${why}`);
+  }
+
+  const tooMany = Array.from({ length: 41 }, (_, i) => ({ name: `p${i}.html`, content: '' }));
+  assert.strictEqual((await post({ name: 'Many', files: tooMany })).status, 413);
+});
+
+test('a project published before multi-file still loads and serves', async () => {
+  const legacy = await (await post({ name: 'Legacy', html: '<p>old</p>', css: 'p{color:red}' })).json();
+  assert.deepStrictEqual(legacy.files, ['index.html', 'styles.css']);
+
+  const fetched = await (await fetch(`${base}/api/deploys/${legacy.slug}`)).json();
+  assert.ok(Array.isArray(fetched.source));
+  assert.strictEqual(fetched.source[0].name, 'index.html');
+  assert.match(await (await fetch(`${base}/p/${legacy.slug}/`)).text(), /<p>old<\/p>/);
 });

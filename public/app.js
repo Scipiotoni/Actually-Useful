@@ -4,56 +4,84 @@
 
   var STORAGE_KEY = 'actually-useful:draft:v1';
   var LAYOUT_KEY = 'actually-useful:layout:v1';
-  var PANES = ['html', 'css', 'js'];
+
 
   var STARTER = {
     name: 'Hello, Actually Useful',
-    html: [
-      '<main class="card">',
-      '  <h1>Hello 👋</h1>',
-      '  <p>Edit on the left, watch it render on the right, then hit <strong>Deploy</strong>.</p>',
-      '  <button id="cheer">Cheer me up</button>',
-      '  <p id="out"></p>',
-      '</main>'
-    ].join('\n'),
-    css: [
-      'body {',
-      '  margin: 0;',
-      '  min-height: 100vh;',
-      '  display: grid;',
-      '  place-items: center;',
-      '  background: linear-gradient(135deg, #1f2937, #0f172a);',
-      '  font-family: system-ui, sans-serif;',
-      '  color: #e5e7eb;',
-      '}',
-      '',
-      '.card {',
-      '  max-width: 34rem;',
-      '  padding: 2.5rem;',
-      '  background: rgba(255, 255, 255, 0.04);',
-      '  border: 1px solid rgba(255, 255, 255, 0.1);',
-      '  border-radius: 16px;',
-      '  text-align: center;',
-      '}',
-      '',
-      'button {',
-      '  padding: 0.6rem 1.2rem;',
-      '  border: 0;',
-      '  border-radius: 8px;',
-      '  background: #3d7dfd;',
-      '  color: #fff;',
-      '  font-size: 1rem;',
-      '  cursor: pointer;',
-      '}'
-    ].join('\n'),
-    js: [
-      "var lines = ['You are doing great.', 'Ship it.', 'That looks sharp.'];",
-      "document.getElementById('cheer').addEventListener('click', function () {",
-      "  var pick = lines[Math.floor(Math.random() * lines.length)];",
-      "  document.getElementById('out').textContent = pick;",
-      "  console.log('cheered:', pick);",
-      '});'
-    ].join('\n')
+    active: 'index.html',
+    files: [
+      {
+        name: 'index.html',
+        content: [
+          '<main class="card">',
+          '  <h1>Hello 👋</h1>',
+          '  <p>Edit on the left, watch it render on the right, then hit <strong>Deploy</strong>.</p>',
+          '  <button id="cheer">Cheer me up</button>',
+          '  <p id="out"></p>',
+          '  <p><a href="about.html">A second page →</a></p>',
+          '</main>'
+        ].join('\n')
+      },
+      {
+        name: 'about.html',
+        content: [
+          '<main class="card">',
+          '  <h1>Page two</h1>',
+          '  <p>Add as many pages as you like with <strong>＋</strong>, and link them by name.</p>',
+          '  <p><a href="index.html">← Back</a></p>',
+          '</main>'
+        ].join('\n')
+      },
+      {
+        name: 'styles.css',
+        content: [
+          'body {',
+          '  margin: 0;',
+          '  min-height: 100vh;',
+          '  display: grid;',
+          '  place-items: center;',
+          '  background: linear-gradient(135deg, #1f2937, #0f172a);',
+          '  font-family: system-ui, sans-serif;',
+          '  color: #e5e7eb;',
+          '}',
+          '',
+          '.card {',
+          '  max-width: 34rem;',
+          '  padding: 2.5rem;',
+          '  background: rgba(255, 255, 255, 0.04);',
+          '  border: 1px solid rgba(255, 255, 255, 0.1);',
+          '  border-radius: 16px;',
+          '  text-align: center;',
+          '}',
+          '',
+          'a { color: #6ea8fe; }',
+          '',
+          'button {',
+          '  padding: 0.6rem 1.2rem;',
+          '  border: 0;',
+          '  border-radius: 8px;',
+          '  background: #3d7dfd;',
+          '  color: #fff;',
+          '  font-size: 1rem;',
+          '  cursor: pointer;',
+          '}'
+        ].join('\n')
+      },
+      {
+        name: 'app.js',
+        content: [
+          "var lines = ['You are doing great.', 'Ship it.', 'That looks sharp.'];",
+          "var button = document.getElementById('cheer');",
+          'if (button) {',
+          "  button.addEventListener('click', function () {",
+          '    var pick = lines[Math.floor(Math.random() * lines.length)];',
+          "    document.getElementById('out').textContent = pick;",
+          "    console.log('cheered:', pick);",
+          '  });',
+          '}'
+        ].join('\n')
+      }
+    ]
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -68,6 +96,17 @@
     sitesCount: $('sites-count'),
     format: $('btn-format'),
     reset: $('btn-reset'),
+    tabStrip: $('tab-strip'),
+    newFile: $('btn-new-file'),
+    fileModal: $('file-modal'),
+    fileForm: $('file-form'),
+    fileModalTitle: $('file-modal-title'),
+    fileName: $('file-name'),
+    fileHint: $('file-hint'),
+    fileError: $('file-error'),
+    fileCancel: $('file-cancel'),
+    fileSave: $('file-save'),
+    previewPage: null,
     preview: $('preview'),
     previewStage: $('preview-stage'),
     previewUrl: $('preview-url'),
@@ -110,61 +149,232 @@
   };
 
   var editors = {};
-  var state = { slug: null, deployed: null, storage: 'disk', pane: 'html', wrapped: false, renderTimer: null, saveTimer: null, consoleCount: 0 };
+  var state = { slug: null, deployed: null, storage: 'disk', files: [], active: 'index.html', previewFile: null, wrapped: false, renderTimer: null, saveTimer: null, consoleCount: 0 };
 
   // ---------------------------------------------------------------- editors
-  PANES.forEach(function (pane) {
-    editors[pane] = new MiniEditor(document.getElementById('ed-' + pane), {
-      mode: pane,
-      ariaLabel: pane.toUpperCase() + ' source',
-      onChange: onEdit,
-      onCaret: function (at) {
-        els.caretPos.textContent = 'Ln ' + at.line + ', Col ' + at.column;
-      }
-    });
+  // One editor serves every file; switching tabs swaps its contents and mode.
+  var editor = new MiniEditor(document.getElementById('ed-main'), {
+    mode: 'html',
+    ariaLabel: 'Source code',
+    onChange: onEdit,
+    onCaret: function (at) {
+      els.caretPos.textContent = 'Ln ' + at.line + ', Col ' + at.column;
+    }
   });
+  editors.main = editor;
 
+  /** The project as the API wants it, with the open file's latest text. */
   function source() {
-    return {
-      name: els.name.value.trim() || 'Untitled page',
-      html: editors.html.getValue(),
-      css: editors.css.getValue(),
-      js: editors.js.getValue()
-    };
+    var files = state.files.map(function (file) {
+      return {
+        name: file.name,
+        content: file.name === state.active ? editor.getValue() : file.content
+      };
+    });
+    return { name: els.name.value.trim() || 'Untitled page', files: files };
+  }
+
+  /** Copies what is on screen back into the file list. */
+  function commitActive() {
+    var file = Compose.find(state.files, state.active);
+    if (file) file.content = editor.getValue();
   }
 
   function load(data) {
     els.name.value = data.name || 'Untitled page';
-    PANES.forEach(function (pane) { editors[pane].setValue(data[pane] || ''); });
+    state.files = Compose.toFiles(data).map(function (file) {
+      return { name: file.name, content: String(file.content || '') };
+    });
+    if (!state.files.length) state.files = [{ name: Compose.ENTRY, content: '' }];
+
+    state.active = Compose.find(state.files, data.active) ? data.active : Compose.entryOf(state.files);
     state.slug = data.slug || null;
-    refreshEditors();
+    state.previewFile = null;
+    openFile(state.active, true);
+    renderTabs();
   }
 
-  function refreshEditors() {
-    PANES.forEach(function (pane) { editors[pane].refresh(); });
+  function openFile(name, skipCommit) {
+    var file = Compose.find(state.files, name);
+    if (!file) return;
+    if (!skipCommit) commitActive();
+
+    state.active = name;
+    editor.setMode(Compose.fileType(name));
+    editor.setValue(file.content);
+    editor.refresh();
+    renderTabs();
+    if (!els.findbar.hidden) runFind(false);
   }
+
+  function refreshEditors() { editor.refresh(); }
 
   // ------------------------------------------------------------------- tabs
-  document.querySelectorAll('.tab[data-tab]').forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      var target = tab.dataset.tab;
-      document.querySelectorAll('.tab[data-tab]').forEach(function (t) {
-        var on = t === tab;
-        t.classList.toggle('is-active', on);
-        t.setAttribute('aria-selected', String(on));
-      });
-      document.querySelectorAll('.editor-host').forEach(function (host) {
-        host.classList.toggle('is-active', host.dataset.editor === target);
-      });
-      state.pane = target;
-      editors[target].refresh();
-      editors[target].focus();
-      if (!els.findbar.hidden) runFind();
-    });
+  function renderTabs() {
+    els.tabStrip.innerHTML = state.files.map(function (file) {
+      var on = file.name === state.active;
+      return '<button class="tab' + (on ? ' is-active' : '') + '" role="tab" ' +
+        'aria-selected="' + on + '" data-file="' + Compose.escapeHtml(file.name) + '" ' +
+        'title="Double-click to rename">' +
+        '<span class="tab-dot is-' + Compose.fileType(file.name) + '"></span>' +
+        '<span class="tab-name">' + Compose.escapeHtml(file.name) + '</span>' +
+        (state.files.length > 1
+          ? '<span class="tab-close" role="button" data-close="1" aria-label="Delete ' +
+            Compose.escapeHtml(file.name) + '">×</span>'
+          : '') +
+        '</button>';
+    }).join('');
+  }
+
+  els.tabStrip.addEventListener('click', function (event) {
+    var tab = event.target.closest('.tab[data-file]');
+    if (!tab) return;
+    if (event.target.dataset.close) return deleteFile(tab.dataset.file);
+    openFile(tab.dataset.file);
+    editor.focus();
   });
 
+  els.tabStrip.addEventListener('dblclick', function (event) {
+    var tab = event.target.closest('.tab[data-file]');
+    if (tab) openFileModal(tab.dataset.file);
+  });
+
+  function deleteFile(name) {
+    var pages = Compose.byType(state.files, 'html');
+    if (Compose.fileType(name) === 'html' && pages.length === 1) {
+      return toast('A project needs at least one page.', 'err');
+    }
+    if (!window.confirm('Delete ' + name + ' from this project?')) return;
+
+    commitActive();
+    state.files = state.files.filter(function (file) { return file.name !== name; });
+    if (state.active === name) state.active = Compose.entryOf(state.files) || state.files[0].name;
+    if (state.previewFile === name) state.previewFile = null;
+    openFile(state.active, true);
+    onEdit();
+    toast('Deleted ' + name + '. Deploy to publish the change.', 'ok');
+  }
+
+  // --------------------------------------------------------- new and rename
+  var modal = { type: 'html', renaming: null };
+
+  var HINTS = {
+    html: function (name) {
+      return 'Saved as <code>' + Compose.escapeHtml(name) + '</code>. Link to it from another page with ' +
+        '<code>&lt;a href="' + Compose.escapeHtml(name) + '"&gt;</code>';
+    },
+    css: function (name) {
+      return 'Saved as <code>' + Compose.escapeHtml(name) + '</code> and linked into your pages automatically. ' +
+        'In a full HTML document, add it yourself with <code>&lt;link rel="stylesheet" href="' +
+        Compose.escapeHtml(name) + '"&gt;</code>';
+    },
+    js: function (name) {
+      return 'Saved as <code>' + Compose.escapeHtml(name) + '</code> and linked into your pages automatically. ' +
+        'In a full HTML document, add it yourself with <code>&lt;script src="' +
+        Compose.escapeHtml(name) + '"&gt;&lt;/script&gt;</code>';
+    }
+  };
+
+  function plannedName() {
+    return Compose.fileNameFor(els.fileName.value || 'untitled', modal.type);
+  }
+
+  function updateHint() {
+    els.fileHint.innerHTML = HINTS[modal.type](plannedName());
+  }
+
+  function pickType(type) {
+    modal.type = type;
+    els.fileModal.querySelectorAll('.type-picker button').forEach(function (button) {
+      button.setAttribute('aria-pressed', String(button.dataset.type === type));
+    });
+    updateHint();
+  }
+
+  function openFileModal(renaming) {
+    modal.renaming = renaming || null;
+    els.fileError.hidden = true;
+    els.fileModalTitle.textContent = renaming ? 'Rename ' + renaming : 'New file';
+    els.fileSave.textContent = renaming ? 'Rename' : 'Create';
+    els.fileName.value = renaming ? renaming.replace(/\.(html|css|js)$/, '') : '';
+    pickType(renaming ? Compose.fileType(renaming) : 'html');
+    els.fileModal.hidden = false;
+    els.fileName.focus();
+    els.fileName.select();
+  }
+
+  function closeFileModal() {
+    els.fileModal.hidden = true;
+    editor.focus();
+  }
+
+  els.newFile.addEventListener('click', function () { openFileModal(null); });
+  els.fileCancel.addEventListener('click', closeFileModal);
+  els.fileName.addEventListener('input', updateHint);
+  els.fileModal.addEventListener('click', function (event) {
+    if (event.target === els.fileModal) closeFileModal();
+  });
+  els.fileModal.querySelectorAll('.type-picker button').forEach(function (button) {
+    button.addEventListener('click', function () { pickType(button.dataset.type); });
+  });
+
+  els.fileForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var name = plannedName();
+
+    if (!Compose.isValidName(name)) {
+      els.fileError.textContent = 'Use letters, digits, dashes or dots.';
+      els.fileError.hidden = false;
+      return;
+    }
+    if (name !== modal.renaming && Compose.find(state.files, name)) {
+      els.fileError.textContent = 'This project already has a file called ' + name + '.';
+      els.fileError.hidden = false;
+      return;
+    }
+
+    commitActive();
+    if (modal.renaming) {
+      var file = Compose.find(state.files, modal.renaming);
+      file.name = name;
+      if (state.active === modal.renaming) state.active = name;
+      if (state.previewFile === modal.renaming) state.previewFile = name;
+      toast('Renamed to ' + name + '. Links pointing at the old name need updating.', 'ok', 7000);
+    } else {
+      state.files.push({ name: name, content: NEW_FILE[modal.type](name) });
+      state.active = name;
+    }
+
+    closeFileModal();
+    openFile(state.active, true);
+    onEdit();
+  });
+
+  var NEW_FILE = {
+    html: function (name) {
+      return '<h1>' + name.replace(/\.html$/, '') + '</h1>\n<p><a href="index.html">← Back</a></p>';
+    },
+    css: function () { return '/* Styles for every page in this project */\n'; },
+    js: function () { return "// Runs on every page in this project\n"; }
+  };
+
   // ---------------------------------------------------------------- preview
-  var PREVIEW_BASE = '<base href="' + location.origin + '/p/">';
+  var PREVIEW_BASE = '<base href="' + location.origin + '/p/x/">';
+
+  var NAV_BRIDGE = [
+    '<script>',
+    '(function () {',
+    '  document.addEventListener("click", function (event) {',
+    '    var link = event.target.closest && event.target.closest("a[href]");',
+    '    if (!link) return;',
+    '    var href = link.getAttribute("href") || "";',
+    '    if (/^(?:[a-z]+:|\\/\\/|#)/i.test(href)) return;',
+    '    event.preventDefault();',
+    '    try { parent.postMessage({ __au: true, nav: href }, "*"); } catch (e) {}',
+    '  });',
+    '}());',
+    '<\/script>'
+  ].join('\n');
 
   var CONSOLE_BRIDGE = [
     '<script>',
@@ -196,26 +406,65 @@
   function render() {
     clearTimeout(state.renderTimer);
     var parts = source();
-    els.preview.srcdoc = Compose.compose({
-      html: parts.html,
-      css: parts.css,
-      js: parts.js,
-      title: parts.name,
-      head: PREVIEW_BASE + '\n' + CONSOLE_BRIDGE
+    var page = Compose.find(parts.files, state.previewFile)
+      ? state.previewFile
+      : Compose.entryOf(parts.files);
+
+    if (!page) {
+      els.preview.srcdoc = '<p style="font:14px system-ui;padding:24px">This project has no HTML page.</p>';
+      return;
+    }
+
+    var doc = Compose.composeFile(parts.files, page, {
+      head: PREVIEW_BASE + '\n' + CONSOLE_BRIDGE + '\n' + NAV_BRIDGE,
+      title: parts.name
     });
-    els.previewUrl.textContent = previewLabel(parts);
+    // Nothing is served yet while drafting, so the project's own stylesheets
+    // and scripts are folded in rather than linked.
+    els.preview.srcdoc = Compose.inlineLocal(doc, parts.files);
+
+    state.previewFile = page;
+    els.previewUrl.textContent = previewLabel(parts, page);
+    renderPreviewPage(parts, page);
+  }
+
+  /** Lets you jump back to the entry page once you have followed a link. */
+  function renderPreviewPage(parts, page) {
+    var entry = Compose.entryOf(parts.files);
+    if (!els.previewPage) {
+      els.previewPage = document.createElement('button');
+      els.previewPage.className = 'preview-page';
+      els.previewPage.type = 'button';
+      els.previewPage.addEventListener('click', function () {
+        state.previewFile = null;
+        render();
+      });
+      els.previewUrl.parentNode.insertBefore(els.previewPage, els.previewUrl.nextSibling);
+    }
+    var showing = page !== entry;
+    els.previewPage.hidden = !showing;
+    if (showing) {
+      els.previewPage.textContent = '← ' + entry;
+      els.previewPage.title = 'Back to ' + entry;
+    }
   }
 
   /** Says whether what you are looking at matches what is deployed. */
-  function previewLabel(parts) {
-    if (!state.slug) return 'preview — not deployed yet';
+  function previewLabel(parts, page) {
+    var shown = page && page !== Compose.entryOf(parts.files) ? page : '';
+    if (!state.slug) return 'preview' + (shown ? ' · ' + shown : ' — not deployed yet');
+    return '/p/' + state.slug + '/' + shown + (sameAsDeployed(parts) ? ' · live' : ' · unpublished changes');
+  }
+
+  /** Whether what is on screen matches what is published at this slug. */
+  function sameAsDeployed(parts) {
     var live = state.deployed;
-    var same = live &&
-      live.name === parts.name &&
-      live.html === parts.html &&
-      live.css === parts.css &&
-      live.js === parts.js;
-    return '/p/' + state.slug + (same ? ' · live' : ' · unpublished changes');
+    if (!live || live.name !== parts.name) return false;
+    if (live.files.length !== parts.files.length) return false;
+    return parts.files.every(function (file) {
+      var published = Compose.find(live.files, file.name);
+      return published && published.content === file.content;
+    });
   }
 
   function scheduleRender() {
@@ -227,6 +476,18 @@
   window.addEventListener('message', function (event) {
     var data = event.data;
     if (!data || data.__au !== true) return;
+
+    if (data.nav !== undefined) {
+      var target = String(data.nav).split(/[?#]/)[0].replace(/^\.\//, '');
+      if (!target) target = Compose.ENTRY;
+      if (Compose.find(state.files, target)) {
+        state.previewFile = target;
+        return render();
+      }
+      return toast('This project has no file called <code>' +
+        Compose.escapeHtml(target) + '</code>. Add it with ＋.', 'err', 6000);
+    }
+
     appendConsole(data.level, data.text);
   });
 
@@ -284,12 +545,14 @@
   function markDirty() {
     els.saveState.textContent = 'Unsaved changes…';
     els.saveState.classList.add('is-dirty');
-    els.previewUrl.textContent = previewLabel(source());
+    els.previewUrl.textContent = previewLabel(source(), state.previewFile);
   }
 
   function saveLocal() {
+    commitActive();
     var data = source();
     data.slug = state.slug;
+    data.active = state.active;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       els.saveState.textContent = 'Saved locally · ' + new Date().toLocaleTimeString();
@@ -326,7 +589,7 @@
 
   function deploy() {
     var parts = source();
-    if (!parts.html.trim() && !parts.css.trim() && !parts.js.trim()) {
+    if (!parts.files.some(function (file) { return file.content.trim(); })) {
       return toast('Nothing to deploy yet — write some HTML first.', 'err');
     }
     els.deploy.disabled = true;
@@ -337,15 +600,13 @@
       body: JSON.stringify({
         name: parts.name,
         slug: state.slug || undefined,
-        html: parts.html,
-        css: parts.css,
-        js: parts.js
+        files: parts.files
       })
     }).then(function (site) {
       state.slug = site.slug;
-      state.deployed = { name: parts.name, html: parts.html, css: parts.css, js: parts.js };
+      state.deployed = { name: parts.name, files: parts.files };
       saveLocal();
-      els.previewUrl.textContent = previewLabel(parts);
+      els.previewUrl.textContent = previewLabel(parts, state.previewFile);
       var shareUrl = site.permanentUrl || site.url;
       toast(
         'Deployed v' + site.version + ' → <a href="' + shareUrl + '" target="_blank" rel="noopener">' +
@@ -370,17 +631,12 @@
       // Re-link a restored draft with what is actually live at its slug.
       var mine = state.slug && sites.filter(function (s) { return s.slug === state.slug; })[0];
       if (mine) {
-        state.deployed = {
-          name: mine.name,
-          html: mine.source.html,
-          css: mine.source.css,
-          js: mine.source.js
-        };
+        state.deployed = { name: mine.name, files: Compose.toFiles(mine.source) };
       } else if (state.slug) {
         state.slug = null;
         state.deployed = null;
       }
-      els.previewUrl.textContent = previewLabel(source());
+      els.previewUrl.textContent = previewLabel(source(), state.previewFile);
     }).catch(function () {
       els.sitesCount.textContent = '0';
       els.siteList.innerHTML = '<li class="empty">' + Compose.escapeHtml(NO_SERVER) + '</li>';
@@ -430,19 +686,9 @@
 
     if (button.dataset.action === 'edit') {
       return void api('/api/deploys/' + slug).then(function (site) {
-        load({
-          name: site.name,
-          html: site.source.html,
-          css: site.source.css,
-          js: site.source.js,
-          slug: site.slug
-        });
-        state.deployed = {
-          name: site.name,
-          html: site.source.html,
-          css: site.source.css,
-          js: site.source.js
-        };
+        var files = Compose.toFiles(site.source);
+        load({ name: site.name, files: files, slug: site.slug });
+        state.deployed = { name: site.name, files: files };
         saveLocal();
         render();
         loadSites();
@@ -494,7 +740,7 @@
   }
 
   // ------------------------------------------------------------------- find
-  function activeEditor() { return editors[state.pane]; }
+  function activeEditor() { return editor; }
 
   function findOptions() {
     return { caseSensitive: els.findCase.getAttribute('aria-pressed') === 'true' };
@@ -543,7 +789,7 @@
 
   function closeFind() {
     els.findbar.hidden = true;
-    PANES.forEach(function (pane) { editors[pane].clearFind(); });
+    editor.clearFind();
     activeEditor().focus();
   }
 
@@ -614,7 +860,7 @@
   els.wrap.addEventListener('click', function () {
     state.wrapped = !state.wrapped;
     els.wrap.setAttribute('aria-pressed', String(state.wrapped));
-    PANES.forEach(function (pane) { editors[pane].setWrap(state.wrapped); });
+    editor.setWrap(state.wrapped);
     try { localStorage.setItem('actually-useful:wrap', state.wrapped ? '1' : '0'); } catch (err) { /* ignore */ }
   });
 
@@ -786,10 +1032,10 @@
     var tag = imageTag(path, name);
 
     if (button.dataset.action === 'insert') {
-      // Switch first: the pane has to be visible for the caret to land.
-      document.querySelector('.tab[data-tab="html"]').click();
-      editors.html.insertAtCursor('\n' + tag + '\n');
-      return void toast('Inserted into your HTML.', 'ok');
+      // An <img> belongs in a page, so switch to one if a stylesheet is open.
+      if (Compose.fileType(state.active) !== 'html') openFile(Compose.entryOf(state.files));
+      editor.insertAtCursor('\n' + tag + '\n');
+      return void toast('Inserted into ' + state.active + '.', 'ok');
     }
 
     if (button.dataset.action === 'copy') {
@@ -828,11 +1074,18 @@
   // --------------------------------------------------------------- download
   els.download.addEventListener('click', function () {
     var parts = source();
-    var doc = Compose.compose({ html: parts.html, css: parts.css, js: parts.js, title: parts.name });
+    var page = Compose.find(parts.files, state.previewFile) ? state.previewFile : Compose.entryOf(parts.files);
+    if (!page) return toast('There is no page to download.', 'err');
+
+    // Everything the page needs is folded in, so the file works on its own.
+    var doc = Compose.inlineLocal(
+      Compose.composeFile(parts.files, page, { title: parts.name }),
+      parts.files
+    );
     var blob = new Blob([doc], { type: 'text/html' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = Compose.slugify(parts.name) + '.html';
+    a.download = page;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -842,10 +1095,10 @@
 
   // ----------------------------------------------------------------- format
   els.format.addEventListener('click', function () {
-    editors.html.setValue(formatMarkup(editors.html.getValue()));
-    editors.css.setValue(formatBraces(editors.css.getValue()));
-    editors.js.setValue(formatBraces(editors.js.getValue()));
-    toast('Re-indented all three panes.', 'ok');
+    var tidy = Compose.fileType(state.active) === 'html' ? formatMarkup : formatBraces;
+    editor.setValue(tidy(editor.getValue()));
+    onEdit();
+    toast('Re-indented ' + state.active + '.', 'ok');
   });
 
   var VOID_TAGS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr|!doctype)$/i;
@@ -887,8 +1140,8 @@
 
   // ------------------------------------------------------------------ reset
   els.reset.addEventListener('click', function () {
-    if (!window.confirm('Clear the editor and start a new page? Deployed pages are not affected.')) return;
-    load({ name: 'Untitled page', html: '', css: '', js: '', slug: null });
+    if (!window.confirm('Clear the editor and start a new project? Deployed pages are not affected.')) return;
+    load({ name: 'Untitled page', files: [{ name: Compose.ENTRY, content: '' }], slug: null });
     state.deployed = null;
     clearConsole();
     saveLocal();
@@ -997,6 +1250,10 @@
   });
 
   window.addEventListener('resize', refreshEditors);
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && !els.fileModal.hidden) closeFileModal();
+  });
 
   try {
     if (localStorage.getItem('actually-useful:wrap') === '1') els.wrap.click();

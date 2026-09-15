@@ -311,6 +311,13 @@
 
   MiniEditor.prototype.focus = function () { this.input.focus(); };
 
+  /** Switches the language the painter and the comment command use. */
+  MiniEditor.prototype.setMode = function (mode) {
+    if (!MODES[mode] || mode === this.mode) return;
+    this.mode = mode;
+    this._sync();
+  };
+
   MiniEditor.prototype.refresh = function () { this._syncScroll(); };
 
   /** Wrapping and the line-number gutter cannot both be right; pick one. */

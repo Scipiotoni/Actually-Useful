@@ -1,6 +1,7 @@
 'use strict';
 
-const { compose, escapeHtml } = require('../public/compose.js');
+const Compose = require('../public/compose.js');
+const { escapeHtml } = Compose;
 const { SLUG_RE, validateSource, nextFreeSlug } = require('./store.js');
 const { ASSET_NAME_RE, assetName, nextFreeName, decodeUpload } = require('./assets.js');
 
@@ -25,8 +26,8 @@ class GitHubError extends Error {
  * Each publish is one commit writing three files:
  *   published/index.json          the list of pages (metadata only)
  *   published/index.html          a browsable directory of those pages
- *   published/<slug>/page.json    metadata plus the three editor panes
- *   published/<slug>/index.html   the composed page, which GitHub Pages serves
+ *   published/<slug>/page.json    metadata plus every source file
+ *   published/<slug>/<file>       each published file, which GitHub Pages serves
  *   published/assets/<file>       uploaded images, reached as ../assets/<file>
  *
  * Everything is cached in memory after the first read, so serving a page costs
@@ -248,7 +249,8 @@ class GitHubStore {
     return Array.from(this.index.values())
       .map((meta) => {
         const page = this.pages.get(meta.slug);
-        return { ...meta, source: page ? page.source : { html: '', css: '', js: '' } };
+        const files = page ? Compose.toFiles(page.source) : [];
+        return { ...meta, files: files.map((file) => file.name), source: files };
       })
       .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
   }
@@ -257,25 +259,45 @@ class GitHubStore {
     if (!SLUG_RE.test(slug)) return null;
     await this.ready();
     const page = this.pages.get(slug);
-    return page ? { ...page.meta, source: page.source } : null;
+    if (!page) return null;
+    const files = Compose.toFiles(page.source);
+    return {
+      ...page.meta,
+      files: files.map((file) => file.name),
+      entry: page.meta.entry || Compose.entryOf(files),
+      source: files
+    };
   }
 
-  async html(slug) {
+  /** The served contents of one file in a deploy. */
+  async file(slug, name) {
     if (!SLUG_RE.test(slug)) return null;
     await this.ready();
     const page = this.pages.get(slug);
     if (!page) return null;
-    return compose({ ...page.source, title: page.meta.name });
+
+    const files = Compose.toFiles(page.source);
+    const wanted = name || page.meta.entry || Compose.entryOf(files);
+    if (!wanted || !Compose.isValidName(wanted)) return null;
+
+    const body = Compose.serveFile(files, wanted, { title: page.meta.name });
+    return body === null ? null : { name: wanted, body, type: Compose.fileType(wanted) };
   }
 
-  async save({ name, slug, html = '', css = '', js = '' }) {
-    const invalid = validateSource({ html, css, js });
-    if (!invalid.ok) return invalid;
+  async html(slug) {
+    const served = await this.file(slug);
+    return served ? served.body : null;
+  }
+
+  async save(input) {
+    const checked = validateSource(input);
+    if (!checked.ok) return checked;
+    const files = checked.files;
 
     await this.ready();
-    const title = String(name || '').trim() || 'Untitled page';
+    const title = String(input.name || '').trim() || 'Untitled page';
 
-    let target = slug;
+    let target = input.slug;
     let existing = null;
     if (target) {
       if (!SLUG_RE.test(target)) return { ok: false, status: 400, error: 'Invalid slug' };
@@ -288,31 +310,47 @@ class GitHubStore {
     const meta = {
       slug: target,
       name: title,
+      entry: Compose.entryOf(files),
+      files: files.map((file) => file.name),
       createdAt: existing ? existing.createdAt : now,
       updatedAt: now,
       version: existing ? (existing.version || 1) + 1 : 1
     };
-    const source = { html, css, js };
 
     const nextIndex = new Map(this.index);
     nextIndex.set(target, meta);
 
+    const changes = [
+      { path: MANIFEST, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
+      { path: DIRECTORY, content: renderDirectory(Array.from(nextIndex.values())) },
+      { path: `${ROOT}/${target}/page.json`, content: JSON.stringify({ meta, source: files }, null, 2) }
+    ];
+
+    files.forEach((file) => {
+      changes.push({
+        path: `${ROOT}/${target}/${file.name}`,
+        content: Compose.serveFile(files, file.name, { title })
+      });
+    });
+
+    // A file the project no longer has must be deleted, or the old copy would
+    // linger in the tree and keep being served.
+    const previous = this.pages.get(target);
+    if (previous) {
+      const keep = new Set(files.map((file) => file.name));
+      Compose.toFiles(previous.source).forEach((file) => {
+        if (!keep.has(file.name)) changes.push({ path: `${ROOT}/${target}/${file.name}`, remove: true });
+      });
+    }
+
     try {
-      await this.commit(
-        `Publish ${target} (v${meta.version})`,
-        [
-          { path: MANIFEST, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
-          { path: DIRECTORY, content: renderDirectory(Array.from(nextIndex.values())) },
-          { path: `${ROOT}/${target}/page.json`, content: JSON.stringify({ meta, source }, null, 2) },
-          { path: `${ROOT}/${target}/index.html`, content: compose({ html, css, js, title }) }
-        ]
-      );
+      await this.commit(`Publish ${target} (v${meta.version})`, changes);
     } catch (err) {
       return { ok: false, status: err.status === 403 ? 403 : 502, error: githubHint(err) };
     }
 
     this.index = nextIndex;
-    this.pages.set(target, { meta, source });
+    this.pages.set(target, { meta, source: files });
     return { ok: true, site: meta, created: !existing };
   }
 
@@ -324,15 +362,17 @@ class GitHubStore {
     const nextIndex = new Map(this.index);
     nextIndex.delete(slug);
 
-    await this.commit(
-      `Unpublish ${slug}`,
-      [
-        { path: MANIFEST, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
-        { path: DIRECTORY, content: renderDirectory(Array.from(nextIndex.values())) },
-        { path: `${ROOT}/${slug}/page.json`, remove: true },
-        { path: `${ROOT}/${slug}/index.html`, remove: true }
-      ]
-    );
+    const changes = [
+      { path: MANIFEST, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
+      { path: DIRECTORY, content: renderDirectory(Array.from(nextIndex.values())) },
+      { path: `${ROOT}/${slug}/page.json`, remove: true }
+    ];
+    const page = this.pages.get(slug);
+    Compose.toFiles(page ? page.source : {}).forEach((file) => {
+      changes.push({ path: `${ROOT}/${slug}/${file.name}`, remove: true });
+    });
+
+    await this.commit(`Unpublish ${slug}`, changes);
 
     this.index = nextIndex;
     this.pages.delete(slug);

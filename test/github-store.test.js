@@ -154,14 +154,19 @@ test('publishing writes the page, its source and the indexes in one commit', asy
     assert.deepStrictEqual(Array.from(files.keys()).sort(), [
       'published/index.html',
       'published/index.json',
+      'published/mi-primera-pagina/app.js',
       'published/mi-primera-pagina/index.html',
-      'published/mi-primera-pagina/page.json'
+      'published/mi-primera-pagina/page.json',
+      'published/mi-primera-pagina/styles.css'
     ]);
 
     const page = files.get('published/mi-primera-pagina/index.html');
     assert.match(page, /<h1>hola<\/h1>/);
-    assert.match(page, /color:red/);
     assert.match(page, /<title>Mi Primera Página<\/title>/);
+    // Styles and scripts are published as sibling files the page links.
+    assert.match(page, /href="styles\.css"/);
+    assert.strictEqual(files.get('published/mi-primera-pagina/styles.css'), 'h1{color:red}');
+    assert.strictEqual(files.get('published/mi-primera-pagina/app.js'), 'console.log(1)');
 
     const manifest = JSON.parse(files.get('published/index.json'));
     assert.strictEqual(manifest.pages.length, 1);
@@ -180,7 +185,8 @@ test('a new instance loads what a previous one published', async () => {
     const list = await restarted.list();
     assert.strictEqual(list.length, 1);
     assert.strictEqual(list[0].slug, 'persistente');
-    assert.strictEqual(list[0].source.html, '<p>v1</p>');
+    assert.deepStrictEqual(list[0].files, ['index.html', 'styles.css']);
+    assert.strictEqual(list[0].source[0].content, '<p>v1</p>');
     assert.match(await restarted.html('persistente'), /<p>v1<\/p>/);
   });
 });
@@ -296,7 +302,7 @@ test('the app serves pages straight from GitHub storage', async () => {
       })).json();
 
       assert.strictEqual(created.slug, 'desde-la-app');
-      assert.strictEqual(created.url, `${at}/p/desde-la-app`);
+      assert.strictEqual(created.url, `${at}/p/desde-la-app/`);
       assert.strictEqual(
         created.permanentUrl,
         'https://scipiotoni.github.io/Actually-Useful/published/desde-la-app/'
@@ -308,11 +314,11 @@ test('the app serves pages straight from GitHub storage', async () => {
 
       const { deploys } = await (await fetch(`${at}/api/deploys`)).json();
       assert.strictEqual(deploys.length, 1);
-      assert.strictEqual(deploys[0].source.html, '<h1>vivo</h1>');
+      assert.strictEqual(deploys[0].source[0].content, '<h1>vivo</h1>');
 
       const del = await fetch(`${at}/api/deploys/desde-la-app`, { method: 'DELETE' });
       assert.strictEqual(del.status, 200);
-      assert.strictEqual((await fetch(`${at}/p/desde-la-app`)).status, 404);
+      assert.strictEqual((await fetch(`${at}/p/desde-la-app/`)).status, 404);
     } finally {
       app.close();
     }
@@ -452,5 +458,53 @@ test('a file that is not an image is refused before any commit', async () => {
     assert.deepStrictEqual(commits, []);
 
     assert.strictEqual(await store.readAsset('../../secret'), null);
+  });
+});
+
+
+test('a multi-file project publishes every file and cleans up removals', async () => {
+  await withFake({}, async ({ make, files }) => {
+    const store = make();
+    await store.save({
+      name: 'Sitio',
+      files: [
+        { name: 'index.html', content: '<a href="about.html">about</a>' },
+        { name: 'about.html', content: '<h1>About</h1>' },
+        { name: 'styles.css', content: 'h1{color:red}' }
+      ]
+    });
+
+    assert.ok(files.has('published/sitio/index.html'));
+    assert.ok(files.has('published/sitio/about.html'));
+    assert.strictEqual(files.get('published/sitio/styles.css'), 'h1{color:red}');
+    // A sibling link needs no rewriting: the layout already matches.
+    assert.match(files.get('published/sitio/index.html'), /href="about\.html"/);
+
+    await store.save({
+      name: 'Sitio',
+      slug: 'sitio',
+      files: [{ name: 'index.html', content: '<p>solo</p>' }]
+    });
+    assert.ok(!files.has('published/sitio/about.html'), 'the dropped page must go');
+    assert.ok(!files.has('published/sitio/styles.css'), 'the dropped stylesheet must go');
+    assert.ok(files.has('published/sitio/index.html'));
+  });
+});
+
+test('unpublishing takes every file with it', async () => {
+  await withFake({}, async ({ make, files }) => {
+    const store = make();
+    await store.save({
+      name: 'Efimero',
+      files: [
+        { name: 'index.html', content: '<p>a</p>' },
+        { name: 'extra.html', content: '<p>b</p>' },
+        { name: 'styles.css', content: 'p{}' }
+      ]
+    });
+    await store.remove('efimero');
+
+    const left = Array.from(files.keys()).filter((path) => path.startsWith('published/efimero/'));
+    assert.deepStrictEqual(left, [], 'nothing of the deploy should remain');
   });
 });

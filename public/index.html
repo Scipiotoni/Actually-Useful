@@ -38,13 +38,12 @@
 
 <main class="workspace" id="workspace">
   <section class="pane pane-editor" id="pane-editor" aria-label="Editor">
-    <div class="tabs" role="tablist">
-      <button class="tab is-active" role="tab" data-tab="html" aria-selected="true">HTML</button>
-      <button class="tab" role="tab" data-tab="css" aria-selected="false">CSS</button>
-      <button class="tab" role="tab" data-tab="js" aria-selected="false">JS</button>
+    <div class="tabs">
+      <div class="tab-strip" id="tab-strip" role="tablist"></div>
+      <button class="tab tab-add" id="btn-new-file" title="New file">＋</button>
       <span class="tabs-spacer"></span>
       <button class="tab tab-action" id="btn-format" title="Tidy up indentation">Format</button>
-      <button class="tab tab-action" id="btn-reset" title="Start from a blank page">Reset</button>
+      <button class="tab tab-action" id="btn-reset" title="Start a new project">Reset</button>
     </div>
     <div class="findbar" id="findbar" hidden>
       <div class="find-row">
@@ -67,9 +66,7 @@
     </div>
 
     <div class="editors">
-      <div class="editor-host is-active" data-editor="html" id="ed-html"></div>
-      <div class="editor-host" data-editor="css" id="ed-css"></div>
-      <div class="editor-host" data-editor="js" id="ed-js"></div>
+      <div class="editor-host is-active" id="ed-main"></div>
     </div>
     <footer class="statusbar">
       <span id="save-state" class="status-item">Saved locally</span>
@@ -147,6 +144,40 @@
   <p class="drawer-note">Ctrl on Windows and Linux, Cmd on a Mac.</p>
   <dl class="shortcuts" id="shortcut-list"></dl>
 </aside>
+
+<div class="modal" id="file-modal" hidden>
+  <form class="modal-card" id="file-form">
+    <h2 id="file-modal-title">New file</h2>
+
+    <div class="field">
+      <span class="field-label">What kind of file?</span>
+      <div class="type-picker" role="group" aria-label="File type">
+        <button type="button" data-type="html" aria-pressed="true">
+          <strong>HTML</strong><span>a page</span>
+        </button>
+        <button type="button" data-type="css" aria-pressed="false">
+          <strong>CSS</strong><span>styling</span>
+        </button>
+        <button type="button" data-type="js" aria-pressed="false">
+          <strong>JS</strong><span>behaviour</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="file-name">Name</label>
+      <input id="file-name" type="text" autocomplete="off" spellcheck="false" placeholder="about">
+      <p class="field-hint" id="file-hint"></p>
+    </div>
+
+    <p class="field-error" id="file-error" hidden></p>
+
+    <div class="modal-actions">
+      <button type="button" class="btn" id="file-cancel">Cancel</button>
+      <button type="submit" class="btn btn-primary" id="file-save">Create</button>
+    </div>
+  </form>
+</div>
 
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
 

@@ -13,6 +13,12 @@ const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const DATA_DIR = process.env.AU_DATA_DIR || path.join(__dirname, '..', 'data', 'sites');
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
+const CONTENT_TYPES = {
+  html: 'text/html; charset=utf-8',
+  css: 'text/css; charset=utf-8',
+  js: 'text/javascript; charset=utf-8'
+};
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -144,24 +150,11 @@ function createApp(options = {}) {
     const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host || 'localhost'}`;
 
     try {
-      // --- Deployed pages -------------------------------------------------
-      const pageMatch = pathname.match(/^\/p\/([^/]+)\/?$/);
-      if (pageMatch) {
-        const html = await store.html(pageMatch[1]);
-        if (html === null) {
-          return sendText(res, 404, notFoundPage(pageMatch[1]), 'text/html; charset=utf-8');
-        }
-        res.writeHead(200, {
-          'content-type': 'text/html; charset=utf-8',
-          'x-content-type-options': 'nosniff',
-          'cache-control': 'no-cache'
-        });
-        return res.end(html);
-      }
-
       // --- Uploaded images -------------------------------------------------
       // Public like the pages that embed them, so this sits above the gate.
-      const assetMatch = pathname.match(/^\/assets\/([^/]+)$/);
+      // Mirrors the layout on GitHub Pages, where a page at
+      // /published/<slug>/ reaches images as ../assets/<name>.
+      const assetMatch = pathname.match(/^\/(?:p\/)?assets\/([^/]+)$/);
       if (assetMatch && (req.method === 'GET' || req.method === 'HEAD')) {
         const name = assetMatch[1];
         const bytes = ASSET_NAME_RE.test(name) ? await store.readAsset(name) : null;
@@ -177,6 +170,30 @@ function createApp(options = {}) {
           'cache-control': 'public, max-age=300'
         });
         return res.end(req.method === 'HEAD' ? undefined : bytes);
+      }
+
+      // --- Deployed pages -------------------------------------------------
+      // A deploy is a directory of files. The trailing slash matters: it is
+      // what makes "styles.css" in a page resolve to a sibling file, here and
+      // on GitHub Pages alike.
+      const bareMatch = pathname.match(/^\/p\/([^/]+)$/);
+      if (bareMatch && (req.method === 'GET' || req.method === 'HEAD')) {
+        res.writeHead(302, { location: `/p/${encodeURIComponent(bareMatch[1])}/${url.search}` });
+        return res.end();
+      }
+
+      const pageMatch = pathname.match(/^\/p\/([^/]+)\/(.*)$/);
+      if (pageMatch) {
+        const served = await store.file(pageMatch[1], pageMatch[2] || undefined);
+        if (!served) {
+          return sendText(res, 404, notFoundPage(pageMatch[1], pageMatch[2]), 'text/html; charset=utf-8');
+        }
+        res.writeHead(200, {
+          'content-type': CONTENT_TYPES[served.type] || 'text/plain; charset=utf-8',
+          'x-content-type-options': 'nosniff',
+          'cache-control': 'no-cache'
+        });
+        return res.end(req.method === 'HEAD' ? undefined : served.body);
       }
 
       // --- Login ----------------------------------------------------------
@@ -324,18 +341,18 @@ function createApp(options = {}) {
  * `permanentUrl` is the GitHub Pages copy that outlives a restart.
  */
 function decorate(site, origin, store) {
-  const out = { ...site, url: `${origin}/p/${site.slug}` };
+  const out = { ...site, url: `${origin}/p/${site.slug}/` };
   if (typeof store.pagesUrl === 'function') out.permanentUrl = store.pagesUrl(site.slug);
   return out;
 }
 
-function notFoundPage(slug) {
+function notFoundPage(slug, file) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Page not found</title>
 <style>body{font:16px/1.6 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f1115;color:#e6e8ee}
 main{text-align:center;padding:24px}code{background:#1b1f27;padding:2px 6px;border-radius:4px}
 a{color:#7aa2f7}</style></head><body><main>
-<h1>404</h1><p>No page is deployed at <code>/p/${String(slug).replace(/[<&>]/g, '')}</code>.</p>
+<h1>404</h1><p>Nothing is published at <code>/p/${String(slug).replace(/[<&>]/g, '')}/${String(file || '').replace(/[<&>]/g, '')}</code>.</p>
 <p><a href="/">Back to the editor</a></p></main></body></html>`;
 }
 

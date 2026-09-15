@@ -3,26 +3,55 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { compose, slugify } = require('../public/compose.js');
+const Compose = require('../public/compose.js');
+const { slugify } = Compose;
 const { ASSET_NAME_RE, assetName, nextFreeName, decodeUpload } = require('./assets.js');
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,59}$/;
 const MAX_SOURCE_BYTES = 2 * 1024 * 1024; // per pane
 
+const MAX_FILES = 40;
+
 /**
- * Checks the three panes a deploy carries.
- * @returns {{ok: true} | {ok: false, status: number, error: string}}
+ * Checks the files a deploy carries, accepting the original three-pane shape
+ * as well so projects published before multi-file still work.
+ * @returns {{ok: true, files: Array} | {ok: false, status: number, error: string}}
  */
-function validateSource({ html = '', css = '', js = '' }) {
-  for (const [field, value] of Object.entries({ html, css, js })) {
-    if (typeof value !== 'string') {
-      return { ok: false, status: 400, error: `"${field}" must be a string` };
+function validateSource(input) {
+  const files = Compose.toFiles(input);
+
+  if (!files.length) return { ok: false, status: 400, error: 'A project needs at least one file' };
+  if (files.length > MAX_FILES) {
+    return { ok: false, status: 413, error: `A project can hold at most ${MAX_FILES} files` };
+  }
+
+  const seen = new Set();
+  for (const file of files) {
+    if (!file || !Compose.isValidName(file.name)) {
+      return {
+        ok: false,
+        status: 400,
+        error: `"${file && file.name}" is not a valid file name. Use letters, digits, - . _ and end in .html, .css or .js`
+      };
     }
-    if (Buffer.byteLength(value, 'utf8') > MAX_SOURCE_BYTES) {
-      return { ok: false, status: 413, error: `"${field}" exceeds the 2 MB limit` };
+    if (seen.has(file.name)) {
+      return { ok: false, status: 400, error: `Two files are called "${file.name}"` };
+    }
+    seen.add(file.name);
+
+    if (typeof file.content !== 'string') {
+      return { ok: false, status: 400, error: `"${file.name}" must hold text` };
+    }
+    if (Buffer.byteLength(file.content, 'utf8') > MAX_SOURCE_BYTES) {
+      return { ok: false, status: 413, error: `"${file.name}" exceeds the 2 MB limit` };
     }
   }
-  return { ok: true };
+
+  if (!Compose.entryOf(files)) {
+    return { ok: false, status: 400, error: 'A project needs at least one .html file' };
+  }
+
+  return { ok: true, files };
 }
 
 /** Picks a free slug from `taken`, appending -2, -3 ... on collision. */
@@ -139,20 +168,33 @@ class DeployStore {
     if (!dir) return null;
     try {
       const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
-      return { ...meta, slug };
+      const files = Compose.toFiles(meta.source !== undefined ? meta.source : meta);
+      return {
+        ...meta,
+        slug,
+        files: files.map((file) => file.name),
+        entry: meta.entry || Compose.entryOf(files),
+        source: files
+      };
     } catch {
       return null;
     }
   }
 
+  /** The served contents of one file in a deploy. */
+  file(slug, name) {
+    const site = this.get(slug);
+    if (!site) return null;
+    const wanted = name || site.entry;
+    if (!Compose.isValidName(wanted)) return null;
+    const body = Compose.serveFile(site.source, wanted, { title: site.name });
+    return body === null ? null : { name: wanted, body, type: Compose.fileType(wanted) };
+  }
+
+  /** The deploy's entry page, for callers that just want the page. */
   html(slug) {
-    const dir = this.dirFor(slug);
-    if (!dir) return null;
-    try {
-      return fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
-    } catch {
-      return null;
-    }
+    const served = this.file(slug);
+    return served ? served.body : null;
   }
 
   /** Picks a free slug, appending -2, -3 ... on collision. */
@@ -164,12 +206,13 @@ class DeployStore {
    * Creates a new deploy, or updates an existing one when `slug` is given.
    * @returns {{ok: true, site: object} | {ok: false, error: string, status: number}}
    */
-  save({ name, slug, html = '', css = '', js = '' }) {
-    const invalid = validateSource({ html, css, js });
-    if (!invalid.ok) return invalid;
+  save(input) {
+    const checked = validateSource(input);
+    if (!checked.ok) return checked;
+    const files = checked.files;
 
-    const title = String(name || '').trim() || 'Untitled page';
-    let target = slug;
+    const title = String(input.name || '').trim() || 'Untitled page';
+    let target = input.slug;
     let existing = null;
 
     if (target) {
@@ -188,15 +231,27 @@ class DeployStore {
     const meta = {
       slug: target,
       name: title,
-      source: { html, css, js },
+      entry: Compose.entryOf(files),
+      files: files.map((file) => file.name),
       createdAt: existing ? existing.createdAt : now,
       updatedAt: now,
       version: existing ? (existing.version || 1) + 1 : 1
     };
 
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'index.html'), compose({ html, css, js, title }), 'utf8');
-    fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(meta, null, 2), 'utf8');
+
+    // Drop files the project no longer has, so a rename does not leave a ghost.
+    const keep = new Set(files.map((file) => file.name));
+    for (const name of fs.readdirSync(dir)) {
+      if (name !== 'meta.json' && !keep.has(name)) {
+        fs.rmSync(path.join(dir, name), { force: true });
+      }
+    }
+
+    for (const file of files) {
+      fs.writeFileSync(path.join(dir, file.name), Compose.serveFile(files, file.name, { title }), 'utf8');
+    }
+    fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify({ ...meta, source: files }, null, 2), 'utf8');
 
     return { ok: true, site: meta, created: !existing };
   }
@@ -209,4 +264,4 @@ class DeployStore {
   }
 }
 
-module.exports = { DeployStore, SLUG_RE, MAX_SOURCE_BYTES, validateSource, nextFreeSlug };
+module.exports = { DeployStore, SLUG_RE, MAX_SOURCE_BYTES, MAX_FILES, validateSource, nextFreeSlug };
