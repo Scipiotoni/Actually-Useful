@@ -141,6 +141,13 @@
   // Lines drawn above and below the viewport, so a small scroll needs no repaint.
   var OVERSCAN = 40;
 
+  // Elements that never take a closing tag.
+  var VOID_TAGS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i;
+  // An opening tag that runs right up to the caret, quotes included so an
+  // attribute value containing ">" does not end it early.
+  var OPEN_AT_CARET = /<([a-zA-Z][\w:-]*)((?:"[^"]*"|'[^']*'|[^<>"'])*)$/;
+  var TAG_SCAN = /<(\/?)([a-zA-Z][\w:-]*)((?:"[^"]*"|'[^']*'|[^<>"'])*)>/g;
+
   var PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
   var CLOSERS = ')]}"\'`';
   var INDENT = '  ';
@@ -270,6 +277,58 @@
       else if (from > 0) from -= 1;
       if (from === to) return null;
       return { from: from, to: to, insert: '', selStart: from, selEnd: from };
+    },
+
+    /**
+     * The closing tag to write when ">" is typed, or null when the tag needs
+     * none — a void element, one already closed with "/>", or no tag at all.
+     * @returns {{insert: string, caret: number}|null}
+     */
+    closeTagOn: function (text, offset) {
+      var match = text.slice(0, offset).match(OPEN_AT_CARET);
+      if (!match) return null;
+      if (/\/\s*$/.test(match[2])) return null;
+      if (VOID_TAGS.test(match[1])) return null;
+      // The ">" the user typed, then the closing tag; the caret sits between.
+      return { insert: '></' + match[1] + '>', caret: 1 };
+    },
+
+    /** The tag still open at this point, for completing a typed "</". */
+    openTagAt: function (text) {
+      var stack = [];
+      var match;
+      TAG_SCAN.lastIndex = 0;
+      while ((match = TAG_SCAN.exec(text)) !== null) {
+        var name = match[2];
+        if (VOID_TAGS.test(name) || /\/\s*$/.test(match[3])) continue;
+
+        if (match[1] === '/') {
+          for (var i = stack.length - 1; i >= 0; i -= 1) {
+            if (stack[i].toLowerCase() === name.toLowerCase()) {
+              stack.length = i;
+              break;
+            }
+          }
+        } else {
+          stack.push(name);
+        }
+      }
+      return stack.length ? stack[stack.length - 1] : null;
+    },
+
+    /**
+     * Whether typing `key` should step over the character already there
+     * instead of adding a second one.
+     */
+    skipsOver: function (text, offset, key) {
+      return CLOSERS.indexOf(key) >= 0 && text.charAt(offset) === key;
+    },
+
+    /** What to write when "/" is typed straight after a "<". */
+    completeClosingTag: function (text, offset) {
+      if (text.charAt(offset - 1) !== '<') return null;
+      var open = Edits.openTagAt(text.slice(0, offset - 1));
+      return open ? { insert: '/' + open + '>' } : null;
     },
 
     findMatches: function (text, query, caseSensitive) {
@@ -791,14 +850,36 @@
       return;
     }
 
+    // Tag completion only makes sense in markup.
+    if (this.mode === 'html' && !mod && !event.altKey && start === end) {
+      if (event.key === '>') {
+        var closing = Edits.closeTagOn(value, start);
+        if (closing) {
+          event.preventDefault();
+          return void this._insert(closing.insert, closing.caret);
+        }
+      }
+      if (event.key === '/') {
+        var completed = Edits.completeClosingTag(value, start);
+        if (completed) {
+          event.preventDefault();
+          return void this._insert(completed.insert);
+        }
+      }
+    }
+
+    // Typing the closer that is already sitting there steps over it. This has
+    // to come before the pairing below: ")" and "]" are not keys in PAIRS, so
+    // inside that branch they were unreachable and got typed twice.
+    if (!mod && !event.altKey && start === end && Edits.skipsOver(value, start, event.key)) {
+      event.preventDefault();
+      el.selectionStart = el.selectionEnd = start + 1;
+      this._syncCaret();
+      return;
+    }
+
     if (PAIRS[event.key] && !mod && !event.altKey) {
       var nextChar = value[end] || '';
-      // Skip over a closer we just typed rather than doubling it.
-      if (start === end && event.key === nextChar && CLOSERS.indexOf(event.key) >= 0 && '([{'.indexOf(event.key) < 0) {
-        event.preventDefault();
-        el.selectionStart = el.selectionEnd = end + 1;
-        return;
-      }
       if (start === end && /[\w$]/.test(nextChar)) return; // don't auto-close mid-word
       event.preventDefault();
       var selected = value.slice(start, end);

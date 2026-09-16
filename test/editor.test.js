@@ -232,3 +232,104 @@ test('line arithmetic holds for a document far past the colouring limit', () => 
   assert.strictEqual(countNewlines(big) + 1, starts.length);
   assert.strictEqual(starts[1], 81);
 });
+
+// --------------------------------------------------------------------------
+// Closing tags written for you
+// --------------------------------------------------------------------------
+
+/** What the document looks like after typing ">", with | marking the caret. */
+function typeAngle(text) {
+  const done = edits.closeTagOn(text, text.length);
+  if (!done) return text + '>';
+  return text + done.insert.slice(0, done.caret) + '|' + done.insert.slice(done.caret);
+}
+
+test('typing > closes the tag and leaves the caret inside', () => {
+  assert.strictEqual(typeAngle('<h1'), '<h1>|</h1>');
+  assert.strictEqual(typeAngle('<div'), '<div>|</div>');
+  assert.strictEqual(typeAngle('<my-widget'), '<my-widget>|</my-widget>');
+});
+
+test('attributes come along, including a > inside a quoted value', () => {
+  assert.strictEqual(typeAngle('<div class="card"'), '<div class="card">|</div>');
+  assert.strictEqual(typeAngle("<a href='x.html'"), "<a href='x.html'>|</a>");
+  // The > in the value must not be read as the end of the tag.
+  assert.strictEqual(typeAngle('<p data-q="a>b"'), '<p data-q="a>b">|</p>');
+});
+
+test('tags that never close are left alone', () => {
+  for (const tag of ['<br', '<img src="x.png"', '<input type="text"', '<hr', '<meta charset="utf-8"', '<link rel="x"']) {
+    assert.strictEqual(edits.closeTagOn(tag, tag.length), null, `${tag} takes no closing tag`);
+  }
+});
+
+test('nothing is added where there is no open tag', () => {
+  const leaveAlone = [
+    '<div /',          // already self-closed
+    '<div / ',
+    '</div',           // this is a closing tag being typed
+    'a < b',           // a comparison, not markup
+    'plain text',
+    '<div>text'        // the tag was closed already
+  ];
+  for (const text of leaveAlone) {
+    assert.strictEqual(edits.closeTagOn(text, text.length), null, `${JSON.stringify(text)} should add nothing`);
+  }
+});
+
+test('the caret lands between the two tags, not after them', () => {
+  const done = edits.closeTagOn('<section', 8);
+  assert.strictEqual(done.insert, '></section>');
+  assert.strictEqual(done.caret, 1, 'one character in, just past the >');
+});
+
+// ---------------------------------------------------------------- </ completes
+
+test('typing </ completes the tag that is still open', () => {
+  const complete = (text) => {
+    const done = edits.completeClosingTag(text + '<', text.length + 1);
+    return done ? '<' + done.insert : null;
+  };
+  assert.strictEqual(complete('<div><p>texto'), '</p>');
+  assert.strictEqual(complete('<div><p>a</p>'), '</div>');
+  assert.strictEqual(complete('<ul><li>x</li><li>y'), '</li>');
+  // Void elements never go on the stack.
+  assert.strictEqual(complete('<div><br>'), '</div>');
+  assert.strictEqual(complete('<div><img src="x">'), '</div>');
+  // Self-closing elements do not either.
+  assert.strictEqual(complete('<div><thing/>'), '</div>');
+});
+
+test('nothing is completed when everything is closed', () => {
+  assert.strictEqual(edits.completeClosingTag('<div></div><', 12), null);
+  assert.strictEqual(edits.completeClosingTag('texto<', 6), null);
+  // The "/" has to follow a "<" directly.
+  assert.strictEqual(edits.completeClosingTag('<div>x', 6), null);
+});
+
+test('a stray closing tag does not unbalance the stack', () => {
+  // </span> closes nothing here, so <div> is still the open one.
+  const done = edits.completeClosingTag('<div></span><', 13);
+  assert.strictEqual(done && '<' + done.insert, '</div>');
+});
+
+test('typing a closer that is already there steps over it', () => {
+  // Every closing character, not just quotes: ")" and "]" used to be typed
+  // twice because the rule sat where they could never reach it.
+  for (const key of [')', ']', '}', '"', "'", '`']) {
+    assert.strictEqual(edits.skipsOver(key, 0, key), true, `${key} should step over itself`);
+  }
+});
+
+test('a closer is only stepped over when it is the very next character', () => {
+  assert.strictEqual(edits.skipsOver('()', 1, ')'), true);
+  assert.strictEqual(edits.skipsOver('(a)', 1, ')'), false, 'there is an "a" in the way');
+  assert.strictEqual(edits.skipsOver('()', 2, ')'), false, 'past the end');
+  assert.strictEqual(edits.skipsOver('', 0, ')'), false);
+});
+
+test('opening characters are never stepped over', () => {
+  for (const key of ['(', '[', '{', '<']) {
+    assert.strictEqual(edits.skipsOver(key + key, 0, key), false, `${key} should be typed, not skipped`);
+  }
+});

@@ -880,6 +880,8 @@
   // ------------------------------------------------------------- shortcuts
   var SHORTCUTS = [
     ['Editing', [
+      ['&gt;', 'In HTML, writes the closing tag and puts the caret between'],
+      ['&lt;/', 'Completes whichever tag is still open'],
       ['Tab', 'Indent the selected lines'],
       ['Shift Tab', 'Outdent the selected lines'],
       ['Ctrl /', 'Comment or uncomment the lines'],

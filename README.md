@@ -82,9 +82,20 @@ Windows and Linux, `Cmd` on a Mac.
 | `Ctrl`+`S` | Deploy |
 | `Esc` | Close the find bar or any drawer |
 
-Enter keeps the current indent, and adds a level inside a bracket or between a
-tag pair. Brackets and quotes close themselves; typing the closer skips over it
-instead of doubling it, and backspace between an empty pair removes both.
+### Typing help
+
+In an HTML file, **typing `>` writes the closing tag and leaves the caret
+between the two** — `<h1` then `>` gives `<h1>|</h1>`. Attributes come along
+(`<div class="card">` closes as `</div>`), elements that never close are left
+alone (`<br>`, `<img>`, `<input>` …), and so is anything that is not an opening
+tag — `</div>`, `<div />`, or an `a < b` comparison. Typing `</` completes
+whichever tag is still open.
+
+Everywhere: Enter keeps the current indent, and adds a level inside a bracket or
+between a tag pair. Brackets and quotes close themselves; typing the closer
+steps over it instead of doubling it, and backspace between an empty pair
+removes both. All of it is one undo step, so `Ctrl+Z` takes back the whole
+thing.
 
 **Wrap** in the status bar turns on soft wrapping, which helps on a phone. The
 line-number gutter is hidden while it is on, since wrapped lines and a 1:1
