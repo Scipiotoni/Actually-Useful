@@ -90,6 +90,24 @@ instead of doubling it, and backspace between an empty pair removes both.
 line-number gutter is hidden while it is on, since wrapped lines and a 1:1
 gutter cannot both be honest.
 
+### Large files
+
+The editor draws the document twice — the `<textarea>` you type into, and the
+coloured layer painted under it — so the cost of a keystroke grows with the
+file. Past **80 KB** two things change automatically:
+
+- syntax colouring turns off, and
+- only the lines on screen are painted, with the layer still sized to the whole
+  document so scrolling, the caret and the line numbers stay put.
+
+The status bar says so when it happens. A file that big is almost always an
+image pasted into the HTML as a `data:` URL — upload it under **Images**
+instead and the file shrinks back to normal.
+
+Measured on an 800 KB file, this took a keystroke from 480 ms to 70 ms. What
+is left is the browser's own cost of editing a very large `<textarea>`, not
+anything the editor does on top.
+
 ## How files fit together
 
 `public/compose.js` decides what each file is served as, and it is the *same*

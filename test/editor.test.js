@@ -185,3 +185,50 @@ test('highlighting escapes markup so source cannot inject into the paint layer',
   assert.ok(!out.includes('<img'), 'the tag must be escaped');
   assert.match(out, /&lt;img/);
 });
+
+// --------------------------------------------------------------------------
+// Line arithmetic. These run on every keystroke, so they avoid allocating a
+// string per line — which is what made a large file lock the editor up.
+// --------------------------------------------------------------------------
+
+const { countNewlines, lineStarts } = MiniEditor.text;
+
+test('counting newlines matches splitting, without the allocation', () => {
+  const samples = ['', 'a', 'a\nb', 'a\nb\n', '\n', '\n\n\n', 'sin saltos de linea'];
+  for (const text of samples) {
+    assert.strictEqual(
+      countNewlines(text) + 1,
+      text.split('\n').length,
+      `line count for ${JSON.stringify(text)}`
+    );
+  }
+});
+
+test('counting newlines up to an offset stops there', () => {
+  const text = 'uno\ndos\ntres';
+  assert.strictEqual(countNewlines(text, 0), 0);
+  assert.strictEqual(countNewlines(text, 4), 1);
+  assert.strictEqual(countNewlines(text, 8), 2);
+  assert.strictEqual(countNewlines(text, text.length), 2);
+});
+
+test('line starts point at the first character of every line', () => {
+  const text = 'uno\ndos\ntres';
+  const starts = lineStarts(text);
+  assert.deepStrictEqual(starts, [0, 4, 8]);
+  assert.deepStrictEqual(starts.map((at) => text.slice(at).split('\n')[0]), ['uno', 'dos', 'tres']);
+
+  assert.deepStrictEqual(lineStarts(''), [0]);
+  assert.deepStrictEqual(lineStarts('a\n'), [0, 2], 'a trailing newline opens one more line');
+});
+
+test('line arithmetic holds for a document far past the colouring limit', () => {
+  const line = 'x'.repeat(80) + '\n';
+  const big = line.repeat(20000);
+  assert.ok(big.length > MiniEditor.COLOUR_LIMIT, 'this sample must exceed the limit');
+
+  const starts = lineStarts(big);
+  assert.strictEqual(starts.length, 20001);
+  assert.strictEqual(countNewlines(big) + 1, starts.length);
+  assert.strictEqual(starts[1], 81);
+});

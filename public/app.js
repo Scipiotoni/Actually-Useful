@@ -130,6 +130,7 @@
     splitter: $('splitter'),
     saveState: $('save-state'),
     caretPos: $('caret-pos'),
+    bigFile: $('big-file'),
     wrap: $('btn-wrap'),
     shortcuts: $('btn-shortcuts'),
     shortcutDrawer: $('shortcut-drawer'),
@@ -159,6 +160,16 @@
     onChange: onEdit,
     onCaret: function (at) {
       els.caretPos.textContent = 'Ln ' + at.line + ', Col ' + at.column;
+    },
+    onColouring: function (on) {
+      els.bigFile.hidden = on;
+      if (!on) {
+        els.bigFile.textContent = 'Large file — colouring off to keep typing quick';
+        els.bigFile.title = 'Above ' + Math.round(MiniEditor.COLOUR_LIMIT / 1024) +
+          ' KB the editor stops colouring and paints only the lines on screen. ' +
+          'A file this size is usually an image pasted into the HTML — upload it ' +
+          'under Images instead and the file shrinks back.';
+      }
     }
   });
   editors.main = editor;
@@ -558,7 +569,9 @@
       els.saveState.textContent = 'Saved locally · ' + new Date().toLocaleTimeString();
       els.saveState.classList.remove('is-dirty');
     } catch (err) {
-      els.saveState.textContent = 'Could not save locally';
+      // Browsers cap local storage at a few MB; a pasted image blows past it.
+      els.saveState.textContent = 'Too large to save in this browser — deploy to keep it';
+      els.saveState.classList.add('is-dirty');
     }
   }
 

@@ -399,6 +399,18 @@ button { font-family: inherit; }
 }
 .ed-input::selection { background: rgba(110, 168, 254, .3); }
 
+/* Only the visible lines are painted for a very large file, so the painted
+   block is positioned rather than sitting in flow. */
+.ed.is-plain .ed-paint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-height: 0;
+  will-change: transform;
+}
+.ed.is-plain .ed-marks { will-change: transform; }
+.ed.is-plain .ed-layer { width: auto; }
+
 /* Wrapped lines and a 1:1 number gutter cannot both be true. */
 .ed.is-wrapped .ed-gutter { display: none; }
 .ed.is-wrapped .ed-active { display: none; }
@@ -432,6 +444,8 @@ button { font-family: inherit; }
 }
 .status-hint { margin-left: auto; }
 .status-pos { font-variant-numeric: tabular-nums; }
+.status-warn { color: var(--warn); }
+.status-warn[hidden] { display: none !important; }
 .status-btn {
   padding: 0;
   background: none;

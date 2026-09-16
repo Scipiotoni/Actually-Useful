@@ -12,6 +12,29 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  /** The offset each line starts at. One pass, no per-line allocation. */
+  function lineStarts(text) {
+    var starts = [0];
+    var at = text.indexOf('\n');
+    while (at !== -1) {
+      starts.push(at + 1);
+      at = text.indexOf('\n', at + 1);
+    }
+    return starts;
+  }
+
+  /** Counts newlines without splitting, which would allocate a string per line. */
+  function countNewlines(text, upto) {
+    var end = upto === undefined ? text.length : upto;
+    var total = 0;
+    var at = text.indexOf('\n');
+    while (at !== -1 && at < end) {
+      total += 1;
+      at = text.indexOf('\n', at + 1);
+    }
+    return total;
+  }
+
   function esc(s) {
     return String(s)
       .replace(/&/g, '&amp;')
@@ -109,6 +132,14 @@
     css: { block: ['/*', '*/'] },
     js: { line: '//' }
   };
+
+  // Colouring costs time proportional to the whole document, on every
+  // keystroke. Past this size that cost is felt as lag, so the text is painted
+  // plain instead — it stays fully editable, it just stops being coloured.
+  var COLOUR_LIMIT = 80 * 1024;
+  var MARK_LIMIT = 2000;
+  // Lines drawn above and below the viewport, so a small scroll needs no repaint.
+  var OVERSCAN = 40;
 
   var PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
   var CLOSERS = ')]}"\'`';
@@ -260,6 +291,8 @@
     this.mode = options.mode || 'html';
     this.onChange = options.onChange || function () {};
     this.onCaret = options.onCaret || function () {};
+    this.onColouring = options.onColouring || function () {};
+    this.plain = false;
 
     host.classList.add('ed');
     host.innerHTML =
@@ -295,7 +328,10 @@
     this.input.addEventListener('click', caret);
     this.input.addEventListener('select', caret);
     this.input.addEventListener('focus', caret);
-    this.body.addEventListener('scroll', function () { self._syncScroll(); });
+    this.body.addEventListener('scroll', function () {
+      self._syncScroll();
+      if (self.plain) self._schedulePaint();
+    });
 
     this.setValue(options.value || '');
   }
@@ -307,6 +343,9 @@
   MiniEditor.prototype.setValue = function (value) {
     this.input.value = value;
     this._sync();
+    // Switching files should show the new contents at once, not next frame.
+    this._paintQueued = false;
+    this._paintNow();
   };
 
   MiniEditor.prototype.focus = function () { this.input.focus(); };
@@ -318,7 +357,11 @@
     this._sync();
   };
 
-  MiniEditor.prototype.refresh = function () { this._syncScroll(); };
+  MiniEditor.prototype.refresh = function () {
+    this._cachedMetrics = null;
+    this._syncScroll();
+    this._schedulePaint();
+  };
 
   /** Wrapping and the line-number gutter cannot both be right; pick one. */
   MiniEditor.prototype.setWrap = function (on) {
@@ -330,17 +373,92 @@
 
   MiniEditor.prototype._sync = function () {
     var value = this.input.value;
-    // The trailing newline needs a character after it or <pre> collapses it.
-    this.paint.innerHTML = MODES[this.mode](value) + '\n';
-    var lines = value.split('\n').length;
+    var lines = countNewlines(value) + 1;
     if (this._lineCount !== lines) {
       this._lineCount = lines;
       var buf = new Array(lines);
       for (var i = 0; i < lines; i += 1) buf[i] = i + 1;
       this.nums.textContent = buf.join('\n');
     }
-    this._paintMarks();
+    this._schedulePaint();
     this._syncCaret();
+  };
+
+  /**
+   * Repainting is the expensive half, so it happens once per frame however
+   * many keystrokes arrive in between. Typing is never blocked waiting for it.
+   */
+  MiniEditor.prototype._schedulePaint = function () {
+    if (this._paintQueued) return;
+    this._paintQueued = true;
+
+    var self = this;
+    var run = function () {
+      self._paintQueued = false;
+      self._paintNow();
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+    else setTimeout(run, 16);
+  };
+
+  MiniEditor.prototype._paintNow = function () {
+    var value = this.input.value;
+    var plain = value.length > COLOUR_LIMIT;
+
+    if (plain !== this.plain) {
+      this.plain = plain;
+      this.host.classList.toggle('is-plain', plain);
+      if (!plain) this._unwindow();
+      this.onColouring(!plain);
+    }
+
+    if (plain) this._paintWindow(value);
+    else this.paint.innerHTML = MODES[this.mode](value) + '\n';
+
+    this._paintMarks();
+  };
+
+  /**
+   * For a document too large to colour, only the lines on screen are drawn.
+   * The layer is still given the full size, so scrolling, the caret and the
+   * line numbers all stay where they belong — there is simply nothing painted
+   * where nobody is looking.
+   */
+  MiniEditor.prototype._paintWindow = function (value) {
+    var m = this._metrics();
+    var starts = lineStarts(value);
+    var total = starts.length;
+
+    var first = Math.max(0, Math.floor(this.body.scrollTop / m.lineHeight) - OVERSCAN);
+    var visible = Math.ceil(this.body.clientHeight / m.lineHeight) + OVERSCAN * 2;
+    var last = Math.min(total, first + visible);
+
+    this._window = { first: first, last: last, starts: starts };
+
+    var from = starts[first];
+    var to = last < total ? starts[last] - 1 : value.length;
+
+    // Sizing the layer by the longest line keeps horizontal scrolling honest
+    // without asking the browser to measure every line.
+    var widest = 0;
+    for (var i = 0; i < total; i += 1) {
+      var end = i + 1 < total ? starts[i + 1] - 1 : value.length;
+      if (end - starts[i] > widest) widest = end - starts[i];
+    }
+
+    this.layer.style.height = (m.padTop * 2 + total * m.lineHeight) + 'px';
+    this.layer.style.width = (m.padLeft * 2 + widest * m.charWidth) + 'px';
+    this.paint.style.transform = 'translateY(' + (first * m.lineHeight) + 'px)';
+    this.paint.textContent = value.slice(from, to) + '\n';
+  };
+
+  /** Puts the layer back under the stylesheet's control. */
+  MiniEditor.prototype._unwindow = function () {
+    this._window = null;
+    this.layer.style.height = '';
+    this.layer.style.width = '';
+    this.paint.style.transform = '';
+    this.marks.style.transform = '';
   };
 
   MiniEditor.prototype._syncScroll = function () {
@@ -350,9 +468,19 @@
   MiniEditor.prototype._metrics = function () {
     if (!this._cachedMetrics) {
       var style = getComputedStyle(this.paint);
+      var ruler = document.createElement('span');
+      ruler.textContent = new Array(101).join('x');
+      ruler.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;' +
+        'font-family:' + style.fontFamily + ';font-size:' + style.fontSize;
+      this.paint.appendChild(ruler);
+      var charWidth = ruler.getBoundingClientRect().width / 100;
+      this.paint.removeChild(ruler);
+
       this._cachedMetrics = {
         lineHeight: parseFloat(style.lineHeight) || 20,
-        padTop: parseFloat(style.paddingTop) || 0
+        padTop: parseFloat(style.paddingTop) || 0,
+        padLeft: parseFloat(style.paddingLeft) || 0,
+        charWidth: charWidth || 8
       };
     }
     return this._cachedMetrics;
@@ -360,9 +488,9 @@
 
   /** Position of a character offset, as a 1-based line and column. */
   MiniEditor.prototype.positionAt = function (offset) {
-    var before = this.input.value.slice(0, offset);
-    var line = before.split('\n').length;
-    return { line: line, column: offset - (before.lastIndexOf('\n') + 1) + 1 };
+    var value = this.input.value;
+    var lineStart = value.lastIndexOf('\n', offset - 1) + 1;
+    return { line: countNewlines(value, offset) + 1, column: offset - lineStart + 1 };
   };
 
   MiniEditor.prototype._syncCaret = function () {
@@ -476,11 +604,14 @@
   };
 
   MiniEditor.prototype.gotoLine = function (number) {
-    var lines = this.input.value.split('\n');
-    var index = Math.min(Math.max(1, number), lines.length) - 1;
-    var offset = 0;
-    for (var i = 0; i < index; i += 1) offset += lines[i].length + 1;
-    this.select(offset, offset + lines[index].length);
+    var value = this.input.value;
+    var total = countNewlines(value) + 1;
+    var index = Math.min(Math.max(1, number), total) - 1;
+
+    var start = 0;
+    for (var i = 0; i < index; i += 1) start = value.indexOf('\n', start) + 1;
+    var end = value.indexOf('\n', start);
+    this.select(start, end === -1 ? value.length : end);
   };
 
   /** Home goes to the first non-blank character before the line start. */
@@ -555,13 +686,45 @@
     var out = '';
     var last = 0;
     var self = this;
+    // Painting thousands of hits costs more than it helps; the current one is
+    // still shown, and the count still reports the true total.
+    var shown = this.matches.length > MARK_LIMIT
+      ? this.matches.slice(Math.max(0, this.matchIndex), Math.max(0, this.matchIndex) + 1)
+      : this.matches;
+    shown.forEach(function (match, i) {
+      out += esc(value.slice(last, match.start));
+      var current = shown === self.matches ? i === self.matchIndex : true;
+      out += '<mark class="' + (current ? 'on' : '') + '">' +
+        esc(value.slice(match.start, match.end)) + '</mark>';
+      last = match.end;
+    });
+    if (this.plain && this._window) {
+      // Drawn in the same window as the text, or it would sit at the wrong height.
+      var m = this._metrics();
+      var w = this._window;
+      var from = w.starts[w.first];
+      var to = w.last < w.starts.length ? w.starts[w.last] - 1 : value.length;
+      this.marks.style.transform = 'translateY(' + (w.first * m.lineHeight) + 'px)';
+      this.marks.innerHTML = this._marksWithin(value, from, to);
+      return;
+    }
+    this.marks.style.transform = '';
+    this.marks.innerHTML = out + esc(value.slice(last)) + '\n';
+  };
+
+  /** The mark layer for one slice of the document. */
+  MiniEditor.prototype._marksWithin = function (value, from, to) {
+    var out = '';
+    var last = from;
+    var self = this;
     this.matches.forEach(function (match, i) {
+      if (match.end <= from || match.start >= to) return;
       out += esc(value.slice(last, match.start));
       out += '<mark class="' + (i === self.matchIndex ? 'on' : '') + '">' +
         esc(value.slice(match.start, match.end)) + '</mark>';
       last = match.end;
     });
-    this.marks.innerHTML = out + esc(value.slice(last)) + '\n';
+    return out + esc(value.slice(last, to)) + '\n';
   };
 
   // ------------------------------------------------------------------ keys
@@ -657,5 +820,7 @@
   MiniEditor.highlight = function (mode, src) { return MODES[mode](src); };
   MiniEditor.COMMENTS = COMMENTS;
   MiniEditor.edits = Edits;
+  MiniEditor.COLOUR_LIMIT = COLOUR_LIMIT;
+  MiniEditor.text = { countNewlines: countNewlines, lineStarts: lineStarts };
   return MiniEditor;
 });
