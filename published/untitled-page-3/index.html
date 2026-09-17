@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lobby Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#071316;--panel:#0d1f24;--panel2:#12292f;--line:#1c3a41;
+  --ink:#dcefea;--mute:#6f8f8a;--mint:#3dffc4;--mint-d:#0f4d3e;
+  --pink:#ff4fa3;--bubble-me:#0f4d3e;--bubble:#15313a;--danger:#ff5d6c;
+  --glow:0 0 14px rgba(61,255,196,.35);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#e9f3f0;--panel:#ffffff;--panel2:#f2f8f6;--line:#cfe2dc;
+    --ink:#0d2a26;--mute:#5b7a75;--mint:#00a877;--mint-d:#c9f4e5;
+    --pink:#d2257a;--bubble-me:#c9f4e5;--bubble:#ffffff;--danger:#d02a3a;--glow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#071316;--panel:#0d1f24;--panel2:#12292f;--line:#1c3a41;
+  --ink:#dcefea;--mute:#6f8f8a;--mint:#3dffc4;--mint-d:#0f4d3e;
+  --pink:#ff4fa3;--bubble-me:#0f4d3e;--bubble:#15313a;--danger:#ff5d6c;
+  --glow:0 0 14px rgba(61,255,196,.35);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 Sora,system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+img{max-width:100%}
+.app{display:grid;grid-template-columns:minmax(260px,340px) 1fr;height:100vh;height:100dvh}
+aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.me{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.me b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{display:flex;padding:8px;gap:6px;border-bottom:1px solid var(--line)}
+.tab{flex:1;background:none;border:1px solid transparent;border-radius:999px;padding:6px 10px;color:var(--mute)}
+.tab[aria-selected="true"]{color:var(--mint);border-color:var(--mint);box-shadow:var(--glow)}
+.list{flex:1;overflow-y:auto;min-height:0}
+.row{display:flex;align-items:center;gap:12px;width:100%;padding:10px 16px;background:none;border:0;border-bottom:1px solid var(--line);text-align:left}
+.row:hover,.row.on{background:var(--panel2)}
+.row .txt{flex:1;min-width:0}
+.row .t1{display:flex;justify-content:space-between;gap:8px}
+.row .t1 span:first-child,.row .t2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .t2{color:var(--mute);font-size:13px}
+.row time{color:var(--mute);font-size:12px;flex:none}
+.badge{background:var(--mint);color:#032;font-size:11px;font-weight:700;border-radius:999px;padding:1px 7px;margin-left:6px}
+.av{position:relative;flex:none;width:40px;height:40px}
+.av img{width:40px;height:40px;border-radius:50%;display:block;object-fit:cover}
+.av.sm,.av.sm img{width:28px;height:28px}
+.av .dot{position:absolute;right:0;bottom:0;width:11px;height:11px;border-radius:50%;background:var(--mint);border:2px solid var(--panel);box-shadow:var(--glow)}
+.grp{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--mint-d);color:var(--mint);font-weight:700}
+.newbtn{margin:10px 16px;padding:10px;border-radius:12px;border:1px dashed var(--mint);background:none;color:var(--mint)}
+.empty{padding:24px 16px;color:var(--mute)}
+main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+.head{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);min-height:61px}
+.head .txt{flex:1;min-width:0}
+.head h1{font-size:16px;margin:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.head p{margin:0;color:var(--mute);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ghost{background:none;border:1px solid var(--line);border-radius:10px;padding:6px 12px}
+.ghost:hover{border-color:var(--mint);color:var(--mint)}
+.back{display:none}
+.msgs{flex:1;overflow-y:auto;padding:18px 6% 10px;display:flex;flex-direction:column;gap:4px;min-height:0;
+  background-image:radial-gradient(circle at 1px 1px,var(--line) 1px,transparent 0);background-size:22px 22px}
+.b{max-width:min(72%,560px);padding:7px 10px 5px;border-radius:12px;background:var(--bubble);align-self:flex-start;word-wrap:break-word;white-space:pre-wrap;border:1px solid var(--line)}
+.b.me{align-self:flex-end;background:var(--bubble-me);border-color:transparent}
+.b .who{font-size:12px;font-weight:600;margin-bottom:2px}
+.b time{display:block;text-align:right;font-size:11px;color:var(--mute);margin-top:2px}
+.b.gap{margin-top:8px}
+.sys{align-self:center;font-size:12px;color:var(--mute);background:var(--panel);border:1px solid var(--line);padding:3px 10px;border-radius:999px;margin:8px 0}
+.composer{display:flex;gap:8px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line)}
+.composer input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:10px 16px;min-width:0}
+.composer input:focus{border-color:var(--mint);outline:none;box-shadow:var(--glow)}
+.send{border:0;border-radius:999px;background:var(--mint);color:#032;font-weight:700;padding:0 18px}
+.send:disabled{opacity:.4;cursor:default}
+.welcome{flex:1;display:grid;place-items:center;text-align:center;padding:24px;color:var(--mute)}
+.welcome h2{color:var(--ink);font-size:28px;margin:0 0 8px;letter-spacing:-.02em}
+.welcome kbd,.keys kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;font:12px/1.6 inherit;color:var(--ink)}
+.keys{margin-top:18px;font-size:13px;line-height:2}
+.drawer{position:absolute;inset:0 0 0 auto;width:min(360px,100%);background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;z-index:5;transform:translateX(100%);transition:transform .2s}
+.drawer.open{transform:none}
+.drawer .body{flex:1;overflow-y:auto;min-height:0}
+.sec{padding:12px 16px;border-bottom:1px solid var(--line)}
+.sec h3{margin:0 0 8px;font-size:13px;color:var(--mute);font-weight:500}
+.field{display:flex;gap:8px}
+.field input{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.tag{font-size:11px;color:var(--pink);border:1px solid var(--pink);border-radius:999px;padding:0 6px;margin-left:6px}
+.kick{background:none;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:3px 10px;font-size:13px}
+.act{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 16px;border-bottom:1px solid var(--line)}
+.act.red{color:var(--danger)}
+.act:hover{background:var(--panel2)}
+dialog{background:var(--panel);color:var(--ink);border:1px solid var(--mint);border-radius:16px;padding:0;width:min(440px,94vw);max-height:84vh;box-shadow:var(--glow)}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+dialog form{display:flex;flex-direction:column;max-height:84vh}
+dialog header{padding:14px 16px;border-bottom:1px solid var(--line)}
+dialog header h2{margin:0 0 10px;font-size:17px}
+dialog .pick{flex:1;overflow-y:auto;min-height:120px}
+dialog .row[aria-pressed="true"]{background:var(--mint-d)}
+dialog .row .chk{width:20px;height:20px;border-radius:6px;border:2px solid var(--line);flex:none}
+dialog .row[aria-pressed="true"] .chk{background:var(--mint);border-color:var(--mint)}
+dialog footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:20;pointer-events:none}
+.toast{background:var(--panel2);border:1px solid var(--mint);border-radius:10px;padding:8px 14px;box-shadow:var(--glow)}
+.offline{padding:40px;text-align:center;color:var(--mute)}
+@media (max-width:720px){
+  .app{grid-template-columns:1fr}
+  .app.chatting aside{display:none}
+  .app:not(.chatting) main{display:none}
+  .back{display:inline-block}
+}
+@media (prefers-reduced-motion:reduce){.drawer{transition:none}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside>
+    <div class="me" id="meBox"><div class="grp">…</div><b>Connecting</b></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabChats" aria-selected="true">Chats</button>
+      <button class="tab" role="tab" id="tabPeople" aria-selected="false">People</button>
+    </div>
+    <button class="newbtn" id="newBtn">New chat</button>
+    <div class="list" id="list"></div>
+  </aside>
+  <main id="main">
+    <div class="welcome" id="welcome">
+      <div>
+        <h2>Everyone on this page, one tap away</h2>
+        <p>Pick someone in People, or start a group and invite them.</p>
+        <div class="keys">
+          <kbd>Alt</kbd>+<kbd>N</kbd> new chat &nbsp; <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> switch chat<br>
+          <kbd>Alt</kbd>+<kbd>P</kbd> people &nbsp; <kbd>Alt</kbd>+<kbd>M</kbd> members &nbsp; <kbd>/</kbd> type &nbsp; <kbd>Esc</kbd> close
+        </div>
+      </div>
+    </div>
+    <div class="head" id="head" hidden>
+      <button class="ghost back" id="backBtn" aria-label="Back to chats">‹</button>
+      <div id="headAv"></div>
+      <div class="txt"><h1 id="chatName"></h1><p id="chatSub"></p></div>
+      <button class="ghost" id="membersBtn">Members</button>
+    </div>
+    <div class="msgs" id="msgs" hidden aria-live="polite"></div>
+    <form class="composer" id="composer" hidden>
+      <input id="input" autocomplete="off" maxlength="2000" placeholder="Type a message">
+      <button class="send" id="sendBtn" disabled>Send</button>
+    </form>
+    <div class="drawer" id="drawer" aria-label="Chat members">
+      <div class="head"><div class="txt"><h1>Chat info</h1></div><button class="ghost" id="closeDrawer">Close</button></div>
+      <div class="body" id="drawerBody"></div>
+    </div>
+  </main>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="dlgForm">
+    <header>
+      <h2 id="dlgTitle">New chat</h2>
+      <div class="field" id="nameField" style="margin-bottom:8px"><input id="dlgName" maxlength="60" placeholder="Group name (optional)"></div>
+      <div class="field"><input id="dlgSearch" placeholder="Search people"></div>
+    </header>
+    <div class="pick" id="pick"></div>
+    <footer>
+      <button type="button" class="ghost" id="dlgCancel">Cancel</button>
+      <button type="button" class="send" id="dlgOk" style="padding:8px 18px">Create chat</button>
+    </footer>
+  </form>
+</dialog>
+<div class="toasts" id="toasts"></div>
+
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const k in attrs || {}) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
+  return el;
+}
+const S = {
+  db: null, user: null, room: null, me: null,
+  chats: [], people: [], online: new Set(), prof: {},
+  active: null, msgs: [], read: {}, tab: "chats", drawer: false,
+  unsubMsgs: null, knownChats: null,
+};
+const name = (id) => (S.prof[id] && S.prof[id].name) || (id === S.me ? "You" : "Someone");
+const fmt = (ts) => { const d = new Date(ts || 0); return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
+const chatOf = (cid) => S.chats.find((c) => c.id === cid);
+const isAdmin = (c) => c && c.admin === S.me;
+
+function toast(text) {
+  const t = h("div", { class: "toast" }, text);
+  $("toasts").append(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function avatar(id, sm) {
+  const p = S.prof[id];
+  const wrap = h("div", { class: "av" + (sm ? " sm" : "") });
+  if (p && p.avatarUrl) wrap.append(h("img", { src: p.avatarUrl, alt: "" }));
+  else wrap.append(h("div", { class: "grp" }, "?"));
+  if (S.online.has(id) && id !== S.me) wrap.append(h("span", { class: "dot", title: "Online now" }));
+  return wrap;
+}
+function chatTitle(c) {
+  if (c.name) return c.name;
+  const others = c.members.filter((m) => m !== S.me);
+  if (!others.length) return "Just you";
+  return others.map(name).join(", ");
+}
+function chatAvatar(c) {
+  const others = c.members.filter((m) => m !== S.me);
+  if (!c.name && others.length === 1) return avatar(others[0]);
+  return h("div", { class: "grp" }, (c.name || "#").trim().charAt(0).toUpperCase() || "#");
+}
+
+/* ---------- render ---------- */
+let renderTok = 0, renderQueued = false;
+function render() {
+  if (renderQueued) return;
+  renderQueued = true;
+  queueMicrotask(async () => {
+    renderQueued = false;
+    const tok = ++renderTok;
+    if (S.user) {
+      const ids = new Set([S.me, ...S.people, ...S.online]);
+      S.chats.forEach((c) => c.members.forEach((m) => ids.add(m)));
+      S.msgs.forEach((m) => { if (m.from) ids.add(m.from); if (m.target) ids.add(m.target); });
+      try { S.prof = await S.user.profiles([...ids].filter(Boolean)); } catch (e) { /* keep last */ }
+      if (tok !== renderTok) return;
+    }
+    paint();
+  });
+}
+
+function paint() {
+  // me
+  const mb = $("meBox"); mb.replaceChildren(avatar(S.me), h("b", null, name(S.me)),
+    h("span", { style: "color:var(--mute);font-size:12px" }, S.online.size ? S.online.size + " online" : ""));
+  $("tabChats").setAttribute("aria-selected", S.tab === "chats");
+  $("tabPeople").setAttribute("aria-selected", S.tab === "people");
+  const list = $("list"); list.replaceChildren();
+  if (S.tab === "chats") {
+    if (!S.chats.length) list.append(h("div", { class: "empty" }, "No chats yet. Open People and tap someone to start one."));
+    for (const c of S.chats) {
+      const unread = (c.updatedAt || 0) > (S.read[c.id] || 0) && c.last && c.last.from !== S.me && c.id !== S.active;
+      const last = c.last ? (c.last.sys ? c.last.text : (c.last.from === S.me ? "You: " : name(c.last.from) + ": ") + c.last.text) : "No messages yet";
+      list.append(h("button", { class: "row" + (c.id === S.active ? " on" : ""), onclick: () => openChat(c.id) },
+        chatAvatar(c),
+        h("div", { class: "txt" },
+          h("div", { class: "t1" }, h("span", null, chatTitle(c), isAdmin(c) ? h("span", { class: "tag" }, "admin") : null), h("time", null, c.updatedAt ? fmt(c.updatedAt) : "")),
+          h("div", { class: "t2" }, last, unread ? h("span", { class: "badge" }, "new") : null))));
+    }
+  } else {
+    const ids = [...new Set([...S.online, ...S.people])].filter((i) => i !== S.me);
+    ids.sort((a, b) => (S.online.has(b) - S.online.has(a)) || name(a).localeCompare(name(b)));
+    if (!ids.length) list.append(h("div", { class: "empty" }, "Nobody else has opened this page yet. Share the link and they'll show up here."));
+    for (const id of ids) {
+      list.append(h("button", { class: "row", onclick: () => directChat(id) },
+        avatar(id),
+        h("div", { class: "txt" }, h("div", { class: "t1" }, h("span", null, name(id))),
+          h("div", { class: "t2" }, S.online.has(id) ? "On the page now · tap to chat" : "Tap to chat"))));
+    }
+  }
+  // chat pane
+  const c = chatOf(S.active);
+  $("app").classList.toggle("chatting", !!c);
+  $("welcome").hidden = !!c; $("head").hidden = !c; $("msgs").hidden = !c; $("composer").hidden = !c;
+  if (c) {
+    $("headAv").replaceChildren(chatAvatar(c));
+    $("chatName").textContent = chatTitle(c);
+    const on = c.members.filter((m) => S.online.has(m) && m !== S.me).length;
+    $("chatSub").textContent = c.members.length + " members" + (on ? " · " + on + " online" : "") + " · admin: " + name(c.admin);
+    paintMsgs();
+  }
+  paintDrawer();
+}
+
+function paintMsgs() {
+  const box = $("msgs");
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  box.replaceChildren();
+  const c = chatOf(S.active);
+  const group = c && c.members.length > 2;
+  let prev = null;
+  for (const m of S.msgs) {
+    if (m.sys) {
+      box.append(h("div", { class: "sys" }, sysText(m)));
+      prev = null; continue;
+    }
+    const mine = m.from === S.me;
+    const first = !prev || prev.from !== m.from;
+    const p = S.prof[m.from];
+    box.append(h("div", { class: "b" + (mine ? " me" : "") + (first ? " gap" : "") },
+      group && !mine && first ? h("div", { class: "who", style: "color:" + ((p && p.color) || "var(--pink)") }, name(m.from)) : null,
+      m.text, h("time", null, fmt(m.ts))));
+    prev = m;
+  }
+  if (!S.msgs.length) box.append(h("div", { class: "sys" }, "Say hi 👋"));
+  if (atBottom || box.dataset.cid !== S.active) box.scrollTop = box.scrollHeight;
+  box.dataset.cid = S.active;
+}
+function sysText(m) {
+  const a = name(m.from), t = m.target ? name(m.target) : "";
+  switch (m.kind) {
+    case "create": return a + " created the chat";
+    case "add": return a + " added " + t;
+    case "kick": return a + " removed " + t;
+    case "leave": return a + " left";
+    case "admin": return t + " is now admin";
+    case "rename": return a + " renamed the chat";
+    default: return m.text || "";
+  }
+}
+
+function paintDrawer() {
+  const d = $("drawer"), body = $("drawerBody");
+  const c = chatOf(S.active);
+  d.classList.toggle("open", S.drawer && !!c);
+  d.inert = !(S.drawer && c);
+  body.replaceChildren();
+  if (!c) return;
+  const admin = isAdmin(c);
+  if (admin) {
+    const inp = h("input", { value: c.name || "", maxlength: 60, placeholder: "Chat name", "aria-label": "Chat name" });
+    body.append(h("div", { class: "sec" }, h("h3", null, "Name"),
+      h("div", { class: "field" }, inp, h("button", { class: "ghost", onclick: () => renameChat(c, inp.value) }, "Save"))));
+  }
+  const sec = h("div", { class: "sec" }, h("h3", null, c.members.length + " members"));
+  const sorted = [...c.members].sort((a, b) => (b === c.admin) - (a === c.admin));
+  for (const m of sorted) {
+    sec.append(h("div", { class: "row", style: "padding:8px 0;border:0" }, avatar(m, true),
+      h("div", { class: "txt" }, h("span", null, name(m) + (m === S.me ? " (you)" : "")), m === c.admin ? h("span", { class: "tag" }, "admin") : null),
+      admin && m !== S.me ? h("button", { class: "ghost", style: "padding:3px 8px;font-size:13px", onclick: () => makeAdmin(c, m) }, "Make admin") : null,
+      admin && m !== S.me ? h("button", { class: "kick", onclick: () => kick(c, m) }, "Kick") : null));
+  }
+  body.append(sec);
+  if (admin) body.append(h("button", { class: "act", onclick: () => openPicker("add") }, "＋ Add people"));
+  body.append(h("button", { class: "act red", onclick: () => leave(c) }, "Leave chat"));
+  if (admin) body.append(h("button", { class: "act red", onclick: () => deleteChat(c) }, "Delete chat for everyone"));
+}
+
+/* ---------- actions ---------- */
+async function post(cid, msg) {
+  const data = Object.assign({ from: S.me, ts: Date.now() }, msg);
+  await S.db.collection("chats/" + cid + "/msgs").add(data);
+  const last = msg.sys ? { sys: true, text: sysText(data), from: S.me } : { from: S.me, text: msg.text.slice(0, 120) };
+  await S.db.doc("chats/" + cid).update({ updatedAt: data.ts, last }).catch(() => {});
+}
+function fail(e) {
+  console.error(e);
+  toast(e && e.code === "quota_exceeded" ? "Storage is full. Ask an admin to delete an old chat." : "That didn't go through. Try again.");
+}
+
+async function createChat(members, chatName) {
+  const ref = S.db.collection("chats").doc();
+  const now = Date.now();
+  await ref.set({ name: chatName || "", admin: S.me, members: [S.me, ...members.filter((m) => m !== S.me)], createdAt: now, updatedAt: now, last: null });
+  S.active = ref.id; S.tab = "chats";
+  subscribeMsgs();
+  await post(ref.id, { sys: true, kind: "create" });
+  members.forEach(invitePing.bind(null, ref.id));
+  render();
+}
+function invitePing(cid, uid) {
+  if (S.room && uid !== S.me) S.room.emit("invite", { to: uid, chat: cid }).catch(() => {});
+}
+async function directChat(uid) {
+  const ex = S.chats.find((c) => !c.name && c.members.length === 2 && c.members.includes(uid));
+  if (ex) return openChat(ex.id);
+  try { await createChat([uid], ""); } catch (e) { fail(e); }
+}
+async function addMembers(c, ids) {
+  const fresh = ids.filter((i) => !c.members.includes(i));
+  if (!fresh.length) return;
+  try {
+    await S.db.doc("chats/" + c.id).update({ members: [...c.members, ...fresh] });
+    for (const id of fresh) { await post(c.id, { sys: true, kind: "add", target: id }); invitePing(c.id, id); }
+  } catch (e) { fail(e); }
+}
+async function kick(c, uid) {
+  if (!isAdmin(c)) return;
+  if (!confirm("Remove " + name(uid) + " from this chat?")) return;
+  try {
+    await S.db.doc("chats/" + c.id).update({ members: c.members.filter((m) => m !== uid) });
+    await post(c.id, { sys: true, kind: "kick", target: uid });
+  } catch (e) { fail(e); }
+}
+async function makeAdmin(c, uid) {
+  if (!isAdmin(c) || !confirm("Hand admin to " + name(uid) + "? You'll become a regular member.")) return;
+  try { await S.db.doc("chats/" + c.id).update({ admin: uid }); await post(c.id, { sys: true, kind: "admin", target: uid }); }
+  catch (e) { fail(e); }
+}
+async function renameChat(c, v) {
+  v = v.trim().slice(0, 60);
+  if (!isAdmin(c) || v === (c.name || "")) return;
+  try { await S.db.doc("chats/" + c.id).update({ name: v }); await post(c.id, { sys: true, kind: "rename" }); toast("Chat renamed"); }
+  catch (e) { fail(e); }
+}
+async function leave(c) {
+  if (!confirm("Leave this chat?")) return;
+  const rest = c.members.filter((m) => m !== S.me);
+  try {
+    if (!rest.length) return deleteChat(c, true);
+    await post(c.id, { sys: true, kind: "leave" });
+    const patch = { members: rest };
+    if (c.admin === S.me) patch.admin = rest[0];
+    await S.db.doc("chats/" + c.id).update(patch);
+    if (patch.admin) await post(c.id, { sys: true, kind: "admin", target: rest[0] }).catch(() => {});
+    S.active = null; S.drawer = false; stopMsgs(); render();
+  } catch (e) { fail(e); }
+}
+async function deleteChat(c, silent) {
+  if (!silent && !confirm("Delete this chat and all its messages for everyone?")) return;
+  try {
+    const snap = await S.db.collection("chats/" + c.id + "/msgs").get();
+    for (const d of snap.docs) await S.db.doc("chats/" + c.id + "/msgs/" + d.id).delete();
+    await S.db.doc("chats/" + c.id).delete();
+    S.active = null; S.drawer = false; stopMsgs(); render();
+    toast("Chat deleted");
+  } catch (e) { fail(e); }
+}
+
+/* ---------- read state ---------- */
+let readTimer = null;
+function markRead() {
+  const c = chatOf(S.active);
+  if (!c || (S.read[c.id] || 0) >= (c.updatedAt || 0)) return;
+  S.read = Object.assign({}, S.read, { [c.id]: c.updatedAt });
+  clearTimeout(readTimer);
+  readTimer = setTimeout(() => {
+    S.db.doc("data/users/" + S.me + "/state").set({ read: S.read }).catch(() => {});
+  }, 800);
+}
+
+/* ---------- subscriptions ---------- */
+function stopMsgs() { if (S.unsubMsgs) { S.unsubMsgs(); S.unsubMsgs = null; } S.msgs = []; }
+function subscribeMsgs() {
+  stopMsgs();
+  const cid = S.active;
+  if (!cid) return;
+  S.unsubMsgs = S.db.collection("chats/" + cid + "/msgs").orderBy("ts", "desc").limit(300).onSnapshot((snap) => {
+    if (S.active !== cid) return;
+    S.msgs = snap.docs.map((d) => d.data()).reverse();
+    markRead(); render();
+  }, () => {});
+}
+function openChat(cid) {
+  if (S.active === cid) return focusInput();
+  S.active = cid; S.drawer = false;
+  subscribeMsgs(); markRead(); render();
+  focusInput();
+}
+function focusInput() { setTimeout(() => $("input").focus(), 0); }
+
+/* ---------- picker dialog ---------- */
+let pickMode = "new", picked = new Set(), searchHits = [], searchTok = 0;
+function openPicker(mode) {
+  pickMode = mode; picked = new Set(); searchHits = [];
+  $("dlgTitle").textContent = mode === "new" ? "New chat" : "Add people";
+  $("dlgOk").textContent = mode === "new" ? "Create chat" : "Add";
+  $("nameField").hidden = mode !== "new";
+  $("dlgName").value = ""; $("dlgSearch").value = "";
+  paintPick(); $("dlg").showModal(); runSearch("");
+  $(mode === "new" ? "dlgName" : "dlgSearch").focus();
+}
+async function runSearch(q) {
+  if (!S.user || !S.user.search) return;
+  const t = ++searchTok;
+  const hits = await S.user.search(q);
+  if (t !== searchTok) return;
+  searchHits = hits || [];
+  hits.forEach((p) => { S.prof[p.id] = p; });
+  paintPick();
+}
+function paintPick() {
+  const q = $("dlgSearch").value.trim().toLowerCase();
+  const exclude = pickMode === "add" ? new Set((chatOf(S.active) || { members: [] }).members) : new Set([S.me]);
+  const ids = [...new Set([...S.online, ...S.people, ...searchHits.map((p) => p.id), ...picked])]
+    .filter((i) => i && !exclude.has(i) && i !== S.me)
+    .filter((i) => !q || name(i).toLowerCase().includes(q) || searchHits.some((p) => p.id === i));
+  ids.sort((a, b) => (S.online.has(b) - S.online.has(a)) || name(a).localeCompare(name(b)));
+  const box = $("pick"); box.replaceChildren();
+  if (!ids.length) box.append(h("div", { class: "empty" }, "No one to add. People appear here once they open the page."));
+  for (const id of ids) {
+    box.append(h("button", { type: "button", class: "row", "aria-pressed": picked.has(id), onclick: () => { picked.has(id) ? picked.delete(id) : picked.add(id); paintPick(); } },
+      avatar(id), h("div", { class: "txt" }, h("div", null, name(id)), h("div", { class: "t2" }, S.online.has(id) ? "On the page now" : "")), h("span", { class: "chk" })));
+  }
+  $("dlgOk").disabled = !picked.size;
+}
+let sDeb;
+$("dlgSearch").addEventListener("input", (e) => { paintPick(); clearTimeout(sDeb); sDeb = setTimeout(() => runSearch(e.target.value.trim()), 250); });
+$("dlgSearch").addEventListener("keydown", (e) => { if (e.key === "ArrowDown") { e.preventDefault(); const f = $("pick").querySelector(".row"); f && f.focus(); } });
+$("pick").addEventListener("keydown", (e) => {
+  const rows = [...$("pick").querySelectorAll(".row")], i = rows.indexOf(document.activeElement);
+  if (e.key === "ArrowDown" && i >= 0) { e.preventDefault(); (rows[i + 1] || rows[i]).focus(); }
+  if (e.key === "ArrowUp" && i >= 0) { e.preventDefault(); (rows[i - 1] || $("dlgSearch")).focus(); }
+});
+$("dlgCancel").onclick = () => $("dlg").close();
+$("dlgOk").onclick = async () => {
+  if (!picked.size) return;
+  const ids = [...picked];
+  $("dlg").close();
+  if (pickMode === "new") {
+    try { await createChat(ids, ids.length > 1 ? ($("dlgName").value.trim() || "New group") : $("dlgName").value.trim()); }
+    catch (e) { fail(e); }
+  } else { const c = chatOf(S.active); if (c && isAdmin(c)) addMembers(c, ids); }
+};
+$("dlg").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("dlgOk").click(); } });
+
+/* ---------- UI wiring ---------- */
+$("tabChats").onclick = () => { S.tab = "chats"; render(); };
+$("tabPeople").onclick = () => { S.tab = "people"; render(); };
+$("newBtn").onclick = () => S.db && openPicker("new");
+$("membersBtn").onclick = () => { S.drawer = !S.drawer; render(); };
+$("closeDrawer").onclick = () => { S.drawer = false; render(); };
+$("backBtn").onclick = () => { S.active = null; S.drawer = false; stopMsgs(); render(); };
+$("input").addEventListener("input", (e) => { $("sendBtn").disabled = !e.target.value.trim(); });
+$("composer").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const inp = $("input"), text = inp.value.trim();
+  const c = chatOf(S.active);
+  if (!text || !c) return;
+  inp.value = ""; $("sendBtn").disabled = true;
+  try { await post(c.id, { text: text.slice(0, 2000) }); }
+  catch (err) { inp.value = text; $("sendBtn").disabled = false; fail(err); }
+});
+document.addEventListener("keydown", (e) => {
+  if ($("dlg").open) return;
+  const typing = /INPUT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName);
+  if (e.key === "Escape") {
+    if (S.drawer) { S.drawer = false; render(); }
+    else if (S.active) { document.activeElement.blur(); }
+    return;
+  }
+  if (e.altKey && !e.ctrlKey) {
+    const k = e.key.toLowerCase();
+    if (k === "n" || e.code === "KeyN") { e.preventDefault(); if (S.db) openPicker("new"); }
+    else if (k === "p" || e.code === "KeyP") { e.preventDefault(); S.tab = S.tab === "people" ? "chats" : "people"; render(); }
+    else if ((k === "m" || e.code === "KeyM") && S.active) { e.preventDefault(); S.drawer = !S.drawer; render(); }
+    else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!S.chats.length) return;
+      const i = S.chats.findIndex((c) => c.id === S.active);
+      const n = e.key === "ArrowDown" ? (i + 1) % S.chats.length : (i <= 0 ? S.chats.length - 1 : i - 1);
+      S.tab = "chats"; openChat(S.chats[n].id);
+    }
+    return;
+  }
+  if (e.key === "/" && !typing && S.active) { e.preventDefault(); focusInput(); }
+});
+
+/* ---------- boot ---------- */
+function offline(msg) {
+  document.body.replaceChildren(h("div", { class: "offline" }, h("h2", { style: "color:var(--ink)" }, "Chat needs the published page"), h("p", null, msg)));
+}
+async function boot() {
+  if (!window.claude || typeof window.claude.use !== "function") return offline("Open this page from its claude.ai link, signed in, to see who's here and chat.");
+  const [db, user, room] = await Promise.all(["db", "user", "room"].map((n) => window.claude.use(n).catch(() => null)));
+  if (!db || !user) return offline("Chat storage isn't available in this view. Open the page from its claude.ai link while signed in.");
+  const me = await user.id();
+  if (!me) return offline("Sign in to claude.ai to join the chat.");
+  Object.assign(S, { db, user, room, me });
+
+  db.doc("people/" + me).set({ seen: Date.now() }).catch(() => {});
+  db.collection("people").orderBy("seen", "desc").limit(300).onSnapshot((s) => { S.people = s.docs.map((d) => d.id); render(); }, () => {});
+  db.doc("data/users/" + me + "/state").onSnapshot((s) => {
+    const d = s.exists ? s.data() : null;
+    S.read = Object.assign({}, (d && d.read) || {}, S.read);
+    render();
+  }, () => {});
+  db.collection("chats").where("members", "array-contains", me).onSnapshot((s) => {
+    const prev = S.knownChats;
+    S.chats = s.docs.map((d) => Object.assign({ id: d.id }, d.data(), { members: (d.data().members || []).slice() }))
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    const ids = new Set(S.chats.map((c) => c.id));
+    if (prev && !s.metadata.fromCache) {
+      for (const c of S.chats) if (!prev.has(c.id) && c.admin !== me) toast("You were added to " + (c.name || "a chat"));
+      if (S.active && prev.has(S.active) && !ids.has(S.active)) {
+        toast("You're no longer in that chat");
+        S.active = null; S.drawer = false; stopMsgs();
+      }
+    }
+    if (!s.metadata.fromCache || !prev) S.knownChats = ids;
+    if (S.active) markRead();
+    render();
+  }, (e) => { console.error(e); toast("Lost connection to chats. Reload the page."); });
+
+  if (room) {
+    const sync = () => {
+      S.online = new Set(room.peers().map((p) => p.presence && p.presence.uid).filter((u) => typeof u === "string"));
+      render();
+    };
+    room.presence({ uid: me }).catch(() => {});
+    room.onPeers(sync, () => {});
+    sync();
+    room.on("invite", (m) => {
+      const d = m.data || {};
+      if (d.to === me && !m.isMe && typeof d.chat === "string") {
+        const c = chatOf(d.chat);
+        if (c && S.active !== c.id) toast(name(c.admin) + " invited you to " + chatTitle(c));
+      }
+    });
+  }
+  render();
+}
+paint();
+boot();
+})();
+</script>
+</body>
+</html>
