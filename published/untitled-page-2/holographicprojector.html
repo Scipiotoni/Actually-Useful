@@ -1,0 +1,342 @@
+<html><head>
+  <title>Easy</title>
+  <link rel="icon" href="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/E.png" type="image/x-icon">
+  <style>
+      /* Dark grey main theme with professional look */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #2f2f2f; /* dark grey */
+      color: #e0e6f8;
+    }
+    header {
+      background-color: #1a1a1a; /* darker grey */
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 30px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    }
+    header h1 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 24px;
+      color: #fff;
+      user-select: none;
+    }
+    header a {
+      color: #a3b8ff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      user-select: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+    header a:hover {
+      background-color: #4a4a4a;
+      color: #fff;
+    }
+    #redirectForm {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #redirectForm input[list] {
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      min-width: 180px;
+      background-color: #3a3a3a;
+      color: #e0e6f8;
+      box-shadow: inset 0 0 5px #000000;
+      transition: background-color 0.3s ease;
+    }
+    #redirectForm input[list]:focus {
+      background-color: #4a4a4a;
+      box-shadow: 0 0 8px #8090ff;
+      color: #fff;
+    }
+    #redirectForm input[type="submit"] {
+      padding: 8px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      background-color: #5c75e6;
+      color: #e0e6f8;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    #redirectForm input[type="submit"]:hover {
+      background-color: #7a90f0;
+      box-shadow: 0 5px 12px rgba(122,144,240,0.6);
+    }
+    main {
+      max-width: 600px;
+      margin: 60px auto 40px;
+      padding: 30px 40px;
+      background-color: #3a3a3a; /* dark grey main background */
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      color: #e0e6f8;
+    }
+    main h2 {
+      margin-top: 0;
+      font-weight: 700;
+      font-size: 28px;
+      color: #f0f0f0;
+      user-select: none;
+    }
+    main p {
+      font-size: 18px;
+      line-height: 1.6;
+      color: #dcdcdc;
+      user-select: text;
+      max-height: 160px;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+      text-align: justify;
+      cursor: pointer;
+      position: relative;
+      padding-right: 30px;
+    }
+    main p.expanded {
+      max-height: 2000px; /* large enough to show full text */
+    }
+    ul {
+      text-align: left;
+      display: inline-block;
+      margin-left: 0;
+      padding-left: 20px;
+      color: #e0e6f8;
+    }
+    iframe {
+      border-radius: 12px;
+      margin-top: 15px;
+      border: none;
+      box-shadow: 0 0 10px rgba(92,117,230,0.5);
+    }
+    ul {
+      list-style: none;
+      padding-left: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+    ul li {
+      background-color: #5261f7;
+      color: #e0e6f8;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .section {
+      color: #e0e6f8;
+      padding: 20px 25px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      user-select: text;
+      white-space: normal;
+      background: linear-gradient(135deg, #555555 0%, #2f2f2f 100%);
+      text-align: justify;
+      position: relative;
+      margin-top: 20px;
+    }
+    /* Copy button style */
+    #copyButton {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background-color: #5261f7;
+      border: none;
+      color: #e0e6f8;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
+    }
+    #copyButton:hover {
+      background-color: #7a90f0;
+      box-shadow: 0 4px 14px rgba(122,144,240,0.7);
+    }
+    #copyAlert {
+      position: absolute;
+      top: 15px;
+      right: 110px;
+      background-color: #4caf50;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      user-select: none;
+      font-weight: 600;
+    }
+    #copyAlert.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* Add a subtle indicator for expand/collapse */
+    main p::after {
+      content: '▼';
+      position: absolute;
+      right: 10px;
+      bottom: 8px;
+      font-size: 18px;
+      color: #8090ff;
+      user-select: none;
+      transition: transform 0.3s ease;
+    }
+    main p.expanded::after {
+      content: '▼';
+      transform: rotate(180deg);
+    }
+    
+    #nameInput {
+      background-color: #555555;
+      border: none;
+      color: #e0e6f8;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+    
+  </style>
+</head>
+<body data-new-gr-c-s-check-loaded="14.1282.0" data-gr-ext-installed="">
+  <header>
+    <a href="easysteam.html">Back</a>
+    <a href="index.html"></a>
+    <form id="redirectForm">
+      <input list="topics" name="Topics" id="TopicsInput" placeholder="Go to...">
+      <datalist id="topics">
+        <option value="Math"></option>
+        <option value="STEAM"></option>
+      </datalist>
+      <input type="submit" value="Go">
+    </form>
+  </header>
+
+  <main>
+    <h2>Holographic Projector</h2>
+    <h3>Tags:</h3>
+    <ul>
+      <li>Light</li>
+      <li>Refraction</li>
+      <li>Under 5 min</li>
+    </ul>
+
+
+    <br>
+    
+    <div class="droper">
+      <h2>Reaserch Paragraph</h2>
+      </div>
+      <div class="drop">
+        <p></p>
+      </div>
+    
+    <form id="nameform" onsubmit="return false;">
+      <input name="name" id="nameInput" placeholder="Name" autocomplete="off">
+    </form>
+
+    <div class="section" id="copySection">
+      <button id="copyButton" title="Copy text to clipboard"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" height="20px"></button>
+      <div id="copyAlert" role="alert" aria-live="assertive" aria-atomic="true">Copied!</div>
+      <p class="copy expanded" id="copyText" tabindex="0" aria-expanded="true" role="region" aria-label="Expand // Colapse">A holographic projector is a device that can create three dimensional images using light. Although this project does not create a hologram it creates what appears to be a 3D object. As it is only refracted light, you cannot touch it nor feel it. This project consists of four adjacent acrylic transparent panes cut and joined in an inverted pyramid style shape with the top cut out. The four panes refract a light from a screen at an ange to then merge and create the appearance of a three dimensional object that can move and shift although it is just four images playing at the same time.</p>
+    </div>
+  </main>
+
+
+  <script>
+  document.getElementById("redirectForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const choice = document.getElementById("TopicsInput").value.trim();
+  
+    if (choice === "Math") {
+      window.location.href = "easymath.html";
+    } else if (choice === "Main Page") {
+      window.location.href = "mainpage.html";
+    } else if (choice === "STEAM") {
+      window.location.href = "easysteam.html";
+    } else {
+      alert("Selected option not linked");
+    }
+  });
+  
+
+  const baseText =
+    "A holographic projector is a device that can create three dimensional images using light. Although this project does not create a hologram it creates what appears to be a 3D object. As it is only refracted light, you cannot touch it nor feel it. This project consists of four adjacent acrylic transparent panes cut and joined in an inverted pyramid style shape with the top cut out. The four panes refract a light from a screen at an ange to then merge and create the appearance of a three dimensional object that can move and shift although it is just four images playing at the same time.";
+  
+  const copyTextEl = document.getElementById("copyText");
+  const nameInput = document.getElementById("nameInput");
+  
+
+  copyTextEl.textContent = baseText;
+
+  nameInput.addEventListener("input", function () {
+    const userName = this.value.trim();
+    copyTextEl.textContent =
+      baseText + (userName ? " Author: " + userName : "");
+  });
+  
+
+  const copyButton = document.getElementById('copyButton');
+  const copyAlert = document.getElementById('copyAlert');
+  
+  copyButton.addEventListener('click', () => {
+    let userName = nameInput.value.trim();
+  
+    const finalText =
+      baseText + (userName ? `\n\n— ${userName}` : '');
+  
+    navigator.clipboard.writeText(finalText).then(() => {
+      copyAlert.classList.add('show');
+      setTimeout(() => copyAlert.classList.remove('show'), 2000);
+    }).catch(err => {
+      alert('Failed to copy text: ' + err);
+    });
+  });
+  
+
+  copyTextEl.addEventListener('click', () => {
+    const expanded = copyTextEl.classList.toggle('expanded');
+    copyTextEl.setAttribute('aria-expanded', expanded);
+  });
+  
+  copyTextEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const expanded = copyTextEl.classList.toggle('expanded');
+      copyTextEl.setAttribute('aria-expanded', expanded);
+    }
+  });
+</script>  
+
+<iframe id="nr-ext-rsicon" style="position: absolute; display: none; width: 50px; height: 50px; z-index: 2147483647; border-style: none; background: transparent;"></iframe>
+
+
+<iframe id="nr-ext-rsicon" style="position: absolute; display: none; width: 50px; height: 50px; z-index: 2147483647; border-style: none; background: transparent;"></iframe><grammarly-desktop-integration data-grammarly-shadow-root="true"></grammarly-desktop-integration>
+<iframe id="nr-ext-rsicon" style="position: absolute; display: none; width: 50px; height: 50px; z-index: 2147483647; border-style: none; background: transparent;"></iframe><iframe id="nr-ext-rsicon" style="position: absolute; display: none; width: 50px; height: 50px; z-index: 2147483647; border-style: none; background: transparent;"></iframe></body></html>

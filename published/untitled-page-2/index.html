@@ -1,0 +1,277 @@
+<html><head>
+  <title>Easy</title>
+  <link rel="icon" href="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/E.png" type="image/x-icon">
+  <style>
+    /* Dark blue main theme with professional look */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #4b51c9;
+      color: #e0e6f8;
+    }
+    header {
+      background-color: #123275;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 30px;
+      box-shadow: 0 3px 8px rgb(0 0 0 / 0.5);
+    }
+    header h1 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 24px;
+      color: #fff;
+      user-select: none;
+    }
+    #redirectForm {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #redirectForm input[list] {
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      min-width: 180px;
+      background-color: #1a2b73;
+      color: #e0e6f8;
+      box-shadow: inset 0 0 5px #002080;
+      transition: background-color 0.3s ease;
+    }
+    #redirectForm input[list]:focus {
+      background-color: #2c438f;
+      box-shadow: 0 0 8px #6090ff;
+      color: #fff;
+    }
+    #redirectForm input[type="submit"] {
+      padding: 8px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      background-color: #3a4db7;
+      color: #e0e6f8;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 3px 8px rgb(0 0 0 / 0.4);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    #redirectForm input[type="submit"]:hover {
+      background-color: #5c75e6;
+      box-shadow: 0 5px 12px rgb(92 117 230 / 0.6);
+    }
+    main {
+      max-width: 600px;
+      margin: 60px auto 40px;
+      padding: 30px 40px;
+      background-color: #192f7c;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgb(0 0 0 / 0.5);
+      text-align: center;
+    }
+    main h2 {
+      margin-top: 0;
+      font-weight: 700;
+      font-size: 28px;
+      color: #fff;
+      user-select: none;
+    }
+    main p {
+      font-size: 18px;
+      line-height: 1.6;
+      color: #fff;
+    }
+    
+    #version {
+      text-align: right;
+    }
+    
+    .anouncer {
+      background-color: #000;
+      border-radius: 20px;
+      color: #4B79C9;
+      width: 45%;
+      margin: 20px;
+      padding: 10px;
+    }
+    
+    #anouncments {
+      background-color: #4b51c9;
+      border-radius: 20px;
+      color: #fff;
+    }
+    
+    #anounceriframe{
+      display:flex;
+      padding: 20px;
+      justify-content: center;
+    }
+    
+    #checkout{
+      color: #fff;
+      text-decoration: underline;
+      text-decoration-color: #fff;
+    }
+    
+    .droper {
+      position: relative;
+      width: 100%;
+      max-width: 700px; /* max width for container */
+      margin: 10px auto;
+      border-radius: 20px;
+      overflow: hidden; /* hide overflow when collapsed */
+    }
+    
+    .drop {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      padding: 0 20px;
+      box-sizing: border-box;
+      transform: translateY(-10px);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.1s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+    }
+    
+    .droper:hover .drop {
+      max-height: 600px; /* large enough for content */
+      opacity: 1;
+      padding: 20px;
+      transform: translateY(0);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.3s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+    }
+    
+    /* sdroper (smaller drop) styling */
+    .sdroper {
+      position: relative;
+      width: 100%;
+      max-width: 700px;
+      margin: 10px auto;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    
+    .sdrop {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      padding: 0 20px;
+      box-sizing: border-box;
+      transform: translateY(-10px);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.1s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+      background-color: #fff;
+      border-radius: 12px;
+      width: 300px;
+      align-content: left;
+    }
+    
+    .sdroper:hover .sdrop {
+      max-height: 600px; /* enough for content */
+      opacity: 1;
+      padding: 20px;
+      transform: translateY(0);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.3s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+    }
+    
+    .notificationver {
+      font-size: 7px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Easy</h1>
+    <a href="index.html"></a>
+    <form id="redirectForm">
+      <input list="topics" name="Topics" id="TopicsInput" placeholder="Go to...">
+      <datalist id="topics">
+        <option value="Math"></option>
+        <option value="STEAM"></option>
+      </datalist>
+      <input type="submit" value="Go">
+    </form>
+  </header>
+
+  <main>
+    <h2>Welcome to Easy</h2>
+    <p>Tired of homework? This website will help you out</p>
+    <br>
+    <i> This website is under development so there might be some errors or glitches</i>
+    <br>
+    <p id="version">v3.2.0</p>
+    
+    <div id="anouncments">
+      
+      <h3>Recent and Upcoming Updates</h3>
+      <div id="anounceriframe">
+      <div class="anouncer">
+        <div class="droper">
+        <h4>Next</h4>
+        <p>Easysteam is geting the hydraulic arm and claw machine pages.</p>
+        <div class="drop">
+          <hr>
+          <h4>Upcoming</h4>
+          <p>More Features</p>
+        </div>
+        </div>
+      </div>
+      
+      <div class="anouncer">
+        <div class="droper">
+            <h4>Last</h4>
+            <p>Easymath got extendable sections.</p><a href="easymath.html" id="checkout">Go check it out</a>
+            <p class="notificationver">v3.2.0</p>
+          <div class="drop">
+            <hr>
+            <h4>Recent</h4>
+            <p>Easymath just got a percentage calculator</p><a href="easymath.html#percentageSolver" id="checkout">Go check it out</a>
+            <p class="notificationver">v3.1.0</p>
+            <hr>
+            <h4>Recent</h4>
+            <p>Version 3 just came out featuring Easysteam with two new projects.</p><a href="easysteam.html" id="checkout">Go check it out</a>
+            <p class="notificationver">v3.0.0</p>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </main>
+
+  <script>
+  document.getElementById("redirectForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const choice = document.getElementById("TopicsInput").value.trim();
+  
+    if (choice === "Math") {
+      window.location.href = "easymath.html";
+    } else if (choice === "Main Page") {
+      window.location.href = "mainpage.html";
+    } else if (choice === "STEAM") {
+      window.location.href = "easysteam.html";
+    } else {
+      alert("Selected option not linked");
+    }
+  });
+  </script>
+
+
+</body>
+</html>

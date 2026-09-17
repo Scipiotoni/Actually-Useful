@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EasyMath</title>
+  <link rel="icon" href="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/E.png" type="image/x-icon" />
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #4b51c9;
+      margin: 0;
+      padding: 0;
+      color: #e0e6f8;
+    }
+    header {
+      background-color: #123275;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 30px;
+      box-shadow: 0 3px 8px rgb(0 0 0 / 0.5);
+    }
+    header a {
+      color: #a3b8ff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      user-select: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+    header a:hover {
+      background-color: #2c438f;
+      color: #fff;
+    }
+    #redirectForm {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #redirectForm input[list] {
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      min-width: 180px;
+      background-color: #1a2b73;
+      color: #e0e6f8;
+      box-shadow: inset 0 0 5px #002080;
+      transition: background-color 0.3s ease;
+    }
+    #redirectForm input[list]:focus {
+      background-color: #2c438f;
+      box-shadow: 0 0 8px #6090ff;
+      color: #fff;
+    }
+    #redirectForm input[type="submit"] {
+      padding: 8px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      background-color: #3a4db7;
+      color: #e0e6f8;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    #redirectForm input[type="submit"]:hover {
+      background-color: #5c75e6;
+      box-shadow: 0 5px 12px rgba(92,117,230,0.6);
+    }
+    main {
+      max-width: 600px;
+      margin: 40px auto 40px;
+      background-color: #192f7c;
+      border-radius: 12px;
+      padding: 30px 40px;
+      box-shadow: 0 8px 20px rgb(0 0 0 / 0.5);
+      color: #e0e6f8;
+      user-select: none;
+    }
+    h1, h2 {
+      font-weight: 700;
+      margin: 0 0 20px 0;
+      color: #a3b8ff;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 25px;
+    }
+    h1::after, h2::after {
+      content: "\25BC";
+      position: absolute;
+      right: 10px;
+      color: #8090ff;
+      transition: transform 0.3s ease;
+      user-select: none;
+    }
+    h1.expanded::after, h2.expanded::after {
+      transform: rotate(180deg);
+    }
+    section {
+      margin-bottom: 40px;
+      overflow: hidden;
+      transition: max-height 0.5s ease;
+    }
+    section.collapsed > *:not(h1):not(h2) {
+      display: none;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      min-height: 52px;
+      padding: 14px 18px;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+      border-radius: 10px;
+      border: 2px solid #2c438f;
+      outline: none;
+      background-color: #1a2b73;
+      color: #ffffff;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+      margin-bottom: 15px;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      background-color: #2c438f;
+      border-color: #6090ff;
+      box-shadow: 0 0 12px rgba(96,144,255,0.5), inset 0 2px 4px rgba(0,0,0,0.2);
+      color: #fff;
+    }
+    input[type="text"]::placeholder, input[type="number"]::placeholder {
+      color: #c9d5ff;
+      opacity: 0.9;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    button {
+      width: 100%;
+      background-color: #3a4db7;
+      color: #e0e6f8;
+      font-weight: 700;
+      font-size: 18px;
+      padding: 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
+    }
+    button:hover {
+      background-color: #5c75e6;
+      box-shadow: 0 8px 28px rgba(92,117,230,0.7);
+    }
+    #result, #error, #answer, #percentageAnswer, #primeResult {
+      margin-top: 15px;
+      font-weight: 700;
+      font-size: 18px;
+      white-space: pre-wrap;
+      min-height: 40px;
+      color: #c8d0ff;
+      text-align: center;
+      display: inline-block;
+      vertical-align: middle;
+      max-width: 85%;
+      user-select: text;
+    }
+    #error {
+      color: #ff7070;
+      min-height: 20px;
+      display: block;
+    }
+    .answer-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 15px;
+      max-width: 100%;
+      flex-wrap: wrap;
+      user-select: none;
+    }
+    .copy-answer-btn {
+      width: auto;
+      min-width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #3a4db7, #5c75e6);
+      border: 2px solid #6090ff;
+      padding: 8px 12px;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .copy-answer-btn:hover {
+      background: linear-gradient(135deg, #5c75e6, #7a90f0);
+      border-color: #8090ff;
+      box-shadow: 0 6px 18px rgba(92,117,230,0.6);
+      transform: translateY(-2px);
+    }
+    .copy-answer-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .copy-answer-btn img {
+      width: 20px;
+      height: 20px;
+      filter: brightness(0) invert(1);
+      transition: filter 0.3s ease;
+    }
+    .copy-answer-btn:hover img {
+      filter: brightness(0) invert(1) drop-shadow(0 0 3px rgba(255,255,255,0.8));
+    }
+    .input-copy-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+    .input-copy-wrapper input {
+      flex: 1 1 auto;
+      width: auto;
+      min-width: 0;
+      margin-bottom: 0;
+    }
+    .copy-input-btn {
+      width: auto;
+      min-width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #3a4db7, #4b60d4);
+      border: 2px solid #5c75e6;
+      padding: 8px 10px;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    }
+    .copy-input-btn:hover {
+      background: linear-gradient(135deg, #5c75e6, #7a90f0);
+      border-color: #8090ff;
+      box-shadow: 0 5px 15px rgba(92,117,230,0.5);
+      transform: translateY(-2px);
+    }
+    .copy-input-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.3);
+    }
+    .copy-input-btn img {
+      width: 16px;
+      height: 16px;
+      filter: brightness(0) invert(1);
+      transition: filter 0.3s ease;
+    }
+    .copy-input-btn:hover img {
+      filter: brightness(0) invert(1) drop-shadow(0 0 3px rgba(255,255,255,0.8));
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+      table-layout: fixed;
+      color: #e0e6f8;
+    }
+    td {
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    td.operator {
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .clear-btn {
+      background-color: #bb3a3a;
+    }
+    .clear-btn:hover {
+      background-color: #cc4848;
+    }
+    #ratio-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    #ratio-buttons button {
+      flex: 1;
+    }
+    #discountModeContainer {
+      margin-bottom: 10px;
+      user-select: none;
+      color: #e0e6f8;
+      font-weight: 600;
+    }
+    #circCalculator {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 24px;
+    }
+    #circInputs {
+      flex: 1 1 280px;
+      min-width: 0;
+    }
+    #circInputs label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    #circInputs .input-copy-wrapper {
+      margin-bottom: 8px;
+    }
+    #circInputs input[type="number"] {
+      min-height: 38px;
+      padding: 8px 10px;
+      font-size: 17px;
+      margin-bottom: 0;
+    }
+    #circInputs .copy-input-btn {
+      width: 36px;
+      min-width: 36px;
+      height: 36px;
+      padding: 7px;
+    }
+    #circInputs button {
+      padding: 10px;
+      font-size: 16px;
+    }
+    #circDiagram {
+      flex: 0 1 240px;
+      min-width: 0;
+    }
+    #circDiagram svg {
+      width: 100%;
+      max-width: 240px;
+      height: auto;
+    }
+    .factorization-method {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 16px 24px;
+      border: 1px solid rgba(224, 230, 248, 0.35);
+      border-radius: 24px;
+      color: #d8ffe0;
+      text-align: left;
+    }
+    .factorization-method h3 {
+      margin: 0 0 12px;
+      color: #9affad;
+      text-align: center;
+      text-decoration: underline;
+    }
+    .division-step {
+      position: relative;
+      display: grid;
+      grid-template-columns: 42px 1px 58px;
+      align-items: center;
+      width: 140px;
+      min-height: 40px;
+      margin: 0 auto;
+      font-size: 21px;
+      font-weight: 700;
+      color: #baffc5;
+    }
+    .division-step::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 84px;
+      border-left: 2px solid currentColor;
+    }
+    .division-step::after {
+      content: "";
+      grid-column: 1 / -1;
+      grid-row: 1;
+      align-self: end;
+      border-bottom: 1px solid currentColor;
+    }
+    .division-step span:first-child,
+    .division-step span:last-child {
+      grid-row: 1;
+      z-index: 1;
+      background-color: #192f7c;
+      padding: 0 8px;
+    }
+    .division-step span:first-child {
+      grid-column: 1;
+      color: #72ff72;
+      text-align: right;
+    }
+    .division-step span:last-child {
+      grid-column: 3;
+      text-align: left;
+    }
+    .factorization-final {
+      margin: 14px 0 0;
+      color: #9affad;
+      text-align: center;
+      font-size: 17px;
+    }
+    @media (max-width: 650px) {
+      #circCalculator {
+        flex-direction: column;
+        gap: 8px;
+      }
+      #circDiagram {
+        align-self: center;
+        flex-basis: auto;
+      }
+    }
+    abbr {
+      text-decoration:none;
+      font-size: 18px;
+      line-height: 1.6;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html" title="Back to Main Page">Back</a>
+    <form id="redirectForm">
+      <input class="inputlist" list="topics" name="Topics" id="TopicsInput" placeholder="Subject" autocomplete="off" />
+      <datalist id="topics">
+        <option value="Main Page"></option>
+        <option value="Math"></option>
+        <option value="STEAM"></option>
+      </datalist>
+      <input type="submit" value="Go" />
+    </form>
+  </header>
+
+  <main>
+    <form id="MTform">
+      <input list="MTopics" name="Topics" id="MTopicImput" placeholder="Topic" autocomplete="off"/>
+      <datalist id="MTopics">
+        <option value="Arithmetic"></option>
+        <option value="Ratio Calculator"></option>
+        <option value="Prime Factorization"></option>
+        <option value="Percentage Calculator"></option>
+      </datalist>
+      <input type="submit" value="Go" />
+    </form>
+    <br>
+    <br>
+    <section id="arithmeticSolver" class="collapsed">
+      <h1>Arithmetic Solver</h1>
+      <div class="input-copy-wrapper">
+        <input
+          type="text"
+          id="equationInput"
+          placeholder="Enter expression (Fractions work)"
+          autocomplete="off"
+        />
+      </div>
+      <button onclick="solveEquation()">Calculate</button>
+      <div class="answer-container">
+        <div id="result"></div>
+        <button class="copy-answer-btn" id="copyResult" title="Copy result"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
+      </div>
+      <div id="error"></div>
+    </section>
+
+    <hr style="border-color:#2c438f;" />
+
+    <section id="ratioSolver" class="collapsed">
+      <h1>Ratio Calculator</h1>
+      <form id="CalculatorForm" onsubmit="return calculateButtonWorking()">
+        <table>
+          <tr>
+            <td><label for="n_1">A</label></td>
+            <td class="operator">:</td>
+            <td><label for="d_1">B</label></td>
+            <td class="operator">=</td>
+            <td><label for="n_2">C</label></td>
+            <td class="operator">:</td>
+            <td><label for="d_2">D</label></td>
+          </tr>
+          <tr>
+            <td class="input-copy-wrapper"><input type="number" id="n_1" name="n_1" value="2" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="n_1" title="Copy A"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td class="operator">:</td>
+            <td class="input-copy-wrapper"><input type="number" id="d_1" name="d_1" value="5" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="d_1" title="Copy B"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td class="operator">=</td>
+            <td class="input-copy-wrapper"><input type="number" id="n_2" name="n_2" value="6" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="n_2" title="Copy C"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td class="operator">:</td>
+            <td class="input-copy-wrapper"><input type="number" id="d_2" name="d_2" value="" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="d_2" title="Copy D"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+          </tr>
+        </table>
+        <div id="ratio-buttons">
+          <button type="submit">Calculate Ratio</button>
+          <button type="button" class="clear-btn" onclick="clearRatioForm()">Clear</button>
+        </div>
+      </form>
+      <div class="answer-container">
+        <div id="answer"></div>
+      </div>
+    </section>
+
+    <hr style="border-color:#2c438f;" />
+
+    <section id="percentageSolver" class="collapsed">
+      <h1>Percentage Calculator</h1>
+      <form id="PercentageForm" onsubmit="return calculatePercentage()">
+        <table>
+          <tr>
+            <td><label for="baseValue">Base (100%)</label></td>
+            <td class="operator">%</td>
+            <td><label for="percentValue">Percent</label></td>
+            <td class="operator">=</td>
+            <td><label for="resultValue">Answer</label></td>
+          </tr>
+          <tr>
+            <td class="input-copy-wrapper"><input type="number" id="baseValue" name="baseValue" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="baseValue" title="Copy Base"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td class="operator">%</td>
+            <td class="input-copy-wrapper"><input type="number" id="percentValue" name="percentValue" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="percentValue" title="Copy Percent"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td class="operator">=</td>
+            <td class="input-copy-wrapper">
+              <input type="number" id="resultValue" name="resultValue" autocomplete="off" step="any" />
+              <button type="button" class="copy-input-btn" data-copy-target="resultValue" title="Copy Result"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
+            </td>
+          </tr>
+        </table>
+        <div id="discountModeContainer">
+          <label for="discountMode">
+            <input type="checkbox" id="discountMode" /> Discount Mode
+          </label>
+        </div>
+        <div id="percentage-buttons">
+          <button type="submit">Calculate Percentage</button>
+          <button type="button" class="clear-btn" onclick="clearPercentageForm()">Clear</button>
+        </div>
+      </form>
+      <div class="answer-container">
+        <div id="percentageAnswer"></div>
+        <button class="copy-answer-btn" id="copyPercentageAnswer" title="Copy percentage answer"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
+      </div>
+    </section>
+
+    <hr style="border-color:#2c438f;" />
+
+    <section id="primeFactorization" class="collapsed">
+      <h1>Prime Factorization</h1>
+      <div class="input-copy-wrapper">
+        <input
+          type="number"
+          id="primeInput"
+          placeholder="Enter an integer greater than 1"
+          autocomplete="off"
+          min="2"
+        />
+        <button class="copy-input-btn" data-copy-target="primeInput" title="Copy Prime Input"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon" /></button>
+      </div>
+      <button onclick="primeFactorize()">Factorize</button>
+      <div class="answer-container">
+        <div id="primeResult"></div>
+        <button class="copy-answer-btn" id="copyPrimeResult" title="Copy prime factorization result"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon" /></button>
+      </div>
+      <div id="primeError" style="color:#ff7070; font-weight:700; margin-top:8px;"></div>
+    </section>
+
+    <hr style="border-color:#2c438f;" />
+
+    <section id="circumferenceCalculator" class="collapsed">
+      <h1>Circumference Calculator</h1>
+      <div id="circCalculator">
+        <div id="circInputs">
+          <form id="circForm" onsubmit="return false;">
+            <label>
+              Simplified (3.14)
+              <input type="checkbox" id="simplifiedPi">
+            </label>
+            <br>
+            <hr>
+            <label class="input-copy-wrapper">
+              <abbr title="Diameter">D:  </abbr><input id="dInput" type="number" step="any" autocomplete="off" />
+              <button type="button" class="copy-input-btn" data-copy-target="dInput" title="Copy Diameter"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"/></button>
+            </label>
+            <br>
+            <label class="input-copy-wrapper">
+              <abbr title="Radius">R:  </abbr><input id="rInput" type="number" step="any" autocomplete="off" />
+              <button type="button" class="copy-input-btn" data-copy-target="rInput" title="Copy Radius"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"/></button>
+            </label>
+            <br>
+            <label class="input-copy-wrapper">
+              <abbr title="Circumference">C:  </abbr><input id="cInput" type="number" step="any" autocomplete="off" />
+              <button type="button" class="copy-input-btn" data-copy-target="cInput" title="Copy Circumference"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"/></button>
+            </label>
+            <br>
+            <label class="input-copy-wrapper">
+              <abbr title="Area">A:  </abbr><input id="aInput" type="number" step="any" autocomplete="off" />
+              <button type="button" class="copy-input-btn" data-copy-target="aInput" title="Copy Area"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"/></button>
+            </label>
+            <br>
+            <button id="submitCircumference" type="button">Calculate</button>
+            <br>
+            <button id="clearCircButton" onclick="clearCirc()" class="clear-btn" id="">Clear</button>
+          </form>
+        </div>
+        <div id="circDiagram">
+          <svg width="300" height="300" viewBox="0 0 300 300" aria-label="Circle diagram showing radius, diameter and circumference" role="img" style="display:block; margin: 20px auto;">
+            <circle cx="150" cy="150" r="100" stroke="#a3b8ff" stroke-width="3" fill="none" />
+            <line x1="150" y1="150" x2="250" y2="150" stroke="#5c75e6" stroke-width="4" />
+            <text x="200" y="140" fill="#5c75e6" font-size="14" font-weight="600" text-anchor="middle" user-select="none">R</text>
+            <line x1="50" y1="150" x2="250" y2="150" stroke="#3a4db7" stroke-width="4" stroke-dasharray="10,5" />
+            <text x="150" y="170" fill="#3a4db7" font-size="14" font-weight="600" text-anchor="middle" user-select="none">D</text>
+            <circle cx="150" cy="150" r="4" fill="#5c75e6"/>
+            <text x="150" y="40" fill="#a3b8ff" font-size="16" font-weight="700" text-anchor="middle" user-select="none">C</text>
+            <path d="M50 150 A100 100 0 0 1 250 150" fill="none" stroke="#a3b8ff" stroke-width="4" />
+            
+            <defs>
+              <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#5c75e6"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+      <div class="answer-container" style="justify-content:center;">
+        <div id="circAnswer" style="color:#c8d0ff; font-weight:700; font-size:18px; white-space:pre-wrap; min-height: 40px;"></div>
+        <button class="copy-answer-btn" id="copyCircAnswer" title="Copy answer"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"/></button>
+      </div>
+    </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+  <script>
+    
+    // Expand/collapse logic for topics
+    document.querySelectorAll('section h1, section h2').forEach(header => {
+      header.addEventListener('click', () => {
+        const section = header.parentElement;
+        section.classList.toggle('collapsed');
+        header.classList.toggle('expanded');
+      });
+    });
+    
+    function decimalToFraction(decimal) {
+      if (Number.isInteger(decimal)) return decimal.toString();
+      const tolerance = 1.0e-10;
+      let h1 = 1,
+        h2 = 0,
+        k1 = 0,
+        k2 = 1,
+        b = decimal;
+      do {
+        let a = Math.floor(b);
+        let aux = h1;
+        h1 = a * h1 + h2;
+        h2 = aux;
+        aux = k1;
+        k1 = a * k1 + k2;
+        k2 = aux;
+        b = 1 / (b - a);
+      } while (Math.abs(decimal - h1 / k1) > decimal * tolerance);
+      return `${h1}/${k1}`;
+    }
+
+
+    function solveEquation() {
+      const input = document.getElementById("equationInput").value.trim();
+      const resultEl = document.getElementById("result");
+      const errorEl = document.getElementById("error");
+      resultEl.textContent = "";
+      errorEl.textContent = "";
+
+      if (!input) {
+        errorEl.textContent = "Please enter an expression.";
+        return;
+      }
+
+      try {
+        const expr = input
+          .replace(/([0-9])i/g, "$1*i")
+          .replace(/([^\w\d])i/g, "$1i")
+          .replace(/^i/, "1i");
+
+        const value = math.evaluate(expr);
+
+        function formatComplex(c) {
+          const re = c.re;
+          const im = c.im;
+          let parts = [];
+          if (Math.abs(re) > 1e-14) parts.push(re.toFixed(10).replace(/\.?0+$/, ""));
+          if (Math.abs(im) > 1e-14) {
+            let sign = im >= 0 && parts.length ? "+" : "";
+            let absIm = Math.abs(im);
+            parts.push(sign + (absIm === 1 ? "i" : absIm.toFixed(10).replace(/\.?0+$/, "") + "i"));
+          }
+          if (parts.length === 0) return "0";
+          return parts.join("");
+        }
+
+        if (typeof value === "number") {
+          resultEl.textContent = `Result:\nDecimal: ${value}\nFraction: ${decimalToFraction(value)}\nMethod: Evaluate the expression using the order of operations, then convert the decimal to a fraction.`;
+        } else if (math.typeOf(value) === "Complex") {
+          const decStr = formatComplex(value);
+          let fracStr = "";
+          fracStr += Math.abs(value.re) > 1e-14 ? decimalToFraction(value.re) : "0";
+          fracStr += value.im >= 0 ? "+" : "-";
+          fracStr +=
+            Math.abs(value.im) > 1e-14
+              ? decimalToFraction(Math.abs(value.im)) === "1"
+                ? "i"
+                : decimalToFraction(Math.abs(value.im)) + "i"
+              : "0i";
+          resultEl.textContent = `Result:\nDecimal: ${decStr}\nFraction approx: ${fracStr}\nMethod: Evaluate the real and imaginary parts separately, then convert each decimal part to a fraction.`;
+        } else if (math.typeOf(value) === "BigNumber") {
+          const num = value.toNumber();
+          resultEl.textContent = `Result:\nDecimal: ${num}\nFraction: ${decimalToFraction(num)}\nMethod: Evaluate the expression, convert the result to a regular number, then convert the decimal to a fraction.`;
+        } else {
+          resultEl.textContent = `Result:\n${value.toString()}\nMethod: Evaluate the expression using the order of operations.`;
+        }
+      } catch (e) {
+        errorEl.textContent = `Error: ${e.message || e}`;
+      }
+    }
+
+    function calculateButtonWorking() {
+      event.preventDefault();
+
+      let A = parseFloat(document.getElementById("n_1").value);
+      let B = parseFloat(document.getElementById("d_1").value);
+      let CStr = document.getElementById("n_2").value.trim();
+      let DStr = document.getElementById("d_2").value.trim();
+
+      const isANum = !isNaN(A);
+      const isBNum = !isNaN(B);
+      const isCNum = CStr !== "" && !isNaN(parseFloat(CStr));
+      const isDNum = DStr !== "" && !isNaN(parseFloat(DStr));
+
+      const answerEl = document.getElementById("answer");
+      answerEl.textContent = "";
+
+      if (isANum && isBNum && isCNum && isDNum) {
+        let C = parseFloat(CStr);
+        let D = parseFloat(DStr);
+
+        if (B === 0 || D === 0) {
+          alert("Denominators cannot be zero.");
+          return false;
+        }
+
+        const ratio1 = A / B;
+        const ratio2 = C / D;
+
+        if (Math.abs(ratio1 - ratio2) < 1e-10) {
+          answerEl.innerHTML = `<div>The ratios ${A} : ${B} and ${C} : ${D} are proportionate (equal).<br><small>Method: Compare A ÷ B with C ÷ D.</small></div>`;
+        } else {
+          answerEl.innerHTML = `<div>The ratios ${A} : ${B} and ${C} : ${D} are NOT proportionate (not equal).<br><small>Method: Compare A ÷ B with C ÷ D.</small></div>`;
+        }
+        return false;
+      }
+
+      if (isANum && isBNum && !isCNum && !isDNum) {
+        if (B === 0) {
+          alert("Denominator B cannot be zero.");
+          return false;
+        }
+
+
+        function gcd(x, y) {
+          if (!y) return x;
+          return gcd(y, x % y);
+        }
+
+        const gcdAB = gcd(Math.abs(A), Math.abs(B));
+        const simpleA = A / gcdAB;
+        const simpleB = B / gcdAB;
+
+        answerEl.innerHTML = `<div>Ratio simplified: ${simpleA} : ${simpleB}<br><small>Method: Divide both terms by their greatest common divisor, ${gcdAB}.</small></div>`;
+        return false;
+      }
+
+
+      let C = isCNum ? parseFloat(CStr) : NaN;
+      let D = isDNum ? parseFloat(DStr) : NaN;
+
+      const values = [A, B, C, D];
+      const numCount = values.filter(v => !isNaN(v)).length;
+
+      if (numCount !== 3) {
+        alert("Enter exactly 2 values to simplify, exactly 3 numeric values to calculate the missing, or all 4 to check proportion.");
+        return false;
+      }
+
+      if (!isNaN(A) && !isNaN(B) && !isNaN(C) && isNaN(D)) {
+        if (A === 0) {
+          alert("A cannot be zero for calculation.");
+          return false;
+        }
+        const Dval = (B * C) / A;
+        document.getElementById("d_2").value = Dval;
+        answerEl.innerHTML = `<div>${A} : ${B} = ${C} : <b>${Dval}</b><br><small>Method: D = (B × C) ÷ A.</small></div>`;
+      } else if (!isNaN(A) && !isNaN(B) && isNaN(C) && !isNaN(D)) {
+        if (B === 0) {
+          alert("B cannot be zero for calculation.");
+          return false;
+        }
+        const Cval = (A * D) / B;
+        document.getElementById("n_2").value = Cval;
+        answerEl.innerHTML = `<div>${A} : ${B} = ${Cval} : <b>${D}</b><br><small>Method: C = (A × D) ÷ B.</small></div>`;
+      } else if (!isNaN(A) && isNaN(B) && !isNaN(C) && !isNaN(D)) {
+        if (C === 0) {
+          alert("C cannot be zero for calculation.");
+          return false;
+        }
+        const Bval = (A * D) / C;
+        document.getElementById("d_1").value = Bval;
+        answerEl.innerHTML = `<div>${A} : ${Bval} = ${C} : <b>${D}</b><br><small>Method: B = (A × D) ÷ C.</small></div>`;
+      } else if (isNaN(A) && !isNaN(B) && !isNaN(C) && !isNaN(D)) {
+        if (D === 0) {
+          alert("D cannot be zero for calculation.");
+          return false;
+        }
+        const Aval = (B * C) / D;
+        document.getElementById("n_1").value = Aval;
+        answerEl.innerHTML = `<div>${Aval} : ${B} = ${C} : <b>${D}</b><br><small>Method: A = (B × C) ÷ D.</small></div>`;
+      } else {
+        alert("Enter exactly 2 values to simplify, exactly 3 numeric values to calculate the missing, or all 4 to check proportion.");
+        return false;
+      }
+
+      return false;
+    }
+
+    function clearRatioForm() {
+      document.getElementById("n_1").value = "";
+      document.getElementById("d_1").value = "";
+      document.getElementById("n_2").value = "";
+      document.getElementById("d_2").value = "";
+      document.getElementById("answer").textContent = "";
+    }
+
+
+    function calculatePercentage() {
+      event.preventDefault();
+
+      const baseInput = document.getElementById("baseValue");
+      const percentInput = document.getElementById("percentValue");
+      const resultInput = document.getElementById("resultValue");
+      const answerDiv = document.getElementById("percentageAnswer");
+      const discountMode = document.getElementById("discountMode").checked;
+
+      let baseVal = baseInput.value.trim();
+      let percentVal = percentInput.value.trim();
+      let resultVal = resultInput.value.trim();
+
+      answerDiv.textContent = "";
+
+      const emptyCount = [baseVal, percentVal, resultVal].filter(v => v === "").length;
+      if (emptyCount !== 1) {
+        answerDiv.textContent = "Fill exactly one field empty to calculate that value.";
+        return false;
+      }
+
+      baseVal = baseVal === "" ? null : parseFloat(baseVal);
+      percentVal = percentVal === "" ? null : parseFloat(percentVal);
+      resultVal = resultVal === "" ? null : parseFloat(resultVal);
+
+      if (baseVal !== null && (isNaN(baseVal) || baseVal <= 0)) {
+        answerDiv.textContent = "Base (100%) must be a positive number.";
+        return false;
+      }
+      if (percentVal !== null && isNaN(percentVal)) {
+        answerDiv.textContent = "Percent must be a valid number.";
+        return false;
+      }
+      if (resultVal !== null && (isNaN(resultVal) || resultVal < 0)) {
+        answerDiv.textContent = "Answer must be a non-negative number.";
+        return false;
+      }
+
+      try {
+        if (!discountMode) {
+          if (baseVal === null) {
+            if (percentVal === 0) {
+              answerDiv.textContent = "Percent cannot be zero.";
+              return false;
+            }
+            const res = (resultVal * 100) / percentVal;
+            baseInput.value = res.toFixed(10).replace(/\.?0+$/, "");
+            answerDiv.textContent = `Base (100%) is ${res}.\nMethod: Base = (Answer × 100) ÷ Percent.`;
+          } else if (percentVal === null) {
+            if (baseVal === 0) {
+              answerDiv.textContent = "Base cannot be zero.";
+              return false;
+            }
+            const res = (resultVal / baseVal) * 100;
+            percentInput.value = res.toFixed(10).replace(/\.?0+$/, "");
+            answerDiv.textContent = `Percent is ${res}%.\nMethod: Percent = (Answer ÷ Base) × 100.`;
+          } else if (resultVal === null) {
+            const res = (baseVal * percentVal) / 100;
+            resultInput.value = res.toFixed(10).replace(/\.?0+$/, "");
+            answerDiv.textContent = `Result is ${res}.\nMethod: Answer = (Base × Percent) ÷ 100.`;
+          }
+        } else {
+
+          if (baseVal === null) {
+            if (percentVal === 100) {
+              answerDiv.textContent = "Percent cannot be 100 for calculation.";
+              return false;
+            }
+            const res = resultVal / (1 - percentVal / 100);
+            baseInput.value = res.toFixed(10).replace(/\.?0+$/, "");
+            answerDiv.textContent = `Original price (Base 100%) is ${res}.\nMethod: Original price = Discounted price ÷ (1 − Percent ÷ 100).`;
+          } else if (percentVal === null) {
+            if (baseVal === 0) {
+              answerDiv.textContent = "Base cannot be zero.";
+              return false;
+            }
+            const res = (100 * (baseVal - resultVal)) / baseVal;
+            percentInput.value = res.toFixed(10).replace(/\.?0+$/, "");
+            answerDiv.textContent = `Discount percent is ${res}%.\nMethod: Discount percent = ((Base − Final price) ÷ Base) × 100.`;
+          } else if (resultVal === null) {
+            const res = baseVal - (baseVal * percentVal) / 100;
+            resultInput.value = res.toFixed(10).replace(/\.?0+$/, "");
+            answerDiv.textContent = `Discounted price is ${res}.\nMethod: Discounted price = Base − (Base × Percent ÷ 100).`;
+          }
+        }
+      } catch (e) {
+        answerDiv.textContent = "Calculation error.";
+        return false;
+      }
+
+      return false;
+    }
+
+    function clearPercentageForm() {
+      document.getElementById("baseValue").value = "";
+      document.getElementById("percentValue").value = "";
+      document.getElementById("resultValue").value = "";
+      document.getElementById("percentageAnswer").textContent = "";
+    }
+
+
+    function primeFactorize() {
+      const inputEl = document.getElementById("primeInput");
+      const resultEl = document.getElementById("primeResult");
+      const errorEl = document.getElementById("primeError");
+      let num = parseInt(inputEl.value, 10);
+
+      resultEl.textContent = "";
+      errorEl.textContent = "";
+
+      if (isNaN(num) || num < 2 || !Number.isInteger(num)) {
+        errorEl.textContent = "Please enter a valid integer greater than 1.";
+        return;
+      }
+
+      function getPrimeFactors(n) {
+        const factors = [];
+        let divisor = 2;
+        while (n >= 2) {
+          if (n % divisor === 0) {
+            factors.push(divisor);
+            n = n / divisor;
+          } else {
+            divisor++;
+            if (divisor * divisor > n) {
+              if (n > 1) factors.push(n);
+              break;
+            }
+          }
+        }
+        return factors;
+      }
+
+      const factors = getPrimeFactors(num);
+      const factorStr = factors.join(" \u00D7 ");
+      const steps = [];
+      let remaining = num;
+      factors.forEach(factor => {
+        steps.push(`<div class="division-step"><span>${factor}</span><span>${remaining}</span></div>`);
+        remaining /= factor;
+      });
+      steps.push(`<div class="division-step"><span></span><span>1</span></div>`);
+
+      resultEl.innerHTML = `
+        <div class="factorization-method">
+          <h3>Prime Factorization of ${num} by Division Method</h3>
+          ${steps.join("")}
+          <p class="factorization-final">Prime Factorization of ${num} = ${factorStr}</p>
+        </div>`;
+    }
+
+    function calculateCircumference() {
+      const dInput = document.getElementById("dInput");
+      const rInput = document.getElementById("rInput");
+      const cInput = document.getElementById("cInput");
+      const aInput = document.getElementById("aInput");
+      const simplifiedPi = document.getElementById("simplifiedPi");
+
+      const dStr = dInput.value.trim();
+      const rStr = rInput.value.trim();
+      const cStr = cInput.value.trim();
+      const aStr = aInput.value.trim();
+
+      const inputs = [dStr, rStr, cStr, aStr];
+      const filledCount = inputs.filter(v => v !== "").length;
+
+      if (filledCount !== 1) {
+        alert("Please fill exactly one field to calculate the others.");
+        return;
+      }
+
+      const piValue = simplifiedPi.checked ? 3.14 : Math.PI;
+
+      if (dStr !== "") {
+        let d = parseFloat(dStr);
+        if (isNaN(d) || d <= 0) {
+          alert("Diameter must be a positive number.");
+          return;
+        }
+        const r = d / 2;
+        const c = d * piValue;
+        const a = piValue * r * r;
+
+        rInput.value = r.toFixed(10).replace(/\.?0+$/, "");
+        cInput.value = c.toFixed(10).replace(/\.?0+$/, "");
+        aInput.value = a.toFixed(10).replace(/\.?0+$/, "");
+        setCircAnswer(`Diameter: ${d}\nRadius: ${r.toFixed(10)}\nCircumference: ${c.toFixed(10)}\nArea: ${a.toFixed(10)}`);
+      } else if (rStr !== "") {
+        let r = parseFloat(rStr);
+        if (isNaN(r) || r <= 0) {
+          alert("Radius must be a positive number.");
+          return;
+        }
+        const d = 2 * r;
+        const c = 2 * piValue * r;
+        const a = piValue * r * r;
+
+        dInput.value = d.toFixed(10).replace(/\.?0+$/, "");
+        cInput.value = c.toFixed(10).replace(/\.?0+$/, "");
+        aInput.value = a.toFixed(10).replace(/\.?0+$/, "");
+        setCircAnswer(`Diameter: ${d.toFixed(10)}\nRadius: ${r}\nCircumference: ${c.toFixed(10)}\nArea: ${a.toFixed(10)}`);
+      } else if (cStr !== "") {
+        let c = parseFloat(cStr);
+        if (isNaN(c) || c <= 0) {
+          alert("Circumference must be a positive number.");
+          return;
+        }
+        const d = c / piValue;
+        const r = c / (2 * piValue);
+        const a = piValue * r * r;
+
+        dInput.value = d.toFixed(10).replace(/\.?0+$/, "");
+        rInput.value = r.toFixed(10).replace(/\.?0+$/, "");
+        aInput.value = a.toFixed(10).replace(/\.?0+$/, "");
+        setCircAnswer(`Diameter: ${d.toFixed(10)}\nRadius: ${r.toFixed(10)}\nCircumference: ${c}\nArea: ${a.toFixed(10)}`);
+      } else if (aStr !== "") {
+        let a = parseFloat(aStr);
+        if (isNaN(a) || a <= 0) {
+          alert("Area must be a positive number.");
+          return;
+        }
+        const r = Math.sqrt(a / piValue);
+        const d = 2 * r;
+        const c = 2 * piValue * r;
+
+        rInput.value = r.toFixed(10).replace(/\.?0+$/, "");
+        dInput.value = d.toFixed(10).replace(/\.?0+$/, "");
+        cInput.value = c.toFixed(10).replace(/\.?0+$/, "");
+        setCircAnswer(`Diameter: ${d.toFixed(10)}\nRadius: ${r.toFixed(10)}\nCircumference: ${c.toFixed(10)}\nArea: ${a}`);
+      }
+    }
+    function setCircAnswer(text) {
+      const answerDiv = document.getElementById("circAnswer");
+      answerDiv.textContent = `${text}\nMethod: Use C = πD, D = 2R, and A = πR². The selected π value is used.`;
+    }
+
+    document.getElementById("submitCircumference").addEventListener("click", calculateCircumference);
+
+    function clearCirc() {
+      document.getElementById("dInput").value = "";
+      document.getElementById("rInput").value = "";
+      document.getElementById("cInput").value = "";
+      document.getElementById("aInput").value = "";
+      setCircAnswer("");
+    }
+
+    document.getElementById("clearCircButton").addEventListener("click", clearCirc);
+
+    function copyTextFromElement(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      let textToCopy = "";
+
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+        textToCopy = el.value;
+      } else {
+        textToCopy = el.textContent;
+      }
+
+      if (textToCopy.trim() === "") {
+        alert("Nothing to copy!");
+        return;
+      }
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        alert("Copied to clipboard!");
+      }).catch(() => {
+        alert("Failed to copy!");
+      });
+    }
+    function copyInputValue(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const val = input.value.trim();
+      if (val === "") {
+        alert("Nothing to copy!");
+        return;
+      }
+      navigator.clipboard.writeText(val).then(() => {
+        alert("Copied to clipboard!");
+      }).catch(() => {
+        alert("Failed to copy!");
+      });
+    }
+
+    document.getElementById("copyResult").addEventListener("click", () => copyTextFromElement("result"));
+    document.getElementById("copyAnswer").addEventListener("click", () => copyTextFromElement("answer"));
+    document.getElementById("copyPercentageAnswer").addEventListener("click", () => copyTextFromElement("percentageAnswer"));
+    document.getElementById("copyPrimeResult").addEventListener("click", () => copyTextFromElement("primeResult"));
+    document.getElementById("copyCircAnswer").addEventListener("click", () => copyTextFromElement("circAnswer"));
+
+    document.querySelectorAll(".copy-input-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-copy-target");
+        copyInputValue(targetId);
+      });
+    });
+
+  </script>
+</main>
+</body>
+</html>

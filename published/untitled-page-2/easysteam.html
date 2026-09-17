@@ -1,0 +1,416 @@
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EasySteam</title>
+  <link rel="icon" href="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/E.png" type="image/x-icon">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Chango&family=Jersey+10&family=Rubik+Glitch&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Erica+One&display=swap');
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #4b51c9;
+      margin: 0;
+      padding: 0;
+      color: #e0e6f8;
+    }
+    header {
+      background-color: #123275;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 30px;
+      box-shadow: 0 3px 8px rgb(0 0 0 / 0.5);
+    }
+    header a {
+      color: #a3b8ff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      user-select: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+    header a:hover {
+      background-color: #2c438f;
+      color: #fff;
+    }
+    #redirectForm {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #redirectForm input[list] {
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      min-width: 180px;
+      background-color: #1a2b73;
+      color: #e0e6f8;
+      box-shadow: inset 0 0 5px #002080;
+      transition: background-color 0.3s ease;
+    }
+    #redirectForm input[list]:focus {
+      background-color: #2c438f;
+      box-shadow: 0 0 8px #6090ff;
+      color: #fff;
+    }
+    #redirectForm input[type="submit"] {
+      padding: 8px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      background-color: #3a4db7;
+      color: #e0e6f8;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    #redirectForm input[type="submit"]:hover {
+      background-color: #5c75e6;
+      box-shadow: 0 5px 12px rgba(92,117,230,0.6);
+    }
+    main {
+      max-width: 600px;
+      margin: 40px auto 40px;
+      background-color: #192f7c;
+      border-radius: 12px;
+      padding: 30px 40px;
+      box-shadow: 0 8px 20px rgb(0 0 0 / 0.5);
+      color: #e0e6f8;
+      user-select: none;
+    }
+    h1, h2 {
+      font-weight: 700;
+      margin: 0 0 20px 0;
+      color: #a3b8ff;
+      text-align: center;
+    }
+    section {
+      margin-bottom: 40px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px 15px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+      background-color: #1a2b73;
+      color: #e0e6f8;
+      box-shadow: inset 0 0 6px #002080;
+      transition: background-color 0.3s ease;
+      box-sizing: border-box;
+      margin-bottom: 15px;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      background-color: #2c438f;
+      box-shadow: 0 0 12px #6090ff;
+      color: #fff;
+    }
+    button {
+      width: 100%;
+      background-color: #3a4db7;
+      color: #e0e6f8;
+      font-weight: 700;
+      font-size: 18px;
+      padding: 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
+    }
+    button:hover {
+      background-color: #5c75e6;
+      box-shadow: 0 8px 28px rgba(92,117,230,0.7);
+    }
+    #result, #error, #answer {
+      margin-top: 15px;
+      font-weight: 700;
+      font-size: 18px;
+      white-space: pre-wrap;
+      min-height: 40px;
+      color: #c8d0ff;
+      text-align: center;
+    }
+    #error {
+      color: #ff7070;
+      min-height: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+      table-layout: fixed;
+      color: #e0e6f8;
+    }
+    td {
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    td.operator {
+      font-weight: 600;
+      font-size: 18px;
+    }
+    /* Clear button style */
+    .clear-btn {
+      background-color: #bb3a3a;
+    }
+    .clear-btn:hover {
+      background-color: #cc4848;
+    }
+    /* Flex container for ratio buttons */
+    #ratio-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    #ratio-buttons button {
+      flex: 1;
+    }
+    
+    /* Droper container styling */
+    .droper {
+      position: relative;
+      width: 100%;
+      max-width: 700px; /* max width for container */
+      margin: 10px auto;
+      background-color: #4b51c9;
+      border-radius: 20px;
+      overflow: hidden; /* hide overflow when collapsed */
+    }
+    
+    .drop {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      padding: 0 20px;
+      box-sizing: border-box;
+      transform: translateY(-10px);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.1s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+    }
+    
+    .droper:hover .drop {
+      max-height: 600px; /* large enough for content */
+      opacity: 1;
+      padding: 20px;
+      transform: translateY(0);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.3s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+    }
+    
+    /* Make iframe take full width and height when drop expanded */
+    .drop iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+    
+    /* sdroper (smaller drop) styling */
+    .sdroper {
+      position: relative;
+      width: 100%;
+      max-width: 700px;
+      margin: 10px auto;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    
+    .sdrop {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      padding: 0 20px;
+      box-sizing: border-box;
+      transform: translateY(-10px);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.1s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+      background-color: #fff;
+      border-radius: 12px;
+      width: 300px;
+      align-content: left;
+    }
+    
+    .sdroper:hover .sdrop {
+      max-height: 600px; /* enough for content */
+      opacity: 1;
+      padding: 20px;
+      transform: translateY(0);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.3s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+    }
+    
+    
+    .diff {
+      text-decoration: none;
+      font-family: "Erica One", sans-serif;
+      font-weight: 400;
+      font-style: normal;
+      letter-spacing: 3px;
+    }
+    
+    #easylink {
+      color:darkgreen;
+    }
+    
+    #mediumlink {
+      color:orange;
+    }
+    
+    #hardlink {
+      color:darkred;
+    }
+    
+    a.invis {
+      color: #e0e6f8;
+      text-decoration: none;
+      position: relative;
+      user-select: none;
+    }
+    
+    a.invis::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background-color: #e0e6f8;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    
+    a.invis:hover::after {
+      width: 100%;
+    }
+
+ 
+ 
+ 
+  </style>
+</head>
+
+<body>
+  <header>
+    <a class="invis" href="index.html" title="Back to Main Page">Back</a>
+    <form id="redirectForm">
+      <input class="inputlist" list="topics" name="Topics" id="TopicsInput" placeholder="Subject" autocomplete="off">
+      <datalist id="topics">
+        <option value="Main Page"></option>
+        <option value="Math"></option>
+        <option value="STEAM"></option>
+      </datalist>
+      <input type="submit" value="Go">
+    </form>
+  </header>
+
+  <main>
+    <h3>The STEAM page is a gallery of projects to do in school with difficulty and explanations clearly listed</h3>
+    <hr>
+    <div class="sdroper" id="difficultySel">
+      <h3>Difficulty ↓</h3>
+      <div id="diffseldrop" class="sdrop">
+        <a class="diff" id="easylink" href="#easy">Easy</a>
+        <br>
+        <a class="diff" id="mediumlink" href="#meduim">Medium</a>
+        <br>
+        <a class="diff" id="hardlink" href="#hard">Hard</a>
+      </div>
+    </div>
+    <div id="easy">
+      
+      <a href="rubberbandcar.html" class="invis">
+      </a><div class="droper" id="rubberbandcar"><a href="rubberbandcar.html" class="invis">
+        <h1>Rubber Band Car</h1>
+        </a>
+        <div class="drop">
+          <h3>Description:</h3>
+          <p>Simple Rubber Band Car that can run up to 25 meters if done correctly.</p>
+          <iframe width="560" height="200" src="https://www.youtube-nocookie.com/embed/3oEGwsqEV-s?si=qwkkT3S9whXkSDRz" style="pointer-events: none; border: none;">
+      </iframe>
+
+        </div>
+      </div>
+      <a href="holographicprojector.html" class="invis">
+      </a><div class="droper" id="hologram"><a href="holographicprojector.html" class="invis">
+        <h1>Holographic Projector</h1>
+          </a>
+        <div class="drop">
+          <h3>Description:</h3>
+          <p>Cool and easy 3D projector that works with your phone. <b>NOTE: Special video needed that fits the size of your projector</b></p>
+          <iframe width="560" height="200" src="https://www.youtube-nocookie.com/embed/7YWTtCsvgvg?si=jrlcDfPcSIMLbIUB" style="pointer-events: none; border: none;"></iframe>
+        </div>
+      </div>
+      
+    </div>
+    <hr>
+    <div id="medium">
+        <a href="hydraulicarm.html">
+        <div class="droper" id="hydraulicarm"><a href="hydraulicarm.html" class="invis">
+        <h1>Hydraulic Arm</h1>
+        </a>
+        <div class="drop">
+          <h3>Description:</h3>
+          <p>Not to hard and not to easy, but it is totally worth it. A super fun hydraulic arm that you can control</p>
+          <iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/P2r9U4wkjcc?si=yd6yvIgto8l9OP_c&amp;start=18"  style="pointer-events: none; border: none;"></iframe>
+        </div>
+      </div>
+    </div>
+    <hr>
+    <div id="hard">
+      <div class="droper" id="vendingmachine">
+        <h1>Vending Machine</h1>
+        <div class="drop">
+          <h3>Description:</h3>
+          <p>Very hard, I recomend to do only if you are experienced. Probably will assure you that you will have the best STEAM project.</p>
+          <iframe width="560" height="200" src="https://www.youtube-nocookie.com/embed/16MVPbX2D1M?si=8d82BeZ9VHXXX9p_&amp;start=28" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
+        </div>
+      </div> 
+    </div>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+  <script>
+    document.getElementById("redirectForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const choice = document.getElementById("TopicsInput").value.trim();
+    
+      if (choice === "Math") {
+        window.location.href = "easymath.html";
+      } else if (choice === "Main Page") {
+        window.location.href = "index.html";
+      } else if (choice === "STEAM") {
+        window.location.href = "easysteam.html";
+      } else {
+        alert("Selected option not linked");
+      }
+    });
+  </script>
+
+
+</body></html>

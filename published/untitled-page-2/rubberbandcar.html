@@ -1,0 +1,353 @@
+<html><head>
+  <title>Easy</title>
+  <link rel="icon" href="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/E.png" type="image/x-icon">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #2f2f2f;
+      color: #e0e6f8;
+    }
+
+    header {
+      background-color: #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 30px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+      color: #fff;
+    }
+
+    header a {
+      color: #a3b8ff;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+
+    header a:hover {
+      background-color: #4a4a4a;
+      color: #fff;
+    }
+
+    #redirectForm {
+      display: flex;
+      gap: 10px;
+    }
+
+    #redirectForm input {
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: none;
+      background-color: #3a3a3a;
+      color: #fff;
+    }
+
+    #redirectForm input[type="submit"] {
+      background-color: #5c75e6;
+      cursor: pointer;
+    }
+
+    main {
+      max-width: 600px;
+      margin: 60px auto;
+      padding: 30px;
+      background-color: #3a3a3a;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      text-align: center;
+    }
+
+    ul {
+      list-style: none;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 0;
+    }
+
+    ul li {
+      background-color: #5261f7;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+
+    iframe {
+      border-radius: 12px;
+      margin-top: 15px;
+      border: none;
+    }
+
+    .section {
+      position: relative;
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #555555, #2f2f2f);
+      text-align: justify;
+    }
+
+    #copyText {
+      max-height: 160px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: max-height 0.4s ease;
+      position: relative;
+      padding-right: 30px;
+      display: block;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #dcdcdc;
+    }
+
+    #copyText.expanded {
+      max-height: 2000px;
+    }
+
+    #copyText::after {
+      content: '▼';
+      position: absolute;
+      right: 10px;
+      bottom: 5px;
+      color: #8090ff;
+      transition: transform 0.3s;
+      user-select: none;
+    }
+
+    #copyText.expanded::after {
+      transform: rotate(180deg);
+      padding-top: 30px;
+      margin-top: 30px;
+    }
+
+    #copyButton {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background-color: #5261f7;
+      border: none;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      transition: background-color 0.3s ease;
+    }
+
+    #copyButton:hover {
+      background-color: #7a90f0;
+    }
+
+    #copyAlert {
+      position: absolute;
+      top: 15px;
+      right: 110px;
+      background-color: #4caf50;
+      padding: 8px 14px;
+      border-radius: 12px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-weight: 600;
+    }
+
+    #copyAlert.show {
+      opacity: 1;
+    }
+
+    #nameInput {
+      margin-top: 15px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 2px solid #555;
+      background-color: #555555;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      min-width: 200px;
+      box-sizing: border-box;
+      transition: border-color 0.3s ease;
+    }
+
+    #nameInput:focus {
+      outline: none;
+      border-color: #8090ff;
+      background-color: #666666;
+    }
+
+    .droper {
+      position: relative;
+      width: 110%;
+      overflow: hidden;
+      padding-left: -30px;
+      padding-right: -30px;
+      margin-left: -30px;
+      margin-right: -30px;
+    }
+
+    .drop {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      padding: 0 20px;
+      box-sizing: border-box;
+      transform: translateY(-10px);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.1s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+    }
+
+    .droper:hover {
+      border-bottom-left-radius: 20px;
+      border-bottom-right-radius: 20px;
+      background-color: #555;
+    }
+
+    .droper:hover .drop {
+      max-height: 600px;
+      opacity: 1;
+      padding: 20px;
+      transform: translateY(0);
+      transition:
+        max-height 0.6s ease,
+        opacity 0.5s ease 0.3s,
+        padding 0.6s ease,
+        transform 0.6s ease;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <a href="easysteam.html">Back</a>
+
+  <form id="redirectForm">
+    <input list="topics" id="TopicsInput" placeholder="Go to...">
+    <datalist id="topics">
+      <option value="Math">
+      </option><option value="STEAM">
+    </option></datalist>
+    <input type="submit" value="Go">
+  </form>
+</header>
+
+<main>
+
+  <h2>Rubber Band Car</h2>
+
+  <h3>Tags:</h3>
+  <ul>
+    <li>Physics</li>
+    <li>Simple</li>
+    <li>Elastic Energy</li>
+  </ul>
+
+
+
+
+  <div>
+    <h3>Description</h3>
+    <p>This project consists of a wooden framed car with 3D printed wheels.</p>
+  </div>
+
+  <div class="droper">
+    <h2>One page summary</h2>
+    <div class="drop">
+      <h3>What is a one page summary?</h3>
+      <p>A one page summary is a one page long summary that describes the science behing a project. This is often required in school work/assignments. There is a pre-made one below.</p>
+    </div>
+  </div>
+
+
+  <div>
+  <h4>Auto input name:</h4>
+  <input id="nameInput" placeholder="Name">
+  </div>
+
+  <div class="section">
+    <button id="copyButton"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" height="20px"></button>
+    <div id="copyAlert"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/aprobar.png" height="20px"></div>
+
+    <p id="copyText">
+        This project is a car powered by an elastic band, aiming to travel the most distance possible.
+        Motion, in simple terms,  is when an object moves from one place to another. Speed is the quotient of the distance that something travels and the time it takes to travel that distance.
+        As said by Isaac Newton, there are three laws that explain motion. The first law being, "A body that moves will continue to move unless acted upon by a force." The second law, simplified, is that "The heavier an object is, the harder it will be to achieve the same acceleration as a lighter object." And the final law being, "For every action there is an equal reaction."
+        Physics is everywhere, including in the rubber band car. There are many forces acting on a car (weight force, air resistance, friction, traction, weight). A force is a push or a pull action acting on an object. One of them is friction. There is friction between the axles and the piece that holds the axles in place, causing the car to eventually come to a stop. There is also friction between the car and the surrounding air, also slowing down the car. But friction in the right place is good, friction between the wheels and the ground is necessary for the car to move forward and not lose energy because there is no traction. Then there is the air in front of the    car that the car needs to push
+        out of the way (This is air resistance). To maximize the distance and speed the car can travel we need to minimize these forces. There are also other forces like weight force, the force that pulls the car downwards. And according to Newton's third law there must always be an equal and opposite force, which in this case, is called the "Normal Force" It is the force the ground pushes the car back up with to oppose the weight force. The car moves because of an elastic band that moves the rear axles. This turns the wheels because the axles are connected to the wheels. When the elastic band is stretched it stores elastic potential energy because it wants to return to its original state (not stretched) because it is elastic.
+        This is the third law of motion, the action is the elastic band being stretched and the equal reaction is the elastic band contracting. This is the elastic potential energy. Kinetic energy is the force that something has when in movement. Mainly, there is kinetic energy in two places of the car: The rubber band and the car as a whole. The contracting action of the elastic band creates a kinetic energy that then applies on to the axles which then rotates and thanks to the wheel's friction with the floor, the car can propulse itself forward, creating its own kinetic energy.
+        It is important to note that energy can not be created nor can it be destroyed. Energy can only change state. E.g. Energy can change from kinetic to electric by a specific process. There is elastic potential energy stored in the stretched elastic band. When the rubber band is released, this energy changes into kinetic energy moves the axles, moving the wheels and makes the car move forward. As the car moves, some of this energy is lost as heat and sound because of friction between the wheels, axles, and the ground. Even when the car stops moving, the energy still exists because it does not disappear.
+        In conclusion, to make the car go as far and as fast as possible, we need to minimize air resistance, friction with the axles, and with the air and maximize friction with the wheels and the ground, potential energy, and kinetic energy.
+    </p>
+  </div>
+
+</main>
+
+<script>
+  const baseText = `
+        This project is a car powered by an elastic band, aiming to travel the most distance possible.
+        Motion, in simple terms,  is when an object moves from one place to another. Speed is the quotient of the distance that something travels and the time it takes to travel that distance.
+        As said by Isaac Newton, there are three laws that explain motion. The first law being, "A body that moves will continue to move unless acted upon by a force." The second law, simplified, is that "The heavier an object is, the harder it will be to achieve the same acceleration as a lighter object." And the final law being, "For every action there is an equal reaction."
+        Physics is everywhere, including in the rubber band car. There are many forces acting on a car (weight force, air resistance, friction, traction, weight). A force is a push or a pull action acting on an object. One of them is friction. There is friction between the axles and the piece that holds the axles in place, causing the car to eventually come to a stop. There is also friction between the car and the surrounding air, also slowing down the car. But friction in the right place is good, friction between the wheels and the ground is necessary for the car to move forward and not lose energy because there is no traction. Then there is the air in front of the    car that the car needs to push
+        out of the way (This is air resistance). To maximize the distance and speed the car can travel we need to minimize these forces. There are also other forces like weight force, the force that pulls the car downwards. And according to Newton's third law there must always be an equal and opposite force, which in this case, is called the "Normal Force" It is the force the ground pushes the car back up with to oppose the weight force. The car moves because of an elastic band that moves the rear axles. This turns the wheels because the axles are connected to the wheels. When the elastic band is stretched it stores elastic potential energy because it wants to return to its original state (not stretched) because it is elastic.
+        This is the third law of motion, the action is the elastic band being stretched and the equal reaction is the elastic band contracting. This is the elastic potential energy. Kinetic energy is the force that something has when in movement. Mainly, there is kinetic energy in two places of the car: The rubber band and the car as a whole. The contracting action of the elastic band creates a kinetic energy that then applies on to the axles which then rotates and thanks to the wheel's friction with the floor, the car can propulse itself forward, creating its own kinetic energy.
+        It is important to note that energy can not be created nor can it be destroyed. Energy can only change state. E.g. Energy can change from kinetic to electric by a specific process. There is elastic potential energy stored in the stretched elastic band. When the rubber band is released, this energy changes into kinetic energy moves the axles, moving the wheels and makes the car move forward. As the car moves, some of this energy is lost as heat and sound because of friction between the wheels, axles, and the ground. Even when the car stops moving, the energy still exists because it does not disappear.
+        In conclusion, to make the car go as far and as fast as possible, we need to minimize air resistance, friction with the axles, and with the air and maximize friction with the wheels and the ground, potential energy, and kinetic energy.
+    `;
+
+const copyText = document.getElementById("copyText");
+const nameInput = document.getElementById("nameInput");
+
+function updateText() {
+  const name = nameInput.value.trim();
+  copyText.textContent = baseText + (name ? `\n\n— ${name}` : "");
+}
+
+updateText();
+
+nameInput.addEventListener("input", updateText);
+
+// Expand / collapse
+copyText.addEventListener("click", () => {
+  copyText.classList.toggle("expanded");
+});
+
+// Copy
+const copyButton = document.getElementById("copyButton");
+const copyAlert = document.getElementById("copyAlert");
+
+copyButton.addEventListener("click", () => {
+  navigator.clipboard.writeText(copyText.textContent).then(() => {
+    copyAlert.classList.add("show");
+    setTimeout(() => copyAlert.classList.remove("show"), 2000);
+  });
+});
+
+// Redirect
+document.getElementById("redirectForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const choice = document.getElementById("TopicsInput").value;
+
+  if (choice === "Math") {
+    window.location.href = "easymath.html";
+  } else if (choice === "STEAM") {
+    window.location.href = "easysteam.html";
+  } else {
+    alert("Not linked");
+  }
+});
+</script>
+
+
+</body></html>
