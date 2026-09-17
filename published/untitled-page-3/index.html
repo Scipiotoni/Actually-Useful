@@ -3,25 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lobby Chat</title>
+<title>Neon Lobby Chat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <style>
 :root{
-  --bg:#071316;--panel:#0d1f24;--panel2:#12292f;--line:#1c3a41;
-  --ink:#dcefea;--mute:#6f8f8a;--mint:#3dffc4;--mint-d:#0f4d3e;
-  --pink:#ff4fa3;--bubble-me:#0f4d3e;--bubble:#15313a;--danger:#ff5d6c;
-  --glow:0 0 14px rgba(61,255,196,.35);
-}
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]){
-    --bg:#e9f3f0;--panel:#ffffff;--panel2:#f2f8f6;--line:#cfe2dc;
-    --ink:#0d2a26;--mute:#5b7a75;--mint:#00a877;--mint-d:#c9f4e5;
-    --pink:#d2257a;--bubble-me:#c9f4e5;--bubble:#ffffff;--danger:#d02a3a;--glow:none;
-  }
-}
-:root[data-theme="dark"]{
   --bg:#071316;--panel:#0d1f24;--panel2:#12292f;--line:#1c3a41;
   --ink:#dcefea;--mute:#6f8f8a;--mint:#3dffc4;--mint-d:#0f4d3e;
   --pink:#ff4fa3;--bubble-me:#0f4d3e;--bubble:#15313a;--danger:#ff5d6c;
@@ -32,30 +20,41 @@ html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font:15px/1.45 Sora,system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
+button:disabled{opacity:.45;cursor:default}
 :focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+a{color:var(--mint)}
 img{max-width:100%}
-.app{display:grid;grid-template-columns:minmax(260px,340px) 1fr;height:100vh;height:100dvh}
+.app{display:grid;grid-template-columns:minmax(270px,350px) 1fr;height:100vh;height:100dvh}
 aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.me{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
-.me b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.me .txt{flex:1;min-width:0}
+.me b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me small{color:var(--mute);font-size:12px}
+.conn{width:9px;height:9px;border-radius:50%;background:var(--danger);display:inline-block;margin-right:5px}
+.conn.on{background:var(--mint);box-shadow:var(--glow)}
 .tabs{display:flex;padding:8px;gap:6px;border-bottom:1px solid var(--line)}
 .tab{flex:1;background:none;border:1px solid transparent;border-radius:999px;padding:6px 10px;color:var(--mute)}
 .tab[aria-selected="true"]{color:var(--mint);border-color:var(--mint);box-shadow:var(--glow)}
+.btns{display:flex;gap:8px;padding:10px 16px}
+.btns button{flex:1;padding:9px;border-radius:12px;border:1px dashed var(--mint);background:none;color:var(--mint)}
 .list{flex:1;overflow-y:auto;min-height:0}
 .row{display:flex;align-items:center;gap:12px;width:100%;padding:10px 16px;background:none;border:0;border-bottom:1px solid var(--line);text-align:left}
-.row:hover,.row.on{background:var(--panel2)}
+button.row:hover,.row.on{background:var(--panel2)}
 .row .txt{flex:1;min-width:0}
 .row .t1{display:flex;justify-content:space-between;gap:8px}
 .row .t1 span:first-child,.row .t2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row .t2{color:var(--mute);font-size:13px}
 .row time{color:var(--mute);font-size:12px;flex:none}
 .badge{background:var(--mint);color:#032;font-size:11px;font-weight:700;border-radius:999px;padding:1px 7px;margin-left:6px}
-.av{position:relative;flex:none;width:40px;height:40px}
-.av img{width:40px;height:40px;border-radius:50%;display:block;object-fit:cover}
-.av.sm,.av.sm img{width:28px;height:28px}
-.av .dot{position:absolute;right:0;bottom:0;width:11px;height:11px;border-radius:50%;background:var(--mint);border:2px solid var(--panel);box-shadow:var(--glow)}
-.grp{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--mint-d);color:var(--mint);font-weight:700}
-.newbtn{margin:10px 16px;padding:10px;border-radius:12px;border:1px dashed var(--mint);background:none;color:var(--mint)}
+.av{position:relative;flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#041}
+.av.sm{width:28px;height:28px;font-size:12px}
+.av .dot{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;background:var(--mint);border:2px solid var(--panel);box-shadow:var(--glow)}
+.grp{background:var(--mint-d);color:var(--mint)}
+.lock{position:absolute;right:-4px;bottom:-4px;font-size:12px}
+.tag{font-size:11px;color:var(--pink);border:1px solid var(--pink);border-radius:999px;padding:0 6px;margin-left:6px;white-space:nowrap}
+.card{margin:10px 16px;padding:12px;border:1px solid var(--pink);border-radius:12px;background:var(--panel2)}
+.card p{margin:0 0 8px}
+.card .acts{display:flex;gap:8px}
 .empty{padding:24px 16px;color:var(--mute)}
 main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
 .head{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);min-height:61px}
@@ -63,55 +62,72 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relati
 .head h1{font-size:16px;margin:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .head p{margin:0;color:var(--mute);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ghost{background:none;border:1px solid var(--line);border-radius:10px;padding:6px 12px}
-.ghost:hover{border-color:var(--mint);color:var(--mint)}
+.ghost:hover:not(:disabled){border-color:var(--mint);color:var(--mint)}
+.primary{border:0;border-radius:10px;background:var(--mint);color:#032;font-weight:700;padding:8px 16px}
+.danger{background:none;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:3px 10px;font-size:13px}
 .back{display:none}
 .msgs{flex:1;overflow-y:auto;padding:18px 6% 10px;display:flex;flex-direction:column;gap:4px;min-height:0;
   background-image:radial-gradient(circle at 1px 1px,var(--line) 1px,transparent 0);background-size:22px 22px}
-.b{max-width:min(72%,560px);padding:7px 10px 5px;border-radius:12px;background:var(--bubble);align-self:flex-start;word-wrap:break-word;white-space:pre-wrap;border:1px solid var(--line)}
+.b{max-width:min(74%,560px);padding:7px 10px 5px;border-radius:12px;background:var(--bubble);align-self:flex-start;overflow-wrap:anywhere;white-space:pre-wrap;border:1px solid var(--line)}
 .b.me{align-self:flex-end;background:var(--bubble-me);border-color:transparent}
 .b .who{font-size:12px;font-weight:600;margin-bottom:2px}
 .b time{display:block;text-align:right;font-size:11px;color:var(--mute);margin-top:2px}
 .b.gap{margin-top:8px}
-.sys{align-self:center;font-size:12px;color:var(--mute);background:var(--panel);border:1px solid var(--line);padding:3px 10px;border-radius:999px;margin:8px 0}
-.composer{display:flex;gap:8px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line)}
-.composer input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:10px 16px;min-width:0}
-.composer input:focus{border-color:var(--mint);outline:none;box-shadow:var(--glow)}
-.send{border:0;border-radius:999px;background:var(--mint);color:#032;font-weight:700;padding:0 18px}
-.send:disabled{opacity:.4;cursor:default}
+.b img.shot{display:block;max-height:280px;border-radius:8px;margin:2px 0 4px}
+.file{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.25);text-decoration:none;color:var(--ink);margin:2px 0 4px;white-space:normal}
+.file b{display:block;font-weight:500}
+.file small{color:var(--mute)}
+.lnk{display:block;margin-top:4px;padding:6px 9px;border-left:3px solid var(--mint);background:rgba(0,0,0,.2);border-radius:6px;font-size:13px;text-decoration:none;white-space:normal}
+.sys{align-self:center;font-size:12px;color:var(--mute);background:var(--panel);border:1px solid var(--line);padding:3px 10px;border-radius:999px;margin:8px 0;text-align:center}
+.composer{display:flex;gap:8px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);align-items:center}
+.composer input[type=text]{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:10px 16px;min-width:0}
+.composer input[type=text]:focus{border-color:var(--mint);outline:none;box-shadow:var(--glow)}
+.attach{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:none;font-size:18px;flex:none}
+.attach:hover{border-color:var(--mint)}
+.send{border:0;border-radius:999px;background:var(--mint);color:#032;font-weight:700;padding:0 18px;height:42px}
+.dropping .msgs{outline:2px dashed var(--mint);outline-offset:-10px}
 .welcome{flex:1;display:grid;place-items:center;text-align:center;padding:24px;color:var(--mute)}
 .welcome h2{color:var(--ink);font-size:28px;margin:0 0 8px;letter-spacing:-.02em}
-.welcome kbd,.keys kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;font:12px/1.6 inherit;color:var(--ink)}
-.keys{margin-top:18px;font-size:13px;line-height:2}
-.drawer{position:absolute;inset:0 0 0 auto;width:min(360px,100%);background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;z-index:5;transform:translateX(100%);transition:transform .2s}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;font-size:12px;color:var(--ink)}
+.keys{margin-top:18px;font-size:13px;line-height:2.1}
+.drawer{position:absolute;inset:0 0 0 auto;width:min(380px,100%);background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;z-index:5;transform:translateX(100%);transition:transform .2s}
 .drawer.open{transform:none}
 .drawer .body{flex:1;overflow-y:auto;min-height:0}
 .sec{padding:12px 16px;border-bottom:1px solid var(--line)}
 .sec h3{margin:0 0 8px;font-size:13px;color:var(--mute);font-weight:500}
-.field{display:flex;gap:8px}
-.field input{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
-.tag{font-size:11px;color:var(--pink);border:1px solid var(--pink);border-radius:999px;padding:0 6px;margin-left:6px}
-.kick{background:none;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:3px 10px;font-size:13px}
-.act{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 16px;border-bottom:1px solid var(--line)}
+.sec .row{padding:7px 0;border:0}
+.field{display:flex;gap:8px;align-items:center}
+.field+.field{margin-top:8px}
+.inp{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.inp:focus{border-color:var(--mint);outline:none}
+.code{font-size:22px;font-weight:700;letter-spacing:.12em;color:var(--mint);text-shadow:var(--glow)}
+.chk{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:14px}
+.chk input{accent-color:var(--mint);width:17px;height:17px}
+.seg{display:flex;gap:6px;margin-top:4px}
+.seg button{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:none;text-align:left;font-size:13px}
+.seg button[aria-pressed="true"]{border-color:var(--mint);background:var(--mint-d);box-shadow:var(--glow)}
+.seg button b{display:block;font-size:14px}
+.act{display:block;width:100%;text-align:left;background:none;border:0;padding:11px 16px;border-bottom:1px solid var(--line)}
 .act.red{color:var(--danger)}
 .act:hover{background:var(--panel2)}
-dialog{background:var(--panel);color:var(--ink);border:1px solid var(--mint);border-radius:16px;padding:0;width:min(440px,94vw);max-height:84vh;box-shadow:var(--glow)}
-dialog::backdrop{background:rgba(0,0,0,.55)}
-dialog form{display:flex;flex-direction:column;max-height:84vh}
-dialog header{padding:14px 16px;border-bottom:1px solid var(--line)}
-dialog header h2{margin:0 0 10px;font-size:17px}
-dialog .pick{flex:1;overflow-y:auto;min-height:120px}
-dialog .row[aria-pressed="true"]{background:var(--mint-d)}
-dialog .row .chk{width:20px;height:20px;border-radius:6px;border:2px solid var(--line);flex:none}
-dialog .row[aria-pressed="true"] .chk{background:var(--mint);border-color:var(--mint)}
-dialog footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
-.toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:20;pointer-events:none}
+dialog{background:var(--panel);color:var(--ink);border:1px solid var(--mint);border-radius:16px;padding:0;width:min(440px,94vw);max-height:86vh;box-shadow:var(--glow)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.mwrap{display:flex;flex-direction:column;max-height:86vh}
+.mhead{padding:14px 16px 4px}
+.mhead h2{margin:0;font-size:17px}
+.mbody{padding:8px 16px;overflow-y:auto;min-height:0;flex:1}
+.mbody p{color:var(--mute);margin:4px 0 10px;font-size:14px}
+.mfoot{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.pick .row{border-radius:10px;border:1px solid var(--line);margin-bottom:6px}
+.pick .row[aria-pressed="true"]{background:var(--mint-d);border-color:var(--mint)}
+.toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:50;pointer-events:none;width:max-content;max-width:92vw}
 .toast{background:var(--panel2);border:1px solid var(--mint);border-radius:10px;padding:8px 14px;box-shadow:var(--glow)}
-.offline{padding:40px;text-align:center;color:var(--mute)}
 @media (max-width:720px){
   .app{grid-template-columns:1fr}
   .app.chatting aside{display:none}
   .app:not(.chatting) main{display:none}
   .back{display:inline-block}
+  .b{max-width:86%}
 }
 @media (prefers-reduced-motion:reduce){.drawer{transition:none}}
 </style>
@@ -119,22 +135,27 @@ dialog footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;bo
 <body>
 <div class="app" id="app">
   <aside>
-    <div class="me" id="meBox"><div class="grp">…</div><b>Connecting</b></div>
+    <div class="me" id="meBox"></div>
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="tabChats" aria-selected="true">Chats</button>
+      <button class="tab" role="tab" id="tabPublic" aria-selected="false">Public</button>
       <button class="tab" role="tab" id="tabPeople" aria-selected="false">People</button>
     </div>
-    <button class="newbtn" id="newBtn">New chat</button>
+    <div class="btns">
+      <button id="newBtn">New group</button>
+      <button id="joinBtn">Join with code</button>
+    </div>
     <div class="list" id="list"></div>
   </aside>
   <main id="main">
     <div class="welcome" id="welcome">
       <div>
         <h2>Everyone on this page, one tap away</h2>
-        <p>Pick someone in People, or start a group and invite them.</p>
+        <p>Open People to chat with whoever is here, browse Public groups, or join a private group with its code.</p>
         <div class="keys">
-          <kbd>Alt</kbd>+<kbd>N</kbd> new chat &nbsp; <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> switch chat<br>
-          <kbd>Alt</kbd>+<kbd>P</kbd> people &nbsp; <kbd>Alt</kbd>+<kbd>M</kbd> members &nbsp; <kbd>/</kbd> type &nbsp; <kbd>Esc</kbd> close
+          <kbd>Alt</kbd>+<kbd>N</kbd> new group · <kbd>Alt</kbd>+<kbd>J</kbd> join with code · <kbd>Alt</kbd>+<kbd>G</kbd> public groups · <kbd>Alt</kbd>+<kbd>P</kbd> people<br>
+          <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> switch chat · <kbd>Alt</kbd>+<kbd>M</kbd> group info · <kbd>Alt</kbd>+<kbd>U</kbd> send file<br>
+          <kbd>/</kbd> type · <kbd>Esc</kbd> close · <kbd>Alt</kbd>+<kbd>S</kbd> change your name
         </div>
       </div>
     </div>
@@ -142,39 +163,38 @@ dialog footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;bo
       <button class="ghost back" id="backBtn" aria-label="Back to chats">‹</button>
       <div id="headAv"></div>
       <div class="txt"><h1 id="chatName"></h1><p id="chatSub"></p></div>
-      <button class="ghost" id="membersBtn">Members</button>
+      <button class="ghost" id="infoBtn">Group info</button>
     </div>
     <div class="msgs" id="msgs" hidden aria-live="polite"></div>
     <form class="composer" id="composer" hidden>
-      <input id="input" autocomplete="off" maxlength="2000" placeholder="Type a message">
+      <button type="button" class="attach" id="attachBtn" title="Send a file (Alt+U)" aria-label="Send a file">📎</button>
+      <input type="file" id="fileInput" hidden>
+      <input type="text" id="input" autocomplete="off" maxlength="4000" placeholder="Message, or paste a link">
       <button class="send" id="sendBtn" disabled>Send</button>
     </form>
-    <div class="drawer" id="drawer" aria-label="Chat members">
-      <div class="head"><div class="txt"><h1>Chat info</h1></div><button class="ghost" id="closeDrawer">Close</button></div>
+    <div class="drawer" id="drawer" aria-label="Group info">
+      <div class="head"><div class="txt"><h1>Group info</h1></div><button class="ghost" id="closeDrawer">Close</button></div>
       <div class="body" id="drawerBody"></div>
     </div>
   </main>
 </div>
-
-<dialog id="dlg">
-  <form method="dialog" id="dlgForm">
-    <header>
-      <h2 id="dlgTitle">New chat</h2>
-      <div class="field" id="nameField" style="margin-bottom:8px"><input id="dlgName" maxlength="60" placeholder="Group name (optional)"></div>
-      <div class="field"><input id="dlgSearch" placeholder="Search people"></div>
-    </header>
-    <div class="pick" id="pick"></div>
-    <footer>
-      <button type="button" class="ghost" id="dlgCancel">Cancel</button>
-      <button type="button" class="send" id="dlgOk" style="padding:8px 18px">Create chat</button>
-    </footer>
-  </form>
-</dialog>
+<dialog id="modal"></dialog>
 <div class="toasts" id="toasts"></div>
 
 <script>
 (() => {
 "use strict";
+/* ================= config ================= */
+const BROKER = "wss://broker.emqx.io:8084/mqtt";
+const NS = "neonlobby-v1";
+const params = new URLSearchParams(location.search);
+const SPACE = (params.get("space") || "main").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 32) || "main";
+const P = NS + "/" + SPACE;
+const LS = "nl." + SPACE + ".";
+const MAX_FILE = 600 * 1024;
+const HIST_MAX = 200;
+
+/* ================= helpers ================= */
 const $ = (id) => document.getElementById(id);
 function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
@@ -182,441 +202,1110 @@ function h(tag, attrs, ...kids) {
     const v = attrs[k];
     if (v == null || v === false) continue;
     if (k === "class") el.className = v;
+    else if (k === "style") el.style.cssText = v;
     else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "value" || k === "checked") el[k] = v;
     else el.setAttribute(k, v === true ? "" : v);
   }
   for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
   return el;
 }
-const S = {
-  db: null, user: null, room: null, me: null,
-  chats: [], people: [], online: new Set(), prof: {},
-  active: null, msgs: [], read: {}, tab: "chats", drawer: false,
-  unsubMsgs: null, knownChats: null,
-};
-const name = (id) => (S.prof[id] && S.prof[id].name) || (id === S.me ? "You" : "Someone");
-const fmt = (ts) => { const d = new Date(ts || 0); return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
-const chatOf = (cid) => S.chats.find((c) => c.id === cid);
-const isAdmin = (c) => c && c.admin === S.me;
-
+const te = new TextEncoder(), td = new TextDecoder(), C = crypto.subtle;
+const b64 = (buf) => { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const unb64 = (s) => { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+const sha = async (s) => hex(await C.digest("SHA-256", te.encode(s)));
+const rid = (n) => hex(crypto.getRandomValues(new Uint8Array(n || 8)));
+const clip = (s, n) => String(s == null ? "" : s).slice(0, n);
+const jget = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+const fmt = (ts) => new Date(ts || 0).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const size = (n) => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+const isHex = (s, n) => typeof s === "string" && new RegExp("^[0-9a-f]{" + n + "}$").test(s);
+const normCode = (c) => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 24);
+function newCode() {
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const r = crypto.getRandomValues(new Uint8Array(8));
+  return [...r].map((x) => A[x % A.length]).join("");
+}
 function toast(text) {
   const t = h("div", { class: "toast" }, text);
   $("toasts").append(t);
-  setTimeout(() => t.remove(), 3500);
+  setTimeout(() => t.remove(), 3800);
+}
+async function copy(text, label) {
+  try { await navigator.clipboard.writeText(text); toast(label + " copied"); }
+  catch (e) { prompt("Copy this:", text); }
 }
 
-function avatar(id, sm) {
-  const p = S.prof[id];
-  const wrap = h("div", { class: "av" + (sm ? " sm" : "") });
-  if (p && p.avatarUrl) wrap.append(h("img", { src: p.avatarUrl, alt: "" }));
-  else wrap.append(h("div", { class: "grp" }, "?"));
-  if (S.online.has(id) && id !== S.me) wrap.append(h("span", { class: "dot", title: "Online now" }));
-  return wrap;
+/* ================= crypto ================= */
+const ECDSA = { name: "ECDSA", namedCurve: "P-256" };
+const ECDH = { name: "ECDH", namedCurve: "P-256" };
+const SIG = { name: "ECDSA", hash: "SHA-256" };
+const pubOnly = (j) => ({ kty: "EC", crv: "P-256", x: j.x, y: j.y });
+const uidOf = async (j) => (await sha("uid:" + j.x + "." + j.y)).slice(0, 16);
+let ID = null;
+
+async function loadIdentity() {
+  let raw = jget("nl.identity");
+  if (!raw || !raw.sPriv) {
+    const s = await C.generateKey(ECDSA, true, ["sign", "verify"]);
+    const d = await C.generateKey(ECDH, true, ["deriveKey"]);
+    raw = {
+      sPub: pubOnly(await C.exportKey("jwk", s.publicKey)), sPriv: await C.exportKey("jwk", s.privateKey),
+      dPub: pubOnly(await C.exportKey("jwk", d.publicKey)), dPriv: await C.exportKey("jwk", d.privateKey),
+      name: "", hue: Math.floor(Math.random() * 360),
+    };
+    jset("nl.identity", raw);
+  }
+  ID = {
+    raw, uid: await uidOf(raw.sPub),
+    sKey: await C.importKey("jwk", raw.sPriv, ECDSA, false, ["sign"]),
+    dKey: await C.importKey("jwk", raw.dPriv, ECDH, false, ["deriveKey"]),
+  };
 }
-function chatTitle(c) {
-  if (c.name) return c.name;
-  const others = c.members.filter((m) => m !== S.me);
-  if (!others.length) return "Just you";
-  return others.map(name).join(", ");
+async function sign(obj) {
+  const d = JSON.stringify(obj);
+  const s = await C.sign(SIG, ID.sKey, te.encode(d));
+  return { d, s: b64(s), k: ID.raw.sPub };
 }
-function chatAvatar(c) {
-  const others = c.members.filter((m) => m !== S.me);
-  if (!c.name && others.length === 1) return avatar(others[0]);
-  return h("div", { class: "grp" }, (c.name || "#").trim().charAt(0).toUpperCase() || "#");
+const vkCache = new Map();
+async function verify(w) {
+  if (!w || typeof w.d !== "string" || typeof w.s !== "string" || !w.k || typeof w.k.x !== "string" || typeof w.k.y !== "string") return null;
+  const ck = w.k.x + "." + w.k.y;
+  let e = vkCache.get(ck);
+  if (!e) {
+    try { e = { key: await C.importKey("jwk", pubOnly(w.k), ECDSA, false, ["verify"]), uid: await uidOf(w.k) }; }
+    catch (err) { return null; }
+    vkCache.set(ck, e);
+  }
+  let ok = false;
+  try { ok = await C.verify(SIG, e.key, unb64(w.s), te.encode(w.d)); } catch (err) { ok = false; }
+  if (!ok) return null;
+  let o; try { o = JSON.parse(w.d); } catch (err) { return null; }
+  return o && o.from === e.uid ? o : null;
+}
+const aesKey = (raw) => C.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+async function seal(key, obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await C.encrypt({ name: "AES-GCM", iv }, key, te.encode(JSON.stringify(obj)));
+  const out = new Uint8Array(12 + ct.byteLength);
+  out.set(iv); out.set(new Uint8Array(ct), 12);
+  return b64(out);
+}
+async function unseal(key, str) {
+  try {
+    const u = unb64(str);
+    const pt = await C.decrypt({ name: "AES-GCM", iv: u.subarray(0, 12) }, key, u.subarray(12));
+    return JSON.parse(td.decode(pt));
+  } catch (e) { return null; }
+}
+async function doorIdOf(code) { return (await sha("door:" + P + ":" + code)).slice(0, 24); }
+async function doorKeyOf(code, doorId) {
+  const base = await C.importKey("raw", te.encode(code), "PBKDF2", false, ["deriveKey"]);
+  return C.deriveKey({ name: "PBKDF2", salt: te.encode("door:" + doorId), iterations: 150000, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+const dhCache = new Map();
+async function dhKey(pub) {
+  const ck = pub.x + "." + pub.y;
+  if (!dhCache.has(ck)) {
+    const p = await C.importKey("jwk", pubOnly(pub), ECDH, false, []);
+    dhCache.set(ck, await C.deriveKey({ name: "ECDH", public: p }, ID.dKey, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]));
+  }
+  return dhCache.get(ck);
+}
+const gKeys = new Map(), doorKeys = new Map();
+async function groupKey(g) {
+  const ck = g.gid + ":" + g.epoch;
+  if (!gKeys.has(ck)) gKeys.set(ck, await aesKey(unb64(g.key)));
+  return gKeys.get(ck);
 }
 
-/* ---------- render ---------- */
-let renderTok = 0, renderQueued = false;
-function render() {
-  if (renderQueued) return;
-  renderQueued = true;
-  queueMicrotask(async () => {
-    renderQueued = false;
-    const tok = ++renderTok;
-    if (S.user) {
-      const ids = new Set([S.me, ...S.people, ...S.online]);
-      S.chats.forEach((c) => c.members.forEach((m) => ids.add(m)));
-      S.msgs.forEach((m) => { if (m.from) ids.add(m.from); if (m.target) ids.add(m.target); });
-      try { S.prof = await S.user.profiles([...ids].filter(Boolean)); } catch (e) { /* keep last */ }
-      if (tok !== renderTok) return;
-    }
-    paint();
+/* ================= state ================= */
+const S = {
+  people: {}, groups: {}, hist: {}, ids: {}, invites: {}, pj: {},
+  pubs: {}, active: null, tab: "chats", drawer: false, conn: false, lookup: null, synced: new Set(),
+};
+let client = null;
+const T = {
+  pres: (u) => P + "/pres/" + u,
+  inbox: (to, from, gid) => P + "/inbox/" + to + "/" + from + "/" + gid,
+  g: (g, kind, epoch) => P + "/g/" + g.gid + "/" + (epoch == null ? g.epoch : epoch) + "/" + kind,
+  door: (d) => P + "/door/" + d,
+  req: (d) => P + "/door/" + d + "/req",
+  list: (gid) => P + "/public/" + gid,
+};
+const me = () => ID.uid;
+const isAdmin = (g) => g && g.admin === me();
+function nameOf(uid, g) {
+  if (uid === me()) return ID.raw.name || "You";
+  const p = S.people[uid];
+  return (p && p.name) || (g && g.names && g.names[uid]) || findName(uid) || "Someone";
+}
+function findName(uid) { for (const k in S.groups) { const n = S.groups[k].names && S.groups[k].names[uid]; if (n) return n; } return ""; }
+function hueOf(uid) { if (uid === me()) return ID.raw.hue; const p = S.people[uid]; return p ? p.hue : parseInt(uid.slice(0, 3), 16) % 360; }
+const online = (uid) => !!S.people[uid];
+
+function saveGroups() { jset(LS + "groups", S.groups); }
+function saveMisc() { jset(LS + "inv", S.invites); jset(LS + "pj", S.pj); }
+const histTimers = {};
+function saveHist(gid) {
+  clearTimeout(histTimers[gid]);
+  histTimers[gid] = setTimeout(() => {
+    const k = LS + "h." + gid;
+    let arr = (S.hist[gid] || []).slice(-HIST_MAX).map((x) => x.w);
+    if (jset(k, arr)) return;
+    arr = arr.filter((w) => w.d.length < 30000);
+    if (jset(k, arr)) return;
+    jset(k, arr.slice(-50));
+  }, 400);
+}
+function loadAll() {
+  S.groups = jget(LS + "groups") || {};
+  S.invites = jget(LS + "inv") || {};
+  S.pj = jget(LS + "pj") || {};
+  for (const gid in S.groups) {
+    const list = (jget(LS + "h." + gid) || []).map((w) => { try { return { w, o: JSON.parse(w.d) }; } catch (e) { return null; } }).filter(Boolean);
+    S.hist[gid] = list;
+    S.ids[gid] = new Set(list.map((x) => x.o.id));
+  }
+}
+
+/* ================= network ================= */
+function pub(topic, payload, retain) {
+  if (!client || !client.connected) return false;
+  client.publish(topic, payload, { qos: 0, retain: !!retain });
+  return true;
+}
+function sub(topic) { if (client && client.connected) client.subscribe(topic, { qos: 0 }); }
+function unsub(topic) { if (client && client.connected) client.unsubscribe(topic); }
+
+function connect() {
+  if (typeof mqtt === "undefined") { toast("Couldn't load the chat library. Check your connection and reload."); return; }
+  client = mqtt.connect(BROKER, {
+    clientId: "nl_" + rid(6), clean: true, keepalive: 30, reconnectPeriod: 3000, connectTimeout: 15000,
+    will: { topic: T.pres(me()), payload: "", retain: true, qos: 0 },
   });
+  client.on("connect", () => {
+    S.conn = true;
+    sub(P + "/pres/+");
+    sub(P + "/inbox/" + me() + "/#");
+    sub(P + "/public/+");
+    for (const gid in S.groups) subscribeGroup(S.groups[gid], true);
+    if (S.lookup) sub(T.door(S.lookup.doorId));
+    for (const d in S.pj) sub(T.door(S.pj[d].doorId || "x"));
+    publishPresence();
+    render();
+  });
+  client.on("close", () => { S.conn = false; render(); });
+  client.on("offline", () => { S.conn = false; render(); });
+  client.on("error", (e) => console.warn("mqtt", e && e.message));
+  client.on("message", (topic, buf) => { route(topic, buf.toString()).catch((e) => console.warn(e)); });
+  setInterval(publishPresence, 120000);
+  setInterval(() => {
+    const now = Date.now(); let ch = false;
+    for (const u in S.people) if (now - S.people[u].seen > 330000) { delete S.people[u]; ch = true; }
+    if (ch) render();
+  }, 30000);
+  addEventListener("pagehide", () => { pub(T.pres(me()), "", true); });
+}
+async function publishPresence() {
+  if (!ID.raw.name) return;
+  const w = await sign({ t: "pres", from: me(), name: ID.raw.name, hue: ID.raw.hue, dh: ID.raw.dPub, ts: Date.now() });
+  pub(T.pres(me()), JSON.stringify(w), true);
+}
+async function subscribeGroup(g, withSync) {
+  sub(P + "/g/" + g.gid + "/" + g.epoch + "/#");
+  if (isAdmin(g) && g.coded && g.code) await openDoor(g);
+  if (withSync) requestSync(g);
+}
+function unsubscribeGroup(g) {
+  unsub(P + "/g/" + g.gid + "/" + g.epoch + "/#");
+  if (g.doorId) unsub(T.req(g.doorId));
+}
+async function openDoor(g) {
+  g.doorId = await doorIdOf(g.code);
+  doorKeys.set(g.doorId, await doorKeyOf(g.code, g.doorId));
+  sub(T.req(g.doorId));
+  await publishDoor(g);
+}
+async function publishDoor(g) {
+  if (!isAdmin(g) || !g.coded || !g.doorId) return;
+  const w = await sign({ t: "door", from: me(), gid: g.gid, name: g.name, admin: me(), approval: !!g.approval, n: g.members.length });
+  pub(T.door(g.doorId), await seal(doorKeys.get(g.doorId), w), true);
+  await publishListing(g);
+}
+function requestSync(g) {
+  groupKey(g).then(async (k) => pub(T.g(g, "ctl"), await seal(k, { t: "syncreq", req: rid(6), from: me() })));
 }
 
-function paint() {
-  // me
-  const mb = $("meBox"); mb.replaceChildren(avatar(S.me), h("b", null, name(S.me)),
-    h("span", { style: "color:var(--mute);font-size:12px" }, S.online.size ? S.online.size + " online" : ""));
-  $("tabChats").setAttribute("aria-selected", S.tab === "chats");
-  $("tabPeople").setAttribute("aria-selected", S.tab === "people");
-  const list = $("list"); list.replaceChildren();
-  if (S.tab === "chats") {
-    if (!S.chats.length) list.append(h("div", { class: "empty" }, "No chats yet. Open People and tap someone to start one."));
-    for (const c of S.chats) {
-      const unread = (c.updatedAt || 0) > (S.read[c.id] || 0) && c.last && c.last.from !== S.me && c.id !== S.active;
-      const last = c.last ? (c.last.sys ? c.last.text : (c.last.from === S.me ? "You: " : name(c.last.from) + ": ") + c.last.text) : "No messages yet";
-      list.append(h("button", { class: "row" + (c.id === S.active ? " on" : ""), onclick: () => openChat(c.id) },
-        chatAvatar(c),
-        h("div", { class: "txt" },
-          h("div", { class: "t1" }, h("span", null, chatTitle(c), isAdmin(c) ? h("span", { class: "tag" }, "admin") : null), h("time", null, c.updatedAt ? fmt(c.updatedAt) : "")),
-          h("div", { class: "t2" }, last, unread ? h("span", { class: "badge" }, "new") : null))));
-    }
-  } else {
-    const ids = [...new Set([...S.online, ...S.people])].filter((i) => i !== S.me);
-    ids.sort((a, b) => (S.online.has(b) - S.online.has(a)) || name(a).localeCompare(name(b)));
-    if (!ids.length) list.append(h("div", { class: "empty" }, "Nobody else has opened this page yet. Share the link and they'll show up here."));
-    for (const id of ids) {
-      list.append(h("button", { class: "row", onclick: () => directChat(id) },
-        avatar(id),
-        h("div", { class: "txt" }, h("div", { class: "t1" }, h("span", null, name(id))),
-          h("div", { class: "t2" }, S.online.has(id) ? "On the page now · tap to chat" : "Tap to chat"))));
-    }
-  }
-  // chat pane
-  const c = chatOf(S.active);
-  $("app").classList.toggle("chatting", !!c);
-  $("welcome").hidden = !!c; $("head").hidden = !c; $("msgs").hidden = !c; $("composer").hidden = !c;
-  if (c) {
-    $("headAv").replaceChildren(chatAvatar(c));
-    $("chatName").textContent = chatTitle(c);
-    const on = c.members.filter((m) => S.online.has(m) && m !== S.me).length;
-    $("chatSub").textContent = c.members.length + " members" + (on ? " · " + on + " online" : "") + " · admin: " + name(c.admin);
-    paintMsgs();
-  }
-  paintDrawer();
+async function route(topic, payload) {
+  const parts = topic.slice(P.length + 1).split("/");
+  if (parts[0] === "pres") return onPres(parts[1], payload);
+  if (parts[0] === "inbox") return onInbox(topic, payload);
+  if (parts[0] === "public") return onPublic(parts[1], payload);
+  if (parts[0] === "g") return onGroup(parts[1], Number(parts[2]), parts[3], payload);
+  if (parts[0] === "door") return parts[2] === "req" ? onDoorReq(parts[1], payload) : onDoorInfo(parts[1], payload);
 }
 
-function paintMsgs() {
-  const box = $("msgs");
-  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-  box.replaceChildren();
-  const c = chatOf(S.active);
-  const group = c && c.members.length > 2;
-  let prev = null;
-  for (const m of S.msgs) {
-    if (m.sys) {
-      box.append(h("div", { class: "sys" }, sysText(m)));
-      prev = null; continue;
-    }
-    const mine = m.from === S.me;
-    const first = !prev || prev.from !== m.from;
-    const p = S.prof[m.from];
-    box.append(h("div", { class: "b" + (mine ? " me" : "") + (first ? " gap" : "") },
-      group && !mine && first ? h("div", { class: "who", style: "color:" + ((p && p.color) || "var(--pink)") }, name(m.from)) : null,
-      m.text, h("time", null, fmt(m.ts))));
-    prev = m;
+async function onPres(uid, payload) {
+  if (!payload) { if (S.people[uid]) { delete S.people[uid]; render(); } return; }
+  let w; try { w = JSON.parse(payload); } catch (e) { return; }
+  const o = await verify(w);
+  if (!o || o.t !== "pres" || o.from !== uid || !o.dh || typeof o.dh.x !== "string") return;
+  if (Date.now() - (o.ts || 0) > 330000) return;
+  if (uid === me()) return;
+  S.people[uid] = { name: clip(o.name, 40) || "Someone", hue: Number(o.hue) % 360 || 0, dh: pubOnly(o.dh), seen: Date.now() };
+  for (const gid in S.groups) {
+    const g = S.groups[gid];
+    if (g.names && g.members.includes(uid) && isAdmin(g) && g.names[uid] !== S.people[uid].name) { /* name refresh happens on next state change */ }
   }
-  if (!S.msgs.length) box.append(h("div", { class: "sys" }, "Say hi 👋"));
-  if (atBottom || box.dataset.cid !== S.active) box.scrollTop = box.scrollHeight;
-  box.dataset.cid = S.active;
-}
-function sysText(m) {
-  const a = name(m.from), t = m.target ? name(m.target) : "";
-  switch (m.kind) {
-    case "create": return a + " created the chat";
-    case "add": return a + " added " + t;
-    case "kick": return a + " removed " + t;
-    case "leave": return a + " left";
-    case "admin": return t + " is now admin";
-    case "rename": return a + " renamed the chat";
-    default: return m.text || "";
-  }
-}
-
-function paintDrawer() {
-  const d = $("drawer"), body = $("drawerBody");
-  const c = chatOf(S.active);
-  d.classList.toggle("open", S.drawer && !!c);
-  d.inert = !(S.drawer && c);
-  body.replaceChildren();
-  if (!c) return;
-  const admin = isAdmin(c);
-  if (admin) {
-    const inp = h("input", { value: c.name || "", maxlength: 60, placeholder: "Chat name", "aria-label": "Chat name" });
-    body.append(h("div", { class: "sec" }, h("h3", null, "Name"),
-      h("div", { class: "field" }, inp, h("button", { class: "ghost", onclick: () => renameChat(c, inp.value) }, "Save"))));
-  }
-  const sec = h("div", { class: "sec" }, h("h3", null, c.members.length + " members"));
-  const sorted = [...c.members].sort((a, b) => (b === c.admin) - (a === c.admin));
-  for (const m of sorted) {
-    sec.append(h("div", { class: "row", style: "padding:8px 0;border:0" }, avatar(m, true),
-      h("div", { class: "txt" }, h("span", null, name(m) + (m === S.me ? " (you)" : "")), m === c.admin ? h("span", { class: "tag" }, "admin") : null),
-      admin && m !== S.me ? h("button", { class: "ghost", style: "padding:3px 8px;font-size:13px", onclick: () => makeAdmin(c, m) }, "Make admin") : null,
-      admin && m !== S.me ? h("button", { class: "kick", onclick: () => kick(c, m) }, "Kick") : null));
-  }
-  body.append(sec);
-  if (admin) body.append(h("button", { class: "act", onclick: () => openPicker("add") }, "＋ Add people"));
-  body.append(h("button", { class: "act red", onclick: () => leave(c) }, "Leave chat"));
-  if (admin) body.append(h("button", { class: "act red", onclick: () => deleteChat(c) }, "Delete chat for everyone"));
-}
-
-/* ---------- actions ---------- */
-async function post(cid, msg) {
-  const data = Object.assign({ from: S.me, ts: Date.now() }, msg);
-  await S.db.collection("chats/" + cid + "/msgs").add(data);
-  const last = msg.sys ? { sys: true, text: sysText(data), from: S.me } : { from: S.me, text: msg.text.slice(0, 120) };
-  await S.db.doc("chats/" + cid).update({ updatedAt: data.ts, last }).catch(() => {});
-}
-function fail(e) {
-  console.error(e);
-  toast(e && e.code === "quota_exceeded" ? "Storage is full. Ask an admin to delete an old chat." : "That didn't go through. Try again.");
-}
-
-async function createChat(members, chatName) {
-  const ref = S.db.collection("chats").doc();
-  const now = Date.now();
-  await ref.set({ name: chatName || "", admin: S.me, members: [S.me, ...members.filter((m) => m !== S.me)], createdAt: now, updatedAt: now, last: null });
-  S.active = ref.id; S.tab = "chats";
-  subscribeMsgs();
-  await post(ref.id, { sys: true, kind: "create" });
-  members.forEach(invitePing.bind(null, ref.id));
   render();
 }
-function invitePing(cid, uid) {
-  if (S.room && uid !== S.me) S.room.emit("invite", { to: uid, chat: cid }).catch(() => {});
+
+async function onPublic(gid, payload) {
+  if (!isHex(gid, 16)) return;
+  if (!payload) { if (S.pubs[gid]) { delete S.pubs[gid]; render(); } return; }
+  let w; try { w = JSON.parse(payload); } catch (e) { return; }
+  const o = await verify(w);
+  if (!o || o.t !== "listing" || o.gid !== gid || normCode(o.code).length < 4) return;
+  const mine = S.groups[gid];
+  if (mine && mine.ver > 0 && o.from !== mine.admin) return;
+  S.pubs[gid] = { gid, from: o.from, name: clip(o.name, 60) || "Unnamed group", code: normCode(o.code), n: Number(o.n) || 1, approval: !!o.approval, ts: o.ts };
+  render();
+}
+async function publishListing(g) {
+  if (!isAdmin(g) || !g.public || !g.code) return;
+  const w = await sign({ t: "listing", from: me(), gid: g.gid, name: g.name, code: g.code, n: g.members.length, approval: !!g.approval, ts: Date.now() });
+  pub(T.list(g.gid), JSON.stringify(w), true);
+}
+const clearListing = (g) => pub(T.list(g.gid), "", true);
+async function joinPublic(p) {
+  if (S.groups[p.gid]) return openChat(p.gid);
+  if (!S.conn) return toast("You're offline. Try again in a moment.");
+  const doorId = await doorIdOf(p.code);
+  const key = await doorKeyOf(p.code, doorId);
+  sub(T.door(doorId));
+  await requestJoin({ code: p.code, doorId, key, info: { gid: p.gid, from: p.from, name: p.name, approval: p.approval } });
+  toast(p.approval ? "Request sent. The admin will let you in." : "Joining " + p.name + "…");
+  S.tab = "chats"; render();
+}
+
+async function onInbox(topic, payload) {
+  if (!payload) return;
+  pub(topic, "", true); // consume
+  let env; try { env = JSON.parse(payload); } catch (e) { return; }
+  if (!env || !env.dh || typeof env.c !== "string") return;
+  let k; try { k = await dhKey(env.dh); } catch (e) { return; }
+  const inner = await unseal(k, env.c);
+  const o = await verify(inner);
+  if (!o || o.to !== me() || o.t !== "invite") return;
+  if (!isHex(o.gid, 16) || !Number.isInteger(o.epoch) || typeof o.key !== "string") return;
+  const g = S.groups[o.gid];
+  if (g) {
+    if (o.from === g.admin && o.epoch > g.epoch) {
+      unsubscribeGroup(g);
+      g.epoch = o.epoch; g.key = o.key; saveGroups();
+      subscribeGroup(g, false);
+    }
+    return;
+  }
+  const inv = { gid: o.gid, epoch: o.epoch, key: o.key, name: clip(o.name, 60), from: o.from, fromName: clip(o.fromName, 40), coded: !!o.coded, ts: o.ts };
+  const pend = Object.values(S.pj).find((p) => p.gid === o.gid);
+  if (pend && pend.admin === o.from) {
+    delete S.pj[pend.doorId]; unsub(T.door(pend.doorId)); saveMisc();
+    joinGroup(inv, true);
+    toast("You're in " + (inv.name || "the group"));
+    return;
+  }
+  S.invites[o.gid] = inv; saveMisc();
+  toast((inv.fromName || "Someone") + " invited you to " + (inv.name || "a chat"));
+  render();
+}
+function joinGroup(inv, open) {
+  const g = {
+    gid: inv.gid, epoch: inv.epoch, key: inv.key, name: inv.name, admin: inv.from,
+    members: [me(), inv.from], names: { [inv.from]: inv.fromName }, keys: {}, coded: !!inv.coded,
+    approval: false, banned: [], code: "", ver: 0, unread: 0, updatedAt: Date.now(), last: null,
+  };
+  S.groups[g.gid] = g; S.hist[g.gid] = []; S.ids[g.gid] = new Set();
+  delete S.invites[g.gid]; saveMisc(); saveGroups();
+  subscribeGroup(g, true);
+  if (open) openChat(g.gid); else render();
+}
+
+async function onGroup(gid, epoch, kind, payload) {
+  const g = S.groups[gid];
+  if (!g || !payload || epoch !== g.epoch) return;
+  const inner = await unseal(await groupKey(g), payload);
+  if (!inner) return;
+  if (kind === "state") return applyState(g, await verify(inner));
+  if (kind === "msg") return acceptMsg(g, inner, true);
+  if (kind === "ctl") return onCtl(g, inner);
+}
+async function applyState(g, o) {
+  if (!o || o.t !== "state" || o.gid !== g.gid || o.from !== g.admin) return;
+  if (!(o.ver > g.ver)) return;
+  if (!Array.isArray(o.members)) return;
+  const wasAdmin = isAdmin(g);
+  if (o.deleted || !o.members.includes(me())) {
+    removeLocal(g, o.deleted ? "“" + (g.name || "Chat") + "” was deleted by the admin" : "You were removed from “" + (g.name || "a chat") + "”");
+    return;
+  }
+  Object.assign(g, {
+    ver: o.ver, name: clip(o.name, 60), admin: String(o.admin), members: o.members.filter((x) => isHex(x, 16)).slice(0, 200),
+    names: o.names || {}, keys: o.keys || {}, coded: !!o.coded, approval: !!o.approval,
+    banned: Array.isArray(o.banned) ? o.banned : [], code: normCode(o.code), public: !!o.public,
+  });
+  if (!wasAdmin && isAdmin(g)) { toast("You're now admin of " + (g.name || "a chat")); if (g.coded && g.code) await openDoor(g); }
+  if (wasAdmin && !isAdmin(g) && g.doorId) unsub(T.req(g.doorId));
+  saveGroups(); render();
+}
+async function acceptMsg(g, w, live) {
+  const o = await verify(w);
+  if (!o || o.t !== "msg" || o.gid !== g.gid || !isHex(o.id, 16)) return;
+  if (live && g.ver > 0 && !g.members.includes(o.from)) return;
+  if (S.ids[g.gid].has(o.id)) return;
+  S.ids[g.gid].add(o.id);
+  const list = S.hist[g.gid];
+  list.push({ w, o });
+  list.sort((a, b) => (a.o.ts || 0) - (b.o.ts || 0));
+  if (list.length > HIST_MAX) list.splice(0, list.length - HIST_MAX);
+  if ((o.ts || 0) >= (g.updatedAt || 0)) { g.updatedAt = o.ts; g.last = { from: o.from, text: preview(o, g) }; }
+  if (live && o.from !== me() && (S.active !== g.gid || document.hidden)) g.unread = (g.unread || 0) + 1;
+  saveHist(g.gid); saveGroups(); render();
+}
+const syncSeen = new Set();
+async function onCtl(g, c) {
+  if (!c || typeof c !== "object") return;
+  if (c.t === "syncreq" && c.from !== me() && typeof c.req === "string") {
+    if (!(S.hist[g.gid] || []).length) return;
+    setTimeout(async () => {
+      if (syncSeen.has(c.req)) return;
+      syncSeen.add(c.req);
+      const k = await groupKey(g);
+      pub(T.g(g, "ctl"), await seal(k, { t: "synctaken", req: c.req }));
+      for (const x of S.hist[g.gid].slice(-60)) {
+        if (x.w.d.length > 200000) continue;
+        pub(T.g(g, "ctl"), await seal(k, { t: "syncitem", req: c.req, w: x.w }));
+      }
+    }, 200 + Math.random() * 1500);
+  } else if (c.t === "synctaken") {
+    syncSeen.add(c.req);
+  } else if (c.t === "syncitem") {
+    await acceptMsg(g, c.w, false);
+  } else if (c.w) {
+    const o = await verify(c.w);
+    if (o && o.t === "leave" && o.gid === g.gid && isAdmin(g) && g.members.includes(o.from)) {
+      g.members = g.members.filter((m) => m !== o.from);
+      await publishState(g);
+      await sendMsg(g, { sys: "left", target: o.from });
+    }
+  }
+}
+async function onDoorInfo(doorId, payload) {
+  const L = S.lookup && S.lookup.doorId === doorId ? S.lookup : null;
+  const pend = S.pj[doorId];
+  if (!L && !pend) return;
+  const key = L ? L.key : doorKeys.get(doorId);
+  if (!key || !payload) { if (L) { L.info = null; L.searched = true; paintJoin(); } return; }
+  const o = await verify(await unseal(key, payload));
+  if (!o || o.t !== "door" || !isHex(o.gid, 16)) return;
+  if (pend) { pend.admin = o.from; pend.name = clip(o.name, 60); saveMisc(); render(); }
+  if (L) { L.info = o; L.searched = true; paintJoin(); }
+}
+async function onDoorReq(doorId, payload) {
+  if (!payload) return;
+  const g = Object.values(S.groups).find((x) => x.doorId === doorId && isAdmin(x) && x.coded);
+  if (!g) return;
+  const o = await verify(await unseal(doorKeys.get(doorId), payload));
+  if (!o || o.t !== "join" || o.gid !== g.gid || !o.dh || typeof o.dh.x !== "string") return;
+  const nm = clip(o.name, 40) || "Someone";
+  if (g.banned.includes(o.from)) return;
+  if (g.members.includes(o.from)) { g.keys[o.from] = pubOnly(o.dh); return sendInvite(g, o.from); }
+  if (g.approval) {
+    g.pending = g.pending || {};
+    if (!g.pending[o.from]) toast(nm + " wants to join " + (g.name || "your group"));
+    g.pending[o.from] = { name: nm, dh: pubOnly(o.dh), ts: Date.now() };
+    saveGroups(); render();
+    return;
+  }
+  await admit(g, [{ uid: o.from, name: nm, dh: pubOnly(o.dh) }]);
+}
+
+/* ================= group actions ================= */
+async function publishState(g, extra) {
+  g.ver = (g.ver || 0) + 1;
+  g.names = g.names || {};
+  g.names[me()] = ID.raw.name;
+  const obj = Object.assign({
+    t: "state", from: me(), gid: g.gid, ver: g.ver, name: g.name, admin: g.admin, members: g.members,
+    names: pickKeys(g.names, g.members), keys: pickKeys(g.keys, g.members), coded: !!g.coded, approval: !!g.approval,
+    banned: g.banned || [], code: g.coded ? g.code : "", public: !!(g.public && g.coded), ts: Date.now(),
+  }, extra || {});
+  const w = await sign(obj);
+  pub(T.g(g, "state"), await seal(await groupKey(g), w), true);
+  saveGroups();
+  if (g.coded && isAdmin(g)) publishDoor(g);
+}
+function pickKeys(obj, keys) { const o = {}; for (const k of keys) if (obj && obj[k]) o[k] = obj[k]; return o; }
+async function sendInvite(g, uid) {
+  const dh = (g.keys && g.keys[uid]) || (S.people[uid] && S.people[uid].dh);
+  if (!dh) return false;
+  const w = await sign({ t: "invite", from: me(), fromName: ID.raw.name, to: uid, gid: g.gid, epoch: g.epoch, key: g.key, name: g.name, coded: !!g.coded, ts: Date.now() });
+  const c = await seal(await dhKey(dh), w);
+  pub(T.inbox(uid, me(), g.gid), JSON.stringify({ dh: ID.raw.dPub, c }), true);
+  return true;
+}
+async function sendMsg(g, body) {
+  const o = Object.assign({ t: "msg", from: me(), gid: g.gid, id: rid(8), ts: Date.now() }, body);
+  const w = await sign(o);
+  const payload = await seal(await groupKey(g), w);
+  if (payload.length > 1000000) { toast("That's too big to send. Files must be under " + size(MAX_FILE) + "."); return false; }
+  if (!pub(T.g(g, "msg"), payload)) { toast("You're offline. Message not sent."); return false; }
+  await acceptMsg(g, w, false);
+  return true;
+}
+function newGroup(name, admin) {
+  const g = {
+    gid: rid(8), epoch: 1, key: b64(crypto.getRandomValues(new Uint8Array(32))), name: clip(name, 60), admin: me(),
+    members: [me()], names: { [me()]: ID.raw.name }, keys: { [me()]: ID.raw.dPub }, coded: false, approval: false,
+    banned: [], code: "", ver: 0, unread: 0, updatedAt: Date.now(), last: null, pending: {},
+  };
+  S.groups[g.gid] = g; S.hist[g.gid] = []; S.ids[g.gid] = new Set();
+  return g;
+}
+async function createGroup(name, uids, code, approval, isPublic) {
+  if (!S.conn) return toast("You're offline. Try again in a moment.");
+  const g = newGroup(name);
+  saveGroups();
+  await subscribeGroup(g, false);
+  await sendMsg(g, { sys: "created" });
+  if (code) { g.coded = true; g.code = code; g.approval = !!approval; g.public = !!isPublic; await openDoor(g); }
+  const list = uids.map((u) => ({ uid: u, name: S.people[u] ? S.people[u].name : "", dh: S.people[u] && S.people[u].dh })).filter((x) => x.dh);
+  if (list.length) await admit(g, list); else await publishState(g);
+  S.tab = "chats";
+  openChat(g.gid);
+}
+async function admit(g, list) {
+  for (const p of list) {
+    if (!g.members.includes(p.uid)) g.members.push(p.uid);
+    g.names[p.uid] = p.name; g.keys[p.uid] = p.dh;
+    g.banned = (g.banned || []).filter((b) => b !== p.uid);
+    if (g.pending) delete g.pending[p.uid];
+  }
+  await publishState(g);
+  for (const p of list) { await sendInvite(g, p.uid); await sendMsg(g, { sys: "added", target: p.uid, tname: p.name }); }
+  render();
 }
 async function directChat(uid) {
-  const ex = S.chats.find((c) => !c.name && c.members.length === 2 && c.members.includes(uid));
-  if (ex) return openChat(ex.id);
-  try { await createChat([uid], ""); } catch (e) { fail(e); }
+  const ex = Object.values(S.groups).find((g) => !g.name && g.members.length === 2 && g.members.includes(uid));
+  if (ex) return openChat(ex.gid);
+  await createGroup("", [uid]);
 }
-async function addMembers(c, ids) {
-  const fresh = ids.filter((i) => !c.members.includes(i));
-  if (!fresh.length) return;
-  try {
-    await S.db.doc("chats/" + c.id).update({ members: [...c.members, ...fresh] });
-    for (const id of fresh) { await post(c.id, { sys: true, kind: "add", target: id }); invitePing(c.id, id); }
-  } catch (e) { fail(e); }
+async function kick(g, uid) {
+  if (!isAdmin(g) || !confirm("Remove " + nameOf(uid, g) + " from this group? They won't be able to rejoin with the code.")) return;
+  const tname = nameOf(uid, g);
+  g.members = g.members.filter((m) => m !== uid);
+  if (!g.banned.includes(uid)) g.banned.push(uid);
+  if (g.keys) delete g.keys[uid];
+  await publishState(g); // old epoch: tells the removed person
+  await rekey(g);
+  await sendMsg(g, { sys: "removed", target: uid, tname });
 }
-async function kick(c, uid) {
-  if (!isAdmin(c)) return;
-  if (!confirm("Remove " + name(uid) + " from this chat?")) return;
-  try {
-    await S.db.doc("chats/" + c.id).update({ members: c.members.filter((m) => m !== uid) });
-    await post(c.id, { sys: true, kind: "kick", target: uid });
-  } catch (e) { fail(e); }
+async function rekey(g) {
+  unsubscribeGroup(g);
+  g.epoch += 1;
+  g.key = b64(crypto.getRandomValues(new Uint8Array(32)));
+  saveGroups();
+  await subscribeGroup(g, false);
+  await publishState(g);
+  for (const m of g.members) if (m !== me()) await sendInvite(g, m);
 }
-async function makeAdmin(c, uid) {
-  if (!isAdmin(c) || !confirm("Hand admin to " + name(uid) + "? You'll become a regular member.")) return;
-  try { await S.db.doc("chats/" + c.id).update({ admin: uid }); await post(c.id, { sys: true, kind: "admin", target: uid }); }
-  catch (e) { fail(e); }
+async function makeAdmin(g, uid) {
+  if (!isAdmin(g) || !confirm("Make " + nameOf(uid, g) + " the admin? You'll become a regular member.")) return;
+  g.admin = uid;
+  await publishState(g);
+  if (g.doorId) unsub(T.req(g.doorId));
+  await sendMsg(g, { sys: "admin", target: uid, tname: nameOf(uid, g) });
+  render();
 }
-async function renameChat(c, v) {
-  v = v.trim().slice(0, 60);
-  if (!isAdmin(c) || v === (c.name || "")) return;
-  try { await S.db.doc("chats/" + c.id).update({ name: v }); await post(c.id, { sys: true, kind: "rename" }); toast("Chat renamed"); }
-  catch (e) { fail(e); }
+async function rename(g, v) {
+  v = clip(v.trim(), 60);
+  if (!isAdmin(g) || v === g.name) return;
+  g.name = v;
+  await publishState(g);
+  await sendMsg(g, { sys: "renamed", text: v });
 }
-async function leave(c) {
-  if (!confirm("Leave this chat?")) return;
-  const rest = c.members.filter((m) => m !== S.me);
-  try {
-    if (!rest.length) return deleteChat(c, true);
-    await post(c.id, { sys: true, kind: "leave" });
-    const patch = { members: rest };
-    if (c.admin === S.me) patch.admin = rest[0];
-    await S.db.doc("chats/" + c.id).update(patch);
-    if (patch.admin) await post(c.id, { sys: true, kind: "admin", target: rest[0] }).catch(() => {});
-    S.active = null; S.drawer = false; stopMsgs(); render();
-  } catch (e) { fail(e); }
+async function setCoded(g, code, approval) {
+  if (!isAdmin(g)) return;
+  if (g.doorId) { pub(T.door(g.doorId), "", true); unsub(T.req(g.doorId)); g.doorId = ""; }
+  if (code) { g.coded = true; g.code = code; g.approval = !!approval; await openDoor(g); }
+  else { if (g.public) clearListing(g); g.coded = false; g.code = ""; g.public = false; }
+  await publishState(g);
+  await sendMsg(g, { sys: code ? "coded" : "uncoded" });
+  render();
 }
-async function deleteChat(c, silent) {
-  if (!silent && !confirm("Delete this chat and all its messages for everyone?")) return;
-  try {
-    const snap = await S.db.collection("chats/" + c.id + "/msgs").get();
-    for (const d of snap.docs) await S.db.doc("chats/" + c.id + "/msgs/" + d.id).delete();
-    await S.db.doc("chats/" + c.id).delete();
-    S.active = null; S.drawer = false; stopMsgs(); render();
-    toast("Chat deleted");
-  } catch (e) { fail(e); }
-}
-
-/* ---------- read state ---------- */
-let readTimer = null;
-function markRead() {
-  const c = chatOf(S.active);
-  if (!c || (S.read[c.id] || 0) >= (c.updatedAt || 0)) return;
-  S.read = Object.assign({}, S.read, { [c.id]: c.updatedAt });
-  clearTimeout(readTimer);
-  readTimer = setTimeout(() => {
-    S.db.doc("data/users/" + S.me + "/state").set({ read: S.read }).catch(() => {});
-  }, 800);
-}
-
-/* ---------- subscriptions ---------- */
-function stopMsgs() { if (S.unsubMsgs) { S.unsubMsgs(); S.unsubMsgs = null; } S.msgs = []; }
-function subscribeMsgs() {
-  stopMsgs();
-  const cid = S.active;
-  if (!cid) return;
-  S.unsubMsgs = S.db.collection("chats/" + cid + "/msgs").orderBy("ts", "desc").limit(300).onSnapshot((snap) => {
-    if (S.active !== cid) return;
-    S.msgs = snap.docs.map((d) => d.data()).reverse();
-    markRead(); render();
-  }, () => {});
-}
-function openChat(cid) {
-  if (S.active === cid) return focusInput();
-  S.active = cid; S.drawer = false;
-  subscribeMsgs(); markRead(); render();
-  focusInput();
-}
-function focusInput() { setTimeout(() => $("input").focus(), 0); }
-
-/* ---------- picker dialog ---------- */
-let pickMode = "new", picked = new Set(), searchHits = [], searchTok = 0;
-function openPicker(mode) {
-  pickMode = mode; picked = new Set(); searchHits = [];
-  $("dlgTitle").textContent = mode === "new" ? "New chat" : "Add people";
-  $("dlgOk").textContent = mode === "new" ? "Create chat" : "Add";
-  $("nameField").hidden = mode !== "new";
-  $("dlgName").value = ""; $("dlgSearch").value = "";
-  paintPick(); $("dlg").showModal(); runSearch("");
-  $(mode === "new" ? "dlgName" : "dlgSearch").focus();
-}
-async function runSearch(q) {
-  if (!S.user || !S.user.search) return;
-  const t = ++searchTok;
-  const hits = await S.user.search(q);
-  if (t !== searchTok) return;
-  searchHits = hits || [];
-  hits.forEach((p) => { S.prof[p.id] = p; });
-  paintPick();
-}
-function paintPick() {
-  const q = $("dlgSearch").value.trim().toLowerCase();
-  const exclude = pickMode === "add" ? new Set((chatOf(S.active) || { members: [] }).members) : new Set([S.me]);
-  const ids = [...new Set([...S.online, ...S.people, ...searchHits.map((p) => p.id), ...picked])]
-    .filter((i) => i && !exclude.has(i) && i !== S.me)
-    .filter((i) => !q || name(i).toLowerCase().includes(q) || searchHits.some((p) => p.id === i));
-  ids.sort((a, b) => (S.online.has(b) - S.online.has(a)) || name(a).localeCompare(name(b)));
-  const box = $("pick"); box.replaceChildren();
-  if (!ids.length) box.append(h("div", { class: "empty" }, "No one to add. People appear here once they open the page."));
-  for (const id of ids) {
-    box.append(h("button", { type: "button", class: "row", "aria-pressed": picked.has(id), onclick: () => { picked.has(id) ? picked.delete(id) : picked.add(id); paintPick(); } },
-      avatar(id), h("div", { class: "txt" }, h("div", null, name(id)), h("div", { class: "t2" }, S.online.has(id) ? "On the page now" : "")), h("span", { class: "chk" })));
+async function setVisibility(g, isPublic) {
+  if (!isAdmin(g) || !!g.public === !!isPublic) return;
+  if (isPublic) {
+    g.public = true;
+    if (!g.coded || !g.code) { g.coded = true; g.code = newCode(); await openDoor(g); }
+  } else {
+    g.public = false;
+    clearListing(g);
   }
-  $("dlgOk").disabled = !picked.size;
+  await publishState(g);
+  await sendMsg(g, { sys: isPublic ? "public" : "private" });
+  render();
 }
-let sDeb;
-$("dlgSearch").addEventListener("input", (e) => { paintPick(); clearTimeout(sDeb); sDeb = setTimeout(() => runSearch(e.target.value.trim()), 250); });
-$("dlgSearch").addEventListener("keydown", (e) => { if (e.key === "ArrowDown") { e.preventDefault(); const f = $("pick").querySelector(".row"); f && f.focus(); } });
-$("pick").addEventListener("keydown", (e) => {
-  const rows = [...$("pick").querySelectorAll(".row")], i = rows.indexOf(document.activeElement);
-  if (e.key === "ArrowDown" && i >= 0) { e.preventDefault(); (rows[i + 1] || rows[i]).focus(); }
-  if (e.key === "ArrowUp" && i >= 0) { e.preventDefault(); (rows[i - 1] || $("dlgSearch")).focus(); }
-});
-$("dlgCancel").onclick = () => $("dlg").close();
-$("dlgOk").onclick = async () => {
-  if (!picked.size) return;
-  const ids = [...picked];
-  $("dlg").close();
-  if (pickMode === "new") {
-    try { await createChat(ids, ids.length > 1 ? ($("dlgName").value.trim() || "New group") : $("dlgName").value.trim()); }
-    catch (e) { fail(e); }
-  } else { const c = chatOf(S.active); if (c && isAdmin(c)) addMembers(c, ids); }
-};
-$("dlg").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("dlgOk").click(); } });
+async function setApproval(g, v) { g.approval = !!v; await publishState(g); render(); }
+async function leave(g) {
+  if (!confirm("Leave “" + (g.name || "this chat") + "”?")) return;
+  const rest = g.members.filter((m) => m !== me());
+  if (!rest.length) return deleteGroup(g, true);
+  if (isAdmin(g)) {
+    g.admin = rest[0];
+    g.members = rest;
+    await publishState(g);
+    await sendMsg(g, { sys: "admin", target: rest[0], tname: nameOf(rest[0], g) });
+  } else {
+    const w = await sign({ t: "leave", from: me(), gid: g.gid });
+    pub(T.g(g, "ctl"), await seal(await groupKey(g), { w }));
+  }
+  removeLocal(g, "You left " + (g.name || "the chat"));
+}
+async function deleteGroup(g, silent) {
+  if (!silent && !confirm("Delete “" + (g.name || "this chat") + "” for everyone?")) return;
+  if (g.doorId) pub(T.door(g.doorId), "", true);
+  clearListing(g);
+  g.members = [];
+  await publishState(g, { deleted: true });
+  removeLocal(g, "Group deleted");
+}
+function removeLocal(g, msg) {
+  unsubscribeGroup(g);
+  delete S.groups[g.gid]; delete S.hist[g.gid]; delete S.ids[g.gid];
+  try { localStorage.removeItem(LS + "h." + g.gid); } catch (e) {}
+  saveGroups();
+  if (S.active === g.gid) { S.active = null; S.drawer = false; }
+  if (msg) toast(msg);
+  render();
+}
+async function requestJoin(L) {
+  const o = L.info;
+  const w = await sign({ t: "join", from: me(), gid: o.gid, name: ID.raw.name, dh: ID.raw.dPub, ts: Date.now() });
+  pub(T.req(L.doorId), await seal(L.key, w));
+  doorKeys.set(L.doorId, L.key);
+  S.pj[L.doorId] = { doorId: L.doorId, gid: o.gid, admin: o.from, name: clip(o.name, 60), approval: !!o.approval, ts: Date.now(), code: L.code };
+  saveMisc(); render();
+}
+async function retryJoin(p) {
+  doorKeys.set(p.doorId, doorKeys.get(p.doorId) || await doorKeyOf(p.code, p.doorId));
+  const w = await sign({ t: "join", from: me(), gid: p.gid, name: ID.raw.name, dh: ID.raw.dPub, ts: Date.now() });
+  pub(T.req(p.doorId), await seal(doorKeys.get(p.doorId), w));
+  toast("Asked again");
+}
 
-/* ---------- UI wiring ---------- */
+/* ================= files ================= */
+function sendFile(file) {
+  const g = S.groups[S.active];
+  if (!g || !file) return;
+  if (file.size > MAX_FILE) return toast("“" + file.name + "” is " + size(file.size) + ". Files must be under " + size(MAX_FILE) + ".");
+  const r = new FileReader();
+  r.onload = async () => {
+    const caption = $("input").value.trim();
+    const ok = await sendMsg(g, { text: clip(caption, 4000), file: { name: clip(file.name, 120), type: clip(file.type || "application/octet-stream", 80), size: file.size, data: r.result } });
+    if (ok && caption) { $("input").value = ""; $("sendBtn").disabled = true; }
+  };
+  r.onerror = () => toast("Couldn't read that file.");
+  r.readAsDataURL(file);
+}
+
+/* ================= render ================= */
+function sysText(o, g) {
+  const a = nameOf(o.from, g), t = o.target ? (nameOf(o.target, g) !== "Someone" ? nameOf(o.target, g) : (o.tname || "someone")) : "";
+  switch (o.sys) {
+    case "created": return a + " created the chat";
+    case "added": return a + " added " + t;
+    case "removed": return a + " removed " + t;
+    case "left": return t + " left";
+    case "admin": return t + " is now admin";
+    case "renamed": return a + " renamed the group to “" + clip(o.text, 60) + "”";
+    case "coded": return a + " set a join code";
+    case "uncoded": return a + " turned off the join code";
+    case "public": return a + " made the group public";
+    case "private": return a + " made the group private";
+    default: return "";
+  }
+}
+function preview(o, g) {
+  if (o.sys) return sysText(o, g);
+  if (o.file) return "📎 " + clip(o.file.name, 60);
+  return clip(o.text, 100);
+}
+function avatar(uid, sm) {
+  const n = nameOf(uid);
+  const el = h("div", { class: "av" + (sm ? " sm" : ""), style: "background:hsl(" + hueOf(uid) + " 90% 65%)", "aria-hidden": "true" }, (n.trim()[0] || "?").toUpperCase());
+  if (uid !== me() && online(uid)) el.append(h("span", { class: "dot" }));
+  return el;
+}
+function groupAvatar(g) {
+  const others = g.members.filter((m) => m !== me());
+  const el = (!g.name && others.length === 1) ? avatar(others[0]) : h("div", { class: "av grp", "aria-hidden": "true" }, (g.name || "#").trim().charAt(0).toUpperCase() || "#");
+  if (g.public) el.append(h("span", { class: "lock", title: "Public group" }, "🌐"));
+  else if (g.coded) el.append(h("span", { class: "lock", title: "Private group with code" }, "🔑"));
+  return el;
+}
+function titleOf(g) {
+  if (g.name) return g.name;
+  const others = g.members.filter((m) => m !== me());
+  return others.length ? others.map((m) => nameOf(m, g)).join(", ") : "Just you";
+}
+const sortedGroups = () => Object.values(S.groups).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+let rq = false;
+function render() {
+  if (rq) return;
+  rq = true;
+  requestAnimationFrame(() => { rq = false; paint(); });
+}
+function paint() {
+  if (!ID) return;
+  const total = Object.values(S.groups).reduce((n, g) => n + (g.unread || 0), 0) + Object.keys(S.invites).length;
+  document.title = (total ? "(" + total + ") " : "") + "Neon Lobby Chat";
+  $("meBox").replaceChildren(avatar(me()),
+    h("div", { class: "txt" }, h("b", null, ID.raw.name || "…"),
+      h("small", null, h("span", { class: "conn" + (S.conn ? " on" : "") }), S.conn ? Object.keys(S.people).length + " others here · room " + SPACE : "Connecting…")),
+    h("button", { class: "ghost", title: "Copy page link", onclick: () => copy(location.origin + location.pathname + "?space=" + SPACE, "Page link") }, "Share"));
+  $("tabChats").setAttribute("aria-selected", S.tab === "chats");
+  $("tabPeople").setAttribute("aria-selected", S.tab === "people");
+  $("tabPublic").setAttribute("aria-selected", S.tab === "public");
+  const pubCount = Object.keys(S.pubs).filter((k) => !S.groups[k]).length;
+  $("tabPublic").textContent = pubCount ? "Public (" + pubCount + ")" : "Public";
+  const list = $("list");
+  list.replaceChildren();
+  if (S.tab === "chats") paintChats(list); else if (S.tab === "public") paintPublic(list); else paintPeople(list);
+
+  const g = S.groups[S.active];
+  $("app").classList.toggle("chatting", !!g);
+  $("welcome").hidden = !!g; $("head").hidden = !g; $("msgs").hidden = !g; $("composer").hidden = !g;
+  if (g) {
+    if (g.unread && !document.hidden) { g.unread = 0; saveGroups(); }
+    $("headAv").replaceChildren(groupAvatar(g));
+    $("chatName").textContent = titleOf(g);
+    const on = g.members.filter((m) => m !== me() && online(m)).length;
+    $("chatSub").textContent = g.members.length + " members" + (on ? " · " + on + " online" : "") + " · admin: " + nameOf(g.admin, g) + (g.public ? " · public" : g.coded ? " · private, code" : " · private");
+    const pend = isAdmin(g) && g.pending ? Object.keys(g.pending).length : 0;
+    $("infoBtn").textContent = pend ? "Group info (" + pend + ")" : "Group info";
+    paintMsgs(g);
+  }
+  paintDrawer(g);
+}
+function paintChats(list) {
+  for (const gid in S.invites) {
+    const inv = S.invites[gid];
+    list.append(h("div", { class: "card" },
+      h("p", null, (inv.fromName || "Someone") + " invited you to ", h("b", null, inv.name || "a chat")),
+      h("div", { class: "acts" },
+        h("button", { class: "primary", onclick: () => joinGroup(inv, true) }, "Join"),
+        h("button", { class: "ghost", onclick: () => { delete S.invites[gid]; saveMisc(); render(); } }, "Decline"))));
+  }
+  for (const d in S.pj) {
+    const p = S.pj[d];
+    list.append(h("div", { class: "card" },
+      h("p", null, "Waiting to join ", h("b", null, p.name || "group"), ". The admin needs to be online", p.approval ? " and approve you." : "."),
+      h("div", { class: "acts" },
+        h("button", { class: "ghost", onclick: () => retryJoin(p) }, "Ask again"),
+        h("button", { class: "ghost", onclick: () => { delete S.pj[d]; unsub(T.door(d)); saveMisc(); render(); } }, "Cancel"))));
+  }
+  const gs = sortedGroups();
+  if (!gs.length && !Object.keys(S.invites).length && !Object.keys(S.pj).length)
+    list.append(h("div", { class: "empty" }, "No chats yet. Open People and tap someone, or join a group with its code."));
+  for (const g of gs) {
+    const last = g.last ? (g.last.from === me() ? "You: " : "") + g.last.text : "No messages yet";
+    list.append(h("button", { class: "row" + (g.gid === S.active ? " on" : ""), onclick: () => openChat(g.gid) },
+      groupAvatar(g),
+      h("div", { class: "txt" },
+        h("div", { class: "t1" }, h("span", null, titleOf(g), isAdmin(g) ? h("span", { class: "tag" }, "admin") : null), h("time", null, g.updatedAt ? fmt(g.updatedAt) : "")),
+        h("div", { class: "t2" }, last, g.unread ? h("span", { class: "badge" }, g.unread) : null))));
+  }
+}
+function paintPublic(list) {
+  const ps = Object.values(S.pubs).sort((a, b) => (b.n - a.n) || a.name.localeCompare(b.name));
+  list.append(h("div", { class: "empty", style: "padding:12px 16px" }, "Public groups are visible to everyone on this page. Private groups never show here — you need their code."));
+  if (!ps.length) list.append(h("div", { class: "empty" }, "No public groups yet. Create one with New group → Public."));
+  for (const p of ps) {
+    const inG = !!S.groups[p.gid];
+    const waiting = Object.values(S.pj).some((x) => x.gid === p.gid);
+    list.append(h("div", { class: "row" },
+      h("div", { class: "av grp", "aria-hidden": "true" }, p.name.charAt(0).toUpperCase(), h("span", { class: "lock" }, "🌐")),
+      h("div", { class: "txt" }, h("div", null, p.name),
+        h("div", { class: "t2" }, p.n + " members · admin " + nameOf(p.from) + (p.approval ? " · approval needed" : ""))),
+      inG ? h("button", { class: "ghost", onclick: () => openChat(p.gid) }, "Open")
+        : waiting ? h("span", { class: "t2" }, "Waiting…")
+        : h("button", { class: "primary", style: "padding:6px 12px", onclick: () => joinPublic(p) }, "Join")));
+  }
+}
+function paintPeople(list) {
+  const ids = Object.keys(S.people).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+  list.append(h("div", { class: "row" }, avatar(me()), h("div", { class: "txt" }, h("div", null, (ID.raw.name || "You") + " (you)"), h("div", { class: "t2" }, "Alt+S to change your name"))));
+  if (!ids.length) list.append(h("div", { class: "empty" }, "Nobody else is here right now. Tap Share and send the link."));
+  const adminGroups = sortedGroups().filter(isAdmin);
+  for (const uid of ids) {
+    const inv = adminGroups.filter((g) => !g.members.includes(uid));
+    list.append(h("div", { class: "row" },
+      avatar(uid),
+      h("div", { class: "txt" }, h("div", null, nameOf(uid)), h("div", { class: "t2" }, "On the page now")),
+      h("button", { class: "ghost", onclick: () => directChat(uid) }, "Chat"),
+      inv.length ? h("button", { class: "ghost", onclick: () => inviteDialog(uid, inv) }, "Invite") : null));
+  }
+}
+const URL_RE = /\bhttps?:\/\/[^\s<>"']+/gi;
+function safeUrl(u) { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x : null; } catch (e) { return null; } }
+function rich(text) {
+  const out = []; let last = 0, m, first = null;
+  URL_RE.lastIndex = 0;
+  while ((m = URL_RE.exec(text))) {
+    const raw = m[0].replace(/[),.!?;:'"]+$/, "");
+    const u = safeUrl(raw);
+    out.push(text.slice(last, m.index));
+    if (u) { out.push(h("a", { href: u.href, target: "_blank", rel: "noopener noreferrer nofollow" }, raw)); if (!first) first = u; }
+    else out.push(raw);
+    last = m.index + raw.length; URL_RE.lastIndex = last;
+  }
+  out.push(text.slice(last));
+  if (first) out.push(h("a", { class: "lnk", href: first.href, target: "_blank", rel: "noopener noreferrer nofollow" }, "🔗 " + first.hostname + (first.pathname.length > 1 ? clip(first.pathname, 40) : "")));
+  return out;
+}
+const IMG_T = /^data:image\/(png|jpe?g|gif|webp|svg\+xml|avif|bmp);base64,/i;
+function fileView(f) {
+  if (!f || typeof f.data !== "string" || !f.data.startsWith("data:")) return null;
+  const nm = clip(f.name, 120) || "file";
+  if (IMG_T.test(f.data)) {
+    return h("a", { href: f.data, download: nm, title: "Download " + nm }, h("img", { class: "shot", src: f.data, alt: nm }));
+  }
+  if (/^data:video\/(mp4|webm);/i.test(f.data)) return h("video", { class: "shot", src: f.data, controls: true, style: "max-width:100%;border-radius:8px" });
+  if (/^data:audio\//i.test(f.data)) return h("audio", { src: f.data, controls: true, style: "max-width:100%" });
+  const safe = "data:application/octet-stream;base64," + (f.data.split(",")[1] || "");
+  return h("a", { class: "file", href: safe, download: nm },
+    h("span", { style: "font-size:24px" }, "📄"),
+    h("span", null, h("b", null, nm), h("small", null, size(Number(f.size) || 0) + " · tap to download")));
+}
+function paintMsgs(g) {
+  const box = $("msgs");
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
+  box.replaceChildren();
+  const many = g.members.length > 2;
+  let prev = null;
+  for (const { o } of S.hist[g.gid] || []) {
+    if (o.sys) { box.append(h("div", { class: "sys" }, sysText(o, g))); prev = null; continue; }
+    const mine = o.from === me();
+    const first = !prev || prev.from !== o.from;
+    box.append(h("div", { class: "b" + (mine ? " me" : "") + (first ? " gap" : "") },
+      many && !mine && first ? h("div", { class: "who", style: "color:hsl(" + hueOf(o.from) + " 90% 68%)" }, nameOf(o.from, g)) : null,
+      o.file ? fileView(o.file) : null,
+      o.text ? rich(String(o.text)) : null,
+      h("time", null, fmt(o.ts))));
+    prev = o;
+  }
+  if (!(S.hist[g.gid] || []).length) box.append(h("div", { class: "sys" }, "No messages yet. Say hi 👋"));
+  if (atBottom || box.dataset.gid !== g.gid) box.scrollTop = box.scrollHeight;
+  box.dataset.gid = g.gid;
+}
+function paintDrawer(g) {
+  const d = $("drawer"), body = $("drawerBody");
+  const open = S.drawer && !!g;
+  d.classList.toggle("open", open);
+  d.inert = !open;
+  if (!open) return;
+  const keepFocus = document.activeElement && d.contains(document.activeElement) && document.activeElement.id;
+  const draft = keepFocus === "dName" ? $("dName").value : null;
+  body.replaceChildren();
+  const admin = isAdmin(g);
+  if (admin) {
+    const inp = h("input", { class: "inp", id: "dName", value: draft != null ? draft : (g.name || ""), maxlength: 60, placeholder: "Group name", "aria-label": "Group name" });
+    body.append(h("div", { class: "sec" }, h("h3", null, "Name"),
+      h("div", { class: "field" }, inp, h("button", { class: "ghost", onclick: () => rename(g, inp.value) }, "Save"))));
+  }
+  // visibility
+  const vs = h("div", { class: "sec" }, h("h3", null, "Visibility"));
+  if (admin) {
+    vs.append(h("div", { class: "seg" },
+      h("button", { "aria-pressed": !g.public, onclick: () => setVisibility(g, false) }, h("b", null, "🔒 Private"), "Hidden. Only people with the code or an invite"),
+      h("button", { "aria-pressed": !!g.public, onclick: () => setVisibility(g, true) }, h("b", null, "🌐 Public"), "Listed for everyone on the page")));
+  } else {
+    vs.append(h("p", { style: "margin:0;font-size:14px" }, g.public ? "🌐 Public — anyone on the page can see and join it." : "🔒 Private — hidden from the public list."));
+  }
+  body.append(vs);
+  // coded
+  const cs = h("div", { class: "sec" }, h("h3", null, "Join code"));
+  if (g.coded && g.code) {
+    cs.append(h("div", { class: "field" }, h("span", { class: "code" }, g.code),
+      h("button", { class: "ghost", onclick: () => copy(g.code, "Code") }, "Copy"),
+      h("button", { class: "ghost", onclick: () => copy(joinLink(g.code), "Join link") }, "Link")));
+    cs.append(h("p", { style: "color:var(--mute);font-size:13px;margin:8px 0 0" },
+      (g.public ? "Anyone on this page can join from the Public tab" : "Only people who enter this code can find the group") + (g.approval ? ". The admin approves each request." : ". They get in when the admin is online.")));
+    if (admin) {
+      cs.append(h("label", { class: "chk" }, h("input", { type: "checkbox", checked: !!g.approval, onchange: (e) => setApproval(g, e.target.checked) }), "Approve each person before they join"));
+      cs.append(h("div", { class: "field", style: "margin-top:10px" },
+        h("button", { class: "ghost", onclick: () => codeDialog(g) }, "Change code"),
+        g.public ? null : h("button", { class: "danger", onclick: () => setCoded(g, "", false) }, "Turn off code")));
+    }
+  } else if (admin) {
+    cs.append(h("p", { style: "color:var(--mute);font-size:13px;margin:0 0 8px" }, "Add a secret code so people can join without an invite. The group stays hidden."),
+      h("button", { class: "primary", onclick: () => codeDialog(g) }, "Add a join code"));
+  } else cs.append(h("p", { style: "color:var(--mute);font-size:13px;margin:0" }, "This group has no join code. Only the admin can add people."));
+  body.append(cs);
+  // pending
+  if (admin && g.pending && Object.keys(g.pending).length) {
+    const ps = h("div", { class: "sec" }, h("h3", null, "Waiting to join"));
+    for (const uid in g.pending) {
+      const p = g.pending[uid];
+      ps.append(h("div", { class: "row" }, avatar(uid, true), h("div", { class: "txt" }, p.name),
+        h("button", { class: "primary", style: "padding:4px 10px", onclick: () => admit(g, [{ uid, name: p.name, dh: p.dh }]) }, "Let in"),
+        h("button", { class: "danger", onclick: () => { delete g.pending[uid]; saveGroups(); render(); } }, "Deny")));
+    }
+    body.append(ps);
+  }
+  // members
+  const ms = h("div", { class: "sec" }, h("h3", null, g.members.length + " members"));
+  const sorted = [...g.members].sort((a, b) => (b === g.admin) - (a === g.admin) || nameOf(a, g).localeCompare(nameOf(b, g)));
+  for (const m of sorted) {
+    ms.append(h("div", { class: "row" }, avatar(m, true),
+      h("div", { class: "txt" }, h("span", null, nameOf(m, g) + (m === me() ? " (you)" : "")), m === g.admin ? h("span", { class: "tag" }, "admin") : null),
+      admin && m !== me() ? h("button", { class: "ghost", style: "padding:3px 8px;font-size:13px", onclick: () => makeAdmin(g, m) }, "Make admin") : null,
+      admin && m !== me() ? h("button", { class: "danger", onclick: () => kick(g, m) }, "Kick") : null));
+  }
+  body.append(ms);
+  if (admin) {
+    const cands = Object.keys(S.people).filter((u) => !g.members.includes(u));
+    const as = h("div", { class: "sec" }, h("h3", null, "Add people on the page"));
+    if (!cands.length) as.append(h("p", { style: "color:var(--mute);font-size:13px;margin:0" }, "Everyone here is already in this group."));
+    for (const u of cands) {
+      as.append(h("div", { class: "row" }, avatar(u, true), h("div", { class: "txt" }, nameOf(u)),
+        h("button", { class: "ghost", onclick: () => admit(g, [{ uid: u, name: S.people[u].name, dh: S.people[u].dh }]) }, "Add")));
+    }
+    body.append(as);
+  }
+  body.append(h("button", { class: "act red", onclick: () => leave(g) }, "Leave group"));
+  if (admin) body.append(h("button", { class: "act red", onclick: () => deleteGroup(g) }, "Delete group for everyone"));
+  if (keepFocus && $(keepFocus)) $(keepFocus).focus();
+}
+const joinLink = (code) => location.origin + location.pathname + "?space=" + SPACE + "#join=" + code;
+
+/* ================= dialogs ================= */
+const modal = $("modal");
+function showModal(title, bodyKids, actions, onEnter) {
+  modal.replaceChildren(h("div", { class: "mwrap" },
+    h("div", { class: "mhead" }, h("h2", null, title)),
+    h("div", { class: "mbody", id: "mbody" }, bodyKids),
+    h("div", { class: "mfoot", id: "mfoot" }, actions)));
+  modal.onkeydown = (e) => { if (e.key === "Enter" && onEnter && (e.target.tagName === "INPUT" && e.target.type !== "checkbox" || e.ctrlKey)) { e.preventDefault(); onEnter(); } };
+  if (!modal.open) modal.showModal();
+  const f = modal.querySelector("input,button"); if (f) f.focus();
+}
+const closeModal = () => modal.open && modal.close();
+
+function nameDialog(first) {
+  const inp = h("input", { class: "inp", maxlength: 40, value: ID.raw.name || "", placeholder: "Your name", "aria-label": "Your name" });
+  const save = () => {
+    const v = clip(inp.value.trim(), 40);
+    if (!v) return inp.focus();
+    ID.raw.name = v; jset("nl.identity", ID.raw);
+    closeModal(); publishPresence();
+    for (const gid in S.groups) { const g = S.groups[gid]; if (isAdmin(g)) publishState(g); }
+    if (first) connect();
+    render();
+  };
+  showModal(first ? "What should people call you?" : "Change your name",
+    [h("p", null, "Everyone on this page will see this name."), inp],
+    [first ? null : h("button", { class: "ghost", onclick: closeModal }, "Cancel"), h("button", { class: "primary", onclick: save }, "Save")], save);
+  if (first) modal.oncancel = (e) => e.preventDefault(); else modal.oncancel = null;
+}
+function pickList(selected, ids) {
+  const box = h("div", { class: "pick" });
+  const draw = () => {
+    box.replaceChildren();
+    if (!ids.length) box.append(h("p", null, "Nobody else is on the page right now. You can still create the group and share its code."));
+    for (const u of ids) box.append(h("button", { type: "button", class: "row", "aria-pressed": selected.has(u),
+      onclick: () => { selected.has(u) ? selected.delete(u) : selected.add(u); draw(); } }, avatar(u), h("div", { class: "txt" }, nameOf(u))));
+  };
+  draw();
+  return box;
+}
+function newGroupDialog(preselect) {
+  const sel = new Set(preselect || []);
+  const nm = h("input", { class: "inp", maxlength: 60, placeholder: "Group name" });
+  let vis = "private";
+  const segBtns = {};
+  const setVis = (v) => {
+    vis = v;
+    for (const k in segBtns) segBtns[k].setAttribute("aria-pressed", k === v);
+    codeBox.hidden = v === "private";
+    codeRow.hidden = v === "public";
+  };
+  const codeInp = h("input", { class: "inp", maxlength: 24, value: newCode(), "aria-label": "Join code", style: "letter-spacing:.1em;font-weight:700" });
+  const appr = h("input", { type: "checkbox" });
+  const codeRow = h("div", { class: "field" }, codeInp, h("button", { type: "button", class: "ghost", onclick: () => { codeInp.value = newCode(); } }, "New"));
+  const codeBox = h("div", { hidden: true, style: "margin-top:8px" }, codeRow,
+    h("label", { class: "chk" }, appr, "Approve each person before they join"));
+  const seg = h("div", { class: "seg" },
+    segBtns.private = h("button", { type: "button", "aria-pressed": "true", onclick: () => setVis("private") }, h("b", null, "🔒 Invite only"), "Hidden, you add people"),
+    segBtns.code = h("button", { type: "button", "aria-pressed": "false", onclick: () => setVis("code") }, h("b", null, "🔑 Private code"), "Hidden, join with code"),
+    segBtns.public = h("button", { type: "button", "aria-pressed": "false", onclick: () => setVis("public") }, h("b", null, "🌐 Public"), "Everyone can see it"));
+  const go = async () => {
+    const name = nm.value.trim();
+    const code = vis === "public" ? newCode() : vis === "code" ? normCode(codeInp.value) : "";
+    if (vis === "code" && code.length < 4) return toast("Codes need at least 4 letters or numbers.");
+    if (!name && (sel.size !== 1 || code)) return nm.focus(), toast("Give the group a name.");
+    closeModal();
+    try { await createGroup(name, [...sel], code, appr.checked, vis === "public"); } catch (e) { console.error(e); toast("Couldn't create the group. Try again."); }
+  };
+  showModal("New group", [
+    h("div", { class: "field" }, nm),
+    h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:14px 0 4px" }, "Who can find it"), seg, codeBox,
+    h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:14px 0 8px" }, "Invite people on the page"),
+    pickList(sel, Object.keys(S.people)),
+  ], [h("button", { class: "ghost", onclick: closeModal }, "Cancel"), h("button", { class: "primary", onclick: go }, "Create group")], go);
+}
+function codeDialog(g) {
+  const inp = h("input", { class: "inp", maxlength: 24, value: newCode(), style: "letter-spacing:.1em;font-weight:700", "aria-label": "New code" });
+  const appr = h("input", { type: "checkbox", checked: !!g.approval });
+  const go = () => {
+    const c = normCode(inp.value);
+    if (c.length < 4) return toast("Codes need at least 4 letters or numbers.");
+    closeModal(); setCoded(g, c, appr.checked);
+  };
+  showModal(g.coded ? "Change join code" : "Add a private join code", [
+    h("p", null, g.coded ? "The old code stops working right away." : "The group stays hidden. Only people who type this code can find and join it."),
+    h("div", { class: "field" }, inp, h("button", { class: "ghost", onclick: () => { inp.value = newCode(); } }, "New")),
+    h("label", { class: "chk" }, appr, "Approve each person before they join"),
+  ], [h("button", { class: "ghost", onclick: closeModal }, "Cancel"), h("button", { class: "primary", onclick: go }, "Save code")], go);
+}
+function inviteDialog(uid, groups) {
+  showModal("Invite " + nameOf(uid) + " to…", [h("div", { class: "pick" }, groups.map((g) =>
+    h("button", { class: "row", onclick: () => { closeModal(); admit(g, [{ uid, name: S.people[uid].name, dh: S.people[uid].dh }]); toast("Invited " + nameOf(uid)); } },
+      groupAvatar(g), h("div", { class: "txt" }, titleOf(g)))))],
+  [h("button", { class: "ghost", onclick: closeModal }, "Cancel")]);
+}
+function joinDialog(prefill) {
+  const inp = h("input", { class: "inp", maxlength: 24, value: prefill || "", placeholder: "Enter code", style: "letter-spacing:.1em;font-weight:700", "aria-label": "Join code" });
+  const find = async () => {
+    const code = normCode(inp.value);
+    if (code.length < 4) return toast("Codes have at least 4 letters or numbers.");
+    if (!S.conn) return toast("You're offline. Try again in a moment.");
+    if (S.lookup) unsub(T.door(S.lookup.doorId));
+    const doorId = await doorIdOf(code);
+    S.lookup = { code, doorId, key: await doorKeyOf(code, doorId), info: null, searched: false };
+    paintJoin(true);
+    sub(T.door(doorId));
+    setTimeout(() => { if (S.lookup && S.lookup.doorId === doorId && !S.lookup.searched) { S.lookup.searched = true; paintJoin(); } }, 4000);
+  };
+  showModal("Join with code", [h("div", { class: "field" }, inp, h("button", { class: "primary", onclick: find }, "Find")), h("div", { id: "joinRes" })],
+    [h("button", { class: "ghost", onclick: closeModal }, "Close")], find);
+  modal.onclose = () => { if (S.lookup) { unsub(T.door(S.lookup.doorId)); S.lookup = null; } modal.onclose = null; };
+  if (prefill) find();
+}
+function paintJoin(loading) {
+  const box = $("joinRes"); if (!box || !S.lookup) return;
+  const L = S.lookup;
+  box.replaceChildren();
+  if (loading) return box.append(h("p", null, "Looking for the group…"));
+  if (!L.info) return box.append(h("p", null, L.searched ? "No group uses that code on this page. Check it with whoever shared it." : "Looking for the group…"));
+  const o = L.info;
+  if (S.groups[o.gid]) return box.append(h("p", null, "You're already in “" + (o.name || "this group") + "”."),
+    h("button", { class: "primary", onclick: () => { closeModal(); openChat(o.gid); } }, "Open chat"));
+  box.append(h("div", { class: "card", style: "margin:12px 0 0" },
+    h("p", null, h("b", null, o.name || "Unnamed group"), " · " + (Number(o.n) || 1) + " members"),
+    h("p", { style: "color:var(--mute);font-size:13px" }, o.approval ? "The admin approves each new member." : "You'll get in as soon as the admin is online."),
+    h("button", { class: "primary", onclick: async () => { const l = S.lookup; S.lookup = null; closeModal(); S.lookup = l; await requestJoin(l); S.lookup = null; toast("Request sent"); S.tab = "chats"; render(); } }, "Ask to join")));
+}
+
+/* ================= wiring ================= */
+function openChat(gid) {
+  S.active = gid; S.drawer = false;
+  const g = S.groups[gid];
+  if (g) g.unread = 0;
+  saveGroups(); render();
+  setTimeout(() => $("input").focus(), 0);
+}
 $("tabChats").onclick = () => { S.tab = "chats"; render(); };
 $("tabPeople").onclick = () => { S.tab = "people"; render(); };
-$("newBtn").onclick = () => S.db && openPicker("new");
-$("membersBtn").onclick = () => { S.drawer = !S.drawer; render(); };
+$("tabPublic").onclick = () => { S.tab = "public"; render(); };
+$("newBtn").onclick = () => newGroupDialog();
+$("joinBtn").onclick = () => joinDialog();
+$("infoBtn").onclick = () => { S.drawer = !S.drawer; render(); };
 $("closeDrawer").onclick = () => { S.drawer = false; render(); };
-$("backBtn").onclick = () => { S.active = null; S.drawer = false; stopMsgs(); render(); };
+$("backBtn").onclick = () => { S.active = null; S.drawer = false; render(); };
+$("attachBtn").onclick = () => $("fileInput").click();
+$("fileInput").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; sendFile(f); };
 $("input").addEventListener("input", (e) => { $("sendBtn").disabled = !e.target.value.trim(); });
+$("input").addEventListener("paste", (e) => {
+  const f = [...(e.clipboardData && e.clipboardData.files || [])][0];
+  if (f) { e.preventDefault(); sendFile(f); }
+});
 $("composer").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const inp = $("input"), text = inp.value.trim();
-  const c = chatOf(S.active);
-  if (!text || !c) return;
+  const g = S.groups[S.active], inp = $("input"), text = inp.value.trim();
+  if (!g || !text) return;
   inp.value = ""; $("sendBtn").disabled = true;
-  try { await post(c.id, { text: text.slice(0, 2000) }); }
-  catch (err) { inp.value = text; $("sendBtn").disabled = false; fail(err); }
+  if (!(await sendMsg(g, { text: clip(text, 4000) }))) { inp.value = text; $("sendBtn").disabled = false; }
 });
+const mainEl = $("main");
+mainEl.addEventListener("dragover", (e) => { if (S.active && e.dataTransfer.types.includes("Files")) { e.preventDefault(); $("app").classList.add("dropping"); } });
+mainEl.addEventListener("dragleave", (e) => { if (!mainEl.contains(e.relatedTarget)) $("app").classList.remove("dropping"); });
+mainEl.addEventListener("drop", (e) => { e.preventDefault(); $("app").classList.remove("dropping"); const f = e.dataTransfer.files[0]; if (f) sendFile(f); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
 document.addEventListener("keydown", (e) => {
-  if ($("dlg").open) return;
+  if (modal.open || !ID || !ID.raw.name) return;
   const typing = /INPUT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName);
   if (e.key === "Escape") {
     if (S.drawer) { S.drawer = false; render(); }
-    else if (S.active) { document.activeElement.blur(); }
+    else if (typing) document.activeElement.blur();
+    else if (S.active) { S.active = null; render(); }
     return;
   }
-  if (e.altKey && !e.ctrlKey) {
-    const k = e.key.toLowerCase();
-    if (k === "n" || e.code === "KeyN") { e.preventDefault(); if (S.db) openPicker("new"); }
-    else if (k === "p" || e.code === "KeyP") { e.preventDefault(); S.tab = S.tab === "people" ? "chats" : "people"; render(); }
-    else if ((k === "m" || e.code === "KeyM") && S.active) { e.preventDefault(); S.drawer = !S.drawer; render(); }
-    else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+  if (e.altKey && !e.ctrlKey && !e.metaKey) {
+    const c = e.code;
+    const act = {
+      KeyN: () => newGroupDialog(), KeyJ: () => joinDialog(), KeyS: () => nameDialog(false),
+      KeyP: () => { S.tab = S.tab === "people" ? "chats" : "people"; render(); },
+      KeyG: () => { S.tab = S.tab === "public" ? "chats" : "public"; render(); },
+      KeyM: () => { if (S.active) { S.drawer = !S.drawer; render(); } },
+      KeyU: () => { if (S.active) $("fileInput").click(); },
+    }[c];
+    if (act) { e.preventDefault(); act(); return; }
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
-      if (!S.chats.length) return;
-      const i = S.chats.findIndex((c) => c.id === S.active);
-      const n = e.key === "ArrowDown" ? (i + 1) % S.chats.length : (i <= 0 ? S.chats.length - 1 : i - 1);
-      S.tab = "chats"; openChat(S.chats[n].id);
+      const gs = sortedGroups(); if (!gs.length) return;
+      const i = gs.findIndex((g) => g.gid === S.active);
+      const n = e.key === "ArrowDown" ? (i + 1) % gs.length : (i <= 0 ? gs.length - 1 : i - 1);
+      S.tab = "chats"; openChat(gs[n].gid);
     }
     return;
   }
-  if (e.key === "/" && !typing && S.active) { e.preventDefault(); focusInput(); }
+  if (e.key === "/" && !typing && S.active) { e.preventDefault(); $("input").focus(); }
 });
 
-/* ---------- boot ---------- */
-function offline(msg) {
-  document.body.replaceChildren(h("div", { class: "offline" }, h("h2", { style: "color:var(--ink)" }, "Chat needs the published page"), h("p", null, msg)));
-}
-async function boot() {
-  if (!window.claude || typeof window.claude.use !== "function") return offline("Open this page from its claude.ai link, signed in, to see who's here and chat.");
-  const [db, user, room] = await Promise.all(["db", "user", "room"].map((n) => window.claude.use(n).catch(() => null)));
-  if (!db || !user) return offline("Chat storage isn't available in this view. Open the page from its claude.ai link while signed in.");
-  const me = await user.id();
-  if (!me) return offline("Sign in to claude.ai to join the chat.");
-  Object.assign(S, { db, user, room, me });
-
-  db.doc("people/" + me).set({ seen: Date.now() }).catch(() => {});
-  db.collection("people").orderBy("seen", "desc").limit(300).onSnapshot((s) => { S.people = s.docs.map((d) => d.id); render(); }, () => {});
-  db.doc("data/users/" + me + "/state").onSnapshot((s) => {
-    const d = s.exists ? s.data() : null;
-    S.read = Object.assign({}, (d && d.read) || {}, S.read);
-    render();
-  }, () => {});
-  db.collection("chats").where("members", "array-contains", me).onSnapshot((s) => {
-    const prev = S.knownChats;
-    S.chats = s.docs.map((d) => Object.assign({ id: d.id }, d.data(), { members: (d.data().members || []).slice() }))
-      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    const ids = new Set(S.chats.map((c) => c.id));
-    if (prev && !s.metadata.fromCache) {
-      for (const c of S.chats) if (!prev.has(c.id) && c.admin !== me) toast("You were added to " + (c.name || "a chat"));
-      if (S.active && prev.has(S.active) && !ids.has(S.active)) {
-        toast("You're no longer in that chat");
-        S.active = null; S.drawer = false; stopMsgs();
-      }
-    }
-    if (!s.metadata.fromCache || !prev) S.knownChats = ids;
-    if (S.active) markRead();
-    render();
-  }, (e) => { console.error(e); toast("Lost connection to chats. Reload the page."); });
-
-  if (room) {
-    const sync = () => {
-      S.online = new Set(room.peers().map((p) => p.presence && p.presence.uid).filter((u) => typeof u === "string"));
-      render();
-    };
-    room.presence({ uid: me }).catch(() => {});
-    room.onPeers(sync, () => {});
-    sync();
-    room.on("invite", (m) => {
-      const d = m.data || {};
-      if (d.to === me && !m.isMe && typeof d.chat === "string") {
-        const c = chatOf(d.chat);
-        if (c && S.active !== c.id) toast(name(c.admin) + " invited you to " + chatTitle(c));
-      }
-    });
+/* ================= boot ================= */
+(async function boot() {
+  if (!window.crypto || !crypto.subtle) {
+    document.body.replaceChildren(h("p", { style: "padding:40px;text-align:center" }, "This chat needs a secure page (https). Publish it on an https host and open it there."));
+    return;
   }
-  render();
-}
-paint();
-boot();
+  await loadIdentity();
+  loadAll();
+  paint();
+  const m = location.hash.match(/join=([A-Za-z0-9-]{4,30})/);
+  if (!ID.raw.name) nameDialog(true); else connect();
+  if (m) {
+    history.replaceState(null, "", location.pathname + location.search);
+    const code = normCode(m[1]);
+    const wait = setInterval(() => { if (S.conn && ID.raw.name && !modal.open) { clearInterval(wait); joinDialog(code); } }, 300);
+  }
+})();
 })();
 </script>
 </body>
