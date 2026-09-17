@@ -36,12 +36,12 @@
       background-color: #2c438f;
       color: #fff;
     }
-    #redirectForm {
+    #redirectForm, #MTform {
       display: flex;
       align-items: center;
       gap: 10px;
     }
-    #redirectForm input[list] {
+    #redirectForm input[list], #MTform input[list] {
       padding: 8px 12px;
       font-size: 16px;
       border-radius: 5px;
@@ -53,12 +53,16 @@
       box-shadow: inset 0 0 5px #002080;
       transition: background-color 0.3s ease;
     }
-    #redirectForm input[list]:focus {
+    #MTform input[list] {
+      flex: 1;
+      margin: 0;
+    }
+    #redirectForm input[list]:focus, #MTform input[list]:focus {
       background-color: #2c438f;
       box-shadow: 0 0 8px #6090ff;
       color: #fff;
     }
-    #redirectForm input[type="submit"] {
+    #redirectForm input[type="submit"], #MTform input[type="submit"] {
       padding: 8px 20px;
       font-size: 16px;
       border-radius: 5px;
@@ -70,7 +74,7 @@
       box-shadow: 0 3px 8px rgba(0,0,0,0.4);
       transition: background-color 0.3s ease, box-shadow 0.3s ease;
     }
-    #redirectForm input[type="submit"]:hover {
+    #redirectForm input[type="submit"]:hover, #MTform input[type="submit"]:hover {
       background-color: #5c75e6;
       box-shadow: 0 5px 12px rgba(92,117,230,0.6);
     }
@@ -160,6 +164,10 @@
       background-color: #5c75e6;
       box-shadow: 0 8px 28px rgba(92,117,230,0.7);
     }
+    button:focus-visible, input:focus-visible {
+      outline: 2px solid #a3b8ff;
+      outline-offset: 2px;
+    }
     #result, #error, #answer, #percentageAnswer, #primeResult {
       margin-top: 15px;
       font-weight: 700;
@@ -172,6 +180,20 @@
       vertical-align: middle;
       max-width: 85%;
       user-select: text;
+    }
+    #result {
+      text-align: left;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    #result .res-main {
+      color: #ffffff;
+      font-size: 22px;
+    }
+    #result .res-note {
+      color: #9fb0f0;
+      font-size: 14px;
+      font-weight: 500;
     }
     #error {
       color: #ff7070;
@@ -235,6 +257,17 @@
       min-width: 0;
       margin-bottom: 0;
     }
+    td .input-copy-wrapper {
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 0;
+    }
+    td .input-copy-wrapper input {
+      width: 100%;
+      padding: 10px 6px;
+      font-size: 18px;
+      text-align: center;
+    }
     .copy-input-btn {
       width: auto;
       min-width: 38px;
@@ -276,7 +309,7 @@
       color: #e0e6f8;
     }
     td {
-      padding: 8px;
+      padding: 8px 4px;
       text-align: center;
       vertical-align: middle;
       font-weight: 600;
@@ -285,6 +318,7 @@
     td.operator {
       font-weight: 700;
       font-size: 18px;
+      width: 18px;
     }
     .clear-btn {
       background-color: #bb3a3a;
@@ -292,12 +326,12 @@
     .clear-btn:hover {
       background-color: #cc4848;
     }
-    #ratio-buttons {
+    #ratio-buttons, #percentage-buttons {
       display: flex;
       gap: 10px;
       margin-top: 10px;
     }
-    #ratio-buttons button {
+    #ratio-buttons button, #percentage-buttons button {
       flex: 1;
     }
     #discountModeContainer {
@@ -306,6 +340,51 @@
       color: #e0e6f8;
       font-weight: 600;
     }
+
+    /* ---- Arithmetic keypad / exponent mode ---- */
+    .math-keys {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 8px;
+    }
+    .math-keys button {
+      width: auto;
+      min-width: 44px;
+      padding: 8px 12px;
+      font-size: 17px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+    }
+    #supToggle.active {
+      background-color: #b43bd4;
+      box-shadow: 0 0 14px rgba(214,90,255,0.75);
+    }
+    #equationInput.sup-mode {
+      border-color: #d65aff;
+      box-shadow: 0 0 14px rgba(214,90,255,0.55);
+    }
+    .math-hint {
+      font-size: 13px;
+      color: #c9d5ff;
+      margin: 0 0 12px;
+      line-height: 1.7;
+    }
+    .math-hint kbd {
+      background: #123275;
+      border: 1px solid #2c438f;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: inherit;
+    }
+    #supStatus {
+      display: none;
+      color: #e7a6ff;
+      font-weight: 700;
+    }
+    #supStatus.on {
+      display: inline;
+    }
+
     #circCalculator {
       display: flex;
       align-items: flex-start;
@@ -413,7 +492,39 @@
       text-align: center;
       font-size: 17px;
     }
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translate(-50%, 20px);
+      background: #123275;
+      color: #fff;
+      border: 1px solid #6090ff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
     @media (max-width: 650px) {
+      main {
+        margin: 20px 10px;
+        padding: 20px 16px;
+      }
+      header {
+        padding: 12px 14px;
+      }
+      #redirectForm input[list] {
+        min-width: 0;
+        width: 110px;
+      }
       #circCalculator {
         flex-direction: column;
         gap: 8px;
@@ -422,6 +533,9 @@
         align-self: center;
         flex-basis: auto;
       }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
     }
     abbr {
       text-decoration:none;
@@ -447,12 +561,13 @@
 
   <main>
     <form id="MTform">
-      <input list="MTopics" name="Topics" id="MTopicImput" placeholder="Topic" autocomplete="off"/>
+      <input list="MTopics" name="Topics" id="MTopicInput" placeholder="Topic" autocomplete="off"/>
       <datalist id="MTopics">
         <option value="Arithmetic"></option>
         <option value="Ratio Calculator"></option>
-        <option value="Prime Factorization"></option>
         <option value="Percentage Calculator"></option>
+        <option value="Prime Factorization"></option>
+        <option value="Circumference Calculator"></option>
       </datalist>
       <input type="submit" value="Go" />
     </form>
@@ -464,14 +579,33 @@
         <input
           type="text"
           id="equationInput"
-          placeholder="Enter expression (Fractions work)"
+          placeholder="e.g. 2x² + 3x = 5"
           autocomplete="off"
+          spellcheck="false"
         />
+        <button type="button" class="copy-input-btn" data-copy-target="equationInput" title="Copy expression"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
       </div>
-      <button onclick="solveEquation()">Calculate</button>
+      <div class="math-keys" id="mathKeys">
+        <button type="button" id="supToggle" title="Exponent mode (^ or Ctrl+↑)">xⁿ</button>
+        <button type="button" data-insert="²" title="Squared">x²</button>
+        <button type="button" data-insert="³" title="Cubed">x³</button>
+        <button type="button" data-insert="√(" title="Square root">√</button>
+        <button type="button" data-insert="π" title="Pi">π</button>
+        <button type="button" data-insert="x" title="Variable x">x</button>
+        <button type="button" data-insert="y" title="Variable y">y</button>
+        <button type="button" data-insert="(" title="Open bracket">(</button>
+        <button type="button" data-insert=")" title="Close bracket">)</button>
+        <button type="button" data-insert=" = " title="Equals (solve)">=</button>
+      </div>
+      <p class="math-hint">
+        <kbd>^</kbd> or <kbd>Ctrl</kbd>+<kbd>↑</kbd> types small exponent numbers, <kbd>Space</kbd> or <kbd>Esc</kbd> goes back to normal.
+        Add <kbd>=</kbd> to solve for a variable; without a solution the expression is simplified.
+        <kbd>Enter</kbd> calculates. <span id="supStatus">Exponent mode on</span>
+      </p>
+      <button type="button" onclick="solveEquation()">Calculate</button>
       <div class="answer-container">
         <div id="result"></div>
-        <button class="copy-answer-btn" id="copyResult" title="Copy result"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
+        <button type="button" class="copy-answer-btn" id="copyResult" title="Copy result"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
       </div>
       <div id="error"></div>
     </section>
@@ -480,7 +614,7 @@
 
     <section id="ratioSolver" class="collapsed">
       <h1>Ratio Calculator</h1>
-      <form id="CalculatorForm" onsubmit="return calculateButtonWorking()">
+      <form id="CalculatorForm" onsubmit="return calculateButtonWorking(event)">
         <table>
           <tr>
             <td><label for="n_1">A</label></td>
@@ -492,13 +626,13 @@
             <td><label for="d_2">D</label></td>
           </tr>
           <tr>
-            <td class="input-copy-wrapper"><input type="number" id="n_1" name="n_1" value="2" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="n_1" title="Copy A"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td><div class="input-copy-wrapper"><input type="number" id="n_1" name="n_1" value="2" autocomplete="off" step="any" /><button type="button" class="copy-input-btn" data-copy-target="n_1" title="Copy A"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></div></td>
             <td class="operator">:</td>
-            <td class="input-copy-wrapper"><input type="number" id="d_1" name="d_1" value="5" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="d_1" title="Copy B"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td><div class="input-copy-wrapper"><input type="number" id="d_1" name="d_1" value="5" autocomplete="off" step="any" /><button type="button" class="copy-input-btn" data-copy-target="d_1" title="Copy B"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></div></td>
             <td class="operator">=</td>
-            <td class="input-copy-wrapper"><input type="number" id="n_2" name="n_2" value="6" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="n_2" title="Copy C"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td><div class="input-copy-wrapper"><input type="number" id="n_2" name="n_2" value="6" autocomplete="off" step="any" /><button type="button" class="copy-input-btn" data-copy-target="n_2" title="Copy C"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></div></td>
             <td class="operator">:</td>
-            <td class="input-copy-wrapper"><input type="number" id="d_2" name="d_2" value="" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="d_2" title="Copy D"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td><div class="input-copy-wrapper"><input type="number" id="d_2" name="d_2" value="" autocomplete="off" step="any" /><button type="button" class="copy-input-btn" data-copy-target="d_2" title="Copy D"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></div></td>
           </tr>
         </table>
         <div id="ratio-buttons">
@@ -508,6 +642,7 @@
       </form>
       <div class="answer-container">
         <div id="answer"></div>
+        <button type="button" class="copy-answer-btn" id="copyAnswer" title="Copy ratio answer"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
       </div>
     </section>
 
@@ -515,7 +650,7 @@
 
     <section id="percentageSolver" class="collapsed">
       <h1>Percentage Calculator</h1>
-      <form id="PercentageForm" onsubmit="return calculatePercentage()">
+      <form id="PercentageForm" onsubmit="return calculatePercentage(event)">
         <table>
           <tr>
             <td><label for="baseValue">Base (100%)</label></td>
@@ -525,14 +660,11 @@
             <td><label for="resultValue">Answer</label></td>
           </tr>
           <tr>
-            <td class="input-copy-wrapper"><input type="number" id="baseValue" name="baseValue" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="baseValue" title="Copy Base"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td><div class="input-copy-wrapper"><input type="number" id="baseValue" name="baseValue" autocomplete="off" step="any" /><button type="button" class="copy-input-btn" data-copy-target="baseValue" title="Copy Base"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></div></td>
             <td class="operator">%</td>
-            <td class="input-copy-wrapper"><input type="number" id="percentValue" name="percentValue" autocomplete="off" step="any" /><button class="copy-input-btn" data-copy-target="percentValue" title="Copy Percent"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></td>
+            <td><div class="input-copy-wrapper"><input type="number" id="percentValue" name="percentValue" autocomplete="off" step="any" /><button type="button" class="copy-input-btn" data-copy-target="percentValue" title="Copy Percent"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></div></td>
             <td class="operator">=</td>
-            <td class="input-copy-wrapper">
-              <input type="number" id="resultValue" name="resultValue" autocomplete="off" step="any" />
-              <button type="button" class="copy-input-btn" data-copy-target="resultValue" title="Copy Result"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
-            </td>
+            <td><div class="input-copy-wrapper"><input type="number" id="resultValue" name="resultValue" autocomplete="off" step="any" /><button type="button" class="copy-input-btn" data-copy-target="resultValue" title="Copy Result"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button></div></td>
           </tr>
         </table>
         <div id="discountModeContainer">
@@ -547,7 +679,7 @@
       </form>
       <div class="answer-container">
         <div id="percentageAnswer"></div>
-        <button class="copy-answer-btn" id="copyPercentageAnswer" title="Copy percentage answer"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
+        <button type="button" class="copy-answer-btn" id="copyPercentageAnswer" title="Copy percentage answer"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"></button>
       </div>
     </section>
 
@@ -563,12 +695,12 @@
           autocomplete="off"
           min="2"
         />
-        <button class="copy-input-btn" data-copy-target="primeInput" title="Copy Prime Input"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon" /></button>
+        <button type="button" class="copy-input-btn" data-copy-target="primeInput" title="Copy Prime Input"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon" /></button>
       </div>
-      <button onclick="primeFactorize()">Factorize</button>
+      <button type="button" onclick="primeFactorize()">Factorize</button>
       <div class="answer-container">
         <div id="primeResult"></div>
-        <button class="copy-answer-btn" id="copyPrimeResult" title="Copy prime factorization result"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon" /></button>
+        <button type="button" class="copy-answer-btn" id="copyPrimeResult" title="Copy prime factorization result"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon" /></button>
       </div>
       <div id="primeError" style="color:#ff7070; font-weight:700; margin-top:8px;"></div>
     </section>
@@ -608,68 +740,591 @@
             <br>
             <button id="submitCircumference" type="button">Calculate</button>
             <br>
-            <button id="clearCircButton" onclick="clearCirc()" class="clear-btn" id="">Clear</button>
+            <button id="clearCircButton" type="button" class="clear-btn">Clear</button>
           </form>
         </div>
         <div id="circDiagram">
           <svg width="300" height="300" viewBox="0 0 300 300" aria-label="Circle diagram showing radius, diameter and circumference" role="img" style="display:block; margin: 20px auto;">
             <circle cx="150" cy="150" r="100" stroke="#a3b8ff" stroke-width="3" fill="none" />
             <line x1="150" y1="150" x2="250" y2="150" stroke="#5c75e6" stroke-width="4" />
-            <text x="200" y="140" fill="#5c75e6" font-size="14" font-weight="600" text-anchor="middle" user-select="none">R</text>
+            <text x="200" y="140" fill="#5c75e6" font-size="14" font-weight="600" text-anchor="middle">R</text>
             <line x1="50" y1="150" x2="250" y2="150" stroke="#3a4db7" stroke-width="4" stroke-dasharray="10,5" />
-            <text x="150" y="170" fill="#3a4db7" font-size="14" font-weight="600" text-anchor="middle" user-select="none">D</text>
+            <text x="150" y="170" fill="#3a4db7" font-size="14" font-weight="600" text-anchor="middle">D</text>
             <circle cx="150" cy="150" r="4" fill="#5c75e6"/>
-            <text x="150" y="40" fill="#a3b8ff" font-size="16" font-weight="700" text-anchor="middle" user-select="none">C</text>
+            <text x="150" y="40" fill="#a3b8ff" font-size="16" font-weight="700" text-anchor="middle">C</text>
             <path d="M50 150 A100 100 0 0 1 250 150" fill="none" stroke="#a3b8ff" stroke-width="4" />
-            
-            <defs>
-              <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-                <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#5c75e6"/>
-              </marker>
-            </defs>
           </svg>
         </div>
       </div>
       <div class="answer-container" style="justify-content:center;">
-        <div id="circAnswer" style="color:#c8d0ff; font-weight:700; font-size:18px; white-space:pre-wrap; min-height: 40px;"></div>
-        <button class="copy-answer-btn" id="copyCircAnswer" title="Copy answer"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"/></button>
+        <div id="circAnswer" style="color:#c8d0ff; font-weight:700; font-size:18px; white-space:pre-wrap; min-height: 40px; user-select:text;"></div>
+        <button type="button" class="copy-answer-btn" id="copyCircAnswer" title="Copy answer"><img src="https://uploads.onecompiler.io/44fzjzcps/44fzsq7e8/copysymbol.png" alt="Copy icon"/></button>
       </div>
     </section>
+  </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
   <script>
-    
+    // ================= Navigation =================
+    // Adjust these file names to match your site.
+    const PAGE_LINKS = {
+      "main page": "index.html",
+      "math": null,            // null = this page
+      "steam": "steam.html"
+    };
+    const TOPIC_SECTIONS = {
+      "arithmetic": "arithmeticSolver",
+      "ratio calculator": "ratioSolver",
+      "percentage calculator": "percentageSolver",
+      "prime factorization": "primeFactorization",
+      "circumference calculator": "circumferenceCalculator"
+    };
+
+    function findKey(map, text) {
+      const q = text.trim().toLowerCase();
+      if (!q) return null;
+      if (q in map) return q;
+      return Object.keys(map).find(k => k.startsWith(q)) || Object.keys(map).find(k => k.includes(q)) || null;
+    }
+
+    function openSection(id) {
+      const section = document.getElementById(id);
+      if (!section) return;
+      section.classList.remove("collapsed");
+      const h = section.querySelector("h1, h2");
+      if (h) h.classList.add("expanded");
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+      const firstInput = section.querySelector("input");
+      if (firstInput) setTimeout(() => firstInput.focus({ preventScroll: true }), 300);
+    }
+
+    document.getElementById("MTform").addEventListener("submit", e => {
+      e.preventDefault();
+      const input = document.getElementById("MTopicInput");
+      const key = findKey(TOPIC_SECTIONS, input.value);
+      if (key) { openSection(TOPIC_SECTIONS[key]); input.value = ""; }
+      else showToast("Topic not found.");
+    });
+
+    document.getElementById("redirectForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const key = findKey(PAGE_LINKS, document.getElementById("TopicsInput").value);
+      if (!key) { showToast("Subject not found."); return; }
+      if (PAGE_LINKS[key]) window.location.href = PAGE_LINKS[key];
+      else window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
     // Expand/collapse logic for topics
     document.querySelectorAll('section h1, section h2').forEach(header => {
       header.addEventListener('click', () => {
         const section = header.parentElement;
         section.classList.toggle('collapsed');
-        header.classList.toggle('expanded');
+        header.classList.toggle('expanded', !section.classList.contains('collapsed'));
       });
     });
-    
-    function decimalToFraction(decimal) {
-      if (Number.isInteger(decimal)) return decimal.toString();
-      const tolerance = 1.0e-10;
-      let h1 = 1,
-        h2 = 0,
-        k1 = 0,
-        k2 = 1,
-        b = decimal;
-      do {
-        let a = Math.floor(b);
-        let aux = h1;
-        h1 = a * h1 + h2;
-        h2 = aux;
-        aux = k1;
-        k1 = a * k1 + k2;
-        k2 = aux;
-        b = 1 / (b - a);
-      } while (Math.abs(decimal - h1 / k1) > decimal * tolerance);
-      return `${h1}/${k1}`;
+
+    // ================= Toast =================
+    let toastTimer = null;
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove("show"), 1600);
     }
 
+    /* SOLVER START */
+    // ================= Number formatting =================
+    function fmtNum(x) {
+      x = Number(x);
+      if (!isFinite(x)) return String(x);
+      if (Math.abs(x) < 1e-12) return "0";
+      return String(Number(x.toPrecision(12)));
+    }
 
+    // Continued-fraction approximation. Works with negatives.
+    function fractionInfo(decimal, maxDen = 1e6) {
+      decimal = Number(decimal);
+      if (!isFinite(decimal)) return { str: String(decimal), exact: false };
+      if (Math.abs(decimal) < 1e-12) return { str: "0", exact: true };
+      if (Number.isInteger(decimal)) return { str: String(decimal), exact: true };
+      const sign = decimal < 0 ? "-" : "";
+      const x = Math.abs(decimal);
+      let hPrev = 0, h = 1, kPrev = 1, k = 0, b = x;
+      for (let i = 0; i < 64; i++) {
+        const a = Math.floor(b);
+        const hn = a * h + hPrev, kn = a * k + kPrev;
+        if (kn > maxDen) break;
+        hPrev = h; h = hn; kPrev = k; k = kn;
+        if (Math.abs(x - h / k) <= x * 1e-12) break;
+        const f = b - a;
+        if (f < 1e-15) break;
+        b = 1 / f;
+      }
+      if (k === 0) return { str: fmtNum(decimal), exact: false };
+      const exact = Math.abs(x - h / k) <= x * 1e-10;
+      return { str: sign + (k === 1 ? String(h) : `${h}/${k}`), exact };
+    }
+
+    function decimalToFraction(decimal) {
+      return fractionInfo(decimal).str;
+    }
+
+    // "3/2 (1.5)" when the value is a nice fraction, otherwise the decimal
+    function fmtExact(x) {
+      const f = fractionInfo(x, 10000);
+      if (f.exact && f.str.includes("/")) return `${f.str}  (≈ ${fmtNum(x)})`;
+      if (f.exact) return f.str;
+      return fmtNum(x);
+    }
+
+    function toScalar(v) {
+      const t = math.typeOf(v);
+      if (t === "number") return { re: v, im: 0 };
+      if (t === "Complex") return { re: v.re, im: v.im };
+      if (t === "BigNumber" || t === "Fraction") return { re: Number(v), im: 0 };
+      return null;
+    }
+
+    function fmtComplex(re, im, exact = true) {
+      const f = exact ? fmtExact : fmtNum;
+      if (Math.abs(im) < 1e-10) return f(re);
+      const imAbs = Math.abs(im);
+      const imStr = Math.abs(imAbs - 1) < 1e-12 ? "i" : `${exact ? fractionInfo(imAbs, 10000).exact ? fractionInfo(imAbs, 10000).str : fmtNum(imAbs) : fmtNum(imAbs)}i`;
+      if (Math.abs(re) < 1e-10) return (im < 0 ? "-" : "") + imStr;
+      const reStr = exact && fractionInfo(re, 10000).exact ? fractionInfo(re, 10000).str : fmtNum(re);
+      return `${reStr} ${im < 0 ? "-" : "+"} ${imStr}`;
+    }
+
+    // ================= Superscripts =================
+    const SUP_MAP = {
+      "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+      "+": "⁺", "-": "⁻", "(": "⁽", ")": "⁾", "/": "ᐟ",
+      a: "ᵃ", b: "ᵇ", c: "ᶜ", d: "ᵈ", e: "ᵉ", f: "ᶠ", g: "ᵍ", h: "ʰ", i: "ⁱ", j: "ʲ", k: "ᵏ", l: "ˡ", m: "ᵐ",
+      n: "ⁿ", o: "ᵒ", p: "ᵖ", r: "ʳ", s: "ˢ", t: "ᵗ", u: "ᵘ", v: "ᵛ", w: "ʷ", x: "ˣ", y: "ʸ", z: "ᶻ"
+    };
+    const SUP_REV = Object.fromEntries(Object.entries(SUP_MAP).map(([k, v]) => [v, k]));
+    const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\\-\/]/g, "\\$&");
+    const SUP_RUN_RE = new RegExp("[" + Object.values(SUP_MAP).map(escapeRe).join("") + "]+", "g");
+    const canSup = s => [...s].every(c => SUP_MAP[c]);
+    const toSup = s => [...s].map(c => SUP_MAP[c] || c).join("");
+
+    // ================= Parsing helpers =================
+    const CONSTANTS = new Set(["pi", "e", "i", "tau", "phi", "Infinity", "NaN", "E", "PI"]);
+    const VAR_PRIORITY = ["x", "y", "z", "t", "n", "a", "b", "c"];
+
+    function normalizeInput(raw) {
+      let s = raw
+        .replace(/[−–—]/g, "-")
+        .replace(/[×·∙⋅]/g, "*")
+        .replace(/÷/g, "/")
+        .replace(/π/g, " pi ");
+      // superscript runs -> ^(...)
+      s = s.replace(SUP_RUN_RE, run => "^(" + [...run].map(c => SUP_REV[c]).join("") + ")");
+      // roots
+      s = s.replace(/∛\s*\(/g, "cbrt(").replace(/√\s*\(/g, "sqrt(");
+      s = s.replace(/∛\s*([0-9.]+|[A-Za-z])/g, "cbrt($1)").replace(/√\s*([0-9.]+|[A-Za-z])/g, "sqrt($1)");
+      // words: keep functions/constants, split "xy" into "x*y"
+      s = s.replace(/[A-Za-z]+/g, w => {
+        if (w === "ln") return "log";
+        if (CONSTANTS.has(w) || w.length === 1) return w;
+        if (typeof math[w] === "function") return w;
+        return w.split("").join("*");
+      });
+      // single-letter variable followed by "(" is multiplication, not a function call
+      s = s.replace(/(^|[^A-Za-z_])(pi|tau|phi|[A-Za-z])\s*\(/g, "$1$2*(");
+      return s;
+    }
+
+    function getVars(node) {
+      const set = new Set();
+      node.traverse((n, path, parent) => {
+        if (n.isSymbolNode && !(parent && parent.isFunctionNode && path === "fn") && !CONSTANTS.has(n.name)) {
+          set.add(n.name);
+        }
+      });
+      return [...set].sort((a, b) => {
+        const ia = VAR_PRIORITY.indexOf(a), ib = VAR_PRIORITY.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+      });
+    }
+
+    function subst(node, v, value) {
+      return node.transform((n, path) =>
+        n.isSymbolNode && n.name === v && path !== "fn" ? new math.ConstantNode(value) : n);
+    }
+
+    // explicit "*" so re-parsing never turns "pi (0)" into a function call
+    const str = n => n.toString({ implicit: "show" });
+
+    function safeSimplify(node) {
+      try { return math.simplify(node); } catch (e) { return node; }
+    }
+
+    function isZeroValue(val) {
+      const s = toScalar(val);
+      return !!s && Math.abs(s.re) < 1e-10 && Math.abs(s.im) < 1e-10;
+    }
+
+    function isZeroNode(n) {
+      if (getVars(n).length) return false;
+      try { return isZeroValue(n.evaluate()); } catch (e) { return false; }
+    }
+
+    // Readable output: x ^ 2 -> x², 2 * x -> 2x, sqrt -> √
+    function pretty(n) {
+      let s = typeof n === "string" ? n : n.toString();
+      s = s.replace(/(\d)\s+(?=[A-Za-z(])/g, "$1");
+      s = s.replace(/\s*\^\s*\((-?(?:\d+|[a-z]))\)/g, (m, b) => canSup(b) ? toSup(b) : m);
+      s = s.replace(/\s*\^\s*(-?(?:\d+|[a-z]))(?![\w.(])/g, (m, b) => canSup(b) ? toSup(b) : m);
+      s = s.replace(/\bsqrt\(/g, "√(").replace(/\bcbrt\(/g, "∛(").replace(/\bpi\b/g, "π");
+      s = s.replace(/(\d)\s*\*\s*(?=[A-Za-zπ√∛(])/g, "$1");
+      s = s.replace(/\s*\*\s*/g, "·");
+      return s;
+    }
+
+    function evalAt(node, v, value) {
+      try { return toScalar(node.evaluate({ [v]: value })); } catch (e) { return null; }
+    }
+
+    function isValidRoot(expr, v, re, im) {
+      const val = evalAt(expr, v, Math.abs(im) < 1e-12 ? re : math.complex(re, im));
+      return !!val && isFinite(val.re) && isFinite(val.im);
+    }
+
+    // ================= Polynomial solving =================
+    function polyInfo(expr, v) {
+      try {
+        const r = math.rationalize(expr, {}, true);
+        if (!r.coefficients || !r.coefficients.length) return null;
+        if (r.variables.length !== 1 || r.variables[0] !== v) return null;
+        const c = r.coefficients.map(Number);
+        if (c.some(x => !isFinite(x))) return null;
+        while (c.length > 1 && Math.abs(c[c.length - 1]) < 1e-14) c.pop();
+        return c;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function durandKerner(c) {
+      const n = c.length - 1;
+      const a = c.map(x => x / c[n]);
+      const C = math.complex;
+      let roots = Array.from({ length: n }, (_, k) => math.pow(C(0.4, 0.9), k));
+      const evalPoly = z => {
+        let r = C(1, 0);
+        for (let k = n - 1; k >= 0; k--) r = math.add(math.multiply(r, z), a[k]);
+        return r;
+      };
+      for (let iter = 0; iter < 800; iter++) {
+        let maxDelta = 0;
+        roots = roots.map((z, i) => {
+          let den = C(1, 0);
+          roots.forEach((w, j) => { if (i !== j) den = math.multiply(den, math.subtract(z, w)); });
+          const delta = math.divide(evalPoly(z), den);
+          maxDelta = Math.max(maxDelta, math.abs(delta));
+          return math.subtract(z, delta);
+        });
+        if (maxDelta < 1e-14) break;
+      }
+      const clean = x => {
+        if (Math.abs(x) < 1e-9) return 0;
+        const r = Math.round(x);
+        return Math.abs(x - r) < 1e-7 ? r : x;
+      };
+      const out = [];
+      roots.forEach(z => {
+        const re = clean(z.re), im = clean(z.im);
+        if (!out.some(o => Math.abs(o.re - re) < 1e-6 && Math.abs(o.im - im) < 1e-6)) out.push({ re, im });
+      });
+      return out.sort((p, q) => Math.abs(p.im) - Math.abs(q.im) || p.re - q.re);
+    }
+
+    function gcdInt(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; }
+
+    // Exact form for integer-coefficient quadratics with irrational roots
+    function quadExact(a, b, c, v) {
+      if (![a, b, c].every(Number.isInteger)) return null;
+      const D = b * b - 4 * a * c;
+      const absD = Math.abs(D);
+      if (Number.isInteger(Math.sqrt(absD)) && D >= 0) return null; // rational: shown as fractions
+      let k = 1, m = absD;
+      for (let f = 2; f * f <= m; f++) while (m % (f * f) === 0) { m /= f * f; k *= f; }
+      let p = -b, q = 2 * a;
+      if (q < 0) { p = -p; q = -q; }
+      const g = gcdInt(gcdInt(p, k), q);
+      p /= g; k /= g; q /= g;
+      let rootPart = m === 1 ? String(k) : (k === 1 ? "" : k) + "√" + m;
+      if (D < 0) rootPart = rootPart === "1" ? "i" : rootPart + (m === 1 ? "i" : "·i");
+      const inner = p === 0 ? `± ${rootPart}` : `${p} ± ${rootPart}`;
+      return q === 1 ? `${v} = ${inner}` : `${v} = (${inner}) / ${q}`;
+    }
+
+    function polyResult(c, expr, v, lines) {
+      const deg = c.length - 1;
+      if (deg === 0) {
+        if (Math.abs(c[0]) < 1e-12) {
+          lines.push("Every value of " + v + " works (identity).", "Infinite solutions.");
+        } else {
+          lines.push("No solution.", `The ${v} terms cancel and the equation reduces to ${fmtNum(c[0])} = 0, which is false.`);
+        }
+        return lines;
+      }
+      let roots;
+      if (deg === 1) {
+        roots = [{ re: -c[0] / c[1], im: 0 }];
+      } else if (deg === 2) {
+        const [cc, b, a] = c;
+        const D = b * b - 4 * a * cc;
+        if (D >= 0) {
+          const r1 = (-b + Math.sqrt(D)) / (2 * a), r2 = (-b - Math.sqrt(D)) / (2 * a);
+          roots = Math.abs(D) < 1e-12 ? [{ re: r1, im: 0 }] : [{ re: r1, im: 0 }, { re: r2, im: 0 }];
+        } else {
+          const re = -b / (2 * a), im = Math.sqrt(-D) / Math.abs(2 * a);
+          roots = [{ re, im }, { re, im: -im }];
+        }
+      } else {
+        roots = durandKerner(c);
+      }
+
+      const valid = roots.filter(r => isValidRoot(expr, v, r.re, r.im));
+      const rejected = roots.filter(r => !valid.includes(r));
+      const real = valid.filter(r => Math.abs(r.im) < 1e-9);
+      const complex = valid.filter(r => Math.abs(r.im) >= 1e-9);
+      const names = ["Linear", "Quadratic", "Cubic", "Quartic"];
+      const degName = names[deg - 1] || `Degree ${deg}`;
+
+      lines.push(`${degName} equation in ${v}: ${pretty(math.rationalize(expr))} = 0`);
+      if (!valid.length) {
+        lines.push("No solution.");
+      } else {
+        if (!real.length) lines.push("No real solutions. Complex solutions:");
+        valid.forEach((r, idx) => {
+          const sub = valid.length > 1 ? toSubscript(idx + 1) : "";
+          lines.push({ main: `${v}${sub} = ${fmtComplex(r.re, r.im, deg <= 2)}` });
+        });
+        if (deg === 2) {
+          const exact = quadExact(c[2], c[1], c[0], v);
+          if (exact) lines.push(`Exact: ${exact}`);
+        }
+      }
+      rejected.forEach(r => lines.push(`${v} = ${fmtComplex(r.re, r.im)} was rejected (it makes a denominator zero).`));
+      const method = {
+        1: `Method: move everything to one side and isolate ${v}.`,
+        2: "Method: quadratic formula, x = (−b ± √(b² − 4ac)) / 2a.",
+      }[deg] || "Method: roots found numerically (Durand–Kerner) and rounded.";
+      lines.push({ note: method });
+      if (complex.length && real.length) lines.push({ note: "Solutions with i are complex (not real)." });
+      return lines;
+    }
+
+    const toSubscript = n => String(n).split("").map(d => "₀₁₂₃₄₅₆₇₈₉"[d]).join("");
+
+    // ================= Symbolic (linear / quadratic in v) =================
+    function symbolicSolve(expr, v) {
+      let d1;
+      try { d1 = math.simplify(math.derivative(expr, v)); } catch (e) { return null; }
+      const at0 = subst(expr, v, 0);
+      if (!getVars(d1).includes(v)) {
+        if (isZeroNode(d1)) return null;
+        const sol = safeSimplify(math.parse(`-(${str(at0)}) / (${str(d1)})`));
+        return { kind: "linear", sols: [sol] };
+      }
+      let d2;
+      try { d2 = math.simplify(math.derivative(d1, v)); } catch (e) { return null; }
+      if (!getVars(d2).includes(v) && !isZeroNode(d2)) {
+        const a = `((${str(d2)}) / 2)`;
+        const b = `(${str(subst(d1, v, 0))})`;
+        const c = `(${str(at0)})`;
+        const disc = safeSimplify(math.parse(`${b}^2 - 4*${a}*${c}`));
+        const p = safeSimplify(math.parse(`-${b} / (2*${a})`));
+        const r = safeSimplify(math.parse(`sqrt(${str(disc)}) / (2*${a})`));
+        const s1 = safeSimplify(math.parse(`(${str(p)}) + (${str(r)})`));
+        const s2 = safeSimplify(math.parse(`(${str(p)}) - (${str(r)})`));
+        const sols = isZeroNode(disc) ? [p] : [s1, s2];
+        return { kind: "quadratic", sols, p, r, single: isZeroNode(disc) };
+      }
+      return null;
+    }
+
+    // ================= Numeric root search =================
+    function numericRoots(expr, v) {
+      let f;
+      try { f = expr.compile(); } catch (e) { return []; }
+      const g = x => {
+        try {
+          const s = toScalar(f.evaluate({ [v]: x }));
+          if (!s || Math.abs(s.im) > 1e-9) return NaN;
+          return s.re;
+        } catch (e) { return NaN; }
+      };
+      const roots = [];
+      const add = x => {
+        const r = Math.abs(x - Math.round(x)) < 1e-9 ? Math.round(x) : x;
+        if (!roots.some(q => Math.abs(q - r) < 1e-7)) roots.push(r);
+      };
+      const segments = [[-1000, -50, 0.5], [-50, 50, 0.01], [50, 1000, 0.5]];
+      for (const [from, to, step] of segments) {
+        let x0 = from, y0 = g(x0);
+        for (let x1 = from + step; x1 <= to + 1e-9; x1 += step) {
+          const y1 = g(x1);
+          if (y0 === 0) add(x0);
+          if (isFinite(y0) && isFinite(y1) && y0 * y1 < 0) {
+            let lo = x0, hi = x1, ylo = y0;
+            for (let k = 0; k < 80; k++) {
+              const mid = (lo + hi) / 2, ym = g(mid);
+              if (!isFinite(ym)) break;
+              if (ylo * ym <= 0) hi = mid; else { lo = mid; ylo = ym; }
+            }
+            const m = (lo + hi) / 2;
+            if (Math.abs(g(m)) < 1e-7) add(m); // skip poles like 1/x
+          }
+          x0 = x1; y0 = y1;
+        }
+      }
+      return roots.sort((a, b) => Math.abs(a) - Math.abs(b) || a - b);
+    }
+
+    // ================= Top-level solver =================
+    function simplifyOnly(L, R, lines, reason) {
+      lines.push(reason);
+      if (R) {
+        lines.push({ main: `${pretty(safeSimplify(L))} = ${pretty(safeSimplify(R))}` });
+        const combined = safeSimplify(math.parse(`(${str(L)}) - (${str(R)})`));
+        lines.push(`Same as: ${pretty(combined)} = 0`);
+      }
+      lines.push({ note: "Method: simplified with algebra rules (combine like terms, cancel, reduce)." });
+      return lines;
+    }
+
+    function solveEquationNodes(L, R) {
+      const lines = [`Equation: ${pretty(L)} = ${pretty(R)}`];
+      const expr = math.parse(`(${str(L)}) - (${str(R)})`);
+      const simp = safeSimplify(expr);
+      const vars = getVars(simp);
+
+      if (!vars.length) {
+        let val = null;
+        try { val = simp.evaluate(); } catch (e) { /* ignore */ }
+        if (val !== null && isZeroValue(val)) {
+          lines.push({ main: "True for every value (identity)." }, "Infinite solutions.");
+        } else {
+          lines.push({ main: "No solution." });
+          simplifyOnly(L, R, lines, "Both sides simplify to different values:");
+        }
+        return lines;
+      }
+
+      if (vars.length === 1) {
+        const v = vars[0];
+        const c = polyInfo(expr, v);
+        if (c) return polyResult(c, expr, v, lines);
+      }
+
+      for (const v of vars) {
+        const sym = symbolicSolve(expr, v);
+        if (!sym) continue;
+        const others = vars.filter(o => o !== v);
+        const shown = [];
+        if (others.length && sym.kind === "quadratic" && !sym.single) {
+          const pStr = isZeroNode(sym.p) ? "" : pretty(sym.p) + " ";
+          shown.push(`${v} = ${pStr}± ${pretty(sym.r)}`);
+          sym.sols = [];
+        }
+        sym.sols.forEach((s, idx) => {
+          const sub = sym.sols.length > 1 ? toSubscript(idx + 1) : "";
+          let line = `${v}${sub} = ${pretty(s)}`;
+          if (!others.length) {
+            let val = null;
+            try { val = toScalar(s.evaluate()); } catch (e) { /* ignore */ }
+            if (!val || !isFinite(val.re) || !isFinite(val.im)) return;
+            if (!isValidRoot(expr, v, val.re, val.im)) return;
+            const num = fmtComplex(val.re, val.im, false);
+            if (num !== pretty(s)) line += `  ≈ ${num}`;
+          }
+          shown.push(line);
+        });
+        if (!shown.length) continue;
+        shown.forEach(l => lines.push({ main: l }));
+        if (others.length) lines.push(`Solved for ${v}; ${others.join(", ")} treated as ${others.length > 1 ? "constants" : "a constant"}.`);
+        lines.push({ note: sym.kind === "linear"
+          ? `Method: collect the ${v} terms on one side and divide by their coefficient.`
+          : `Method: quadratic formula in ${v}.` });
+        return lines;
+      }
+
+      if (vars.length === 1) {
+        const v = vars[0];
+        const roots = numericRoots(expr, v);
+        if (roots.length) {
+          const MAX = 12;
+          roots.slice(0, MAX).forEach((r, idx) => {
+            const sub = roots.length > 1 ? toSubscript(idx + 1) : "";
+            lines.push({ main: `${v}${sub} ≈ ${fmtNum(r)}` });
+          });
+          if (roots.length > MAX) lines.push(`…and ${roots.length - MAX} more (closest to 0 shown).`);
+          lines.push({ note: "Method: no algebraic formula applies, so real solutions were found numerically between −1000 and 1000." });
+          return lines;
+        }
+        lines.push({ main: "No real solution found." });
+        return simplifyOnly(L, R, lines, "Simplified equation:");
+      }
+
+      return simplifyOnly(L, R, lines, `Can't isolate ${vars.join(" or ")} algebraically. Simplified instead:`);
+    }
+
+    function simplifyExpression(node, vars) {
+      const lines = [`Expression: ${pretty(node)}`];
+      const simp = safeSimplify(node);
+      lines.push("Simplified:", { main: pretty(simp) });
+      try {
+        const expanded = math.rationalize(node);
+        if (pretty(expanded) !== pretty(simp)) lines.push(`Expanded: ${pretty(expanded)}`);
+      } catch (e) { /* not a rational expression */ }
+      lines.push(`Variables: ${vars.join(", ")}`);
+      lines.push({ note: "No \"=\" sign, so the expression was simplified. Add \"= value\" to solve for a variable." });
+      return lines;
+    }
+
+    function evaluateNumeric(node) {
+      const value = node.evaluate();
+      const t = math.typeOf(value);
+      const lines = [`Expression: ${pretty(node)}`];
+      if (t === "number" || t === "BigNumber" || t === "Fraction") {
+        const x = Number(value);
+        const f = fractionInfo(x);
+        lines.push({ main: `= ${fmtNum(x)}` });
+        lines.push(`Decimal: ${fmtNum(x)}`);
+        lines.push(`${f.exact ? "Fraction" : "Fraction ≈"}: ${f.str}`);
+        lines.push({ note: "Method: evaluate using the order of operations, then convert the decimal to a fraction." });
+      } else if (t === "Complex") {
+        lines.push({ main: `= ${fmtComplex(value.re, value.im, false)}` });
+        lines.push(`Fraction form: ${fmtComplex(value.re, value.im, true).replace(/\s+\(≈[^)]*\)/g, "")}`);
+        lines.push({ note: "Method: evaluate the real and imaginary parts separately." });
+      } else {
+        lines.push({ main: `= ${math.format(value, { precision: 12 })}` });
+        lines.push({ note: "Method: evaluate using the order of operations." });
+      }
+      return lines;
+    }
+
+    function solveInput(raw) {
+      const src = normalizeInput(raw);
+      const parts = src.split("=");
+      if (parts.length > 2) throw new Error('Use only one "=" sign.');
+      if (parts.some(p => p.trim() === "")) throw new Error('Both sides of "=" need an expression.');
+      if (parts.length === 2) return solveEquationNodes(math.parse(parts[0]), math.parse(parts[1]));
+      const node = math.parse(parts[0]);
+      const vars = getVars(node);
+      if (vars.length) return simplifyExpression(node, vars);
+      return evaluateNumeric(node);
+    }
+    /* SOLVER END */
+
+    // ================= Arithmetic UI =================
     function solveEquation() {
       const input = document.getElementById("equationInput").value.trim();
       const resultEl = document.getElementById("result");
@@ -681,56 +1336,111 @@
         errorEl.textContent = "Please enter an expression.";
         return;
       }
-
       try {
-        const expr = input
-          .replace(/([0-9])i/g, "$1*i")
-          .replace(/([^\w\d])i/g, "$1i")
-          .replace(/^i/, "1i");
-
-        const value = math.evaluate(expr);
-
-        function formatComplex(c) {
-          const re = c.re;
-          const im = c.im;
-          let parts = [];
-          if (Math.abs(re) > 1e-14) parts.push(re.toFixed(10).replace(/\.?0+$/, ""));
-          if (Math.abs(im) > 1e-14) {
-            let sign = im >= 0 && parts.length ? "+" : "";
-            let absIm = Math.abs(im);
-            parts.push(sign + (absIm === 1 ? "i" : absIm.toFixed(10).replace(/\.?0+$/, "") + "i"));
-          }
-          if (parts.length === 0) return "0";
-          return parts.join("");
-        }
-
-        if (typeof value === "number") {
-          resultEl.textContent = `Result:\nDecimal: ${value}\nFraction: ${decimalToFraction(value)}\nMethod: Evaluate the expression using the order of operations, then convert the decimal to a fraction.`;
-        } else if (math.typeOf(value) === "Complex") {
-          const decStr = formatComplex(value);
-          let fracStr = "";
-          fracStr += Math.abs(value.re) > 1e-14 ? decimalToFraction(value.re) : "0";
-          fracStr += value.im >= 0 ? "+" : "-";
-          fracStr +=
-            Math.abs(value.im) > 1e-14
-              ? decimalToFraction(Math.abs(value.im)) === "1"
-                ? "i"
-                : decimalToFraction(Math.abs(value.im)) + "i"
-              : "0i";
-          resultEl.textContent = `Result:\nDecimal: ${decStr}\nFraction approx: ${fracStr}\nMethod: Evaluate the real and imaginary parts separately, then convert each decimal part to a fraction.`;
-        } else if (math.typeOf(value) === "BigNumber") {
-          const num = value.toNumber();
-          resultEl.textContent = `Result:\nDecimal: ${num}\nFraction: ${decimalToFraction(num)}\nMethod: Evaluate the expression, convert the result to a regular number, then convert the decimal to a fraction.`;
-        } else {
-          resultEl.textContent = `Result:\n${value.toString()}\nMethod: Evaluate the expression using the order of operations.`;
-        }
+        const lines = solveInput(input);
+        lines.forEach((l, i) => {
+          const div = document.createElement("div");
+          if (typeof l === "string") div.textContent = l;
+          else if (l.main) { div.textContent = l.main; div.className = "res-main"; }
+          else { div.textContent = l.note; div.className = "res-note"; }
+          resultEl.appendChild(div);
+        });
       } catch (e) {
         errorEl.textContent = `Error: ${e.message || e}`;
       }
     }
 
-    function calculateButtonWorking() {
-      event.preventDefault();
+    const eqInput = document.getElementById("equationInput");
+    const supToggle = document.getElementById("supToggle");
+    const supStatus = document.getElementById("supStatus");
+    let supMode = false, supDepth = 0, supRunLen = 0;
+
+    function setSup(on) {
+      supMode = on;
+      supDepth = 0;
+      supRunLen = 0;
+      eqInput.classList.toggle("sup-mode", on);
+      supToggle.classList.toggle("active", on);
+      supStatus.classList.toggle("on", on);
+    }
+
+    function insertAtCursor(text) {
+      const start = eqInput.selectionStart ?? eqInput.value.length;
+      const end = eqInput.selectionEnd ?? eqInput.value.length;
+      eqInput.setRangeText(text, start, end, "end");
+    }
+
+    eqInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); setSup(false); solveEquation(); return; }
+      if (e.ctrlKey && e.key === "ArrowUp") { e.preventDefault(); setSup(!supMode); return; }
+      if (e.ctrlKey && e.key === "ArrowDown") { e.preventDefault(); setSup(false); return; }
+      if (!supMode) return;
+      if (e.key === "Escape" || e.key === " ") { e.preventDefault(); setSup(false); return; }
+      if (["ArrowLeft", "ArrowRight", "Home", "End", "Tab"].includes(e.key)) setSup(false);
+    });
+
+    eqInput.addEventListener("beforeinput", e => {
+      if (e.inputType !== "insertText" || e.isComposing || !e.data) return;
+      if (e.data === "^") { e.preventDefault(); setSup(!supMode); return; }
+      if (!supMode || e.data.length !== 1) return;
+      const ch = e.data;
+      const signOk = (ch === "+" || ch === "-") ? (supRunLen === 0 || supDepth > 0) : true;
+      const closeOk = ch !== ")" || supDepth > 0;
+      if (SUP_MAP[ch] && signOk && closeOk) {
+        e.preventDefault();
+        insertAtCursor(SUP_MAP[ch]);
+        supRunLen++;
+        if (ch === "(") supDepth++;
+        if (ch === ")") supDepth--;
+      } else {
+        setSup(false); // normal character: leave exponent mode and type it
+      }
+    });
+
+    // Dead-key "^" (Spanish/French keyboards) arrives as text: convert it here
+    function absorbCaret() {
+      const val = eqInput.value;
+      const caret = eqInput.selectionStart ?? val.length;
+      const idx = val.lastIndexOf("^", caret - 1);
+      if (idx < 0) return;
+      const typed = val.slice(idx + 1, caret);
+      const converted = [...typed].map(c => SUP_MAP[c] || c).join("");
+      eqInput.value = val.slice(0, idx) + converted + val.slice(caret);
+      const pos = idx + converted.length;
+      eqInput.setSelectionRange(pos, pos);
+      setSup(true);
+      supRunLen = converted.length;
+    }
+    eqInput.addEventListener("input", e => {
+      if (e.isComposing || e.inputType === "insertFromPaste" || e.inputType === "insertFromDrop") return;
+      if (eqInput.value.includes("^")) absorbCaret();
+    });
+    eqInput.addEventListener("compositionend", () => {
+      if (eqInput.value.includes("^")) absorbCaret();
+    });
+    eqInput.addEventListener("blur", () => setSup(false));
+
+    // keypad buttons keep focus in the input
+    document.querySelectorAll("#mathKeys button").forEach(btn => {
+      btn.addEventListener("mousedown", e => e.preventDefault());
+    });
+    supToggle.addEventListener("click", () => { eqInput.focus(); setSup(!supMode); });
+    document.querySelectorAll("#mathKeys [data-insert]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        eqInput.focus();
+        insertAtCursor(btn.dataset.insert);
+      });
+    });
+
+    // ================= Ratio =================
+    function decimalPlaces(n) {
+      const s = String(n);
+      if (s.includes("e-")) return parseInt(s.split("e-")[1], 10) + ((s.split("e-")[0].split(".")[1] || "").length);
+      return (s.split(".")[1] || "").length;
+    }
+
+    function calculateButtonWorking(event) {
+      if (event) event.preventDefault();
 
       let A = parseFloat(document.getElementById("n_1").value);
       let B = parseFloat(document.getElementById("d_1").value);
@@ -756,12 +1466,8 @@
 
         const ratio1 = A / B;
         const ratio2 = C / D;
-
-        if (Math.abs(ratio1 - ratio2) < 1e-10) {
-          answerEl.innerHTML = `<div>The ratios ${A} : ${B} and ${C} : ${D} are proportionate (equal).<br><small>Method: Compare A ÷ B with C ÷ D.</small></div>`;
-        } else {
-          answerEl.innerHTML = `<div>The ratios ${A} : ${B} and ${C} : ${D} are NOT proportionate (not equal).<br><small>Method: Compare A ÷ B with C ÷ D.</small></div>`;
-        }
+        const equal = Math.abs(ratio1 - ratio2) < 1e-10;
+        answerEl.innerHTML = `<div>The ratios ${A} : ${B} and ${C} : ${D} are ${equal ? "proportionate (equal)" : "NOT proportionate (not equal)"}.<br><small>Method: Compare A ÷ B with C ÷ D.</small></div>`;
         return false;
       }
 
@@ -770,21 +1476,16 @@
           alert("Denominator B cannot be zero.");
           return false;
         }
+        // scale decimals to integers so the GCD is exact
+        const scale = 10 ** Math.min(10, Math.max(decimalPlaces(A), decimalPlaces(B)));
+        const a = Math.round(A * scale), b = Math.round(B * scale);
+        const g = gcdInt(a, b) || 1;
+        const simpleA = a / g;
+        const simpleB = b / g;
 
-
-        function gcd(x, y) {
-          if (!y) return x;
-          return gcd(y, x % y);
-        }
-
-        const gcdAB = gcd(Math.abs(A), Math.abs(B));
-        const simpleA = A / gcdAB;
-        const simpleB = B / gcdAB;
-
-        answerEl.innerHTML = `<div>Ratio simplified: ${simpleA} : ${simpleB}<br><small>Method: Divide both terms by their greatest common divisor, ${gcdAB}.</small></div>`;
+        answerEl.innerHTML = `<div>Ratio simplified: ${simpleA} : ${simpleB}<br><small>Method: ${scale > 1 ? `Multiply both terms by ${scale} to remove decimals, then divide` : "Divide"} both terms by their greatest common divisor, ${g}.</small></div>`;
         return false;
       }
-
 
       let C = isCNum ? parseFloat(CStr) : NaN;
       let D = isDNum ? parseFloat(DStr) : NaN;
@@ -798,56 +1499,37 @@
       }
 
       if (!isNaN(A) && !isNaN(B) && !isNaN(C) && isNaN(D)) {
-        if (A === 0) {
-          alert("A cannot be zero for calculation.");
-          return false;
-        }
+        if (A === 0) { alert("A cannot be zero for calculation."); return false; }
         const Dval = (B * C) / A;
-        document.getElementById("d_2").value = Dval;
-        answerEl.innerHTML = `<div>${A} : ${B} = ${C} : <b>${Dval}</b><br><small>Method: D = (B × C) ÷ A.</small></div>`;
+        document.getElementById("d_2").value = fmtNum(Dval);
+        answerEl.innerHTML = `<div>${A} : ${B} = ${C} : <b>${fmtNum(Dval)}</b><br><small>Method: D = (B × C) ÷ A.</small></div>`;
       } else if (!isNaN(A) && !isNaN(B) && isNaN(C) && !isNaN(D)) {
-        if (B === 0) {
-          alert("B cannot be zero for calculation.");
-          return false;
-        }
+        if (B === 0) { alert("B cannot be zero for calculation."); return false; }
         const Cval = (A * D) / B;
-        document.getElementById("n_2").value = Cval;
-        answerEl.innerHTML = `<div>${A} : ${B} = ${Cval} : <b>${D}</b><br><small>Method: C = (A × D) ÷ B.</small></div>`;
+        document.getElementById("n_2").value = fmtNum(Cval);
+        answerEl.innerHTML = `<div>${A} : ${B} = <b>${fmtNum(Cval)}</b> : ${D}<br><small>Method: C = (A × D) ÷ B.</small></div>`;
       } else if (!isNaN(A) && isNaN(B) && !isNaN(C) && !isNaN(D)) {
-        if (C === 0) {
-          alert("C cannot be zero for calculation.");
-          return false;
-        }
+        if (C === 0) { alert("C cannot be zero for calculation."); return false; }
         const Bval = (A * D) / C;
-        document.getElementById("d_1").value = Bval;
-        answerEl.innerHTML = `<div>${A} : ${Bval} = ${C} : <b>${D}</b><br><small>Method: B = (A × D) ÷ C.</small></div>`;
+        document.getElementById("d_1").value = fmtNum(Bval);
+        answerEl.innerHTML = `<div>${A} : <b>${fmtNum(Bval)}</b> = ${C} : ${D}<br><small>Method: B = (A × D) ÷ C.</small></div>`;
       } else if (isNaN(A) && !isNaN(B) && !isNaN(C) && !isNaN(D)) {
-        if (D === 0) {
-          alert("D cannot be zero for calculation.");
-          return false;
-        }
+        if (D === 0) { alert("D cannot be zero for calculation."); return false; }
         const Aval = (B * C) / D;
-        document.getElementById("n_1").value = Aval;
-        answerEl.innerHTML = `<div>${Aval} : ${B} = ${C} : <b>${D}</b><br><small>Method: A = (B × C) ÷ D.</small></div>`;
-      } else {
-        alert("Enter exactly 2 values to simplify, exactly 3 numeric values to calculate the missing, or all 4 to check proportion.");
-        return false;
+        document.getElementById("n_1").value = fmtNum(Aval);
+        answerEl.innerHTML = `<div><b>${fmtNum(Aval)}</b> : ${B} = ${C} : ${D}<br><small>Method: A = (B × C) ÷ D.</small></div>`;
       }
-
       return false;
     }
 
     function clearRatioForm() {
-      document.getElementById("n_1").value = "";
-      document.getElementById("d_1").value = "";
-      document.getElementById("n_2").value = "";
-      document.getElementById("d_2").value = "";
+      ["n_1", "d_1", "n_2", "d_2"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("answer").textContent = "";
     }
 
-
-    function calculatePercentage() {
-      event.preventDefault();
+    // ================= Percentage =================
+    function calculatePercentage(event) {
+      if (event) event.preventDefault();
 
       const baseInput = document.getElementById("baseValue");
       const percentInput = document.getElementById("percentValue");
@@ -884,102 +1566,71 @@
         return false;
       }
 
-      try {
-        if (!discountMode) {
-          if (baseVal === null) {
-            if (percentVal === 0) {
-              answerDiv.textContent = "Percent cannot be zero.";
-              return false;
-            }
-            const res = (resultVal * 100) / percentVal;
-            baseInput.value = res.toFixed(10).replace(/\.?0+$/, "");
-            answerDiv.textContent = `Base (100%) is ${res}.\nMethod: Base = (Answer × 100) ÷ Percent.`;
-          } else if (percentVal === null) {
-            if (baseVal === 0) {
-              answerDiv.textContent = "Base cannot be zero.";
-              return false;
-            }
-            const res = (resultVal / baseVal) * 100;
-            percentInput.value = res.toFixed(10).replace(/\.?0+$/, "");
-            answerDiv.textContent = `Percent is ${res}%.\nMethod: Percent = (Answer ÷ Base) × 100.`;
-          } else if (resultVal === null) {
-            const res = (baseVal * percentVal) / 100;
-            resultInput.value = res.toFixed(10).replace(/\.?0+$/, "");
-            answerDiv.textContent = `Result is ${res}.\nMethod: Answer = (Base × Percent) ÷ 100.`;
-          }
+      if (!discountMode) {
+        if (baseVal === null) {
+          if (percentVal === 0) { answerDiv.textContent = "Percent cannot be zero."; return false; }
+          const res = (resultVal * 100) / percentVal;
+          baseInput.value = fmtNum(res);
+          answerDiv.textContent = `Base (100%) is ${fmtNum(res)}.\nMethod: Base = (Answer × 100) ÷ Percent.`;
+        } else if (percentVal === null) {
+          const res = (resultVal / baseVal) * 100;
+          percentInput.value = fmtNum(res);
+          answerDiv.textContent = `Percent is ${fmtNum(res)}%.\nMethod: Percent = (Answer ÷ Base) × 100.`;
         } else {
-
-          if (baseVal === null) {
-            if (percentVal === 100) {
-              answerDiv.textContent = "Percent cannot be 100 for calculation.";
-              return false;
-            }
-            const res = resultVal / (1 - percentVal / 100);
-            baseInput.value = res.toFixed(10).replace(/\.?0+$/, "");
-            answerDiv.textContent = `Original price (Base 100%) is ${res}.\nMethod: Original price = Discounted price ÷ (1 − Percent ÷ 100).`;
-          } else if (percentVal === null) {
-            if (baseVal === 0) {
-              answerDiv.textContent = "Base cannot be zero.";
-              return false;
-            }
-            const res = (100 * (baseVal - resultVal)) / baseVal;
-            percentInput.value = res.toFixed(10).replace(/\.?0+$/, "");
-            answerDiv.textContent = `Discount percent is ${res}%.\nMethod: Discount percent = ((Base − Final price) ÷ Base) × 100.`;
-          } else if (resultVal === null) {
-            const res = baseVal - (baseVal * percentVal) / 100;
-            resultInput.value = res.toFixed(10).replace(/\.?0+$/, "");
-            answerDiv.textContent = `Discounted price is ${res}.\nMethod: Discounted price = Base − (Base × Percent ÷ 100).`;
-          }
+          const res = (baseVal * percentVal) / 100;
+          resultInput.value = fmtNum(res);
+          answerDiv.textContent = `Result is ${fmtNum(res)}.\nMethod: Answer = (Base × Percent) ÷ 100.`;
         }
-      } catch (e) {
-        answerDiv.textContent = "Calculation error.";
-        return false;
+      } else {
+        if (baseVal === null) {
+          if (percentVal >= 100) { answerDiv.textContent = "Discount must be below 100% to find the original price."; return false; }
+          const res = resultVal / (1 - percentVal / 100);
+          baseInput.value = fmtNum(res);
+          answerDiv.textContent = `Original price (Base 100%) is ${fmtNum(res)}.\nMethod: Original price = Discounted price ÷ (1 − Percent ÷ 100).`;
+        } else if (percentVal === null) {
+          const res = (100 * (baseVal - resultVal)) / baseVal;
+          percentInput.value = fmtNum(res);
+          answerDiv.textContent = `Discount percent is ${fmtNum(res)}%.\nMethod: Discount percent = ((Base − Final price) ÷ Base) × 100.`;
+        } else {
+          const res = baseVal - (baseVal * percentVal) / 100;
+          resultInput.value = fmtNum(res);
+          answerDiv.textContent = `Discounted price is ${fmtNum(res)}.\nMethod: Discounted price = Base − (Base × Percent ÷ 100).`;
+        }
       }
-
       return false;
     }
 
     function clearPercentageForm() {
-      document.getElementById("baseValue").value = "";
-      document.getElementById("percentValue").value = "";
-      document.getElementById("resultValue").value = "";
+      ["baseValue", "percentValue", "resultValue"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("percentageAnswer").textContent = "";
     }
 
-
+    // ================= Prime factorization =================
     function primeFactorize() {
       const inputEl = document.getElementById("primeInput");
       const resultEl = document.getElementById("primeResult");
       const errorEl = document.getElementById("primeError");
-      let num = parseInt(inputEl.value, 10);
+      const num = Number(inputEl.value);
 
       resultEl.textContent = "";
       errorEl.textContent = "";
 
-      if (isNaN(num) || num < 2 || !Number.isInteger(num)) {
+      if (!Number.isInteger(num) || num < 2) {
         errorEl.textContent = "Please enter a valid integer greater than 1.";
         return;
       }
-
-      function getPrimeFactors(n) {
-        const factors = [];
-        let divisor = 2;
-        while (n >= 2) {
-          if (n % divisor === 0) {
-            factors.push(divisor);
-            n = n / divisor;
-          } else {
-            divisor++;
-            if (divisor * divisor > n) {
-              if (n > 1) factors.push(n);
-              break;
-            }
-          }
-        }
-        return factors;
+      if (!Number.isSafeInteger(num)) {
+        errorEl.textContent = "Number too large (max 9007199254740991).";
+        return;
       }
 
-      const factors = getPrimeFactors(num);
+      const factors = [];
+      let n = num;
+      for (let d = 2; d * d <= n; d++) {
+        while (n % d === 0) { factors.push(d); n /= d; }
+      }
+      if (n > 1) factors.push(n);
+
       const factorStr = factors.join(" \u00D7 ");
       const steps = [];
       let remaining = num;
@@ -996,154 +1647,92 @@
           <p class="factorization-final">Prime Factorization of ${num} = ${factorStr}</p>
         </div>`;
     }
+    document.getElementById("primeInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") primeFactorize();
+    });
+
+    // ================= Circumference =================
+    const CIRC_FIELDS = ["dInput", "rInput", "cInput", "aInput"];
+    let lastCircField = null;
+    CIRC_FIELDS.forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener("input", () => { lastCircField = id; });
+      el.addEventListener("keydown", e => { if (e.key === "Enter") calculateCircumference(); });
+    });
 
     function calculateCircumference() {
-      const dInput = document.getElementById("dInput");
-      const rInput = document.getElementById("rInput");
-      const cInput = document.getElementById("cInput");
-      const aInput = document.getElementById("aInput");
-      const simplifiedPi = document.getElementById("simplifiedPi");
+      const els = Object.fromEntries(CIRC_FIELDS.map(id => [id, document.getElementById(id)]));
+      const filled = CIRC_FIELDS.filter(id => els[id].value.trim() !== "");
+      let source = null;
+      if (filled.length === 1) source = filled[0];
+      else if (filled.length > 1 && lastCircField && filled.includes(lastCircField)) source = lastCircField;
 
-      const dStr = dInput.value.trim();
-      const rStr = rInput.value.trim();
-      const cStr = cInput.value.trim();
-      const aStr = aInput.value.trim();
-
-      const inputs = [dStr, rStr, cStr, aStr];
-      const filledCount = inputs.filter(v => v !== "").length;
-
-      if (filledCount !== 1) {
-        alert("Please fill exactly one field to calculate the others.");
+      if (!source) {
+        alert("Fill one field (or edit one) to calculate the others.");
         return;
       }
 
-      const piValue = simplifiedPi.checked ? 3.14 : Math.PI;
-
-      if (dStr !== "") {
-        let d = parseFloat(dStr);
-        if (isNaN(d) || d <= 0) {
-          alert("Diameter must be a positive number.");
-          return;
-        }
-        const r = d / 2;
-        const c = d * piValue;
-        const a = piValue * r * r;
-
-        rInput.value = r.toFixed(10).replace(/\.?0+$/, "");
-        cInput.value = c.toFixed(10).replace(/\.?0+$/, "");
-        aInput.value = a.toFixed(10).replace(/\.?0+$/, "");
-        setCircAnswer(`Diameter: ${d}\nRadius: ${r.toFixed(10)}\nCircumference: ${c.toFixed(10)}\nArea: ${a.toFixed(10)}`);
-      } else if (rStr !== "") {
-        let r = parseFloat(rStr);
-        if (isNaN(r) || r <= 0) {
-          alert("Radius must be a positive number.");
-          return;
-        }
-        const d = 2 * r;
-        const c = 2 * piValue * r;
-        const a = piValue * r * r;
-
-        dInput.value = d.toFixed(10).replace(/\.?0+$/, "");
-        cInput.value = c.toFixed(10).replace(/\.?0+$/, "");
-        aInput.value = a.toFixed(10).replace(/\.?0+$/, "");
-        setCircAnswer(`Diameter: ${d.toFixed(10)}\nRadius: ${r}\nCircumference: ${c.toFixed(10)}\nArea: ${a.toFixed(10)}`);
-      } else if (cStr !== "") {
-        let c = parseFloat(cStr);
-        if (isNaN(c) || c <= 0) {
-          alert("Circumference must be a positive number.");
-          return;
-        }
-        const d = c / piValue;
-        const r = c / (2 * piValue);
-        const a = piValue * r * r;
-
-        dInput.value = d.toFixed(10).replace(/\.?0+$/, "");
-        rInput.value = r.toFixed(10).replace(/\.?0+$/, "");
-        aInput.value = a.toFixed(10).replace(/\.?0+$/, "");
-        setCircAnswer(`Diameter: ${d.toFixed(10)}\nRadius: ${r.toFixed(10)}\nCircumference: ${c}\nArea: ${a.toFixed(10)}`);
-      } else if (aStr !== "") {
-        let a = parseFloat(aStr);
-        if (isNaN(a) || a <= 0) {
-          alert("Area must be a positive number.");
-          return;
-        }
-        const r = Math.sqrt(a / piValue);
-        const d = 2 * r;
-        const c = 2 * piValue * r;
-
-        rInput.value = r.toFixed(10).replace(/\.?0+$/, "");
-        dInput.value = d.toFixed(10).replace(/\.?0+$/, "");
-        cInput.value = c.toFixed(10).replace(/\.?0+$/, "");
-        setCircAnswer(`Diameter: ${d.toFixed(10)}\nRadius: ${r.toFixed(10)}\nCircumference: ${c.toFixed(10)}\nArea: ${a}`);
+      const names = { dInput: "Diameter", rInput: "Radius", cInput: "Circumference", aInput: "Area" };
+      const value = parseFloat(els[source].value);
+      if (isNaN(value) || value <= 0) {
+        alert(`${names[source]} must be a positive number.`);
+        return;
       }
+
+      const piValue = document.getElementById("simplifiedPi").checked ? 3.14 : Math.PI;
+      let r;
+      if (source === "dInput") r = value / 2;
+      else if (source === "rInput") r = value;
+      else if (source === "cInput") r = value / (2 * piValue);
+      else r = Math.sqrt(value / piValue);
+
+      const out = { dInput: 2 * r, rInput: r, cInput: 2 * piValue * r, aInput: piValue * r * r };
+      CIRC_FIELDS.forEach(id => { if (id !== source) els[id].value = fmtNum(out[id]); });
+      out[source] = value;
+      setCircAnswer(`Diameter: ${fmtNum(out.dInput)}\nRadius: ${fmtNum(out.rInput)}\nCircumference: ${fmtNum(out.cInput)}\nArea: ${fmtNum(out.aInput)}`);
+      lastCircField = source;
     }
+
     function setCircAnswer(text) {
       const answerDiv = document.getElementById("circAnswer");
-      answerDiv.textContent = `${text}\nMethod: Use C = πD, D = 2R, and A = πR². The selected π value is used.`;
+      answerDiv.textContent = text ? `${text}\nMethod: Use C = πD, D = 2R, and A = πR². The selected π value is used.` : "";
     }
 
-    document.getElementById("submitCircumference").addEventListener("click", calculateCircumference);
-
     function clearCirc() {
-      document.getElementById("dInput").value = "";
-      document.getElementById("rInput").value = "";
-      document.getElementById("cInput").value = "";
-      document.getElementById("aInput").value = "";
+      CIRC_FIELDS.forEach(id => document.getElementById(id).value = "");
+      lastCircField = null;
       setCircAnswer("");
     }
 
+    document.getElementById("submitCircumference").addEventListener("click", calculateCircumference);
     document.getElementById("clearCircButton").addEventListener("click", clearCirc);
+
+    // ================= Copy =================
+    function copyText(text) {
+      if (!text || text.trim() === "") { showToast("Nothing to copy."); return; }
+      navigator.clipboard.writeText(text.trim())
+        .then(() => showToast("Copied."))
+        .catch(() => showToast("Couldn't copy."));
+    }
 
     function copyTextFromElement(elementId) {
       const el = document.getElementById(elementId);
       if (!el) return;
-      let textToCopy = "";
-
-      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
-        textToCopy = el.value;
-      } else {
-        textToCopy = el.textContent;
-      }
-
-      if (textToCopy.trim() === "") {
-        alert("Nothing to copy!");
-        return;
-      }
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        alert("Copied to clipboard!");
-      }).catch(() => {
-        alert("Failed to copy!");
-      });
-    }
-    function copyInputValue(inputId) {
-      const input = document.getElementById(inputId);
-      if (!input) return;
-      const val = input.value.trim();
-      if (val === "") {
-        alert("Nothing to copy!");
-        return;
-      }
-      navigator.clipboard.writeText(val).then(() => {
-        alert("Copied to clipboard!");
-      }).catch(() => {
-        alert("Failed to copy!");
-      });
+      copyText(el.tagName === "INPUT" || el.tagName === "TEXTAREA" ? el.value : el.innerText);
     }
 
-    document.getElementById("copyResult").addEventListener("click", () => copyTextFromElement("result"));
-    document.getElementById("copyAnswer").addEventListener("click", () => copyTextFromElement("answer"));
-    document.getElementById("copyPercentageAnswer").addEventListener("click", () => copyTextFromElement("percentageAnswer"));
-    document.getElementById("copyPrimeResult").addEventListener("click", () => copyTextFromElement("primeResult"));
-    document.getElementById("copyCircAnswer").addEventListener("click", () => copyTextFromElement("circAnswer"));
-
-    document.querySelectorAll(".copy-input-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const targetId = btn.getAttribute("data-copy-target");
-        copyInputValue(targetId);
-      });
+    [["copyResult", "result"], ["copyAnswer", "answer"], ["copyPercentageAnswer", "percentageAnswer"],
+     ["copyPrimeResult", "primeResult"], ["copyCircAnswer", "circAnswer"]].forEach(([btnId, target]) => {
+      const btn = document.getElementById(btnId);
+      if (btn) btn.addEventListener("click", () => copyTextFromElement(target));
     });
 
+    document.querySelectorAll(".copy-input-btn").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.preventDefault();
+        copyTextFromElement(btn.getAttribute("data-copy-target"));
+      });
+    });
   </script>
-</main>
 </body>
 </html>
