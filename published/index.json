@@ -35,14 +35,14 @@
     },
     {
       "slug": "untitled-page-3",
-      "name": "Untitled page",
+      "name": "chat",
       "entry": "index.html",
       "files": [
         "index.html"
       ],
       "createdAt": "2026-09-17T12:10:05.346Z",
-      "updatedAt": "2026-09-17T12:10:05.346Z",
-      "version": 1
+      "updatedAt": "2026-09-17T12:10:38.247Z",
+      "version": 2
     }
   ]
 }
