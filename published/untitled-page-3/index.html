@@ -58,6 +58,12 @@ button.row:hover,.row.on{background:var(--panel2)}
 .empty{padding:24px 16px;color:var(--mute)}
 main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
 .head{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);min-height:61px}
+.head.compact{min-height:0;padding:3px 10px;gap:8px}
+.head.compact .av{width:26px;height:26px;font-size:12px}
+.head.compact .av .dot{width:8px;height:8px;border-width:1px}
+.head.compact h1{font-size:14px}
+.head.compact p{display:none}
+.head.compact .ghost{padding:2px 8px;font-size:13px}
 .head .txt{flex:1;min-width:0}
 .head h1{font-size:16px;margin:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .head p{margin:0;color:var(--mute);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -66,7 +72,7 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relati
 .primary{border:0;border-radius:10px;background:var(--mint);color:#032;font-weight:700;padding:8px 16px}
 .danger{background:none;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:3px 10px;font-size:13px}
 .back{display:none}
-.msgs{flex:1;overflow-y:auto;padding:18px 6% 10px;display:flex;flex-direction:column;gap:4px;min-height:0;
+.msgs{flex:1;overflow-y:auto;padding:10px 4% 8px;display:flex;flex-direction:column;gap:4px;min-height:0;
   background-image:radial-gradient(circle at 1px 1px,var(--line) 1px,transparent 0);background-size:22px 22px}
 .b{max-width:min(74%,560px);padding:7px 10px 5px;border-radius:12px;background:var(--bubble);align-self:flex-start;overflow-wrap:anywhere;white-space:pre-wrap;border:1px solid var(--line)}
 .b.me{align-self:flex-end;background:var(--bubble-me);border-color:transparent}
@@ -79,7 +85,7 @@ main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relati
 .file small{color:var(--mute)}
 .lnk{display:block;margin-top:4px;padding:6px 9px;border-left:3px solid var(--mint);background:rgba(0,0,0,.2);border-radius:6px;font-size:13px;text-decoration:none;white-space:normal}
 .sys{align-self:center;font-size:12px;color:var(--mute);background:var(--panel);border:1px solid var(--line);padding:3px 10px;border-radius:999px;margin:8px 0;text-align:center}
-.composer{display:flex;gap:8px;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);align-items:center}
+.composer{display:flex;gap:8px;padding:8px 12px;background:var(--panel);border-top:1px solid var(--line);align-items:center}
 .composer input[type=text]{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:10px 16px;min-width:0}
 .composer input[type=text]:focus{border-color:var(--mint);outline:none;box-shadow:var(--glow)}
 .attach{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:none;font-size:18px;flex:none}
@@ -111,6 +117,9 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .b .more{position:absolute;top:2px;right:4px;background:none;border:0;color:var(--mute);font-size:15px;line-height:1;padding:2px 4px;opacity:0;border-radius:6px}
 .b{position:relative}
 .b:hover .more,.b .more:focus{opacity:1;background:rgba(0,0,0,.3)}
+.line{display:flex;gap:8px;align-items:flex-end;align-self:flex-start;max-width:min(80%,620px)}
+.line .b{max-width:100%}
+.line .spacer{width:28px;flex:none}
 .rx{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .rx button{background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-size:13px;line-height:1.6}
 .rx button.on{border-color:var(--mint);color:var(--mint);box-shadow:var(--glow)}
@@ -194,6 +203,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
       <button class="ghost back" id="backBtn" aria-label="Back to chats">‹</button>
       <div id="headAv"></div>
       <div class="txt"><h1 id="chatName"></h1><p id="chatSub"></p></div>
+      <button class="ghost" id="barBtn" title="Shrink or expand the bar" aria-label="Shrink or expand the bar">⌃</button>
       <button class="ghost" id="infoBtn">Group info</button>
     </div>
     <div class="msgs" id="msgs" hidden aria-live="polite"></div>
@@ -272,7 +282,7 @@ async function copy(text, label) {
   catch (e) { prompt("Copy this:", text); }
 }
 
-const SET = Object.assign({ notify: false, sound: false }, jget("nl.settings") || {});
+const SET = Object.assign({ notify: false, sound: false, compactBar: true }, jget("nl.settings") || {});
 const saveSet = () => jset("nl.settings", SET);
 function squareThumb(file, px, q, png) {
   return new Promise((res, rej) => {
@@ -464,10 +474,27 @@ const T = {
   list: (gid) => P + "/public/" + gid,
   hello: P + "/hello",
 };
+const NICKS = jget("nl.nicks") || {};
+const saveNicks = () => jset("nl.nicks", NICKS);
+function setNick(uid, v) {
+  v = clip(String(v || "").trim(), 40);
+  if (v) NICKS[uid] = v; else delete NICKS[uid];
+  saveNicks();
+  toast(v ? "Nickname saved" : "Nickname removed");
+  render();
+}
+const realName = (uid, g) => {
+  const p = S.people[uid];
+  if (p && p.name) return p.name;
+  const c = S.avatars[uid];
+  if (c && c.name) return c.name;
+  return (g && g.names && g.names[uid]) || findName(uid) || "Someone";
+};
 const me = () => ID.uid;
 const isAdmin = (g) => g && g.admin === me();
 function nameOf(uid, g) {
   if (uid === me()) return ID.raw.name || "You";
+  if (NICKS[uid]) return NICKS[uid];
   const p = S.people[uid];
   return (p && p.name) || (g && g.names && g.names[uid]) || findName(uid) || "Someone";
 }
@@ -1250,7 +1277,11 @@ function paint() {
       ? (online(otherOf(g)) ? "On the page now" : "Direct chat · not on the page right now")
       : g.members.length + " members" + (on ? " · " + on + " online" : "") + " · admin: " + nameOf(g.admin, g) + (g.public ? " · public" : g.coded ? " · private, code" : " · private");
     const pend = isAdmin(g) && g.pending ? Object.keys(g.pending).length : 0;
-    $("infoBtn").textContent = isDm(g) ? "Chat info" : pend ? "Group info (" + pend + ")" : "Group info";
+    const full = isDm(g) ? "Chat info" : pend ? "Group info (" + pend + ")" : "Group info";
+    $("head").classList.toggle("compact", !!SET.compactBar);
+    $("barBtn").textContent = SET.compactBar ? "⌄" : "⌃";
+    $("infoBtn").textContent = SET.compactBar ? (pend ? "ⓘ " + pend : "ⓘ") : full;
+    $("infoBtn").setAttribute("aria-label", full);
     paintMsgs(g);
   }
   paintDrawer(g);
@@ -1357,7 +1388,7 @@ function paintMsgs(g) {
     if (o.sys) { box.append(h("div", { class: "sys" }, sysText(o, g))); prev = null; continue; }
     const mine = o.from === me();
     const first = !prev || prev.from !== o.from;
-    box.append(h("div", { class: "b" + (mine ? " me" : "") + (first ? " gap" : "") + (o.sticker && !o.deletedBy ? " stkb" : "") + (o.deletedBy ? " del" : "") },
+    const bubble = h("div", { class: "b" + (mine ? " me" : "") + (first ? " gap" : "") + (o.sticker && !o.deletedBy ? " stkb" : "") + (o.deletedBy ? " del" : "") },
       many && !mine && first ? h("div", { class: "who", style: "color:hsl(" + hueOf(o.from) + " 90% 68%)" }, nameOf(o.from, g)) : null,
       o.deletedBy ? (o.deletedBy === o.from ? "🚫 This message was deleted" : "🚫 Deleted by " + nameOf(o.deletedBy, g)) : null,
       !o.deletedBy && typeof o.sticker === "string" && o.sticker.startsWith("data:image/") ? h("img", { class: "stk", src: o.sticker, alt: "sticker" }) : null,
@@ -1373,7 +1404,8 @@ function paintMsgs(g) {
           onclick: () => react(g, o, r.emoji),
         }, r.emoji + " " + r.who.length)));
       })(),
-      h("time", null, fmt(o.ts), o.editedAt ? h("span", { class: "edited" }, "edited") : null)));
+      h("time", null, fmt(o.ts), o.editedAt ? h("span", { class: "edited" }, "edited") : null));
+    box.append(mine ? bubble : h("div", { class: "line" + (first ? " gap" : "") }, first ? avatarBtn(o.from, true) : h("div", { class: "spacer" }), bubble));
     prev = o;
   }
   if (!view.length) box.append(h("div", { class: "sys" }, "No messages yet. Say hi 👋"));
@@ -1464,7 +1496,9 @@ function paintDrawer(g) {
   const sorted = [...g.members].sort((a, b) => (b === g.admin) - (a === g.admin) || nameOf(a, g).localeCompare(nameOf(b, g)));
   for (const m of sorted) {
     ms.append(h("div", { class: "row" }, avatarBtn(m, true),
-      h("div", { class: "txt" }, h("span", null, nameOf(m, g) + (m === me() ? " (you)" : "")), m === g.admin ? h("span", { class: "tag" }, "admin") : null),
+      h("div", { class: "txt" }, h("span", null, nameOf(m, g) + (m === me() ? " (you)" : "")),
+        m !== me() && NICKS[m] ? h("span", { class: "t2" }, realName(m, g)) : null,
+        m === g.admin ? h("span", { class: "tag" }, "admin") : null),
       admin && m !== me() ? h("button", { class: "ghost", style: "padding:3px 8px;font-size:13px", onclick: () => makeAdmin(g, m) }, "Make admin") : null,
       admin && m !== me() ? h("button", { class: "danger", onclick: () => kick(g, m) }, "Kick") : null));
   }
@@ -1574,12 +1608,25 @@ function settingsDialog(first) {
   ], [first ? null : h("button", { class: "ghost", onclick: closeModal }, "Cancel"), h("button", { class: "primary", onclick: save }, "Save")], save);
   modal.oncancel = first ? (e) => e.preventDefault() : null;
 }
+function photoDialog(src, title, back) {
+  showModal(title, [h("img", { src, alt: title, style: "display:block;max-width:100%;max-height:60vh;margin:0 auto;border-radius:16px;image-rendering:auto" })],
+    [back ? h("button", { class: "ghost", onclick: back }, "Back") : null, h("button", { class: "ghost", onclick: closeModal }, "Close")]);
+}
 function profileDialog(uid) {
-  const pic = picOf(uid), n = nameOf(uid), bio = bioOf(uid);
+  const pic = picOf(uid), n = nameOf(uid), bio = bioOf(uid), real = realName(uid);
+  const nick = h("input", { class: "inp", maxlength: 40, value: NICKS[uid] || "", placeholder: "Nickname just for you", "aria-label": "Nickname" });
   showModal(uid === me() ? "Your profile" : "Profile", [
-    pic ? h("img", { class: "bigpic", src: pic, alt: n }) : h("div", { class: "bigpic", style: "display:grid;place-items:center;font-size:64px;font-weight:700;color:#041;background:hsl(" + hueOf(uid) + " 90% 65%)" }, (n.trim()[0] || "?").toUpperCase()),
+    pic ? h("button", { style: "background:none;border:0;padding:0;display:block;width:100%", title: "See the photo big", onclick: () => photoDialog(pic, n, () => profileDialog(uid)) },
+      h("img", { class: "bigpic", src: pic, alt: n }))
+      : h("div", { class: "bigpic", style: "display:grid;place-items:center;font-size:64px;font-weight:700;color:#041;background:hsl(" + hueOf(uid) + " 90% 65%)" }, (n.trim()[0] || "?").toUpperCase()),
     h("h2", { style: "text-align:center;margin:0" }, n + (uid === me() ? " (you)" : "")),
+    uid !== me() && NICKS[uid] ? h("p", { style: "text-align:center;margin:2px 0 0" }, "Their own name: " + real) : null,
     h("p", { style: "text-align:center" }, bio || (uid === me() ? "Add something about you in Settings." : online(uid) ? "On the page now" : "Not on the page right now")),
+    uid === me() ? null : h("div", null,
+      h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:6px 0 4px" }, "Nickname (only you see it)"),
+      h("div", { class: "field" }, nick,
+        h("button", { class: "ghost", onclick: () => setNick(uid, nick.value) }, "Save"),
+        NICKS[uid] ? h("button", { class: "danger", onclick: () => { setNick(uid, ""); closeModal(); } }, "Clear") : null)),
   ], [
     uid === me() ? h("button", { class: "ghost", onclick: () => { closeModal(); settingsDialog(false); } }, "Edit profile")
       : h("button", { class: "primary", onclick: () => { closeModal(); directChat(uid); } }, "Message"),
@@ -1590,7 +1637,7 @@ function groupProfileDialog(g) {
   if (isDm(g)) return profileDialog(otherOf(g));
   const on = g.members.filter((m) => m !== me() && online(m)).length;
   showModal("Group profile", [
-    g.icon ? h("img", { class: "bigpic", src: g.icon, alt: titleOf(g) })
+    g.icon ? h("button", { style: "background:none;border:0;padding:0;display:block;width:100%", title: "See the photo big", onclick: () => photoDialog(g.icon, titleOf(g), () => groupProfileDialog(g)) }, h("img", { class: "bigpic", src: g.icon, alt: titleOf(g) }))
       : h("div", { class: "bigpic", style: "display:grid;place-items:center;font-size:64px;font-weight:700;background:var(--mint-d);color:var(--mint)" }, (titleOf(g)[0] || "#").toUpperCase()),
     h("h2", { style: "text-align:center;margin:0" }, titleOf(g)),
     h("p", { style: "text-align:center" }, (g.public ? "🌐 Public · " : "🔒 Private · ") + g.members.length + " members" + (on ? " · " + on + " online" : "")),
@@ -1849,6 +1896,7 @@ $("joinBtn").onclick = () => joinDialog();
 $("infoBtn").onclick = () => { S.drawer = !S.drawer; render(); };
 $("closeDrawer").onclick = () => { S.drawer = false; render(); };
 $("backBtn").onclick = () => { S.active = null; S.drawer = false; render(); };
+$("barBtn").onclick = () => { SET.compactBar = !SET.compactBar; saveSet(); render(); };
 $("hideTips").onclick = () => { SET.welcomeHidden = true; saveSet(); render(); };
 $("showTips").onclick = () => { SET.welcomeHidden = false; saveSet(); render(); };
 $("attachBtn").onclick = () => $("fileInput").click();
