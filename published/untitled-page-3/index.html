@@ -111,6 +111,12 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .b .more{position:absolute;top:2px;right:4px;background:none;border:0;color:var(--mute);font-size:15px;line-height:1;padding:2px 4px;opacity:0;border-radius:6px}
 .b{position:relative}
 .b:hover .more,.b .more:focus{opacity:1;background:rgba(0,0,0,.3)}
+.rx{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.rx button{background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-size:13px;line-height:1.6}
+.rx button.on{border-color:var(--mint);color:var(--mint);box-shadow:var(--glow)}
+.rxpick{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:2px 0 10px}
+.rxpick button{font-size:22px;background:none;border:1px solid var(--line);border-radius:12px;width:46px;height:42px}
+.rxpick button:hover{border-color:var(--mint)}
 .edited{font-size:11px;color:var(--mute);margin-left:6px}
 .bigpic{width:180px;height:180px;border-radius:24px;object-fit:cover;display:block;margin:0 auto 12px;background:var(--panel2)}
 .stkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
@@ -171,7 +177,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
   </aside>
   <main id="main">
     <div class="welcome" id="welcome">
-      <div>
+      <div id="welcomeFull">
         <h2>Everyone on this page, one tap away</h2>
         <p>Open People to chat with whoever is here, browse Public groups, or join a private group with its code.</p>
         <div class="keys">
@@ -180,7 +186,9 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
           <kbd>/</kbd> type · <kbd>Esc</kbd> close · <kbd>Alt</kbd>+<kbd>S</kbd> settings<br>
           <span style="opacity:.8">Testing on your own? Open a private window, or add <b>?me=2</b> to the link for a second profile.</span>
         </div>
+        <button class="ghost" id="hideTips" style="margin-top:16px">Minimise</button>
       </div>
+      <button class="ghost" id="showTips" hidden>Show shortcuts</button>
     </div>
     <div class="head" id="head" hidden>
       <button class="ghost back" id="backBtn" aria-label="Back to chats">‹</button>
@@ -771,12 +779,18 @@ function viewOf(g) {
   let cut = g.clearedAt || 0;
   for (const x of items) if (x.o.op === "clear" && x.o.from === g.admin) cut = Math.max(cut, x.o.ts || 0);
   const base = new Map();
-  for (const x of items) if (!x.o.op && (x.o.ts || 0) > cut) base.set(x.o.id, Object.assign({}, x.o));
+  for (const x of items) if (!x.o.op && (x.o.ts || 0) > cut) base.set(x.o.id, Object.assign({ rx: {} }, x.o));
   for (const x of items) {
     const o = x.o;
-    if (o.op !== "edit" && o.op !== "del") continue;
+    if (o.op !== "edit" && o.op !== "del" && o.op !== "react") continue;
     const b = base.get(o.target);
     if (!b) continue;
+    if (o.op === "react" && typeof o.emoji === "string" && o.emoji.length <= 8) {
+      const k = o.from + "|" + o.emoji;
+      const prev = b.rx[k];
+      if (!prev || (o.ts || 0) > prev.ts) b.rx[k] = { ts: o.ts || 0, on: o.on !== false, from: o.from, emoji: o.emoji };
+      continue;
+    }
     if (o.op === "edit" && o.from === b.from && (o.ts || 0) > (b.editedAt || 0) && !b.deletedBy) {
       b.text = clip(o.text, 4000); b.editedAt = o.ts;
     }
@@ -787,6 +801,20 @@ function viewOf(g) {
   return [...base.values()].sort((a, b) => (a.ts || 0) - (b.ts || 0));
 }
 const editMsg = (g, id, text) => sendMsg(g, { op: "edit", target: id, text: clip(text, 4000) });
+const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "✨"];
+function reactionsOf(o) {
+  const out = [];
+  for (const k in o.rx || {}) {
+    const r = o.rx[k];
+    if (!r.on) continue;
+    let e = out.find((x) => x.emoji === r.emoji);
+    if (!e) { e = { emoji: r.emoji, who: [] }; out.push(e); }
+    e.who.push(r.from);
+  }
+  return out.sort((a, b) => b.who.length - a.who.length);
+}
+const myReaction = (o, emoji) => { const r = (o.rx || {})[me() + "|" + emoji]; return !!(r && r.on); };
+const react = (g, o, emoji) => sendMsg(g, { op: "react", target: o.id, emoji: clip(emoji, 8), on: !myReaction(o, emoji) });
 const delMsg = (g, id) => sendMsg(g, { op: "del", target: id });
 async function clearChat(g) {
   if (g.dm) {
@@ -1210,7 +1238,9 @@ function paint() {
 
   const g = S.groups[S.active];
   $("app").classList.toggle("chatting", !!g);
-  $("welcome").hidden = !!g; $("head").hidden = !g; $("msgs").hidden = !g; $("composer").hidden = !g;
+  $("welcome").hidden = !!g;
+  $("welcomeFull").hidden = !!SET.welcomeHidden;
+  $("showTips").hidden = !SET.welcomeHidden; $("head").hidden = !g; $("msgs").hidden = !g; $("composer").hidden = !g;
   if (g) {
     if (g.unread && !document.hidden && winFocused) { g.unread = 0; saveGroups(); }
     $("headAv").replaceChildren(h("button", { class: "avbtn", title: "Group profile", onclick: () => groupProfileDialog(g) }, groupAvatar(g)));
@@ -1334,6 +1364,15 @@ function paintMsgs(g) {
       !o.deletedBy && o.file ? fileView(o.file) : null,
       !o.deletedBy && o.text ? rich(String(o.text)) : null,
       o.deletedBy ? null : h("button", { class: "more", title: "Message options", "aria-label": "Message options", onclick: () => msgMenu(g, o) }, "⋯"),
+      (() => {
+        const rs = o.deletedBy ? [] : reactionsOf(o);
+        if (!rs.length) return null;
+        return h("div", { class: "rx" }, rs.map((r) => h("button", {
+          class: myReaction(o, r.emoji) ? "on" : "",
+          title: r.who.map((u) => nameOf(u, g)).join(", "),
+          onclick: () => react(g, o, r.emoji),
+        }, r.emoji + " " + r.who.length)));
+      })(),
       h("time", null, fmt(o.ts), o.editedAt ? h("span", { class: "edited" }, "edited") : null)));
     prev = o;
   }
@@ -1493,6 +1532,10 @@ function settingsDialog(first) {
     else { SET.notify = false; closeNotes(); }
     saveSet(); drawStatus();
   } });
+  const bfi = h("input", { type: "file", accept: "application/json,.json", hidden: true, onchange: (e) => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (f) restoreBackup(f);
+  } });
   const snd = h("input", { type: "checkbox", checked: !!SET.sound, onchange: (e) => { SET.sound = e.target.checked; saveSet(); if (e.target.checked) beep(); } });
   drawStatus();
   drawPic();
@@ -1520,6 +1563,11 @@ function settingsDialog(first) {
       drawStatus();
       toast(sent ? "Test sent — check your desktop" : SET.sound ? "Sound played" : "Nothing to test yet — switch something on first");
     } }, "Send a test")),
+    h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:14px 0 4px" }, "Backup"),
+    h("p", { style: "margin:0 0 6px" }, "Saves your profile, chats, stickers and keys to one file. Anyone with that file can read your chats, so keep it somewhere private."),
+    h("div", { class: "field" },
+      h("button", { class: "ghost", onclick: downloadBackup }, "⬇ Back up everything"),
+      h("button", { class: "ghost", onclick: () => bfi.click() }, "⬆ Restore"), bfi),
     h("div", { class: "field", style: "margin-top:12px" },
       h("button", { class: "ghost", onclick: () => stickerTray(true) }, "✨ My stickers"),
       first ? null : h("button", { class: "ghost", onclick: () => copy(location.origin + location.pathname + "?space=" + SPACE, "Page link") }, "Copy page link")),
@@ -1576,7 +1624,14 @@ function msgMenu(g, o) {
   const mine = o.from === me();
   const canDelete = mine || isAdmin(g);
   const img = o.file && typeof o.file.data === "string" && /^data:image\//.test(o.file.data);
-  showModal("Message", [h("p", null, mine ? "Your message" : "From " + nameOf(o.from, g))], [
+  showModal("Message", [
+    o.deletedBy ? null : h("div", { class: "rxpick" }, REACTIONS.map((e) => h("button", {
+      title: myReaction(o, e) ? "Remove " + e : "React " + e,
+      style: myReaction(o, e) ? "border-color:var(--mint)" : "",
+      onclick: async () => { closeModal(); await react(g, o, e); },
+    }, e))),
+    h("p", null, mine ? "Your message" : "From " + nameOf(o.from, g)),
+  ], [
     o.sticker ? h("button", { class: "primary", onclick: () => { closeModal(); keepSticker(o.sticker); } }, "✨ Save sticker") : null,
     img ? h("button", { class: "primary", onclick: () => { closeModal(); keepSticker(o.file.data); } }, "✨ Save as sticker") : null,
     mine && o.text && !o.file && !o.sticker ? h("button", { class: "ghost", onclick: () => { closeModal(); editDialog(g, o); } }, "Edit") : null,
@@ -1794,6 +1849,8 @@ $("joinBtn").onclick = () => joinDialog();
 $("infoBtn").onclick = () => { S.drawer = !S.drawer; render(); };
 $("closeDrawer").onclick = () => { S.drawer = false; render(); };
 $("backBtn").onclick = () => { S.active = null; S.drawer = false; render(); };
+$("hideTips").onclick = () => { SET.welcomeHidden = true; saveSet(); render(); };
+$("showTips").onclick = () => { SET.welcomeHidden = false; saveSet(); render(); };
 $("attachBtn").onclick = () => $("fileInput").click();
 $("stickerBtn").onclick = () => stickerTray(false);
 $("fileInput").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; sendFile(f); };
@@ -1846,6 +1903,44 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "/" && !typing && S.active) { e.preventDefault(); $("input").focus(); }
 });
 
+function backupData() {
+  const keys = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith("nl.")) keys[k] = localStorage.getItem(k);
+  }
+  return { app: "neon-lobby-chat", v: 1, ts: Date.now(), space: SPACE, name: ID.raw.name, keys };
+}
+function downloadBackup() {
+  try {
+    const data = JSON.stringify(backupData());
+    const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+    const a = h("a", { href: url, download: "neon-lobby-backup-" + new Date().toISOString().slice(0, 10) + ".json" });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast("Backup saved (" + Math.max(1, Math.round(data.length / 1024)) + " KB) — keep it private");
+  } catch (e) { toast("Couldn't build the backup."); }
+}
+function restoreBackup(file) {
+  const r = new FileReader();
+  r.onerror = () => toast("Couldn't read that file.");
+  r.onload = () => {
+    let d;
+    try { d = JSON.parse(r.result); } catch (e) { return toast("That isn't a backup file."); }
+    if (!d || d.app !== "neon-lobby-chat" || !d.keys || typeof d.keys !== "object") return toast("That isn't a backup from this chat.");
+    const n = Object.keys(d.keys).length;
+    if (!confirm("Restore " + n + " saved items from " + new Date(d.ts || 0).toLocaleString() + "?\n\nThis replaces your current profile, chats and stickers on this device, then reloads the page.")) return;
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("nl.")) localStorage.removeItem(k);
+      }
+      for (const k in d.keys) if (typeof d.keys[k] === "string") localStorage.setItem(k, d.keys[k]);
+      location.reload();
+    } catch (e) { toast("Restore failed — your browser storage may be full."); }
+  };
+  r.readAsText(file);
+}
 function watchTabs() {
   if (!("BroadcastChannel" in window)) return;
   try {
