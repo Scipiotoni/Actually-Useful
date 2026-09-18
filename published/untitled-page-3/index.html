@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Classroom</title>
+<title>Neon Lobby Chat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -103,6 +103,28 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .code{font-size:22px;font-weight:700;letter-spacing:.12em;color:var(--mint);text-shadow:var(--glow)}
 .chk{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:14px}
 .chk input{accent-color:var(--mint);width:17px;height:17px}
+.av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.avbtn{background:none;border:0;padding:0;border-radius:50%;flex:none}
+.stk{display:block;width:132px;height:132px;object-fit:contain}
+.b.stkb{background:none;border:0;padding:0 0 2px}
+.b.del{opacity:.75;font-style:italic}
+.b .more{position:absolute;top:2px;right:4px;background:none;border:0;color:var(--mute);font-size:15px;line-height:1;padding:2px 4px;opacity:0;border-radius:6px}
+.b{position:relative}
+.b:hover .more,.b .more:focus{opacity:1;background:rgba(0,0,0,.3)}
+.edited{font-size:11px;color:var(--mute);margin-left:6px}
+.bigpic{width:180px;height:180px;border-radius:24px;object-fit:cover;display:block;margin:0 auto 12px;background:var(--panel2)}
+.stkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.stkcell{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:6px;cursor:pointer}
+.stkcell img{width:100%;height:72px;object-fit:contain;display:block}
+.stkcell .x{position:absolute;top:-6px;right:-6px;background:var(--panel);border:1px solid var(--danger);color:var(--danger);border-radius:50%;width:22px;height:22px;font-size:12px;line-height:1;padding:0}
+#paint{touch-action:none;width:100%;max-width:280px;aspect-ratio:1;display:block;margin:0 auto;border-radius:14px;border:1px solid var(--line);cursor:crosshair;
+  background:conic-gradient(from 0deg,#ffffff14 0 25%,transparent 0 50%,#ffffff14 0 75%,transparent 0) 0 0/18px 18px,var(--panel2)}
+.pal{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.pal button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;padding:0}
+.pal button[aria-pressed="true"]{border-color:var(--ink);transform:scale(1.15)}
+.sizes{display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+.sizes button{min-width:38px;height:32px;border-radius:9px;border:1px solid var(--line);background:none}
+.sizes button[aria-pressed="true"]{border-color:var(--mint);color:var(--mint)}
 .seg{display:flex;gap:6px;margin-top:4px}
 .seg button{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:none;text-align:left;font-size:13px}
 .seg button[aria-pressed="true"]{border-color:var(--mint);background:var(--mint-d);box-shadow:var(--glow)}
@@ -150,12 +172,12 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
   <main id="main">
     <div class="welcome" id="welcome">
       <div>
-        <h2>Web based chat</h2>
+        <h2>Everyone on this page, one tap away</h2>
         <p>Open People to chat with whoever is here, browse Public groups, or join a private group with its code.</p>
         <div class="keys">
           <kbd>Alt</kbd>+<kbd>N</kbd> new group · <kbd>Alt</kbd>+<kbd>J</kbd> join with code · <kbd>Alt</kbd>+<kbd>G</kbd> public groups · <kbd>Alt</kbd>+<kbd>P</kbd> people<br>
-          <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> switch chat · <kbd>Alt</kbd>+<kbd>M</kbd> group info · <kbd>Alt</kbd>+<kbd>U</kbd> send file<br>
-          <kbd>/</kbd> type · <kbd>Esc</kbd> close · <kbd>Alt</kbd>+<kbd>S</kbd> change your name
+          <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> switch chat · <kbd>Alt</kbd>+<kbd>M</kbd> group info · <kbd>Alt</kbd>+<kbd>U</kbd> send file · <kbd>Alt</kbd>+<kbd>E</kbd> stickers<br>
+          <kbd>/</kbd> type · <kbd>Esc</kbd> close · <kbd>Alt</kbd>+<kbd>S</kbd> settings
         </div>
       </div>
     </div>
@@ -167,6 +189,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
     </div>
     <div class="msgs" id="msgs" hidden aria-live="polite"></div>
     <form class="composer" id="composer" hidden>
+      <button type="button" class="attach" id="stickerBtn" title="Stickers (Alt+E)" aria-label="Stickers">✨</button>
       <button type="button" class="attach" id="attachBtn" title="Send a file (Alt+U)" aria-label="Send a file">📎</button>
       <input type="file" id="fileInput" hidden>
       <input type="text" id="input" autocomplete="off" maxlength="4000" placeholder="Message, or paste a link">
@@ -236,6 +259,48 @@ function toast(text) {
 async function copy(text, label) {
   try { await navigator.clipboard.writeText(text); toast(label + " copied"); }
   catch (e) { prompt("Copy this:", text); }
+}
+
+const SET = Object.assign({ notify: false }, jget("nl.settings") || {});
+const saveSet = () => jset("nl.settings", SET);
+function squareThumb(file, px, q, png) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onerror = () => rej(new Error("read"));
+    r.onload = () => {
+      const im = new Image();
+      im.onerror = () => rej(new Error("decode"));
+      im.onload = () => {
+        const cv = document.createElement("canvas");
+        cv.width = cv.height = px;
+        const cx = cv.getContext("2d");
+        const sc = Math.max(px / im.width, px / im.height);
+        const w = im.width * sc, hh = im.height * sc;
+        cx.drawImage(im, (px - w) / 2, (px - hh) / 2, w, hh);
+        res(png ? cv.toDataURL("image/png") : cv.toDataURL("image/jpeg", q || 0.72));
+      };
+      im.src = r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+async function askNotify() {
+  if (!("Notification" in window)) { toast("This browser doesn't support notifications."); return false; }
+  let p = Notification.permission;
+  if (p === "default") { try { p = await Notification.requestPermission(); } catch (e) { p = "denied"; } }
+  if (p !== "granted") { toast("Notifications are blocked in your browser settings."); return false; }
+  return true;
+}
+function notify(g, o) {
+  if (!SET.notify || !("Notification" in window) || Notification.permission !== "granted") return;
+  if (!document.hidden && S.active === g.gid) return;
+  try {
+    const n = new Notification(titleOf(g), {
+      body: (g.members.length > 2 ? nameOf(o.from, g) + ": " : "") + preview(o, g),
+      tag: g.gid, icon: g.icon || picOf(o.from) || undefined,
+    });
+    n.onclick = () => { window.focus(); S.tab = "chats"; openChat(g.gid); n.close(); };
+  } catch (e) { /* ignore */ }
 }
 
 /* ================= crypto ================= */
@@ -325,7 +390,7 @@ async function groupKey(g) {
 /* ================= state ================= */
 const S = {
   people: {}, groups: {}, hist: {}, ids: {}, invites: {}, pj: {},
-  pubs: {}, active: null, tab: "chats", drawer: false, conn: false, lookup: null, synced: new Set(),
+  pubs: {}, avatars: jget("nl.avatars") || {}, stickers: jget("nl.stickers") || [], active: null, tab: "chats", drawer: false, conn: false, lookup: null, synced: new Set(),
 };
 let client = null;
 const T = {
@@ -361,6 +426,13 @@ function saveHist(gid) {
     jset(k, arr.slice(-50));
   }, 400);
 }
+function saveAvatars() {
+  const ks = Object.keys(S.avatars).sort((a, b) => (S.avatars[b].ts || 0) - (S.avatars[a].ts || 0)).slice(0, 40);
+  const out = {}; for (const k of ks) out[k] = S.avatars[k];
+  S.avatars = out;
+  if (!jset("nl.avatars", out)) { S.avatars = {}; jset("nl.avatars", {}); }
+}
+const saveStickers = () => jset("nl.stickers", S.stickers);
 function loadAll() {
   S.groups = jget(LS + "groups") || {};
   S.invites = jget(LS + "inv") || {};
@@ -412,7 +484,7 @@ function connect() {
 }
 async function publishPresence() {
   if (!ID.raw.name) return;
-  const w = await sign({ t: "pres", from: me(), name: ID.raw.name, hue: ID.raw.hue, dh: ID.raw.dPub, ts: Date.now() });
+  const w = await sign({ t: "pres", from: me(), name: ID.raw.name, hue: ID.raw.hue, dh: ID.raw.dPub, av: ID.raw.avatar || "", bio: clip(ID.raw.bio, 200), ts: Date.now() });
   pub(T.pres(me()), JSON.stringify(w), true);
 }
 async function subscribeGroup(g, withSync) {
@@ -456,7 +528,13 @@ async function onPres(uid, payload) {
   if (!o || o.t !== "pres" || o.from !== uid || !o.dh || typeof o.dh.x !== "string") return;
   if (Date.now() - (o.ts || 0) > 330000) return;
   if (uid === me()) return;
-  S.people[uid] = { name: clip(o.name, 40) || "Someone", hue: Number(o.hue) % 360 || 0, dh: pubOnly(o.dh), seen: Date.now() };
+  const av = typeof o.av === "string" && o.av.startsWith("data:image/") && o.av.length < 60000 ? o.av : "";
+  S.people[uid] = { name: clip(o.name, 40) || "Someone", hue: Number(o.hue) % 360 || 0, dh: pubOnly(o.dh), av, bio: clip(o.bio, 200), seen: Date.now() };
+  const old = S.avatars[uid] || {};
+  if (old.a !== av || old.name !== S.people[uid].name || old.bio !== S.people[uid].bio) {
+    S.avatars[uid] = { a: av, name: S.people[uid].name, bio: S.people[uid].bio, ts: Date.now() };
+    saveAvatars();
+  }
   for (const gid in S.groups) {
     const g = S.groups[gid];
     if (g.names && g.members.includes(uid) && isAdmin(g) && g.names[uid] !== S.people[uid].name) { /* name refresh happens on next state change */ }
@@ -527,7 +605,7 @@ function joinGroup(inv, open) {
   const g = {
     gid: inv.gid, epoch: inv.epoch, key: inv.key, name: inv.name, admin: inv.from,
     members: [me(), inv.from], names: { [inv.from]: inv.fromName }, keys: {}, coded: !!inv.coded,
-    approval: false, banned: [], code: "", ver: 0, unread: 0, updatedAt: Date.now(), last: null,
+    approval: false, banned: [], code: "", icon: "", desc: "", clearedAt: 0, ver: 0, unread: 0, updatedAt: Date.now(), last: null,
   };
   S.groups[g.gid] = g; S.hist[g.gid] = []; S.ids[g.gid] = new Set();
   delete S.invites[g.gid]; saveMisc(); saveGroups();
@@ -557,6 +635,8 @@ async function applyState(g, o) {
     ver: o.ver, name: clip(o.name, 60), admin: String(o.admin), members: o.members.filter((x) => isHex(x, 16)).slice(0, 200),
     names: o.names || {}, keys: o.keys || {}, coded: !!o.coded, approval: !!o.approval,
     banned: Array.isArray(o.banned) ? o.banned : [], code: normCode(o.code), public: !!o.public,
+    icon: typeof o.icon === "string" && o.icon.startsWith("data:image/") && o.icon.length < 60000 ? o.icon : "",
+    desc: clip(o.desc, 300),
   });
   if (!wasAdmin && isAdmin(g)) { toast("You're now admin of " + (g.name || "a chat")); if (g.coded && g.code) await openDoor(g); }
   if (wasAdmin && !isAdmin(g) && g.doorId) unsub(T.req(g.doorId));
@@ -567,14 +647,55 @@ async function acceptMsg(g, w, live) {
   if (!o || o.t !== "msg" || o.gid !== g.gid || !isHex(o.id, 16)) return;
   if (live && g.ver > 0 && !g.members.includes(o.from)) return;
   if (S.ids[g.gid].has(o.id)) return;
+  if (!o.op && (o.ts || 0) <= (g.clearedAt || 0)) return;
   S.ids[g.gid].add(o.id);
   const list = S.hist[g.gid];
   list.push({ w, o });
   list.sort((a, b) => (a.o.ts || 0) - (b.o.ts || 0));
   if (list.length > HIST_MAX) list.splice(0, list.length - HIST_MAX);
-  if ((o.ts || 0) >= (g.updatedAt || 0)) { g.updatedAt = o.ts; g.last = { from: o.from, text: preview(o, g) }; }
-  if (live && o.from !== me() && (S.active !== g.gid || document.hidden)) g.unread = (g.unread || 0) + 1;
+  if (o.op === "clear" && o.from === g.admin) pruneTo(g, o.ts);
+  if (!o.op) {
+    if ((o.ts || 0) >= (g.updatedAt || 0)) { g.updatedAt = o.ts; g.last = { from: o.from, text: preview(o, g) }; }
+    if (live && o.from !== me() && (S.active !== g.gid || document.hidden)) { g.unread = (g.unread || 0) + 1; notify(g, o); }
+  }
   saveHist(g.gid); saveGroups(); render();
+}
+function pruneTo(g, ts) {
+  g.clearedAt = Math.max(g.clearedAt || 0, ts || 0);
+  const keep = (S.hist[g.gid] || []).filter((x) => x.o.op === "clear" || (x.o.ts || 0) > g.clearedAt);
+  S.hist[g.gid] = keep;
+  S.ids[g.gid] = new Set(keep.map((x) => x.o.id));
+  g.last = null;
+  saveHist(g.gid); saveGroups();
+}
+function viewOf(g) {
+  const items = S.hist[g.gid] || [];
+  let cut = g.clearedAt || 0;
+  for (const x of items) if (x.o.op === "clear" && x.o.from === g.admin) cut = Math.max(cut, x.o.ts || 0);
+  const base = new Map();
+  for (const x of items) if (!x.o.op && (x.o.ts || 0) > cut) base.set(x.o.id, Object.assign({}, x.o));
+  for (const x of items) {
+    const o = x.o;
+    if (o.op !== "edit" && o.op !== "del") continue;
+    const b = base.get(o.target);
+    if (!b) continue;
+    if (o.op === "edit" && o.from === b.from && (o.ts || 0) > (b.editedAt || 0) && !b.deletedBy) {
+      b.text = clip(o.text, 4000); b.editedAt = o.ts;
+    }
+    if (o.op === "del" && (o.from === b.from || o.from === g.admin)) {
+      b.deletedBy = o.from; b.text = ""; b.file = null; b.sticker = null;
+    }
+  }
+  return [...base.values()].sort((a, b) => (a.ts || 0) - (b.ts || 0));
+}
+const editMsg = (g, id, text) => sendMsg(g, { op: "edit", target: id, text: clip(text, 4000) });
+const delMsg = (g, id) => sendMsg(g, { op: "del", target: id });
+async function clearChat(g) {
+  if (!isAdmin(g)) return;
+  if (!confirm("Delete every message in this group for everyone? People who join later won't see them either.")) return;
+  await sendMsg(g, { op: "clear" });
+  pruneTo(g, Date.now());
+  render();
 }
 const syncSeen = new Set();
 async function onCtl(g, c) {
@@ -642,7 +763,8 @@ async function publishState(g, extra) {
   const obj = Object.assign({
     t: "state", from: me(), gid: g.gid, ver: g.ver, name: g.name, admin: g.admin, members: g.members,
     names: pickKeys(g.names, g.members), keys: pickKeys(g.keys, g.members), coded: !!g.coded, approval: !!g.approval,
-    banned: g.banned || [], code: g.coded ? g.code : "", public: !!(g.public && g.coded), ts: Date.now(),
+    banned: g.banned || [], code: g.coded ? g.code : "", public: !!(g.public && g.coded),
+    icon: g.icon || "", desc: clip(g.desc, 300), ts: Date.now(),
   }, extra || {});
   const w = await sign(obj);
   pub(T.g(g, "state"), await seal(await groupKey(g), w), true);
@@ -671,7 +793,7 @@ function newGroup(name, admin) {
   const g = {
     gid: rid(8), epoch: 1, key: b64(crypto.getRandomValues(new Uint8Array(32))), name: clip(name, 60), admin: me(),
     members: [me()], names: { [me()]: ID.raw.name }, keys: { [me()]: ID.raw.dPub }, coded: false, approval: false,
-    banned: [], code: "", ver: 0, unread: 0, updatedAt: Date.now(), last: null, pending: {},
+    banned: [], code: "", icon: "", desc: "", clearedAt: 0, ver: 0, unread: 0, updatedAt: Date.now(), last: null, pending: {},
   };
   S.groups[g.gid] = g; S.hist[g.gid] = []; S.ids[g.gid] = new Set();
   return g;
@@ -760,6 +882,21 @@ async function setVisibility(g, isPublic) {
   await sendMsg(g, { sys: isPublic ? "public" : "private" });
   render();
 }
+async function setIcon(g, dataUrl) {
+  if (!isAdmin(g)) return;
+  g.icon = dataUrl || "";
+  await publishState(g);
+  await sendMsg(g, { sys: dataUrl ? "icon" : "noicon" });
+  render();
+}
+async function setDesc(g, v) {
+  v = clip(v.trim(), 300);
+  if (!isAdmin(g) || v === (g.desc || "")) return;
+  g.desc = v;
+  await publishState(g);
+  await sendMsg(g, { sys: "desc" });
+  render();
+}
 async function setApproval(g, v) { g.approval = !!v; await publishState(g); render(); }
 async function leave(g) {
   if (!confirm("Leave “" + (g.name || "this chat") + "”?")) return;
@@ -837,23 +974,45 @@ function sysText(o, g) {
     case "uncoded": return a + " turned off the join code";
     case "public": return a + " made the group public";
     case "private": return a + " made the group private";
+    case "icon": return a + " changed the group photo";
+    case "noicon": return a + " removed the group photo";
+    case "desc": return a + " updated the group description";
     default: return "";
   }
 }
 function preview(o, g) {
   if (o.sys) return sysText(o, g);
+  if (o.sticker) return "✨ Sticker";
   if (o.file) return "📎 " + clip(o.file.name, 60);
   return clip(o.text, 100);
 }
+function picOf(uid) {
+  if (uid === me()) return ID.raw.avatar || "";
+  const p = S.people[uid];
+  if (p && p.av) return p.av;
+  const c = S.avatars[uid];
+  return (c && c.a) || "";
+}
+function bioOf(uid) {
+  if (uid === me()) return ID.raw.bio || "";
+  const p = S.people[uid];
+  if (p && p.bio) return p.bio;
+  const c = S.avatars[uid];
+  return (c && c.bio) || "";
+}
 function avatar(uid, sm) {
-  const n = nameOf(uid);
-  const el = h("div", { class: "av" + (sm ? " sm" : ""), style: "background:hsl(" + hueOf(uid) + " 90% 65%)", "aria-hidden": "true" }, (n.trim()[0] || "?").toUpperCase());
+  const n = nameOf(uid), pic = picOf(uid);
+  const el = h("div", { class: "av" + (sm ? " sm" : ""), style: pic ? "" : "background:hsl(" + hueOf(uid) + " 90% 65%)", "aria-hidden": "true" },
+    pic ? h("img", { src: pic, alt: "" }) : (n.trim()[0] || "?").toUpperCase());
   if (uid !== me() && online(uid)) el.append(h("span", { class: "dot" }));
   return el;
 }
+const avatarBtn = (uid, sm) => h("button", { class: "avbtn", title: "See profile", onclick: () => profileDialog(uid) }, avatar(uid, sm));
 function groupAvatar(g) {
   const others = g.members.filter((m) => m !== me());
-  const el = (!g.name && others.length === 1) ? avatar(others[0]) : h("div", { class: "av grp", "aria-hidden": "true" }, (g.name || "#").trim().charAt(0).toUpperCase() || "#");
+  const el = g.icon ? h("div", { class: "av", "aria-hidden": "true" }, h("img", { src: g.icon, alt: "" }))
+    : (!g.name && others.length === 1) ? avatar(others[0])
+    : h("div", { class: "av grp", "aria-hidden": "true" }, (g.name || "#").trim().charAt(0).toUpperCase() || "#");
   if (g.public) el.append(h("span", { class: "lock", title: "Public group" }, "🌐"));
   else if (g.coded) el.append(h("span", { class: "lock", title: "Private group with code" }, "🔑"));
   return el;
@@ -875,10 +1034,11 @@ function paint() {
   if (!ID) return;
   const total = Object.values(S.groups).reduce((n, g) => n + (g.unread || 0), 0) + Object.keys(S.invites).length;
   document.title = (total ? "(" + total + ") " : "") + "Neon Lobby Chat";
-  $("meBox").replaceChildren(avatar(me()),
+  $("meBox").replaceChildren(avatarBtn(me()),
     h("div", { class: "txt" }, h("b", null, ID.raw.name || "…"),
       h("small", null, h("span", { class: "conn" + (S.conn ? " on" : "") }), S.conn ? Object.keys(S.people).length + " others here · room " + SPACE : "Connecting…")),
-    h("button", { class: "ghost", title: "Copy page link", onclick: () => copy(location.origin + location.pathname + "?space=" + SPACE, "Page link") }, "Share"));
+    h("button", { class: "ghost", title: "Copy page link", onclick: () => copy(location.origin + location.pathname + "?space=" + SPACE, "Page link") }, "Share"),
+    h("button", { class: "ghost", title: "Settings (Alt+S)", "aria-label": "Settings", onclick: () => settingsDialog() }, "⚙"));
   $("tabChats").setAttribute("aria-selected", S.tab === "chats");
   $("tabPeople").setAttribute("aria-selected", S.tab === "people");
   $("tabPublic").setAttribute("aria-selected", S.tab === "public");
@@ -893,7 +1053,7 @@ function paint() {
   $("welcome").hidden = !!g; $("head").hidden = !g; $("msgs").hidden = !g; $("composer").hidden = !g;
   if (g) {
     if (g.unread && !document.hidden) { g.unread = 0; saveGroups(); }
-    $("headAv").replaceChildren(groupAvatar(g));
+    $("headAv").replaceChildren(h("button", { class: "avbtn", title: "Group profile", onclick: () => groupProfileDialog(g) }, groupAvatar(g)));
     $("chatName").textContent = titleOf(g);
     const on = g.members.filter((m) => m !== me() && online(m)).length;
     $("chatSub").textContent = g.members.length + " members" + (on ? " · " + on + " online" : "") + " · admin: " + nameOf(g.admin, g) + (g.public ? " · public" : g.coded ? " · private, code" : " · private");
@@ -950,14 +1110,15 @@ function paintPublic(list) {
 }
 function paintPeople(list) {
   const ids = Object.keys(S.people).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
-  list.append(h("div", { class: "row" }, avatar(me()), h("div", { class: "txt" }, h("div", null, (ID.raw.name || "You") + " (you)"), h("div", { class: "t2" }, "Alt+S to change your name"))));
+  list.append(h("div", { class: "row" }, avatarBtn(me()), h("div", { class: "txt" }, h("div", null, (ID.raw.name || "You") + " (you)"), h("div", { class: "t2" }, bioOf(me()) || "Alt+S for settings")),
+    h("button", { class: "ghost", onclick: () => settingsDialog() }, "Settings")));
   if (!ids.length) list.append(h("div", { class: "empty" }, "Nobody else is here right now. Tap Share and send the link."));
   const adminGroups = sortedGroups().filter(isAdmin);
   for (const uid of ids) {
     const inv = adminGroups.filter((g) => !g.members.includes(uid));
     list.append(h("div", { class: "row" },
-      avatar(uid),
-      h("div", { class: "txt" }, h("div", null, nameOf(uid)), h("div", { class: "t2" }, "On the page now")),
+      avatarBtn(uid),
+      h("div", { class: "txt" }, h("div", null, nameOf(uid)), h("div", { class: "t2" }, bioOf(uid) || "On the page now")),
       h("button", { class: "ghost", onclick: () => directChat(uid) }, "Chat"),
       inv.length ? h("button", { class: "ghost", onclick: () => inviteDialog(uid, inv) }, "Invite") : null));
   }
@@ -998,19 +1159,24 @@ function paintMsgs(g) {
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
   box.replaceChildren();
   const many = g.members.length > 2;
+  const view = viewOf(g);
   let prev = null;
-  for (const { o } of S.hist[g.gid] || []) {
+  for (const o of view) {
     if (o.sys) { box.append(h("div", { class: "sys" }, sysText(o, g))); prev = null; continue; }
     const mine = o.from === me();
     const first = !prev || prev.from !== o.from;
-    box.append(h("div", { class: "b" + (mine ? " me" : "") + (first ? " gap" : "") },
+    const canAct = !o.deletedBy && (mine || isAdmin(g));
+    box.append(h("div", { class: "b" + (mine ? " me" : "") + (first ? " gap" : "") + (o.sticker && !o.deletedBy ? " stkb" : "") + (o.deletedBy ? " del" : "") },
       many && !mine && first ? h("div", { class: "who", style: "color:hsl(" + hueOf(o.from) + " 90% 68%)" }, nameOf(o.from, g)) : null,
-      o.file ? fileView(o.file) : null,
-      o.text ? rich(String(o.text)) : null,
-      h("time", null, fmt(o.ts))));
+      o.deletedBy ? (o.deletedBy === o.from ? "🚫 This message was deleted" : "🚫 Deleted by " + nameOf(o.deletedBy, g)) : null,
+      !o.deletedBy && typeof o.sticker === "string" && o.sticker.startsWith("data:image/") ? h("img", { class: "stk", src: o.sticker, alt: "sticker" }) : null,
+      !o.deletedBy && o.file ? fileView(o.file) : null,
+      !o.deletedBy && o.text ? rich(String(o.text)) : null,
+      canAct ? h("button", { class: "more", title: "Message options", "aria-label": "Message options", onclick: () => msgMenu(g, o) }, "⋯") : null,
+      h("time", null, fmt(o.ts), o.editedAt ? h("span", { class: "edited" }, "edited") : null)));
     prev = o;
   }
-  if (!(S.hist[g.gid] || []).length) box.append(h("div", { class: "sys" }, "No messages yet. Say hi 👋"));
+  if (!view.length) box.append(h("div", { class: "sys" }, "No messages yet. Say hi 👋"));
   if (atBottom || box.dataset.gid !== g.gid) box.scrollTop = box.scrollHeight;
   box.dataset.gid = g.gid;
 }
@@ -1022,12 +1188,23 @@ function paintDrawer(g) {
   if (!open) return;
   const keepFocus = document.activeElement && d.contains(document.activeElement) && document.activeElement.id;
   const draft = keepFocus === "dName" ? $("dName").value : null;
+  const draftDesc = keepFocus === "dDesc" ? $("dDesc").value : null;
   body.replaceChildren();
   const admin = isAdmin(g);
   if (admin) {
     const inp = h("input", { class: "inp", id: "dName", value: draft != null ? draft : (g.name || ""), maxlength: 60, placeholder: "Group name", "aria-label": "Group name" });
-    body.append(h("div", { class: "sec" }, h("h3", null, "Name"),
-      h("div", { class: "field" }, inp, h("button", { class: "ghost", onclick: () => rename(g, inp.value) }, "Save"))));
+    const fi = h("input", { type: "file", accept: "image/*", hidden: true, onchange: async (e) => {
+      const f = e.target.files[0]; e.target.value = "";
+      if (f) { try { await setIcon(g, await squareThumb(f, 128, 0.7)); } catch (err) { toast("Couldn't use that image."); } }
+    } });
+    const ds = h("input", { class: "inp", id: "dDesc", value: draftDesc != null ? draftDesc : (g.desc || ""), maxlength: 300, placeholder: "What's this group about?", "aria-label": "Group description" });
+    body.append(h("div", { class: "sec" }, h("h3", null, "Group profile"),
+      h("div", { class: "field" }, groupAvatar(g), h("button", { class: "ghost", onclick: () => fi.click() }, "Change photo"),
+        g.icon ? h("button", { class: "danger", onclick: () => setIcon(g, "") }, "Remove") : null, fi),
+      h("div", { class: "field" }, inp, h("button", { class: "ghost", onclick: () => rename(g, inp.value) }, "Save")),
+      h("div", { class: "field" }, ds, h("button", { class: "ghost", onclick: () => setDesc(g, ds.value) }, "Save"))));
+  } else if (g.desc) {
+    body.append(h("div", { class: "sec" }, h("h3", null, "About"), h("p", { style: "margin:0;font-size:14px" }, g.desc)));
   }
   // visibility
   const vs = h("div", { class: "sec" }, h("h3", null, "Visibility"));
@@ -1073,7 +1250,7 @@ function paintDrawer(g) {
   const ms = h("div", { class: "sec" }, h("h3", null, g.members.length + " members"));
   const sorted = [...g.members].sort((a, b) => (b === g.admin) - (a === g.admin) || nameOf(a, g).localeCompare(nameOf(b, g)));
   for (const m of sorted) {
-    ms.append(h("div", { class: "row" }, avatar(m, true),
+    ms.append(h("div", { class: "row" }, avatarBtn(m, true),
       h("div", { class: "txt" }, h("span", null, nameOf(m, g) + (m === me() ? " (you)" : "")), m === g.admin ? h("span", { class: "tag" }, "admin") : null),
       admin && m !== me() ? h("button", { class: "ghost", style: "padding:3px 8px;font-size:13px", onclick: () => makeAdmin(g, m) }, "Make admin") : null,
       admin && m !== me() ? h("button", { class: "danger", onclick: () => kick(g, m) }, "Kick") : null));
@@ -1089,6 +1266,7 @@ function paintDrawer(g) {
     }
     body.append(as);
   }
+  if (admin) body.append(h("button", { class: "act red", onclick: () => clearChat(g) }, "Clear all messages for everyone"));
   body.append(h("button", { class: "act red", onclick: () => leave(g) }, "Leave group"));
   if (admin) body.append(h("button", { class: "act red", onclick: () => deleteGroup(g) }, "Delete group for everyone"));
   if (keepFocus && $(keepFocus)) $(keepFocus).focus();
@@ -1108,21 +1286,173 @@ function showModal(title, bodyKids, actions, onEnter) {
 }
 const closeModal = () => modal.open && modal.close();
 
-function nameDialog(first) {
-  const inp = h("input", { class: "inp", maxlength: 40, value: ID.raw.name || "", placeholder: "Your name", "aria-label": "Your name" });
-  const save = () => {
-    const v = clip(inp.value.trim(), 40);
-    if (!v) return inp.focus();
-    ID.raw.name = v; jset("nl.identity", ID.raw);
-    closeModal(); publishPresence();
+function settingsDialog(first) {
+  const pic = h("div", { style: "text-align:center" });
+  const fi = h("input", { type: "file", accept: "image/*", hidden: true, onchange: async (e) => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try { ID.raw.avatar = await squareThumb(f, 128, 0.72); drawPic(); } catch (err) { toast("Couldn't use that image."); }
+  } });
+  function drawPic() {
+    pic.replaceChildren(
+      ID.raw.avatar ? h("img", { class: "bigpic", src: ID.raw.avatar, alt: "Your photo" })
+        : h("div", { class: "bigpic", style: "display:grid;place-items:center;font-size:64px;font-weight:700;color:#041;background:hsl(" + ID.raw.hue + " 90% 65%)" }, (nm.value.trim()[0] || "?").toUpperCase()),
+      h("div", { class: "field", style: "justify-content:center" },
+        h("button", { class: "ghost", onclick: () => fi.click() }, ID.raw.avatar ? "Change photo" : "Add photo"),
+        ID.raw.avatar ? h("button", { class: "danger", onclick: () => { ID.raw.avatar = ""; drawPic(); } }, "Remove") : null), fi);
+  }
+  const nm = h("input", { class: "inp", maxlength: 40, value: ID.raw.name || "", placeholder: "Your name", "aria-label": "Your name", oninput: () => { if (!ID.raw.avatar) drawPic(); } });
+  const bio = h("input", { class: "inp", maxlength: 200, value: ID.raw.bio || "", placeholder: "About you (optional)", "aria-label": "About you" });
+  const nt = h("input", { type: "checkbox", checked: !!SET.notify, onchange: async (e) => {
+    if (e.target.checked) { const ok = await askNotify(); e.target.checked = ok; SET.notify = ok; }
+    else SET.notify = false;
+    saveSet();
+  } });
+  drawPic();
+  const save = async () => {
+    const v = clip(nm.value.trim(), 40);
+    if (!v) { toast("Pick a name first."); return nm.focus(); }
+    ID.raw.name = v; ID.raw.bio = clip(bio.value.trim(), 200);
+    jset("nl.identity", ID.raw);
+    closeModal();
+    if (first) connect(); else publishPresence();
     for (const gid in S.groups) { const g = S.groups[gid]; if (isAdmin(g)) publishState(g); }
-    if (first) connect();
     render();
   };
-  showModal(first ? "What should people call you?" : "Change your name",
-    [h("p", null, "Everyone on this page will see this name."), inp],
-    [first ? null : h("button", { class: "ghost", onclick: closeModal }, "Cancel"), h("button", { class: "primary", onclick: save }, "Save")], save);
-  if (first) modal.oncancel = (e) => e.preventDefault(); else modal.oncancel = null;
+  showModal(first ? "Set up your profile" : "Settings", [
+    pic,
+    h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:6px 0 4px" }, "Name"), nm,
+    h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:12px 0 4px" }, "About"), bio,
+    h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:14px 0 4px" }, "Options"),
+    h("label", { class: "chk" }, nt, "System notifications for new messages"),
+    h("div", { class: "field", style: "margin-top:12px" },
+      h("button", { class: "ghost", onclick: () => stickerTray(true) }, "✨ My stickers"),
+      first ? null : h("button", { class: "ghost", onclick: () => copy(location.origin + location.pathname + "?space=" + SPACE, "Page link") }, "Copy page link")),
+  ], [first ? null : h("button", { class: "ghost", onclick: closeModal }, "Cancel"), h("button", { class: "primary", onclick: save }, "Save")], save);
+  modal.oncancel = first ? (e) => e.preventDefault() : null;
+}
+function profileDialog(uid) {
+  const pic = picOf(uid), n = nameOf(uid), bio = bioOf(uid);
+  showModal(uid === me() ? "Your profile" : "Profile", [
+    pic ? h("img", { class: "bigpic", src: pic, alt: n }) : h("div", { class: "bigpic", style: "display:grid;place-items:center;font-size:64px;font-weight:700;color:#041;background:hsl(" + hueOf(uid) + " 90% 65%)" }, (n.trim()[0] || "?").toUpperCase()),
+    h("h2", { style: "text-align:center;margin:0" }, n + (uid === me() ? " (you)" : "")),
+    h("p", { style: "text-align:center" }, bio || (uid === me() ? "Add something about you in Settings." : online(uid) ? "On the page now" : "Not on the page right now")),
+  ], [
+    uid === me() ? h("button", { class: "ghost", onclick: () => { closeModal(); settingsDialog(false); } }, "Edit profile")
+      : h("button", { class: "primary", onclick: () => { closeModal(); directChat(uid); } }, "Message"),
+    h("button", { class: "ghost", onclick: closeModal }, "Close"),
+  ]);
+}
+function groupProfileDialog(g) {
+  const on = g.members.filter((m) => m !== me() && online(m)).length;
+  showModal("Group profile", [
+    g.icon ? h("img", { class: "bigpic", src: g.icon, alt: titleOf(g) })
+      : h("div", { class: "bigpic", style: "display:grid;place-items:center;font-size:64px;font-weight:700;background:var(--mint-d);color:var(--mint)" }, (titleOf(g)[0] || "#").toUpperCase()),
+    h("h2", { style: "text-align:center;margin:0" }, titleOf(g)),
+    h("p", { style: "text-align:center" }, (g.public ? "🌐 Public · " : "🔒 Private · ") + g.members.length + " members" + (on ? " · " + on + " online" : "")),
+    g.desc ? h("p", { style: "text-align:center;color:var(--ink)" }, g.desc) : null,
+  ], [h("button", { class: "ghost", onclick: () => { closeModal(); S.drawer = true; render(); } }, "Group info"),
+    h("button", { class: "ghost", onclick: closeModal }, "Close")]);
+}
+function msgMenu(g, o) {
+  const mine = o.from === me();
+  showModal("Message", [h("p", null, mine ? "Your message" : "From " + nameOf(o.from, g))], [
+    mine && o.text && !o.file && !o.sticker ? h("button", { class: "ghost", onclick: () => { closeModal(); editDialog(g, o); } }, "Edit") : null,
+    o.text ? h("button", { class: "ghost", onclick: () => { closeModal(); copy(o.text, "Message"); } }, "Copy") : null,
+    h("button", { class: "danger", style: "padding:8px 14px", onclick: async () => { closeModal(); await delMsg(g, o.id); } }, "Delete for everyone"),
+    h("button", { class: "ghost", onclick: closeModal }, "Cancel"),
+  ]);
+}
+function editDialog(g, o) {
+  const inp = h("input", { class: "inp", maxlength: 4000, value: o.text || "", "aria-label": "Edit message" });
+  const save = async () => {
+    const v = inp.value.trim();
+    if (!v || v === o.text) return closeModal();
+    closeModal();
+    await editMsg(g, o.id, v);
+  };
+  showModal("Edit message", [h("p", null, "Everyone will see that this message was edited."), inp],
+    [h("button", { class: "ghost", onclick: closeModal }, "Cancel"), h("button", { class: "primary", onclick: save }, "Save")], save);
+}
+function stickerTray(fromSettings) {
+  const grid = h("div", { class: "stkgrid" });
+  const draw = () => {
+    grid.replaceChildren();
+    if (!S.stickers.length) grid.append(h("p", null, "No stickers yet. Draw one — they're tiny, so they send instantly."));
+    S.stickers.forEach((d, i) => {
+      grid.append(h("div", { class: "stkcell" },
+        h("button", { style: "background:none;border:0;padding:0;width:100%", title: S.active ? "Send" : "Sticker",
+          onclick: async () => { const g = S.groups[S.active]; if (!g) return toast("Open a chat first."); closeModal(); await sendMsg(g, { sticker: d }); } },
+          h("img", { src: d, alt: "sticker " + (i + 1) })),
+        h("button", { class: "x", title: "Delete sticker", onclick: () => { S.stickers.splice(i, 1); saveStickers(); draw(); } }, "✕")));
+    });
+  };
+  draw();
+  const fi = h("input", { type: "file", accept: "image/*", hidden: true, onchange: async (e) => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try { addSticker(await squareThumb(f, 128, 0.8, true)); draw(); } catch (err) { toast("Couldn't use that image."); }
+  } });
+  showModal("Stickers", [grid, fi], [
+    h("button", { class: "ghost", onclick: () => fi.click() }, "From image"),
+    h("button", { class: "primary", onclick: () => stickerCreator(fromSettings) }, "✏️ Draw one"),
+    h("button", { class: "ghost", onclick: closeModal }, "Close"),
+  ]);
+}
+function addSticker(data) {
+  if (data.length > 80000) { toast("That sticker is too heavy. Try a simpler image."); return false; }
+  S.stickers.unshift(data);
+  if (S.stickers.length > 60) S.stickers.length = 60;
+  if (!saveStickers()) { S.stickers.shift(); toast("No room left for more stickers. Delete a few first."); return false; }
+  return true;
+}
+function stickerCreator(fromSettings) {
+  const PX = 128;
+  const cv = h("canvas", { id: "paint", width: PX, height: PX });
+  const cx = cv.getContext("2d");
+  cx.lineCap = "round"; cx.lineJoin = "round";
+  const COLORS = ["#3dffc4", "#ff4fa3", "#ffe14f", "#4fc3ff", "#ff7a4f", "#b47bff", "#ffffff", "#0b1a1f"];
+  let color = COLORS[0], width = 8, erase = false, drawing = false, undoStack = [];
+  const swatches = {}, sizeBtns = {};
+  const setColor = (c) => { color = c; erase = false; for (const k in swatches) swatches[k].setAttribute("aria-pressed", k === c); eraseBtn.setAttribute("aria-pressed", "false"); };
+  const setWidth = (w) => { width = w; for (const k in sizeBtns) sizeBtns[k].setAttribute("aria-pressed", Number(k) === w); };
+  const pal = h("div", { class: "pal" }, COLORS.map((c) => swatches[c] = h("button", { type: "button", "aria-pressed": c === color, "aria-label": "Colour " + c, style: "background:" + c, onclick: () => setColor(c) })));
+  const eraseBtn = h("button", { type: "button", "aria-pressed": "false", onclick: () => { erase = !erase; eraseBtn.setAttribute("aria-pressed", String(erase)); } }, "Eraser");
+  const sizes = h("div", { class: "sizes" },
+    [3, 6, 10, 18].map((w) => sizeBtns[w] = h("button", { type: "button", "aria-pressed": w === width, onclick: () => setWidth(w) }, "●".padEnd(1) + w)),
+    eraseBtn,
+    h("button", { type: "button", onclick: () => { const d = undoStack.pop(); cx.clearRect(0, 0, PX, PX); if (d) { const im = new Image(); im.onload = () => cx.drawImage(im, 0, 0); im.src = d; } } }, "Undo"),
+    h("button", { type: "button", onclick: () => { undoStack.push(cv.toDataURL()); cx.clearRect(0, 0, PX, PX); } }, "Clear"));
+  const pos = (e) => {
+    const r = cv.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width * PX, (e.clientY - r.top) / r.height * PX];
+  };
+  const start = (e) => {
+    e.preventDefault();
+    undoStack.push(cv.toDataURL());
+    if (undoStack.length > 12) undoStack.shift();
+    drawing = true;
+    cv.setPointerCapture(e.pointerId);
+    const [x, y] = pos(e);
+    cx.globalCompositeOperation = erase ? "destination-out" : "source-over";
+    cx.strokeStyle = color; cx.fillStyle = color; cx.lineWidth = width;
+    cx.beginPath(); cx.arc(x, y, width / 2, 0, 7); cx.fill();
+    cx.beginPath(); cx.moveTo(x, y);
+  };
+  const move = (e) => { if (!drawing) return; const [x, y] = pos(e); cx.lineTo(x, y); cx.stroke(); };
+  const end = () => { drawing = false; cx.globalCompositeOperation = "source-over"; };
+  cv.addEventListener("pointerdown", start);
+  cv.addEventListener("pointermove", move);
+  cv.addEventListener("pointerup", end);
+  cv.addEventListener("pointerleave", end);
+  const save = () => {
+    const d = cv.toDataURL("image/png");
+    if (addSticker(d)) { toast("Sticker saved"); stickerTray(fromSettings); }
+  };
+  showModal("Draw a sticker", [
+    h("p", null, "128×128 and transparent, so it sends instantly."),
+    cv, pal, sizes,
+  ], [h("button", { class: "ghost", onclick: () => stickerTray(fromSettings) }, "Back"), h("button", { class: "primary", onclick: save }, "Save sticker")]);
 }
 function pickList(selected, ids) {
   const box = h("div", { class: "pick" });
@@ -1240,6 +1570,7 @@ $("infoBtn").onclick = () => { S.drawer = !S.drawer; render(); };
 $("closeDrawer").onclick = () => { S.drawer = false; render(); };
 $("backBtn").onclick = () => { S.active = null; S.drawer = false; render(); };
 $("attachBtn").onclick = () => $("fileInput").click();
+$("stickerBtn").onclick = () => stickerTray(false);
 $("fileInput").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; sendFile(f); };
 $("input").addEventListener("input", (e) => { $("sendBtn").disabled = !e.target.value.trim(); });
 $("input").addEventListener("paste", (e) => {
@@ -1270,7 +1601,8 @@ document.addEventListener("keydown", (e) => {
   if (e.altKey && !e.ctrlKey && !e.metaKey) {
     const c = e.code;
     const act = {
-      KeyN: () => newGroupDialog(), KeyJ: () => joinDialog(), KeyS: () => nameDialog(false),
+      KeyN: () => newGroupDialog(), KeyJ: () => joinDialog(), KeyS: () => settingsDialog(false),
+      KeyE: () => stickerTray(false),
       KeyP: () => { S.tab = S.tab === "people" ? "chats" : "people"; render(); },
       KeyG: () => { S.tab = S.tab === "public" ? "chats" : "public"; render(); },
       KeyM: () => { if (S.active) { S.drawer = !S.drawer; render(); } },
@@ -1299,7 +1631,7 @@ document.addEventListener("keydown", (e) => {
   loadAll();
   paint();
   const m = location.hash.match(/join=([A-Za-z0-9-]{4,30})/);
-  if (!ID.raw.name) nameDialog(true); else connect();
+  if (!ID.raw.name) settingsDialog(true); else connect();
   if (m) {
     history.replaceState(null, "", location.pathname + location.search);
     const code = normCode(m[1]);
