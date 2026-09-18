@@ -177,7 +177,8 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
         <div class="keys">
           <kbd>Alt</kbd>+<kbd>N</kbd> new group · <kbd>Alt</kbd>+<kbd>J</kbd> join with code · <kbd>Alt</kbd>+<kbd>G</kbd> public groups · <kbd>Alt</kbd>+<kbd>P</kbd> people<br>
           <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> switch chat · <kbd>Alt</kbd>+<kbd>M</kbd> group info · <kbd>Alt</kbd>+<kbd>U</kbd> send file · <kbd>Alt</kbd>+<kbd>E</kbd> stickers<br>
-          <kbd>/</kbd> type · <kbd>Esc</kbd> close · <kbd>Alt</kbd>+<kbd>S</kbd> settings
+          <kbd>/</kbd> type · <kbd>Esc</kbd> close · <kbd>Alt</kbd>+<kbd>S</kbd> settings<br>
+          <span style="opacity:.8">Testing on your own? Open a private window, or add <b>?me=2</b> to the link for a second profile.</span>
         </div>
       </div>
     </div>
@@ -214,6 +215,8 @@ const params = new URLSearchParams(location.search);
 const SPACE = (params.get("space") || "main").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 32) || "main";
 const P = NS + "/" + SPACE;
 const LS = "nl." + SPACE + ".";
+const SLOT = (params.get("me") || "").replace(/[^a-z0-9]/gi, "").slice(0, 8);
+const IDKEY = "nl.identity" + (SLOT ? "." + SLOT : "");
 const MAX_FILE = 600 * 1024;
 const HIST_MAX = 200;
 
@@ -261,7 +264,7 @@ async function copy(text, label) {
   catch (e) { prompt("Copy this:", text); }
 }
 
-const SET = Object.assign({ notify: false }, jget("nl.settings") || {});
+const SET = Object.assign({ notify: false, sound: false }, jget("nl.settings") || {});
 const saveSet = () => jset("nl.settings", SET);
 function squareThumb(file, px, q, png) {
   return new Promise((res, rej) => {
@@ -284,23 +287,69 @@ function squareThumb(file, px, q, png) {
     r.readAsDataURL(file);
   });
 }
+let winFocused = true;
+try { winFocused = document.hasFocus(); } catch (e) { winFocused = true; }
+addEventListener("focus", () => { winFocused = true; closeNotes(); });
+addEventListener("blur", () => { winFocused = false; });
+const openNotes = [];
+function closeNotes() { while (openNotes.length) { try { openNotes.pop().close(); } catch (e) { /* ignore */ } } }
+let actx = null;
+function beep() {
+  if (!SET.sound) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    actx = actx || new AC();
+    if (actx.state === "suspended") actx.resume();
+    const osc = actx.createOscillator(), gain = actx.createGain();
+    osc.type = "sine"; osc.frequency.value = 880;
+    osc.connect(gain); gain.connect(actx.destination);
+    const t = actx.currentTime;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.22, t + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    osc.start(t); osc.stop(t + 0.36);
+  } catch (e) { /* ignore */ }
+}
+function notifyState() {
+  if (!("Notification" in window)) return "unsupported";
+  if (Notification.permission === "denied") return "denied";
+  if (Notification.permission !== "granted") return "ask";
+  if (SET.notifyBroken) return "broken";
+  return "granted";
+}
 async function askNotify() {
-  if (!("Notification" in window)) { toast("This browser doesn't support notifications."); return false; }
+  if (!("Notification" in window)) { toast("This browser can't show pop-out notifications on a plain web page."); return false; }
   let p = Notification.permission;
   if (p === "default") { try { p = await Notification.requestPermission(); } catch (e) { p = "denied"; } }
-  if (p !== "granted") { toast("Notifications are blocked in your browser settings."); return false; }
+  if (p !== "granted") { toast("Notifications are blocked for this page in your browser settings."); return false; }
+  SET.notifyBroken = false;
   return true;
 }
+function showNote(title, body, icon, onOpen) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return false;
+  const base = { body, tag: "nl", renotify: true };
+  const fire = (extra) => {
+    const n = new Notification(title, Object.assign({}, base, extra));
+    n.onclick = () => { try { window.focus(); } catch (e) { /* ignore */ } if (onOpen) onOpen(); n.close(); };
+    openNotes.push(n);
+    if (openNotes.length > 6) { try { openNotes.shift().close(); } catch (e) { /* ignore */ } }
+  };
+  try { fire(icon ? { icon } : {}); return true; }
+  catch (e) {
+    try { fire({}); return true; }
+    catch (e2) {
+      if (!SET.notifyBroken) { SET.notifyBroken = true; saveSet(); toast("This browser won't show pop-out notifications here. Turn on the sound alert instead."); }
+      return false;
+    }
+  }
+}
 function notify(g, o) {
-  if (!SET.notify || !("Notification" in window) || Notification.permission !== "granted") return;
-  if (!document.hidden && S.active === g.gid) return;
-  try {
-    const n = new Notification(titleOf(g), {
-      body: (g.members.length > 2 ? nameOf(o.from, g) + ": " : "") + preview(o, g),
-      tag: g.gid, icon: g.icon || picOf(o.from) || undefined,
-    });
-    n.onclick = () => { window.focus(); S.tab = "chats"; openChat(g.gid); n.close(); };
-  } catch (e) { /* ignore */ }
+  if (!document.hidden && winFocused && S.active === g.gid) return;
+  beep();
+  if (!SET.notify) return;
+  showNote(titleOf(g), (g.members.length > 2 ? nameOf(o.from, g) + ": " : "") + preview(o, g),
+    g.icon || picOf(o.from) || "", () => { S.tab = "chats"; openChat(g.gid); });
 }
 
 /* ================= crypto ================= */
@@ -312,7 +361,7 @@ const uidOf = async (j) => (await sha("uid:" + j.x + "." + j.y)).slice(0, 16);
 let ID = null;
 
 async function loadIdentity() {
-  let raw = jget("nl.identity");
+  let raw = jget(IDKEY);
   if (!raw || !raw.sPriv) {
     const s = await C.generateKey(ECDSA, true, ["sign", "verify"]);
     const d = await C.generateKey(ECDH, true, ["deriveKey"]);
@@ -321,12 +370,12 @@ async function loadIdentity() {
       dPub: pubOnly(await C.exportKey("jwk", d.publicKey)), dPriv: await C.exportKey("jwk", d.privateKey),
       name: "", hue: Math.floor(Math.random() * 360),
     };
-    jset("nl.identity", raw);
+    jset(IDKEY, raw);
   }
   ID = {
     raw, uid: await uidOf(raw.sPub),
     sKey: await C.importKey("jwk", raw.sPriv, ECDSA, false, ["sign"]),
-    dKey: await C.importKey("jwk", raw.dPriv, ECDH, false, ["deriveKey"]),
+    dKey: await C.importKey("jwk", Object.assign({}, raw.dPriv, { key_ops: undefined, ext: undefined }), ECDH, false, ["deriveKey", "deriveBits"]),
   };
 }
 async function sign(obj) {
@@ -380,6 +429,11 @@ async function dhKey(pub) {
   }
   return dhCache.get(ck);
 }
+async function dmId(uid) { return (await sha("dm:" + P + ":" + [me(), uid].sort().join("|"))).slice(0, 16); }
+async function dmKeyRaw(pub) {
+  const p = await C.importKey("jwk", pubOnly(pub), ECDH, false, []);
+  return b64(await C.deriveBits({ name: "ECDH", public: p }, ID.dKey, 256));
+}
 const gKeys = new Map(), doorKeys = new Map();
 async function groupKey(g) {
   const ck = g.gid + ":" + g.epoch;
@@ -400,6 +454,7 @@ const T = {
   door: (d) => P + "/door/" + d,
   req: (d) => P + "/door/" + d + "/req",
   list: (gid) => P + "/public/" + gid,
+  hello: P + "/hello",
 };
 const me = () => ID.uid;
 const isAdmin = (g) => g && g.admin === me();
@@ -464,10 +519,12 @@ function connect() {
     sub(P + "/pres/+");
     sub(P + "/inbox/" + me() + "/#");
     sub(P + "/public/+");
+    sub(T.hello);
     for (const gid in S.groups) subscribeGroup(S.groups[gid], true);
     if (S.lookup) sub(T.door(S.lookup.doorId));
     for (const d in S.pj) sub(T.door(S.pj[d].doorId || "x"));
     publishPresence();
+    pub(T.hello, JSON.stringify({ t: "hello", from: me(), ts: Date.now() }));
     render();
   });
   client.on("close", () => { S.conn = false; render(); });
@@ -503,13 +560,18 @@ async function openDoor(g) {
   await publishDoor(g);
 }
 async function publishDoor(g) {
-  if (!isAdmin(g) || !g.coded || !g.doorId) return;
+  if (g.dm || !isAdmin(g) || !g.coded || !g.doorId) return;
   const w = await sign({ t: "door", from: me(), gid: g.gid, name: g.name, admin: me(), approval: !!g.approval, n: g.members.length });
-  pub(T.door(g.doorId), await seal(doorKeys.get(g.doorId), w), true);
+  const payload = await seal(doorKeys.get(g.doorId), w);
+  pub(T.door(g.doorId), payload, true);
+  pub(T.door(g.doorId), payload);
   await publishListing(g);
 }
 function requestSync(g) {
-  groupKey(g).then(async (k) => pub(T.g(g, "ctl"), await seal(k, { t: "syncreq", req: rid(6), from: me() })));
+  groupKey(g).then(async (k) => {
+    pub(T.g(g, "ctl"), await seal(k, { t: "statereq", from: me() }));
+    pub(T.g(g, "ctl"), await seal(k, { t: "syncreq", req: rid(6), from: me() }));
+  });
 }
 
 async function route(topic, payload) {
@@ -517,6 +579,7 @@ async function route(topic, payload) {
   if (parts[0] === "pres") return onPres(parts[1], payload);
   if (parts[0] === "inbox") return onInbox(topic, payload);
   if (parts[0] === "public") return onPublic(parts[1], payload);
+  if (parts[0] === "hello") return onHello(payload);
   if (parts[0] === "g") return onGroup(parts[1], Number(parts[2]), parts[3], payload);
   if (parts[0] === "door") return parts[2] === "req" ? onDoorReq(parts[1], payload) : onDoorInfo(parts[1], payload);
 }
@@ -530,9 +593,13 @@ async function onPres(uid, payload) {
   if (uid === me()) return;
   const av = typeof o.av === "string" && o.av.startsWith("data:image/") && o.av.length < 60000 ? o.av : "";
   S.people[uid] = { name: clip(o.name, 40) || "Someone", hue: Number(o.hue) % 360 || 0, dh: pubOnly(o.dh), av, bio: clip(o.bio, 200), seen: Date.now() };
+  for (const gid in S.groups) {
+    const g = S.groups[gid];
+    if (isAdmin(g) && g.invSent && g.invSent[uid] != null && g.members.includes(uid) && Date.now() - g.invSent[uid] > 20000) sendInvite(g, uid);
+  }
   const old = S.avatars[uid] || {};
-  if (old.a !== av || old.name !== S.people[uid].name || old.bio !== S.people[uid].bio) {
-    S.avatars[uid] = { a: av, name: S.people[uid].name, bio: S.people[uid].bio, ts: Date.now() };
+  if (old.a !== av || old.name !== S.people[uid].name || old.bio !== S.people[uid].bio || !old.dh) {
+    S.avatars[uid] = { a: av, name: S.people[uid].name, bio: S.people[uid].bio, dh: S.people[uid].dh, ts: Date.now() };
     saveAvatars();
   }
   for (const gid in S.groups) {
@@ -542,6 +609,17 @@ async function onPres(uid, payload) {
   render();
 }
 
+let lastHello = 0;
+async function onHello(payload) {
+  let o; try { o = JSON.parse(payload); } catch (e) { return; }
+  if (!o || o.t !== "hello" || o.from === me()) return;
+  if (Date.now() - lastHello < 1500) return;
+  lastHello = Date.now();
+  setTimeout(() => {
+    publishPresence();
+    for (const gid in S.groups) { const g = S.groups[gid]; if (isAdmin(g) && g.coded && g.code) publishDoor(g); }
+  }, 150 + Math.random() * 600);
+}
 async function onPublic(gid, payload) {
   if (!isHex(gid, 16)) return;
   if (!payload) { if (S.pubs[gid]) { delete S.pubs[gid]; render(); } return; }
@@ -557,6 +635,7 @@ async function publishListing(g) {
   if (!isAdmin(g) || !g.public || !g.code) return;
   const w = await sign({ t: "listing", from: me(), gid: g.gid, name: g.name, code: g.code, n: g.members.length, approval: !!g.approval, ts: Date.now() });
   pub(T.list(g.gid), JSON.stringify(w), true);
+  pub(T.list(g.gid), JSON.stringify(w));
 }
 const clearListing = (g) => pub(T.list(g.gid), "", true);
 async function joinPublic(p) {
@@ -589,6 +668,16 @@ async function onInbox(topic, payload) {
     }
     return;
   }
+  if (o.dm) {
+    const mine = Object.values(S.groups).find((x) => x.members.length === 2 && !x.name && x.members.includes(o.from));
+    if (mine) return;
+    const g = makeDm(o.gid, o.from, o.key);
+    g.names[o.from] = clip(o.fromName, 40);
+    saveGroups();
+    await subscribeGroup(g, true);
+    render();
+    return;
+  }
   const inv = { gid: o.gid, epoch: o.epoch, key: o.key, name: clip(o.name, 60), from: o.from, fromName: clip(o.fromName, 40), coded: !!o.coded, ts: o.ts };
   const pend = Object.values(S.pj).find((p) => p.gid === o.gid);
   if (pend && pend.admin === o.from) {
@@ -618,11 +707,11 @@ async function onGroup(gid, epoch, kind, payload) {
   if (!g || !payload || epoch !== g.epoch) return;
   const inner = await unseal(await groupKey(g), payload);
   if (!inner) return;
-  if (kind === "state") return applyState(g, await verify(inner));
+  if (kind === "state") return applyState(g, await verify(inner), inner);
   if (kind === "msg") return acceptMsg(g, inner, true);
   if (kind === "ctl") return onCtl(g, inner);
 }
-async function applyState(g, o) {
+async function applyState(g, o, wire) {
   if (!o || o.t !== "state" || o.gid !== g.gid || o.from !== g.admin) return;
   if (!(o.ver > g.ver)) return;
   if (!Array.isArray(o.members)) return;
@@ -638,6 +727,7 @@ async function applyState(g, o) {
     icon: typeof o.icon === "string" && o.icon.startsWith("data:image/") && o.icon.length < 60000 ? o.icon : "",
     desc: clip(o.desc, 300),
   });
+  if (wire) g.stateWire = wire;
   if (!wasAdmin && isAdmin(g)) { toast("You're now admin of " + (g.name || "a chat")); if (g.coded && g.code) await openDoor(g); }
   if (wasAdmin && !isAdmin(g) && g.doorId) unsub(T.req(g.doorId));
   saveGroups(); render();
@@ -647,6 +737,7 @@ async function acceptMsg(g, w, live) {
   if (!o || o.t !== "msg" || o.gid !== g.gid || !isHex(o.id, 16)) return;
   if (live && g.ver > 0 && !g.members.includes(o.from)) return;
   if (S.ids[g.gid].has(o.id)) return;
+  if (isAdmin(g) && g.invSent && g.invSent[o.from] != null) { delete g.invSent[o.from]; saveGroups(); }
   if (!o.op && (o.ts || 0) <= (g.clearedAt || 0)) return;
   S.ids[g.gid].add(o.id);
   const list = S.hist[g.gid];
@@ -654,9 +745,16 @@ async function acceptMsg(g, w, live) {
   list.sort((a, b) => (a.o.ts || 0) - (b.o.ts || 0));
   if (list.length > HIST_MAX) list.splice(0, list.length - HIST_MAX);
   if (o.op === "clear" && o.from === g.admin) pruneTo(g, o.ts);
+  if (o.op === "edit" || o.op === "del") {
+    const v = viewOf(g), lastM = v[v.length - 1];
+    g.last = lastM ? { from: lastM.from, text: preview(lastM, g) } : null;
+  }
   if (!o.op) {
     if ((o.ts || 0) >= (g.updatedAt || 0)) { g.updatedAt = o.ts; g.last = { from: o.from, text: preview(o, g) }; }
-    if (live && o.from !== me() && (S.active !== g.gid || document.hidden)) { g.unread = (g.unread || 0) + 1; notify(g, o); }
+    if (live && o.from !== me()) {
+      if (S.active !== g.gid || document.hidden || !winFocused) g.unread = (g.unread || 0) + 1;
+      notify(g, o);
+    }
   }
   saveHist(g.gid); saveGroups(); render();
 }
@@ -691,6 +789,10 @@ function viewOf(g) {
 const editMsg = (g, id, text) => sendMsg(g, { op: "edit", target: id, text: clip(text, 4000) });
 const delMsg = (g, id) => sendMsg(g, { op: "del", target: id });
 async function clearChat(g) {
+  if (g.dm) {
+    if (confirm("Clear this chat on your side only? The other person keeps their copy.")) { pruneTo(g, Date.now()); render(); }
+    return;
+  }
   if (!isAdmin(g)) return;
   if (!confirm("Delete every message in this group for everyone? People who join later won't see them either.")) return;
   await sendMsg(g, { op: "clear" });
@@ -700,6 +802,7 @@ async function clearChat(g) {
 const syncSeen = new Set();
 async function onCtl(g, c) {
   if (!c || typeof c !== "object") return;
+  if (c.from && c.from !== me() && isAdmin(g) && g.invSent && g.invSent[c.from] != null) { delete g.invSent[c.from]; saveGroups(); }
   if (c.t === "syncreq" && c.from !== me() && typeof c.req === "string") {
     if (!(S.hist[g.gid] || []).length) return;
     setTimeout(async () => {
@@ -712,6 +815,10 @@ async function onCtl(g, c) {
         pub(T.g(g, "ctl"), await seal(k, { t: "syncitem", req: c.req, w: x.w }));
       }
     }, 200 + Math.random() * 1500);
+  } else if (c.t === "statereq" && c.from !== me() && g.stateWire) {
+    setTimeout(async () => { pub(T.g(g, "ctl"), await seal(await groupKey(g), { t: "state2", w: g.stateWire })); }, 120 + Math.random() * 700);
+  } else if (c.t === "state2" && c.w) {
+    await applyState(g, await verify(c.w), c.w);
   } else if (c.t === "synctaken") {
     syncSeen.add(c.req);
   } else if (c.t === "syncitem") {
@@ -741,7 +848,9 @@ async function onDoorReq(doorId, payload) {
   const g = Object.values(S.groups).find((x) => x.doorId === doorId && isAdmin(x) && x.coded);
   if (!g) return;
   const o = await verify(await unseal(doorKeys.get(doorId), payload));
-  if (!o || o.t !== "join" || o.gid !== g.gid || !o.dh || typeof o.dh.x !== "string") return;
+  if (!o || o.from === me()) return;
+  if (o.t === "lookup") { publishDoor(g); return; }
+  if (o.t !== "join" || o.gid !== g.gid || !o.dh || typeof o.dh.x !== "string") return;
   const nm = clip(o.name, 40) || "Someone";
   if (g.banned.includes(o.from)) return;
   if (g.members.includes(o.from)) { g.keys[o.from] = pubOnly(o.dh); return sendInvite(g, o.from); }
@@ -757,6 +866,7 @@ async function onDoorReq(doorId, payload) {
 
 /* ================= group actions ================= */
 async function publishState(g, extra) {
+  if (g.dm) return;
   g.ver = (g.ver || 0) + 1;
   g.names = g.names || {};
   g.names[me()] = ID.raw.name;
@@ -767,6 +877,7 @@ async function publishState(g, extra) {
     icon: g.icon || "", desc: clip(g.desc, 300), ts: Date.now(),
   }, extra || {});
   const w = await sign(obj);
+  g.stateWire = w;
   pub(T.g(g, "state"), await seal(await groupKey(g), w), true);
   saveGroups();
   if (g.coded && isAdmin(g)) publishDoor(g);
@@ -775,9 +886,13 @@ function pickKeys(obj, keys) { const o = {}; for (const k of keys) if (obj && ob
 async function sendInvite(g, uid) {
   const dh = (g.keys && g.keys[uid]) || (S.people[uid] && S.people[uid].dh);
   if (!dh) return false;
-  const w = await sign({ t: "invite", from: me(), fromName: ID.raw.name, to: uid, gid: g.gid, epoch: g.epoch, key: g.key, name: g.name, coded: !!g.coded, ts: Date.now() });
+  const w = await sign({ t: "invite", from: me(), fromName: ID.raw.name, to: uid, gid: g.gid, epoch: g.epoch, key: g.key, name: g.name, coded: !!g.coded, dm: !!g.dm, ts: Date.now() });
   const c = await seal(await dhKey(dh), w);
-  pub(T.inbox(uid, me(), g.gid), JSON.stringify({ dh: ID.raw.dPub, c }), true);
+  const env = JSON.stringify({ dh: ID.raw.dPub, c });
+  pub(T.inbox(uid, me(), g.gid), env, true);
+  pub(T.inbox(uid, me(), g.gid), env);
+  g.invSent = g.invSent || {};
+  g.invSent[uid] = Date.now();
   return true;
 }
 async function sendMsg(g, body) {
@@ -821,10 +936,48 @@ async function admit(g, list) {
   for (const p of list) { await sendInvite(g, p.uid); await sendMsg(g, { sys: "added", target: p.uid, tname: p.name }); }
   render();
 }
+function isDm(g) { return !!g && (g.dm || (!g.name && !g.admin && g.members.length === 2)); }
+function otherOf(g) { return g.members.find((m) => m !== me()) || me(); }
+function makeDm(gid, uid, key) {
+  const g = {
+    gid, epoch: 1, key, dm: true, admin: "", name: "", members: [me(), uid].sort(),
+    names: {}, keys: {}, coded: false, approval: false, banned: [], code: "", icon: "", desc: "",
+    clearedAt: 0, ver: 0, unread: 0, updatedAt: Date.now(), last: null,
+  };
+  S.groups[gid] = g; S.hist[gid] = S.hist[gid] || []; S.ids[gid] = S.ids[gid] || new Set();
+  saveGroups();
+  return g;
+}
 async function directChat(uid) {
-  const ex = Object.values(S.groups).find((g) => !g.name && g.members.length === 2 && g.members.includes(uid));
-  if (ex) return openChat(ex.gid);
-  await createGroup("", [uid]);
+  const legacy = Object.values(S.groups).find((g) => !g.name && g.members.length === 2 && g.members.includes(uid));
+  if (legacy) return openChat(legacy.gid);
+  const dh = dhOf(uid);
+  if (!dh) return toast("You need to see them on the page once before you can chat.");
+  const gid = await dmId(uid);
+  const g = S.groups[gid] || makeDm(gid, uid, await dmKeyRaw(dh));
+  await subscribeGroup(g, true);
+  await sendInvite(g, uid);
+  S.tab = "chats";
+  openChat(gid);
+}
+function dedupeDms() {
+  const seen = {};
+  for (const g of Object.values(S.groups)) {
+    if (g.name || g.members.length !== 2) continue;
+    const k = [...g.members].sort().join("|");
+    const prev = seen[k];
+    if (!prev) { seen[k] = g; continue; }
+    const keep = ((S.hist[g.gid] || []).length >= (S.hist[prev.gid] || []).length) ? g : prev;
+    const drop = keep === g ? prev : g;
+    seen[k] = keep;
+    for (const x of S.hist[drop.gid] || []) {
+      if (S.ids[keep.gid].has(x.o.id)) continue;
+      S.ids[keep.gid].add(x.o.id); S.hist[keep.gid].push(x);
+    }
+    S.hist[keep.gid].sort((a, b) => (a.o.ts || 0) - (b.o.ts || 0));
+    saveHist(keep.gid);
+    removeLocal(drop, "");
+  }
 }
 async function kick(g, uid) {
   if (!isAdmin(g) || !confirm("Remove " + nameOf(uid, g) + " from this group? They won't be able to rejoin with the code.")) return;
@@ -981,6 +1134,7 @@ function sysText(o, g) {
   }
 }
 function preview(o, g) {
+  if (o.deletedBy) return "🚫 Deleted message";
   if (o.sys) return sysText(o, g);
   if (o.sticker) return "✨ Sticker";
   if (o.file) return "📎 " + clip(o.file.name, 60);
@@ -992,6 +1146,12 @@ function picOf(uid) {
   if (p && p.av) return p.av;
   const c = S.avatars[uid];
   return (c && c.a) || "";
+}
+function dhOf(uid) {
+  const p = S.people[uid];
+  if (p && p.dh) return p.dh;
+  const c = S.avatars[uid];
+  return (c && c.dh) || null;
 }
 function bioOf(uid) {
   if (uid === me()) return ID.raw.bio || "";
@@ -1052,13 +1212,15 @@ function paint() {
   $("app").classList.toggle("chatting", !!g);
   $("welcome").hidden = !!g; $("head").hidden = !g; $("msgs").hidden = !g; $("composer").hidden = !g;
   if (g) {
-    if (g.unread && !document.hidden) { g.unread = 0; saveGroups(); }
+    if (g.unread && !document.hidden && winFocused) { g.unread = 0; saveGroups(); }
     $("headAv").replaceChildren(h("button", { class: "avbtn", title: "Group profile", onclick: () => groupProfileDialog(g) }, groupAvatar(g)));
     $("chatName").textContent = titleOf(g);
     const on = g.members.filter((m) => m !== me() && online(m)).length;
-    $("chatSub").textContent = g.members.length + " members" + (on ? " · " + on + " online" : "") + " · admin: " + nameOf(g.admin, g) + (g.public ? " · public" : g.coded ? " · private, code" : " · private");
+    $("chatSub").textContent = isDm(g)
+      ? (online(otherOf(g)) ? "On the page now" : "Direct chat · not on the page right now")
+      : g.members.length + " members" + (on ? " · " + on + " online" : "") + " · admin: " + nameOf(g.admin, g) + (g.public ? " · public" : g.coded ? " · private, code" : " · private");
     const pend = isAdmin(g) && g.pending ? Object.keys(g.pending).length : 0;
-    $("infoBtn").textContent = pend ? "Group info (" + pend + ")" : "Group info";
+    $("infoBtn").textContent = isDm(g) ? "Chat info" : pend ? "Group info (" + pend + ")" : "Group info";
     paintMsgs(g);
   }
   paintDrawer(g);
@@ -1165,14 +1327,13 @@ function paintMsgs(g) {
     if (o.sys) { box.append(h("div", { class: "sys" }, sysText(o, g))); prev = null; continue; }
     const mine = o.from === me();
     const first = !prev || prev.from !== o.from;
-    const canAct = !o.deletedBy && (mine || isAdmin(g));
     box.append(h("div", { class: "b" + (mine ? " me" : "") + (first ? " gap" : "") + (o.sticker && !o.deletedBy ? " stkb" : "") + (o.deletedBy ? " del" : "") },
       many && !mine && first ? h("div", { class: "who", style: "color:hsl(" + hueOf(o.from) + " 90% 68%)" }, nameOf(o.from, g)) : null,
       o.deletedBy ? (o.deletedBy === o.from ? "🚫 This message was deleted" : "🚫 Deleted by " + nameOf(o.deletedBy, g)) : null,
       !o.deletedBy && typeof o.sticker === "string" && o.sticker.startsWith("data:image/") ? h("img", { class: "stk", src: o.sticker, alt: "sticker" }) : null,
       !o.deletedBy && o.file ? fileView(o.file) : null,
       !o.deletedBy && o.text ? rich(String(o.text)) : null,
-      canAct ? h("button", { class: "more", title: "Message options", "aria-label": "Message options", onclick: () => msgMenu(g, o) }, "⋯") : null,
+      o.deletedBy ? null : h("button", { class: "more", title: "Message options", "aria-label": "Message options", onclick: () => msgMenu(g, o) }, "⋯"),
       h("time", null, fmt(o.ts), o.editedAt ? h("span", { class: "edited" }, "edited") : null)));
     prev = o;
   }
@@ -1190,6 +1351,19 @@ function paintDrawer(g) {
   const draft = keepFocus === "dName" ? $("dName").value : null;
   const draftDesc = keepFocus === "dDesc" ? $("dDesc").value : null;
   body.replaceChildren();
+  if (isDm(g)) {
+    const other = otherOf(g);
+    body.append(h("div", { class: "sec" }, h("h3", null, "Direct chat"),
+      h("div", { class: "row" }, avatarBtn(other, true),
+        h("div", { class: "txt" }, h("div", null, nameOf(other, g)),
+          h("div", { class: "t2" }, bioOf(other) || (online(other) ? "On the page now" : "Not on the page right now"))),
+        h("button", { class: "ghost", onclick: () => profileDialog(other) }, "Profile")),
+      h("p", { style: "margin:6px 0 0;font-size:13px;color:var(--mute)" }, "Just the two of you. Nobody is admin here, so you can each only delete your own messages.")));
+    body.append(h("button", { class: "act", onclick: () => clearChat(g) }, "Clear messages (only for me)"));
+    body.append(h("button", { class: "act red", onclick: () => { if (confirm("Delete this chat from this device?")) removeLocal(g, "Chat deleted here"); } }, "Delete chat"));
+    if (keepFocus && $(keepFocus)) $(keepFocus).focus();
+    return;
+  }
   const admin = isAdmin(g);
   if (admin) {
     const inp = h("input", { class: "inp", id: "dName", value: draft != null ? draft : (g.name || ""), maxlength: 60, placeholder: "Group name", "aria-label": "Group name" });
@@ -1276,6 +1450,7 @@ const joinLink = (code) => location.origin + location.pathname + "?space=" + SPA
 /* ================= dialogs ================= */
 const modal = $("modal");
 function showModal(title, bodyKids, actions, onEnter) {
+  modal.oncancel = null;
   modal.replaceChildren(h("div", { class: "mwrap" },
     h("div", { class: "mhead" }, h("h2", null, title)),
     h("div", { class: "mbody", id: "mbody" }, bodyKids),
@@ -1303,17 +1478,29 @@ function settingsDialog(first) {
   }
   const nm = h("input", { class: "inp", maxlength: 40, value: ID.raw.name || "", placeholder: "Your name", "aria-label": "Your name", oninput: () => { if (!ID.raw.avatar) drawPic(); } });
   const bio = h("input", { class: "inp", maxlength: 200, value: ID.raw.bio || "", placeholder: "About you (optional)", "aria-label": "About you" });
+  const status = h("p", { style: "margin:4px 0 0;font-size:13px" });
+  const drawStatus = () => {
+    const st = notifyState();
+    status.textContent = !SET.notify ? "Pop-out notifications are off."
+      : st === "granted" ? "Allowed. You'll get one when the chat isn't in front of you."
+      : st === "denied" ? "Blocked for this page — allow notifications in your browser's site settings (the icon left of the address bar)."
+      : st === "unsupported" ? "This browser doesn't offer notifications for web pages."
+      : st === "broken" ? "This browser only pops out notifications for installed apps. The sound alert and the tab badge still work."
+      : "Not allowed yet — switch it off and on again to ask.";
+  };
   const nt = h("input", { type: "checkbox", checked: !!SET.notify, onchange: async (e) => {
     if (e.target.checked) { const ok = await askNotify(); e.target.checked = ok; SET.notify = ok; }
-    else SET.notify = false;
-    saveSet();
+    else { SET.notify = false; closeNotes(); }
+    saveSet(); drawStatus();
   } });
+  const snd = h("input", { type: "checkbox", checked: !!SET.sound, onchange: (e) => { SET.sound = e.target.checked; saveSet(); if (e.target.checked) beep(); } });
+  drawStatus();
   drawPic();
   const save = async () => {
     const v = clip(nm.value.trim(), 40);
     if (!v) { toast("Pick a name first."); return nm.focus(); }
     ID.raw.name = v; ID.raw.bio = clip(bio.value.trim(), 200);
-    jset("nl.identity", ID.raw);
+    jset(IDKEY, ID.raw);
     closeModal();
     if (first) connect(); else publishPresence();
     for (const gid in S.groups) { const g = S.groups[gid]; if (isAdmin(g)) publishState(g); }
@@ -1325,6 +1512,14 @@ function settingsDialog(first) {
     h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:12px 0 4px" }, "About"), bio,
     h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:14px 0 4px" }, "Options"),
     h("label", { class: "chk" }, nt, "System notifications for new messages"),
+    h("label", { class: "chk" }, snd, "Sound alert (works even where notifications don't)"),
+    status,
+    h("div", { class: "field", style: "margin-top:8px" }, h("button", { class: "ghost", onclick: () => {
+      beep();
+      const sent = SET.notify && showNote("Neon Lobby Chat", "This is how a new message will look.", ID.raw.avatar || "");
+      drawStatus();
+      toast(sent ? "Test sent — check your desktop" : SET.sound ? "Sound played" : "Nothing to test yet — switch something on first");
+    } }, "Send a test")),
     h("div", { class: "field", style: "margin-top:12px" },
       h("button", { class: "ghost", onclick: () => stickerTray(true) }, "✨ My stickers"),
       first ? null : h("button", { class: "ghost", onclick: () => copy(location.origin + location.pathname + "?space=" + SPACE, "Page link") }, "Copy page link")),
@@ -1344,6 +1539,7 @@ function profileDialog(uid) {
   ]);
 }
 function groupProfileDialog(g) {
+  if (isDm(g)) return profileDialog(otherOf(g));
   const on = g.members.filter((m) => m !== me() && online(m)).length;
   showModal("Group profile", [
     g.icon ? h("img", { class: "bigpic", src: g.icon, alt: titleOf(g) })
@@ -1354,12 +1550,39 @@ function groupProfileDialog(g) {
   ], [h("button", { class: "ghost", onclick: () => { closeModal(); S.drawer = true; render(); } }, "Group info"),
     h("button", { class: "ghost", onclick: closeModal }, "Close")]);
 }
+function stickerFromDataUrl(d) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onerror = () => rej(new Error("decode"));
+    im.onload = () => {
+      const cv = document.createElement("canvas");
+      cv.width = cv.height = 128;
+      const cx = cv.getContext("2d");
+      const sc = Math.min(128 / im.width, 128 / im.height);
+      const w = im.width * sc, hh = im.height * sc;
+      cx.drawImage(im, (128 - w) / 2, (128 - hh) / 2, w, hh);
+      res(cv.toDataURL("image/png"));
+    };
+    im.src = d;
+  });
+}
+async function keepSticker(d) {
+  try {
+    const data = d.length > 40000 || !d.startsWith("data:image/png") ? await stickerFromDataUrl(d) : d;
+    if (addSticker(data)) toast("Saved to your stickers");
+  } catch (e) { toast("Couldn't save that one."); }
+}
 function msgMenu(g, o) {
   const mine = o.from === me();
+  const canDelete = mine || isAdmin(g);
+  const img = o.file && typeof o.file.data === "string" && /^data:image\//.test(o.file.data);
   showModal("Message", [h("p", null, mine ? "Your message" : "From " + nameOf(o.from, g))], [
+    o.sticker ? h("button", { class: "primary", onclick: () => { closeModal(); keepSticker(o.sticker); } }, "✨ Save sticker") : null,
+    img ? h("button", { class: "primary", onclick: () => { closeModal(); keepSticker(o.file.data); } }, "✨ Save as sticker") : null,
     mine && o.text && !o.file && !o.sticker ? h("button", { class: "ghost", onclick: () => { closeModal(); editDialog(g, o); } }, "Edit") : null,
     o.text ? h("button", { class: "ghost", onclick: () => { closeModal(); copy(o.text, "Message"); } }, "Copy") : null,
-    h("button", { class: "danger", style: "padding:8px 14px", onclick: async () => { closeModal(); await delMsg(g, o.id); } }, "Delete for everyone"),
+    canDelete ? h("button", { class: "danger", style: "padding:8px 14px", onclick: async () => { closeModal(); await delMsg(g, o.id); } },
+      mine ? "Delete for everyone" : "Delete for everyone (admin)") : null,
     h("button", { class: "ghost", onclick: closeModal }, "Cancel"),
   ]);
 }
@@ -1419,7 +1642,7 @@ function stickerCreator(fromSettings) {
   const pal = h("div", { class: "pal" }, COLORS.map((c) => swatches[c] = h("button", { type: "button", "aria-pressed": c === color, "aria-label": "Colour " + c, style: "background:" + c, onclick: () => setColor(c) })));
   const eraseBtn = h("button", { type: "button", "aria-pressed": "false", onclick: () => { erase = !erase; eraseBtn.setAttribute("aria-pressed", String(erase)); } }, "Eraser");
   const sizes = h("div", { class: "sizes" },
-    [3, 6, 10, 18].map((w) => sizeBtns[w] = h("button", { type: "button", "aria-pressed": w === width, onclick: () => setWidth(w) }, "●".padEnd(1) + w)),
+    [3, 6, 10, 18].map((w) => sizeBtns[w] = h("button", { type: "button", "aria-pressed": w === width, onclick: () => setWidth(w) }, "●" + w)),
     eraseBtn,
     h("button", { type: "button", onclick: () => { const d = undoStack.pop(); cx.clearRect(0, 0, PX, PX); if (d) { const im = new Image(); im.onload = () => cx.drawImage(im, 0, 0); im.src = d; } } }, "Undo"),
     h("button", { type: "button", onclick: () => { undoStack.push(cv.toDataURL()); cx.clearRect(0, 0, PX, PX); } }, "Clear"));
@@ -1490,6 +1713,7 @@ function newGroupDialog(preselect) {
     const code = vis === "public" ? newCode() : vis === "code" ? normCode(codeInp.value) : "";
     if (vis === "code" && code.length < 4) return toast("Codes need at least 4 letters or numbers.");
     if (!name && (sel.size !== 1 || code)) return nm.focus(), toast("Give the group a name.");
+    if (!name && !code && sel.size === 1) { closeModal(); return directChat([...sel][0]); }
     closeModal();
     try { await createGroup(name, [...sel], code, appr.checked, vis === "public"); } catch (e) { console.error(e); toast("Couldn't create the group. Try again."); }
   };
@@ -1531,7 +1755,8 @@ function joinDialog(prefill) {
     S.lookup = { code, doorId, key: await doorKeyOf(code, doorId), info: null, searched: false };
     paintJoin(true);
     sub(T.door(doorId));
-    setTimeout(() => { if (S.lookup && S.lookup.doorId === doorId && !S.lookup.searched) { S.lookup.searched = true; paintJoin(); } }, 4000);
+    pub(T.req(doorId), await seal(S.lookup.key, await sign({ t: "lookup", from: me(), ts: Date.now() })));
+    setTimeout(() => { if (S.lookup && S.lookup.doorId === doorId && !S.lookup.searched) { S.lookup.searched = true; paintJoin(); } }, 5000);
   };
   showModal("Join with code", [h("div", { class: "field" }, inp, h("button", { class: "primary", onclick: find }, "Find")), h("div", { id: "joinRes" })],
     [h("button", { class: "ghost", onclick: closeModal }, "Close")], find);
@@ -1621,6 +1846,23 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "/" && !typing && S.active) { e.preventDefault(); $("input").focus(); }
 });
 
+function watchTabs() {
+  if (!("BroadcastChannel" in window)) return;
+  try {
+    const bc = new BroadcastChannel("nl-tab-" + ID.uid);
+    const tabId = rid(4);
+    bc.onmessage = (e) => {
+      const d = e.data || {};
+      if (d.id === tabId) return;
+      if (d.t === "hi") bc.postMessage({ t: "here", id: tabId });
+      if (d.t === "hi" || d.t === "here") {
+        toast("This profile is open in another tab. For a second person use a private window, or add ?me=2 to the link.");
+      }
+    };
+    bc.postMessage({ t: "hi", id: tabId });
+  } catch (e) { /* ignore */ }
+}
+
 /* ================= boot ================= */
 (async function boot() {
   if (!window.crypto || !crypto.subtle) {
@@ -1629,8 +1871,10 @@ document.addEventListener("keydown", (e) => {
   }
   await loadIdentity();
   loadAll();
+  dedupeDms();
   paint();
   const m = location.hash.match(/join=([A-Za-z0-9-]{4,30})/);
+  watchTabs();
   if (!ID.raw.name) settingsDialog(true); else connect();
   if (m) {
     history.replaceState(null, "", location.pathname + location.search);
