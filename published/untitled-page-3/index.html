@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Neon Lobby Chat</title>
+<title>Chat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -120,6 +120,22 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .line{display:flex;gap:8px;align-items:flex-end;align-self:flex-start;max-width:min(80%,620px)}
 .line .b{max-width:100%}
 .line .spacer{width:28px;flex:none}
+.quote{display:block;width:100%;text-align:left;background:rgba(0,0,0,.28);border:0;border-left:3px solid var(--mint);border-radius:8px;padding:5px 8px;margin:0 0 5px;color:var(--ink);font-size:13px;white-space:normal}
+.quote b{display:block;color:var(--mint);font-size:12px}
+.quote span{display:block;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b.flash{outline:2px solid var(--mint);outline-offset:2px}
+.replybar{display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--panel2);border-top:1px solid var(--line)}
+.replybar .txt{flex:1;min-width:0}
+.replybar b{color:var(--mint);font-size:13px}
+.catchup{position:fixed;inset:0;z-index:60;background:rgba(3,10,12,.85);display:grid;place-items:center;padding:18px}
+.catchup .box{background:var(--panel);border:2px solid var(--mint);border-radius:20px;box-shadow:0 0 40px rgba(61,255,196,.35);width:min(460px,100%);max-height:82vh;display:flex;flex-direction:column;overflow:hidden;animation:pop .22s ease-out}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:none;opacity:1}}
+.catchup .top{padding:20px 20px 10px;text-align:center}
+.catchup h2{margin:0 0 4px;font-size:26px;letter-spacing:-.02em}
+.catchup .top p{margin:0;color:var(--mute)}
+.catchup .rows{overflow-y:auto;min-height:0}
+.catchup .foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+@media (prefers-reduced-motion:reduce){.catchup .box{animation:none}}
 .rx{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .rx button{background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-size:13px;line-height:1.6}
 .rx button.on{border-color:var(--mint);color:var(--mint);box-shadow:var(--glow)}
@@ -195,7 +211,10 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
           <kbd>/</kbd> type · <kbd>Esc</kbd> close · <kbd>Alt</kbd>+<kbd>S</kbd> settings<br>
           <span style="opacity:.8">Testing on your own? Open a private window, or add <b>?me=2</b> to the link for a second profile.</span>
         </div>
-        <button class="ghost" id="hideTips" style="margin-top:16px">Minimise</button>
+        <div class="field" style="justify-content:center;margin-top:16px">
+          <button class="ghost" id="hideTips">Minimise</button>
+          <button class="ghost" id="closeTips" title="Close — bring it back in Settings">✕ Close</button>
+        </div>
       </div>
       <button class="ghost" id="showTips" hidden>Show shortcuts</button>
     </div>
@@ -207,6 +226,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
       <button class="ghost" id="infoBtn">Group info</button>
     </div>
     <div class="msgs" id="msgs" hidden aria-live="polite"></div>
+    <div class="replybar" id="replyBar" hidden></div>
     <form class="composer" id="composer" hidden>
       <button type="button" class="attach" id="stickerBtn" title="Stickers (Alt+E)" aria-label="Stickers">✨</button>
       <button type="button" class="attach" id="attachBtn" title="Send a file (Alt+U)" aria-label="Send a file">📎</button>
@@ -220,6 +240,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
     </div>
   </main>
 </div>
+<div class="catchup" id="catchup" hidden></div>
 <dialog id="modal"></dialog>
 <div class="toasts" id="toasts"></div>
 
@@ -561,6 +582,10 @@ function connect() {
     publishPresence();
     pub(T.hello, JSON.stringify({ t: "hello", from: me(), ts: Date.now() }));
     render();
+    if (!catchupDone) {
+      catchupDone = true;
+      setTimeout(() => { if (!document.hidden) showCatchup(); else addEventListener("visibilitychange", () => showCatchup(), { once: true }); }, 3500);
+    }
   });
   client.on("close", () => { S.conn = false; render(); });
   client.on("offline", () => { S.conn = false; render(); });
@@ -786,9 +811,10 @@ async function acceptMsg(g, w, live) {
   }
   if (!o.op) {
     if ((o.ts || 0) >= (g.updatedAt || 0)) { g.updatedAt = o.ts; g.last = { from: o.from, text: preview(o, g) }; }
-    if (live && o.from !== me()) {
-      if (S.active !== g.gid || document.hidden || !winFocused) g.unread = (g.unread || 0) + 1;
-      notify(g, o);
+    if (o.from !== me() && (o.ts || 0) > (g.seenTs || 0)) {
+      const watching = live && S.active === g.gid && !document.hidden && winFocused;
+      if (watching) g.seenTs = o.ts; else g.unread = (g.unread || 0) + 1;
+      if (live) notify(g, o);
     }
   }
   saveHist(g.gid); saveGroups(); render();
@@ -826,6 +852,22 @@ function viewOf(g) {
     }
   }
   return [...base.values()].sort((a, b) => (a.ts || 0) - (b.ts || 0));
+}
+function replyTo(g, o) {
+  S.replyTo = { gid: g.gid, id: o.id, from: o.from, t: clip(preview(o, g), 160) };
+  render();
+  setTimeout(() => $("input").focus(), 0);
+}
+function replyBody() {
+  const r = S.replyTo;
+  return r && r.gid === S.active ? { re: { id: r.id, from: r.from, t: clip(r.t, 160) } } : {};
+}
+function jumpTo(id) {
+  const el = $("msgs").querySelector('[data-mid="' + id + '"]');
+  if (!el) return toast("That message isn't in your history any more.");
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.classList.add("flash");
+  setTimeout(() => el.classList.remove("flash"), 1400);
 }
 const editMsg = (g, id, text) => sendMsg(g, { op: "edit", target: id, text: clip(text, 4000) });
 const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "✨"];
@@ -1161,8 +1203,10 @@ function sendFile(file) {
   const r = new FileReader();
   r.onload = async () => {
     const caption = $("input").value.trim();
-    const ok = await sendMsg(g, { text: clip(caption, 4000), file: { name: clip(file.name, 120), type: clip(file.type || "application/octet-stream", 80), size: file.size, data: r.result } });
+    const ok = await sendMsg(g, Object.assign(replyBody(), { text: clip(caption, 4000), file: { name: clip(file.name, 120), type: clip(file.type || "application/octet-stream", 80), size: file.size, data: r.result } }));
+    if (ok) S.replyTo = null;
     if (ok && caption) { $("input").value = ""; $("sendBtn").disabled = true; }
+    render();
   };
   r.onerror = () => toast("Couldn't read that file.");
   r.readAsDataURL(file);
@@ -1265,11 +1309,15 @@ function paint() {
 
   const g = S.groups[S.active];
   $("app").classList.toggle("chatting", !!g);
+  paintReply();
   $("welcome").hidden = !!g;
-  $("welcomeFull").hidden = !!SET.welcomeHidden;
-  $("showTips").hidden = !SET.welcomeHidden; $("head").hidden = !g; $("msgs").hidden = !g; $("composer").hidden = !g;
+  $("welcomeFull").hidden = !!SET.welcomeHidden || !!SET.welcomeClosed;
+  $("showTips").hidden = !SET.welcomeHidden || !!SET.welcomeClosed; $("head").hidden = !g; $("msgs").hidden = !g; $("composer").hidden = !g;
   if (g) {
-    if (g.unread && !document.hidden && winFocused) { g.unread = 0; saveGroups(); }
+    if (!document.hidden && winFocused) {
+      const v = viewOf(g), latest = v.length ? v[v.length - 1].ts || 0 : 0;
+      if (g.unread || latest > (g.seenTs || 0)) { g.unread = 0; g.seenTs = Math.max(g.seenTs || 0, latest); saveGroups(); }
+    }
     $("headAv").replaceChildren(h("button", { class: "avbtn", title: "Group profile", onclick: () => groupProfileDialog(g) }, groupAvatar(g)));
     $("chatName").textContent = titleOf(g);
     const on = g.members.filter((m) => m !== me() && online(m)).length;
@@ -1377,6 +1425,14 @@ function fileView(f) {
     h("span", { style: "font-size:24px" }, "📄"),
     h("span", null, h("b", null, nm), h("small", null, size(Number(f.size) || 0) + " · tap to download")));
 }
+function paintReply() {
+  const bar = $("replyBar"), r = S.replyTo;
+  if (!r || r.gid !== S.active) { bar.hidden = true; bar.replaceChildren(); return; }
+  bar.hidden = false;
+  bar.replaceChildren(
+    h("div", { class: "txt" }, h("b", null, "Replying to " + (r.from === me() ? "yourself" : nameOf(r.from))), h("div", { class: "t2" }, clip(r.t, 120))),
+    h("button", { class: "ghost", title: "Cancel reply", "aria-label": "Cancel reply", onclick: () => { S.replyTo = null; render(); } }, "✕"));
+}
 function paintMsgs(g) {
   const box = $("msgs");
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
@@ -1388,8 +1444,10 @@ function paintMsgs(g) {
     if (o.sys) { box.append(h("div", { class: "sys" }, sysText(o, g))); prev = null; continue; }
     const mine = o.from === me();
     const first = !prev || prev.from !== o.from;
-    const bubble = h("div", { class: "b" + (mine ? " me" : "") + (first ? " gap" : "") + (o.sticker && !o.deletedBy ? " stkb" : "") + (o.deletedBy ? " del" : "") },
+    const bubble = h("div", { "data-mid": o.id, class: "b" + (mine ? " me" : "") + (first ? " gap" : "") + (o.sticker && !o.deletedBy ? " stkb" : "") + (o.deletedBy ? " del" : "") },
       many && !mine && first ? h("div", { class: "who", style: "color:hsl(" + hueOf(o.from) + " 90% 68%)" }, nameOf(o.from, g)) : null,
+      !o.deletedBy && o.re && o.re.id ? h("button", { class: "quote", title: "Go to that message", onclick: () => jumpTo(o.re.id) },
+        h("b", null, o.re.from === me() ? "You" : nameOf(o.re.from, g)), h("span", null, clip(o.re.t, 160) || "Message")) : null,
       o.deletedBy ? (o.deletedBy === o.from ? "🚫 This message was deleted" : "🚫 Deleted by " + nameOf(o.deletedBy, g)) : null,
       !o.deletedBy && typeof o.sticker === "string" && o.sticker.startsWith("data:image/") ? h("img", { class: "stk", src: o.sticker, alt: "sticker" }) : null,
       !o.deletedBy && o.file ? fileView(o.file) : null,
@@ -1590,6 +1648,7 @@ function settingsDialog(first) {
     h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:14px 0 4px" }, "Options"),
     h("label", { class: "chk" }, nt, "System notifications for new messages"),
     h("label", { class: "chk" }, snd, "Sound alert (works even where notifications don't)"),
+    h("label", { class: "chk" }, h("input", { type: "checkbox", checked: !SET.welcomeClosed, onchange: (e) => { SET.welcomeClosed = !e.target.checked; SET.welcomeHidden = false; saveSet(); render(); } }), "Show the tips panel on the empty screen"),
     status,
     h("div", { class: "field", style: "margin-top:8px" }, h("button", { class: "ghost", onclick: () => {
       beep();
@@ -1609,7 +1668,7 @@ function settingsDialog(first) {
   modal.oncancel = first ? (e) => e.preventDefault() : null;
 }
 function photoDialog(src, title, back) {
-  showModal(title, [h("img", { src, alt: title, style: "display:block;max-width:100%;max-height:60vh;margin:0 auto;border-radius:16px;image-rendering:auto" })],
+  showModal(title, [h("img", { src, alt: title, style: "display:block;max-width:100%;max-height:60vh;margin:0 auto;border-radius:16px" })],
     [back ? h("button", { class: "ghost", onclick: back }, "Back") : null, h("button", { class: "ghost", onclick: closeModal }, "Close")]);
 }
 function profileDialog(uid) {
@@ -1681,6 +1740,7 @@ function msgMenu(g, o) {
   ], [
     o.sticker ? h("button", { class: "primary", onclick: () => { closeModal(); keepSticker(o.sticker); } }, "✨ Save sticker") : null,
     img ? h("button", { class: "primary", onclick: () => { closeModal(); keepSticker(o.file.data); } }, "✨ Save as sticker") : null,
+    o.deletedBy ? null : h("button", { class: "ghost", onclick: () => { closeModal(); replyTo(g, o); } }, "↩ Reply"),
     mine && o.text && !o.file && !o.sticker ? h("button", { class: "ghost", onclick: () => { closeModal(); editDialog(g, o); } }, "Edit") : null,
     o.text ? h("button", { class: "ghost", onclick: () => { closeModal(); copy(o.text, "Message"); } }, "Copy") : null,
     canDelete ? h("button", { class: "danger", style: "padding:8px 14px", onclick: async () => { closeModal(); await delMsg(g, o.id); } },
@@ -1882,9 +1942,14 @@ function paintJoin(loading) {
 
 /* ================= wiring ================= */
 function openChat(gid) {
+  if (S.replyTo && S.replyTo.gid !== gid) S.replyTo = null;
   S.active = gid; S.drawer = false;
   const g = S.groups[gid];
-  if (g) g.unread = 0;
+  if (g) {
+    g.unread = 0;
+    const v = viewOf(g);
+    if (v.length) g.seenTs = Math.max(g.seenTs || 0, v[v.length - 1].ts || 0);
+  }
   saveGroups(); render();
   setTimeout(() => $("input").focus(), 0);
 }
@@ -1899,6 +1964,7 @@ $("backBtn").onclick = () => { S.active = null; S.drawer = false; render(); };
 $("barBtn").onclick = () => { SET.compactBar = !SET.compactBar; saveSet(); render(); };
 $("hideTips").onclick = () => { SET.welcomeHidden = true; saveSet(); render(); };
 $("showTips").onclick = () => { SET.welcomeHidden = false; saveSet(); render(); };
+$("closeTips").onclick = () => { SET.welcomeClosed = true; saveSet(); render(); toast("Closed. Settings can bring it back."); };
 $("attachBtn").onclick = () => $("fileInput").click();
 $("stickerBtn").onclick = () => stickerTray(false);
 $("fileInput").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; sendFile(f); };
@@ -1911,8 +1977,10 @@ $("composer").addEventListener("submit", async (e) => {
   e.preventDefault();
   const g = S.groups[S.active], inp = $("input"), text = inp.value.trim();
   if (!g || !text) return;
+  const body = Object.assign({ text: clip(text, 4000) }, replyBody());
   inp.value = ""; $("sendBtn").disabled = true;
-  if (!(await sendMsg(g, { text: clip(text, 4000) }))) { inp.value = text; $("sendBtn").disabled = false; }
+  S.replyTo = null;
+  if (!(await sendMsg(g, body))) { inp.value = text; $("sendBtn").disabled = false; }
 });
 const mainEl = $("main");
 mainEl.addEventListener("dragover", (e) => { if (S.active && e.dataTransfer.types.includes("Files")) { e.preventDefault(); $("app").classList.add("dropping"); } });
@@ -1920,6 +1988,10 @@ mainEl.addEventListener("dragleave", (e) => { if (!mainEl.contains(e.relatedTarg
 mainEl.addEventListener("drop", (e) => { e.preventDefault(); $("app").classList.remove("dropping"); const f = e.dataTransfer.files[0]; if (f) sendFile(f); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
 document.addEventListener("keydown", (e) => {
+  if (!$("catchup").hidden) {
+    if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); hideCatchup(); }
+    return;
+  }
   if (modal.open || !ID || !ID.raw.name) return;
   const typing = /INPUT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName);
   if (e.key === "Escape") {
@@ -1988,6 +2060,31 @@ function restoreBackup(file) {
     } catch (e) { toast("Restore failed — your browser storage may be full."); }
   };
   r.readAsText(file);
+}
+let catchupDone = false;
+function hideCatchup() { $("catchup").hidden = true; $("catchup").replaceChildren(); }
+function showCatchup() {
+  const gs = sortedGroups().filter((g) => (g.unread || 0) > 0);
+  if (!gs.length) return;
+  const total = gs.reduce((n, g) => n + g.unread, 0);
+  const who = gs.map((g) => titleOf(g));
+  const box = h("div", { class: "box" },
+    h("div", { class: "top" },
+      h("h2", null, "👋 Welcome back"),
+      h("p", null, total + (total === 1 ? " message" : " messages") + " while you were away, from " + (who.length > 2 ? who.slice(0, 2).join(", ") + " and " + (who.length - 2) + " more" : who.join(" and ")))),
+    h("div", { class: "rows" }, gs.map((g) => h("button", { class: "row", onclick: () => { hideCatchup(); S.tab = "chats"; openChat(g.gid); } },
+      groupAvatar(g),
+      h("div", { class: "txt" },
+        h("div", { class: "t1" }, h("span", null, titleOf(g)), h("span", { class: "badge" }, g.unread)),
+        h("div", { class: "t2" }, g.last ? (g.last.from === me() ? "You: " : "") + g.last.text : "New messages"))))),
+    h("div", { class: "foot" },
+      h("button", { class: "ghost", onclick: hideCatchup }, "Later"),
+      h("button", { class: "primary", onclick: () => { hideCatchup(); S.tab = "chats"; openChat(gs[0].gid); } }, "Open " + titleOf(gs[0]))));
+  $("catchup").replaceChildren(box);
+  $("catchup").hidden = false;
+  beep();
+  const first = $("catchup").querySelector("button");
+  if (first) first.focus();
 }
 function watchTabs() {
   if (!("BroadcastChannel" in window)) return;
