@@ -128,6 +128,18 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .replybar{display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--panel2);border-top:1px solid var(--line)}
 .replybar .txt{flex:1;min-width:0}
 .replybar b{color:var(--mint);font-size:13px}
+#recBar{background:var(--panel2);border-top:1px solid var(--danger);color:var(--ink)}
+#recBar .dotrec{width:12px;height:12px;border-radius:50%;background:var(--danger);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.voice{display:flex;align-items:center;gap:8px;margin:2px 0 4px}
+.voice audio{height:34px;max-width:230px}
+.ringing .box{animation:ringpulse 1.1s ease-in-out infinite}
+@keyframes ringpulse{0%,100%{box-shadow:0 0 30px rgba(61,255,196,.3)}50%{box-shadow:0 0 70px rgba(61,255,196,.85)}}
+.ringing .av{width:84px;height:84px;font-size:34px}
+.bgswatch{width:100%;height:46px;border-radius:10px;border:1px solid var(--line);cursor:pointer}
+.bgswatch[aria-pressed="true"]{border-color:var(--mint);box-shadow:var(--glow)}
+.bggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (prefers-reduced-motion:reduce){.ringing .box{animation:none}#recBar .dotrec{animation:none}}
 .callstrip{display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--mint-d);border-top:1px solid var(--mint);color:var(--mint)}
 .callstrip .txt{flex:1;min-width:0;font-size:14px}
 .callpanel{position:fixed;right:16px;bottom:16px;z-index:55;width:min(340px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--mint);border-radius:18px;box-shadow:0 0 30px rgba(61,255,196,.3);overflow:hidden}
@@ -223,7 +235,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
         <p>Open People to chat with whoever is here, browse Public groups, or join a private group with its code.</p>
         <div class="keys">
           <kbd>Alt</kbd>+<kbd>N</kbd> new group · <kbd>Alt</kbd>+<kbd>J</kbd> join with code · <kbd>Alt</kbd>+<kbd>G</kbd> public groups · <kbd>Alt</kbd>+<kbd>P</kbd> people<br>
-          <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> switch chat · <kbd>Alt</kbd>+<kbd>M</kbd> group info · <kbd>Alt</kbd>+<kbd>U</kbd> send file · <kbd>Alt</kbd>+<kbd>E</kbd> stickers<br>
+          <kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd> switch chat · <kbd>Alt</kbd>+<kbd>M</kbd> group info · <kbd>Alt</kbd>+<kbd>U</kbd> send file · <kbd>Alt</kbd>+<kbd>E</kbd> stickers · <kbd>Alt</kbd>+<kbd>R</kbd> voice message<br>
           <kbd>/</kbd> type · <kbd>Esc</kbd> close · <kbd>Alt</kbd>+<kbd>S</kbd> settings<br>
           <span style="opacity:.8">Testing on your own? Open a private window, or add <b>?me=2</b> to the link for a second profile.</span>
         </div>
@@ -243,9 +255,11 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
       <button class="ghost" id="infoBtn">Group info</button>
     </div>
     <div class="msgs" id="msgs" hidden aria-live="polite"></div>
+    <div class="callstrip" id="recBar" hidden></div>
     <div class="callstrip" id="callStrip" hidden></div>
     <div class="replybar" id="replyBar" hidden></div>
     <form class="composer" id="composer" hidden>
+      <button type="button" class="attach" id="micBtn" title="Record a voice message (Alt+R)" aria-label="Record a voice message">🎤</button>
       <button type="button" class="attach" id="stickerBtn" title="Stickers (Alt+E)" aria-label="Stickers">✨</button>
       <button type="button" class="attach" id="attachBtn" title="Send a file (Alt+U)" aria-label="Send a file">📎</button>
       <input type="file" id="fileInput" hidden>
@@ -525,6 +539,48 @@ const T = {
   list: (gid) => P + "/public/" + gid,
   hello: P + "/hello",
 };
+const BG = Object.assign({ all: null, by: {} }, jget("nl.bg") || {});
+const saveBG = () => jset("nl.bg", BG);
+const BG_PRESETS = {
+  dots: { name: "Dots", css: "radial-gradient(circle at 1px 1px,var(--line) 1px,transparent 0)", size: "22px 22px" },
+  plain: { name: "Plain", css: "none", size: "auto" },
+  aurora: { name: "Aurora", css: "radial-gradient(60% 50% at 20% 0%,rgba(61,255,196,.16),transparent),radial-gradient(60% 50% at 90% 100%,rgba(255,79,163,.14),transparent)", size: "cover" },
+  grid: { name: "Grid", css: "linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px)", size: "34px 34px" },
+  waves: { name: "Waves", css: "repeating-linear-gradient(45deg,rgba(61,255,196,.06) 0 12px,transparent 12px 26px)", size: "auto" },
+};
+const bgFor = (gid) => (BG.by && BG.by[gid]) || BG.all || { type: "preset", id: "dots" };
+function bgStyle(b) {
+  if (b && b.type === "image" && typeof b.d === "string") return { image: "url(" + b.d + ")", size: "cover", color: "" };
+  if (b && b.type === "color") return { image: "none", size: "auto", color: b.c };
+  const p = BG_PRESETS[(b && b.id) || "dots"] || BG_PRESETS.dots;
+  return { image: p.css, size: p.size, color: "" };
+}
+function applyBg(gid) {
+  const box = $("msgs");
+  const st = bgStyle(bgFor(gid));
+  box.style.backgroundImage = st.image;
+  box.style.backgroundSize = st.size;
+  box.style.backgroundColor = st.color;
+  box.style.backgroundPosition = "center";
+}
+function setBg(gid, b, forAll) {
+  if (forAll) { BG.all = b; BG.by = {}; } else { BG.by = BG.by || {}; if (b) BG.by[gid] = b; else delete BG.by[gid]; }
+  saveBG(); render();
+}
+function fitImage(src, maxW, q) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onerror = () => rej(new Error("decode"));
+    im.onload = () => {
+      const sc = Math.min(1, maxW / im.width);
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(im.width * sc); cv.height = Math.round(im.height * sc);
+      cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+      res(cv.toDataURL("image/jpeg", q || 0.7));
+    };
+    im.src = src;
+  });
+}
 const PMUTE = jget("nl.pmute") || {};
 const CMUTE = jget("nl.cmute") || {};
 const savePMute = () => jset("nl.pmute", PMUTE);
@@ -906,8 +962,8 @@ function viewOf(g) {
     if (o.op === "edit" && o.from === b.from && (o.ts || 0) > (b.editedAt || 0) && !b.deletedBy) {
       b.text = clip(o.text, 4000); b.editedAt = o.ts;
     }
-    if (o.op === "del" && (o.from === b.from || o.from === g.admin)) {
-      b.deletedBy = o.from; b.text = ""; b.file = null; b.sticker = null;
+    if (o.op === "del" && (o.from === b.from || adminsOf(g).includes(o.from))) {
+      b.deletedBy = o.from; b.text = ""; b.file = null; b.sticker = null; b.voice = null;
     }
   }
   return [...base.values()].sort((a, b) => (a.ts || 0) - (b.ts || 0));
@@ -1305,6 +1361,75 @@ function sendFile(file) {
   r.readAsDataURL(file);
 }
 
+/* ================= voice messages ================= */
+const VOICE_MAX = 60;
+const REC = { rec: null, chunks: [], t0: 0, tick: null, stream: null };
+function recording() { return !!REC.rec; }
+async function startRec() {
+  if (recording()) return stopRec(true);
+  if (!S.groups[S.active]) return toast("Open a chat first.");
+  if (typeof MediaRecorder === "undefined") return toast("This browser can't record audio.");
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+  catch (e) { return toast("No microphone access."); }
+  let mime = "";
+  for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"]) {
+    if (typeof MediaRecorder.isTypeSupported !== "function" || MediaRecorder.isTypeSupported(m)) { mime = m; break; }
+  }
+  try { REC.rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 24000 } : undefined); }
+  catch (e) { return toast("This browser can't record audio."); }
+  REC.stream = stream; REC.chunks = []; REC.t0 = Date.now();
+  REC.rec.ondataavailable = (e) => { if (e.data && e.data.size) REC.chunks.push(e.data); };
+  REC.rec.onstop = () => finishRec();
+  REC.rec.start();
+  REC.tick = setInterval(() => {
+    const secs = (Date.now() - REC.t0) / 1000;
+    if (secs >= VOICE_MAX) stopRec(false);
+    paintRec();
+  }, 250);
+  paintRec();
+}
+function stopRec(cancel) {
+  if (!REC.rec) return;
+  REC.cancel = !!cancel;
+  try { REC.rec.stop(); } catch (e) { finishRec(); }
+}
+async function finishRec() {
+  clearInterval(REC.tick);
+  const secs = Math.round((Date.now() - REC.t0) / 10) / 100;
+  const chunks = REC.chunks, cancel = REC.cancel, type = (REC.rec && REC.rec.mimeType) || "audio/webm";
+  if (REC.stream) REC.stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) { /* ignore */ } });
+  Object.assign(REC, { rec: null, chunks: [], stream: null, cancel: false });
+  paintRec();
+  const g = S.groups[S.active];
+  if (cancel || !g || !chunks.length || secs < 0.4) return;
+  const blob = new Blob(chunks, { type });
+  if (blob.size > MAX_FILE) return toast("That recording is too long to send.");
+  const fr = new FileReader();
+  fr.onload = async () => {
+    await sendMsg(g, Object.assign(replyBody(), { voice: { d: fr.result, secs: Math.min(secs, VOICE_MAX), type } }));
+    S.replyTo = null;
+    render();
+  };
+  fr.onerror = () => toast("Couldn't save the recording.");
+  fr.readAsDataURL(blob);
+}
+function paintRec() {
+  const bar = $("recBar");
+  if (!recording()) { bar.hidden = true; bar.replaceChildren(); return; }
+  const secs = (Date.now() - REC.t0) / 1000;
+  bar.hidden = false;
+  bar.replaceChildren(
+    h("span", { class: "dotrec" }),
+    h("div", { class: "txt" }, "Recording " + mmss(secs) + " / " + mmss(VOICE_MAX)),
+    h("button", { class: "ghost", onclick: () => stopRec(true) }, "✕ Cancel"),
+    h("button", { class: "primary", style: "padding:4px 14px", onclick: () => stopRec(false) }, "Send"));
+}
+function voiceView(v) {
+  if (!v || typeof v.d !== "string" || !v.d.startsWith("data:audio")) return null;
+  return h("div", { class: "voice" }, h("audio", { controls: true, preload: "metadata", src: v.d }), h("span", { class: "t2" }, mmss(v.secs || 0)));
+}
+
 /* ================= calls ================= */
 const CALL = { gid: null, id: null, video: false, local: null, peers: {}, startedAt: 0, tick: null, micOff: false, camOff: false };
 const inCall = () => !!CALL.gid;
@@ -1328,6 +1453,8 @@ async function startCall(g, video) {
   if (g.members.length < 2) return toast("Nobody else is in this chat yet.");
   if (!(await openMic(video))) return;
   CALL.gid = g.gid; CALL.id = rid(6); CALL.video = !!video; CALL.startedAt = Date.now();
+  CALL.starter = true; CALL.answered = false;
+  await sendMsg(g, { sys: "callstart", video: !!video });
   await sendCall(g, { kind: "ring", callId: CALL.id, video: !!video });
   await sendCall(g, { kind: "join", callId: CALL.id });
   startTick(g);
@@ -1337,6 +1464,7 @@ async function joinCall(g, callId, video) {
   if (inCall()) hangUp(true);
   if (!(await openMic(video))) return;
   CALL.gid = g.gid; CALL.id = callId; CALL.video = !!video; CALL.startedAt = Date.now();
+  CALL.starter = false; CALL.answered = true;
   await sendCall(g, { kind: "join", callId });
   startTick(g);
   render();
@@ -1372,9 +1500,10 @@ function peerFor(g, uid, initiator) {
   const p = CALL.peers[uid] = { uid, pc, stream: new MediaStream(), el: null, vid: null, muted: !!PMUTE[uid], vol: 1, level: 0, state: "connecting" };
   if (CALL.local) CALL.local.getTracks().forEach((t) => { try { pc.addTrack(t, CALL.local); } catch (e) { /* ignore */ } });
   pc.onicecandidate = (e) => { if (e.candidate) sendCall(g, { kind: "ice", to: uid, callId: CALL.id, c: e.candidate.toJSON() }); };
-  pc.ontrack = (e) => { p.stream.addTrack(e.track); attachPeer(p); renderCall(); };
+  pc.ontrack = (e) => { CALL.answered = true; p.stream.addTrack(e.track); attachPeer(p); renderCall(); };
   pc.onconnectionstatechange = () => {
     p.state = pc.connectionState;
+    if (p.state === "connected") CALL.answered = true;
     if (p.state === "failed" || p.state === "closed") dropPeer(uid);
     renderCall();
   };
@@ -1432,6 +1561,10 @@ function dropPeer(uid) {
 }
 function hangUp(quiet) {
   const g = S.groups[CALL.gid];
+  if (g && CALL.starter) {
+    const secs = Math.round((Date.now() - CALL.startedAt) / 1000);
+    sendMsg(g, { sys: "callend", secs, answered: !!CALL.answered });
+  }
   if (CALL.gid) delete S.activeCalls[CALL.gid];
   if (g && !quiet) sendCall(g, { kind: "leave", callId: CALL.id });
   for (const uid in CALL.peers) dropPeer(uid);
@@ -1445,6 +1578,36 @@ function toggleMic() {
   CALL.micOff = !CALL.micOff;
   CALL.local.getAudioTracks().forEach((t) => { t.enabled = !CALL.micOff; });
   renderCall();
+}
+async function switchCam() {
+  if (!CALL.video || !CALL.local) return toast("This call started as audio only.");
+  try {
+    let devs = [];
+    try { devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput"); } catch (e) { devs = []; }
+    const cur = CALL.local.getVideoTracks()[0];
+    const curId = cur && cur.getSettings ? cur.getSettings().deviceId : null;
+    let constraints;
+    if (devs.length > 1) {
+      const i = Math.max(0, devs.findIndex((d) => d.deviceId === curId));
+      constraints = { video: { deviceId: { exact: devs[(i + 1) % devs.length].deviceId } }, audio: false };
+    } else {
+      CALL.facing = CALL.facing === "environment" ? "user" : "environment";
+      constraints = { video: { facingMode: { ideal: CALL.facing } }, audio: false };
+    }
+    const fresh = await navigator.mediaDevices.getUserMedia(constraints);
+    const track = fresh.getVideoTracks()[0];
+    if (!track) return toast("No other camera found.");
+    for (const uid in CALL.peers) {
+      const pc = CALL.peers[uid].pc;
+      const sender = pc.getSenders && pc.getSenders().find((x) => x.track && x.track.kind === "video");
+      if (sender && sender.replaceTrack) await sender.replaceTrack(track);
+    }
+    if (cur) { CALL.local.removeTrack ? CALL.local.removeTrack(cur) : null; try { cur.stop(); } catch (e) { /* ignore */ } }
+    if (CALL.local.addTrack) CALL.local.addTrack(track);
+    CALL.camOff = false;
+    renderCall();
+    toast("Camera switched");
+  } catch (e) { toast("Couldn't switch camera."); }
 }
 function toggleCam() {
   if (!CALL.local || !CALL.video) return toast("This call started as audio only.");
@@ -1477,7 +1640,7 @@ async function onCall(g, o) {
   }
   if (!inCall() || CALL.gid !== g.gid || o.callId !== CALL.id) return;
   if (o.to && o.to !== me()) return;
-  if (o.kind === "join") { peerFor(g, from, true); return; }
+  if (o.kind === "join") { CALL.answered = true; peerFor(g, from, true); return; }
   if (o.kind === "leave") {
     dropPeer(from);
     if (!Object.keys(CALL.peers).length) { toast("Call ended"); delete S.activeCalls[g.gid]; hangUp(true); render(); }
@@ -1521,7 +1684,22 @@ function startRingtone() {
   } catch (e) { /* ignore */ }
 }
 function stopRingtone() { clearInterval(ringOsc); ringOsc = null; }
-function hideRing() { stopRingtone(); $("ring").hidden = true; $("ring").replaceChildren(); }
+let titleTimer = null, titleWas = "";
+function startTitleFlash(text) {
+  stopTitleFlash();
+  titleWas = document.title;
+  let on = false;
+  titleTimer = setInterval(() => { on = !on; document.title = on ? text : "· · ·"; }, 900);
+  document.title = text;
+}
+function stopTitleFlash() { if (titleTimer) { clearInterval(titleTimer); titleTimer = null; document.title = titleWas || "Neon Lobby Chat"; } }
+function hideRing() {
+  stopRingtone(); stopTitleFlash();
+  try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) { /* ignore */ }
+  $("ring").classList.remove("ringing");
+  $("ring").hidden = true;
+  $("ring").replaceChildren();
+}
 function showRing(g, from, callId, video) {
   const box = h("div", { class: "box" },
     h("div", { class: "top" },
@@ -1533,7 +1711,10 @@ function showRing(g, from, callId, video) {
       h("button", { class: "ghost", onclick: () => { hideRing(); setCMute(g.gid, "call", true); toast("Calls in this chat are silenced"); } }, "🔕 Silence chat"),
       h("button", { class: "primary", onclick: () => { hideRing(); joinCall(g, callId, video); } }, "Answer")));
   $("ring").replaceChildren(box);
+  $("ring").classList.add("ringing");
   $("ring").hidden = false;
+  try { if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]); } catch (e) { /* ignore */ }
+  startTitleFlash((video ? "📹 " : "📞 ") + nameOf(from, g) + " is calling");
   if (SET.callNotify !== false) showNote((video ? "Video call" : "Call") + " from " + nameOf(from, g), isDm(g) ? "Tap to answer" : "In " + titleOf(g), picOf(from), () => { hideRing(); joinCall(g, callId, video); });
   startRingtone();
   setTimeout(() => { if (!$("ring").hidden && $("ring").textContent.includes(nameOf(from, g))) hideRing(); }, 45000);
@@ -1565,7 +1746,8 @@ function renderCall() {
     vids || null, rows,
     h("div", { class: "ctrls" },
       h("button", { title: "Mute yourself", "aria-pressed": CALL.micOff, onclick: toggleMic }, CALL.micOff ? "🎙️✕" : "🎙️"),
-      CALL.video ? h("button", { title: "Camera", "aria-pressed": CALL.camOff, onclick: toggleCam }, CALL.camOff ? "📷✕" : "📷") : null,
+      CALL.video ? h("button", { title: "Camera on or off", "aria-pressed": CALL.camOff, onclick: toggleCam }, CALL.camOff ? "📷✕" : "📷") : null,
+      CALL.video ? h("button", { title: "Switch camera", onclick: switchCam }, "🔄") : null,
       h("button", { class: "hang", title: "Hang up", onclick: () => hangUp(false) }, "Leave"))));
   if (vids) {
     const els = vids.querySelectorAll("video");
@@ -1598,6 +1780,8 @@ function sysText(o, g) {
     case "left": return t + " left";
     case "admin": return t + " is now an admin";
     case "unadmin": return t + " is no longer an admin";
+    case "callstart": return (o.video ? "📹 " : "📞 ") + a + " started a call";
+    case "callend": return o.answered ? "📞 Call ended · " + mmss(o.secs || 0) : "📵 Missed call from " + a;
     case "admincode": return a + " set an admin code";
     case "noadmincode": return a + " removed the admin code";
     case "renamed": return a + " renamed the group to “" + clip(o.text, 60) + "”";
@@ -1611,8 +1795,10 @@ function sysText(o, g) {
     default: return "";
   }
 }
+const mmss = (s) => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
 function preview(o, g) {
   if (o.deletedBy) return "🚫 Deleted message";
+  if (o.voice) return "🎤 Voice message (" + mmss(o.voice.secs || 0) + ")";
   if (o.sys) return sysText(o, g);
   if (o.sticker) return "✨ Sticker";
   if (o.file) return "📎 " + clip(o.file.name, 60);
@@ -1690,6 +1876,7 @@ function paint() {
   $("app").classList.toggle("chatting", !!g);
   renderCall();
   paintCallStrip();
+  paintRec();
   paintReply();
   $("welcome").hidden = !!g;
   $("welcomeFull").hidden = !!SET.welcomeHidden || !!SET.welcomeClosed;
@@ -1711,6 +1898,7 @@ function paint() {
     $("barBtn").textContent = SET.compactBar ? "⌄" : "⌃";
     $("infoBtn").textContent = SET.compactBar ? (pend ? "ⓘ " + pend : "ⓘ") : full;
     $("infoBtn").setAttribute("aria-label", full);
+    applyBg(g.gid);
     paintMsgs(g);
   }
   paintDrawer(g);
@@ -1827,6 +2015,32 @@ function adminCodeSection(g, admin) {
   }
   return sec;
 }
+function bgSection(g) {
+  const cur = bgFor(g.gid);
+  const all = h("input", { type: "checkbox", id: "bgAll" });
+  const pick = (b) => setBg(g.gid, b, all.checked);
+  const grid = h("div", { class: "bggrid" }, Object.keys(BG_PRESETS).map((id) => {
+    const st = bgStyle({ type: "preset", id });
+    return h("button", { class: "bgswatch", title: BG_PRESETS[id].name, "aria-label": BG_PRESETS[id].name,
+      "aria-pressed": cur.type === "preset" && (cur.id || "dots") === id,
+      style: "background-image:" + st.image + ";background-size:" + st.size,
+      onclick: () => pick({ type: "preset", id }) });
+  }));
+  const fi = h("input", { type: "file", accept: "image/*", hidden: true, onchange: async (e) => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try { pick({ type: "image", d: await fitImage(await readFileUrl(f), 1080, 0.68) }); toast("Background set"); }
+    catch (err) { toast("Couldn't use that image."); }
+  } });
+  const col = h("input", { type: "color", value: cur.type === "color" ? cur.c : "#0b1a1f", "aria-label": "Background colour",
+    style: "width:44px;height:34px;background:none;border:1px solid var(--line);border-radius:8px",
+    oninput: (e) => pick({ type: "color", c: e.target.value }) });
+  return h("div", { class: "sec" }, h("h3", null, "Background"), grid,
+    h("div", { class: "field", style: "margin-top:8px" },
+      h("button", { class: "ghost", onclick: () => fi.click() }, "Photo"), col,
+      h("button", { class: "ghost", onclick: () => setBg(g.gid, null, all.checked) }, "Reset"), fi),
+    h("label", { class: "chk" }, all, "Apply my next pick to every chat"));
+}
 function muteSection(g) {
   return h("div", { class: "sec" }, h("h3", null, "Notifications"),
     h("label", { class: "chk" }, h("input", { type: "checkbox", checked: cMuted(g.gid, "msg"), onchange: (e) => setCMute(g.gid, "msg", e.target.checked) }), "🔕 Silence messages here"),
@@ -1867,6 +2081,7 @@ function paintMsgs(g) {
         h("b", null, o.re.from === me() ? "You" : nameOf(o.re.from, g)), h("span", null, clip(o.re.t, 160) || "Message")) : null,
       o.deletedBy ? (o.deletedBy === o.from ? "🚫 This message was deleted" : "🚫 Deleted by " + nameOf(o.deletedBy, g)) : null,
       !o.deletedBy && typeof o.sticker === "string" && o.sticker.startsWith("data:image/") ? h("img", { class: "stk", src: o.sticker, alt: "sticker" }) : null,
+      !o.deletedBy && o.voice ? voiceView(o.voice) : null,
       !o.deletedBy && o.file ? fileView(o.file) : null,
       !o.deletedBy && o.text ? rich(String(o.text)) : null,
       o.deletedBy ? null : h("button", { class: "more", title: "Message options", "aria-label": "Message options", onclick: () => msgMenu(g, o) }, "⋯"),
@@ -1906,6 +2121,7 @@ function paintDrawer(g) {
           h("div", { class: "t2" }, bioOf(other) || (online(other) ? "On the page now" : "Not on the page right now"))),
         h("button", { class: "ghost", onclick: () => profileDialog(other) }, "Profile")),
       h("p", { style: "margin:6px 0 0;font-size:13px;color:var(--mute)" }, "Just the two of you. Nobody is admin here, so you can each only delete your own messages.")));
+    body.append(bgSection(g));
     body.append(muteSection(g));
     body.append(h("button", { class: "act", onclick: () => clearChat(g) }, "Clear messages (only for me)"));
     body.append(h("button", { class: "act red", onclick: () => { if (confirm("Delete this chat from this device?")) removeLocal(g, "Chat deleted here"); } }, "Delete chat"));
@@ -1992,6 +2208,7 @@ function paintDrawer(g) {
     }
     body.append(as);
   }
+  body.append(bgSection(g));
   body.append(adminCodeSection(g, admin));
   body.append(muteSection(g));
   if (admin) body.append(h("button", { class: "act red", onclick: () => clearChat(g) }, "Clear all messages for everyone"));
@@ -2460,6 +2677,7 @@ $("showTips").onclick = () => { SET.welcomeHidden = false; saveSet(); render(); 
 $("closeTips").onclick = () => { SET.welcomeClosed = true; saveSet(); render(); toast("Closed. Settings can bring it back."); };
 $("attachBtn").onclick = () => $("fileInput").click();
 $("stickerBtn").onclick = () => stickerTray(false);
+$("micBtn").onclick = () => startRec();
 $("fileInput").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; sendFile(f); };
 $("input").addEventListener("input", (e) => { $("sendBtn").disabled = !e.target.value.trim(); });
 $("input").addEventListener("paste", (e) => {
@@ -2499,6 +2717,7 @@ document.addEventListener("keydown", (e) => {
     const act = {
       KeyN: () => newGroupDialog(), KeyJ: () => joinDialog(), KeyS: () => settingsDialog(false),
       KeyE: () => stickerTray(false),
+      KeyR: () => { if (S.active) startRec(); },
       KeyP: () => { S.tab = S.tab === "people" ? "chats" : "people"; render(); },
       KeyG: () => { S.tab = S.tab === "public" ? "chats" : "public"; render(); },
       KeyM: () => { if (S.active) { S.drawer = !S.drawer; render(); } },
