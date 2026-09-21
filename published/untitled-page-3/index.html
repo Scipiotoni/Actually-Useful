@@ -326,6 +326,14 @@ async function copy(text, label) {
 
 const SET = Object.assign({ notify: false, sound: false, compactBar: true }, jget("nl.settings") || {});
 const saveSet = () => jset("nl.settings", SET);
+function readFileUrl(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onerror = () => rej(new Error("read"));
+    r.onload = () => res(r.result);
+    r.readAsDataURL(file);
+  });
+}
 function squareThumb(file, px, q, png) {
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -554,7 +562,9 @@ const realName = (uid, g) => {
   return (g && g.names && g.names[uid]) || findName(uid) || "Someone";
 };
 const me = () => ID.uid;
-const isAdmin = (g) => g && g.admin === me();
+const adminsOf = (g) => [].concat(g && g.admin ? [g.admin] : [], (g && g.admins) || []);
+const isAdmin = (g) => !!g && !g.dm && adminsOf(g).includes(me());
+const adminHashOf = async (gid, code) => sha("adm:" + gid + ":" + normCode(code));
 function nameOf(uid, g) {
   if (uid === me()) return ID.raw.name || "You";
   if (NICKS[uid]) return NICKS[uid];
@@ -814,7 +824,12 @@ async function onGroup(gid, epoch, kind, payload) {
   if (kind === "ctl") return onCtl(g, inner);
 }
 async function applyState(g, o, wire) {
-  if (!o || o.t !== "state" || o.gid !== g.gid || o.from !== g.admin) return;
+  if (!o || o.t !== "state" || o.gid !== g.gid) return;
+  if (!adminsOf(g).includes(o.from)) {
+    const claimOk = o.claim && g.adminHash && Array.isArray(o.admins) && o.admins.includes(o.from)
+      && (await adminHashOf(g.gid, o.claim)) === g.adminHash;
+    if (!claimOk) return;
+  }
   if (!(o.ver > g.ver)) return;
   if (!Array.isArray(o.members)) return;
   const wasAdmin = isAdmin(g);
@@ -826,6 +841,8 @@ async function applyState(g, o, wire) {
     ver: o.ver, name: clip(o.name, 60), admin: String(o.admin), members: o.members.filter((x) => isHex(x, 16)).slice(0, 200),
     names: o.names || {}, keys: o.keys || {}, coded: !!o.coded, approval: !!o.approval,
     banned: Array.isArray(o.banned) ? o.banned : [], code: normCode(o.code), public: !!o.public,
+    admins: Array.isArray(o.admins) ? o.admins.filter((x) => isHex(x, 16)).slice(0, 20) : [],
+    adminHash: typeof o.adminHash === "string" ? o.adminHash : "",
     icon: typeof o.icon === "string" && o.icon.startsWith("data:image/") && o.icon.length < 60000 ? o.icon : "",
     desc: clip(o.desc, 300),
   });
@@ -1016,6 +1033,7 @@ async function publishState(g, extra) {
     t: "state", from: me(), gid: g.gid, ver: g.ver, name: g.name, admin: g.admin, members: g.members,
     names: pickKeys(g.names, g.members), keys: pickKeys(g.keys, g.members), coded: !!g.coded, approval: !!g.approval,
     banned: g.banned || [], code: g.coded ? g.code : "", public: !!(g.public && g.coded),
+    admins: (g.admins || []).filter((x) => x !== g.admin), adminHash: g.adminHash || "",
     icon: g.icon || "", desc: clip(g.desc, 300), ts: Date.now(),
   }, extra || {});
   const w = await sign(obj);
@@ -1050,7 +1068,7 @@ function newGroup(name, admin) {
   const g = {
     gid: rid(8), epoch: 1, key: b64(crypto.getRandomValues(new Uint8Array(32))), name: clip(name, 60), admin: me(),
     members: [me()], names: { [me()]: ID.raw.name }, keys: { [me()]: ID.raw.dPub }, coded: false, approval: false,
-    banned: [], code: "", icon: "", desc: "", clearedAt: 0, ver: 0, unread: 0, updatedAt: Date.now(), last: null, pending: {},
+    banned: [], code: "", icon: "", desc: "", admins: [], adminHash: "", adminCodePlain: "", clearedAt: 0, ver: 0, unread: 0, updatedAt: Date.now(), last: null, pending: {},
   };
   S.groups[g.gid] = g; S.hist[g.gid] = []; S.ids[g.gid] = new Set();
   return g;
@@ -1125,6 +1143,7 @@ async function kick(g, uid) {
   if (!isAdmin(g) || !confirm("Remove " + nameOf(uid, g) + " from this group? They won't be able to rejoin with the code.")) return;
   const tname = nameOf(uid, g);
   g.members = g.members.filter((m) => m !== uid);
+  g.admins = (g.admins || []).filter((x) => x !== uid);
   if (!g.banned.includes(uid)) g.banned.push(uid);
   if (g.keys) delete g.keys[uid];
   await publishState(g); // old epoch: tells the removed person
@@ -1141,11 +1160,39 @@ async function rekey(g) {
   for (const m of g.members) if (m !== me()) await sendInvite(g, m);
 }
 async function makeAdmin(g, uid) {
-  if (!isAdmin(g) || !confirm("Make " + nameOf(uid, g) + " the admin? You'll become a regular member.")) return;
-  g.admin = uid;
+  if (!isAdmin(g) || !confirm("Make " + nameOf(uid, g) + " an admin? They'll be able to add and remove people.")) return;
+  g.admins = g.admins || [];
+  if (!g.admins.includes(uid) && uid !== g.admin) g.admins.push(uid);
   await publishState(g);
-  if (g.doorId) unsub(T.req(g.doorId));
   await sendMsg(g, { sys: "admin", target: uid, tname: nameOf(uid, g) });
+  render();
+}
+async function dropAdmin(g, uid) {
+  if (g.admin !== me() || uid === g.admin) return toast("Only the owner can take admin away.");
+  g.admins = (g.admins || []).filter((x) => x !== uid);
+  await publishState(g);
+  await sendMsg(g, { sys: "unadmin", target: uid, tname: nameOf(uid, g) });
+  render();
+}
+async function setAdminCode(g, code) {
+  if (!isAdmin(g)) return;
+  code = normCode(code);
+  g.adminHash = code ? await adminHashOf(g.gid, code) : "";
+  g.adminCodePlain = code;
+  saveGroups();
+  await publishState(g);
+  await sendMsg(g, { sys: code ? "admincode" : "noadmincode" });
+  render();
+}
+async function claimAdmin(g, code) {
+  code = normCode(code);
+  if (!g.adminHash) return toast("This group has no admin code.");
+  if ((await adminHashOf(g.gid, code)) !== g.adminHash) return toast("That admin code doesn't match.");
+  g.admins = g.admins || [];
+  if (!g.admins.includes(me()) && g.admin !== me()) g.admins.push(me());
+  await publishState(g, { claim: code });
+  await sendMsg(g, { sys: "admin", target: me(), tname: ID.raw.name });
+  toast("You're an admin now. Change the admin code so it can't be reused.");
   render();
 }
 async function rename(g, v) {
@@ -1197,8 +1244,9 @@ async function leave(g) {
   if (!confirm("Leave “" + (g.name || "this chat") + "”?")) return;
   const rest = g.members.filter((m) => m !== me());
   if (!rest.length) return deleteGroup(g, true);
-  if (isAdmin(g)) {
-    g.admin = rest[0];
+  if (g.admin === me()) {
+    g.admin = (g.admins || []).find((x) => rest.includes(x)) || rest[0];
+    g.admins = (g.admins || []).filter((x) => x !== g.admin && x !== me());
     g.members = rest;
     await publishState(g);
     await sendMsg(g, { sys: "admin", target: rest[0], tname: nameOf(rest[0], g) });
@@ -1548,7 +1596,10 @@ function sysText(o, g) {
     case "added": return a + " added " + t;
     case "removed": return a + " removed " + t;
     case "left": return t + " left";
-    case "admin": return t + " is now admin";
+    case "admin": return t + " is now an admin";
+    case "unadmin": return t + " is no longer an admin";
+    case "admincode": return a + " set an admin code";
+    case "noadmincode": return a + " removed the admin code";
     case "renamed": return a + " renamed the group to “" + clip(o.text, 60) + "”";
     case "coded": return a + " set a join code";
     case "uncoded": return a + " turned off the join code";
@@ -1755,6 +1806,27 @@ function fileView(f) {
     h("span", { style: "font-size:24px" }, "📄"),
     h("span", null, h("b", null, nm), h("small", null, size(Number(f.size) || 0) + " · tap to download")));
 }
+function adminCodeSection(g, admin) {
+  const sec = h("div", { class: "sec" }, h("h3", null, "Admin code"));
+  if (admin) {
+    const inp = h("input", { class: "inp", id: "dAdmin", maxlength: 24, value: g.adminCodePlain || "", placeholder: "No admin code set", style: "letter-spacing:.1em;font-weight:700", "aria-label": "Admin code" });
+    sec.append(
+      h("p", { style: "margin:0 0 8px;font-size:13px;color:var(--mute)" }, "Anyone in the group who types this code becomes an admin and can remove people. Change it after you hand it out."),
+      h("div", { class: "field" }, inp,
+        h("button", { class: "ghost", onclick: () => { inp.value = newCode(); } }, "New"),
+        h("button", { class: "ghost", onclick: () => setAdminCode(g, inp.value) }, "Save")),
+      g.adminHash ? h("div", { class: "field" },
+        h("button", { class: "ghost", onclick: () => copy(g.adminCodePlain || "", "Admin code") }, "Copy"),
+        h("button", { class: "danger", onclick: () => setAdminCode(g, "") }, "Turn off")) : null);
+  } else if (g.adminHash) {
+    const inp = h("input", { class: "inp", id: "dClaim", maxlength: 24, placeholder: "Enter admin code", style: "letter-spacing:.1em;font-weight:700", "aria-label": "Admin code" });
+    sec.append(h("p", { style: "margin:0 0 8px;font-size:13px;color:var(--mute)" }, "Got the admin code? Type it to become an admin of this group."),
+      h("div", { class: "field" }, inp, h("button", { class: "primary", onclick: () => claimAdmin(g, inp.value) }, "Become admin")));
+  } else {
+    sec.append(h("p", { style: "margin:0;font-size:13px;color:var(--mute)" }, "No admin code in this group."));
+  }
+  return sec;
+}
 function muteSection(g) {
   return h("div", { class: "sec" }, h("h3", null, "Notifications"),
     h("label", { class: "chk" }, h("input", { type: "checkbox", checked: cMuted(g.gid, "msg"), onchange: (e) => setCMute(g.gid, "msg", e.target.checked) }), "🔕 Silence messages here"),
@@ -1823,6 +1895,7 @@ function paintDrawer(g) {
   if (!open) return;
   const keepFocus = document.activeElement && d.contains(document.activeElement) && document.activeElement.id;
   const draft = keepFocus === "dName" ? $("dName").value : null;
+  if (keepFocus === "dAdmin" || keepFocus === "dClaim") return;
   const draftDesc = keepFocus === "dDesc" ? $("dDesc").value : null;
   body.replaceChildren();
   if (isDm(g)) {
@@ -1844,7 +1917,7 @@ function paintDrawer(g) {
     const inp = h("input", { class: "inp", id: "dName", value: draft != null ? draft : (g.name || ""), maxlength: 60, placeholder: "Group name", "aria-label": "Group name" });
     const fi = h("input", { type: "file", accept: "image/*", hidden: true, onchange: async (e) => {
       const f = e.target.files[0]; e.target.value = "";
-      if (f) { try { await setIcon(g, await squareThumb(f, 128, 0.7)); } catch (err) { toast("Couldn't use that image."); } }
+      if (f) { try { cropDialog(await readFileUrl(f), 128, { title: "Group photo" }, (d) => setIcon(g, d)); } catch (err) { toast("Couldn't use that image."); } }
     } });
     const ds = h("input", { class: "inp", id: "dDesc", value: draftDesc != null ? draftDesc : (g.desc || ""), maxlength: 300, placeholder: "What's this group about?", "aria-label": "Group description" });
     body.append(h("div", { class: "sec" }, h("h3", null, "Group profile"),
@@ -1902,9 +1975,11 @@ function paintDrawer(g) {
     ms.append(h("div", { class: "row" }, avatarBtn(m, true),
       h("div", { class: "txt" }, h("span", null, nameOf(m, g) + (m === me() ? " (you)" : "")),
         m !== me() && NICKS[m] ? h("span", { class: "t2" }, realName(m, g)) : null,
-        m === g.admin ? h("span", { class: "tag" }, "admin") : null),
-      admin && m !== me() ? h("button", { class: "ghost", style: "padding:3px 8px;font-size:13px", onclick: () => makeAdmin(g, m) }, "Make admin") : null,
-      admin && m !== me() ? h("button", { class: "danger", onclick: () => kick(g, m) }, "Kick") : null));
+        m === g.admin ? h("span", { class: "tag" }, "owner") : (g.admins || []).includes(m) ? h("span", { class: "tag" }, "admin") : null),
+      admin && m !== me() && m !== g.admin ? ((g.admins || []).includes(m)
+        ? (g.admin === me() ? h("button", { class: "ghost", style: "padding:3px 8px;font-size:13px", onclick: () => dropAdmin(g, m) }, "Remove admin") : null)
+        : h("button", { class: "ghost", style: "padding:3px 8px;font-size:13px", onclick: () => makeAdmin(g, m) }, "Make admin")) : null,
+      admin && m !== me() && (m !== g.admin) ? h("button", { class: "danger", onclick: () => kick(g, m) }, "Remove") : null));
   }
   body.append(ms);
   if (admin) {
@@ -1917,6 +1992,7 @@ function paintDrawer(g) {
     }
     body.append(as);
   }
+  body.append(adminCodeSection(g, admin));
   body.append(muteSection(g));
   if (admin) body.append(h("button", { class: "act red", onclick: () => clearChat(g) }, "Clear all messages for everyone"));
   body.append(h("button", { class: "act red", onclick: () => leave(g) }, "Leave group"));
@@ -1944,7 +2020,8 @@ function settingsDialog(first) {
   const fi = h("input", { type: "file", accept: "image/*", hidden: true, onchange: async (e) => {
     const f = e.target.files[0]; e.target.value = "";
     if (!f) return;
-    try { ID.raw.avatar = await squareThumb(f, 128, 0.72); drawPic(); } catch (err) { toast("Couldn't use that image."); }
+    try { cropDialog(await readFileUrl(f), 128, { round: true, title: "Your photo" }, (d) => { ID.raw.avatar = d; drawPic(); settingsDialog(first); }); }
+    catch (err) { toast("Couldn't use that image."); }
   } });
   function drawPic() {
     pic.replaceChildren(
@@ -2062,6 +2139,60 @@ function groupProfileDialog(g) {
   ], [h("button", { class: "ghost", onclick: () => { closeModal(); S.drawer = true; render(); } }, "Group info"),
     h("button", { class: "ghost", onclick: closeModal }, "Close")]);
 }
+function cropDialog(src, px, opts, done) {
+  opts = opts || {};
+  const VIEW = 256;
+  const cv = h("canvas", { width: VIEW, height: VIEW, style: "touch-action:none;display:block;margin:0 auto;max-width:100%;background:var(--panel2);border-radius:" + (opts.round ? "50%" : "14px") + ";cursor:grab" });
+  const cx = cv.getContext("2d");
+  const im = new Image();
+  let zoom = 1, ox = 0, oy = 0, rot = 0, drag = null, ready = false;
+  const zin = h("input", { type: "range", min: 1, max: 4, step: 0.02, value: 1, style: "width:100%;accent-color:var(--mint)", "aria-label": "Zoom", oninput: (e) => { zoom = Number(e.target.value); draw(); } });
+  const baseScale = () => {
+    const w = rot % 2 ? im.height : im.width, hh = rot % 2 ? im.width : im.height;
+    return VIEW / Math.min(w, hh);
+  };
+  function paintTo(ctx, size) {
+    const k = size / VIEW, s = baseScale() * zoom * k;
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
+    ctx.translate(size / 2 + ox * k, size / 2 + oy * k);
+    ctx.rotate(rot * Math.PI / 2);
+    ctx.drawImage(im, -im.width * s / 2, -im.height * s / 2, im.width * s, im.height * s);
+    ctx.restore();
+  }
+  const draw = () => { if (ready) paintTo(cx, VIEW); };
+  cv.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); cv.style.cursor = "grabbing"; });
+  cv.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const r = cv.getBoundingClientRect(), k = VIEW / r.width;
+    ox += (e.clientX - drag.x) * k; oy += (e.clientY - drag.y) * k;
+    drag = { x: e.clientX, y: e.clientY };
+    draw();
+  });
+  const endDrag = () => { drag = null; cv.style.cursor = "grab"; };
+  cv.addEventListener("pointerup", endDrag);
+  cv.addEventListener("pointerleave", endDrag);
+  cv.addEventListener("wheel", (e) => { e.preventDefault(); zoom = Math.min(4, Math.max(1, zoom * (e.deltaY < 0 ? 1.08 : 0.93))); zin.value = zoom; draw(); }, { passive: false });
+  im.onerror = () => { closeModal(); toast("Couldn't open that image."); };
+  im.onload = () => { ready = true; draw(); };
+  im.src = src;
+  const save = () => {
+    try {
+      const out = document.createElement("canvas");
+      out.width = out.height = px;
+      paintTo(out.getContext("2d"), px);
+      closeModal();
+      done(opts.png ? out.toDataURL("image/png") : out.toDataURL("image/jpeg", 0.75));
+    } catch (e) { toast("Couldn't save that image."); }
+  };
+  showModal(opts.title || "Crop the picture", [
+    h("p", null, "Drag to move, pinch or use the slider to zoom."),
+    cv,
+    h("div", { class: "field", style: "margin-top:10px" }, zin,
+      h("button", { class: "ghost", title: "Rotate", onclick: () => { rot = (rot + 1) % 4; draw(); } }, "⟳"),
+      h("button", { class: "ghost", title: "Reset", onclick: () => { zoom = 1; ox = 0; oy = 0; rot = 0; zin.value = 1; draw(); } }, "Reset")),
+  ], [h("button", { class: "ghost", onclick: closeModal }, "Cancel"), h("button", { class: "primary", onclick: save }, "Save")]);
+}
 function stickerFromDataUrl(d) {
   return new Promise((res, rej) => {
     const im = new Image();
@@ -2127,14 +2258,17 @@ function stickerTray(fromSettings) {
         h("button", { style: "background:none;border:0;padding:0;width:100%", title: S.active ? "Send" : "Sticker",
           onclick: async () => { const g = S.groups[S.active]; if (!g) return toast("Open a chat first."); closeModal(); await sendMsg(g, { sticker: d }); } },
           h("img", { src: d, alt: "sticker " + (i + 1) })),
-        h("button", { class: "x", title: "Delete sticker", onclick: () => { S.stickers.splice(i, 1); saveStickers(); draw(); } }, "✕")));
+        h("button", { class: "x", title: "Delete sticker", onclick: () => { S.stickers.splice(i, 1); saveStickers(); draw(); } }, "✕"),
+        h("button", { class: "x", style: "left:-6px;right:auto;border-color:var(--mint);color:var(--mint)", title: "Crop or move",
+          onclick: () => cropDialog(d, 128, { png: true, title: "Crop sticker" }, (nd) => { S.stickers[i] = nd; saveStickers(); stickerTray(fromSettings); }) }, "✎")));
     });
   };
   draw();
   const fi = h("input", { type: "file", accept: "image/*", hidden: true, onchange: async (e) => {
     const f = e.target.files[0]; e.target.value = "";
     if (!f) return;
-    try { addSticker(await squareThumb(f, 128, 0.8, true)); draw(); } catch (err) { toast("Couldn't use that image."); }
+    try { cropDialog(await readFileUrl(f), 128, { png: true, title: "New sticker" }, (d) => { addSticker(d); stickerTray(fromSettings); }); }
+    catch (err) { toast("Couldn't use that image."); }
   } });
   showModal("Stickers", [grid, fi], [
     h("button", { class: "ghost", onclick: () => fi.click() }, "From image"),
