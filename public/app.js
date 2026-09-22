@@ -164,7 +164,7 @@
   };
 
   var editors = {};
-  var state = { slug: null, deployed: null, storage: 'disk', files: [], active: 'index.html', previewFile: null, wrapped: false, quotaWarned: false, renderTimer: null, saveTimer: null, consoleCount: 0 };
+  var state = { slug: null, deployed: null, storage: 'disk', files: [], active: 'index.html', previewFile: null, wrapped: false, quotaWarned: false, tabSignature: null, renderTimer: null, saveTimer: null, consoleCount: 0 };
 
   // ---------------------------------------------------------------- editors
   // One editor serves every file; switching tabs swaps its contents and mode.
@@ -276,6 +276,21 @@
 
   // ------------------------------------------------------------------- tabs
   function renderTabs() {
+    var signature = state.files.map(function (file) { return file.name; }).join('\n');
+
+    // Rebuilding the strip on every click destroyed the element mid-gesture,
+    // so a double-click to rename never landed. When only the selection
+    // changed, move the marker instead of replacing the tabs.
+    if (signature === state.tabSignature) {
+      Array.prototype.forEach.call(els.tabStrip.children, function (tab) {
+        var on = tab.dataset.file === state.active;
+        tab.classList.toggle('is-active', on);
+        tab.setAttribute('aria-selected', String(on));
+      });
+      return;
+    }
+    state.tabSignature = signature;
+
     els.tabStrip.innerHTML = state.files.map(function (file) {
       var on = file.name === state.active;
       return '<button class="tab' + (on ? ' is-active' : '') + '" role="tab" ' +

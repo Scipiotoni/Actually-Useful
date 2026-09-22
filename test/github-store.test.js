@@ -508,3 +508,62 @@ test('unpublishing takes every file with it', async () => {
     assert.deepStrictEqual(left, [], 'nothing of the deploy should remain');
   });
 });
+
+test('a project whose entry is not index.html still gets one published', async () => {
+  await withFake({}, async ({ make, files }) => {
+    const store = make();
+    const saved = await store.save({
+      name: 'Neon Lobby',
+      files: [
+        { name: 'chat.html', content: '<h1>Lobby</h1>' },
+        { name: 'manifest.json', content: '{"start_url":"./"}' },
+        { name: 'sw.js', content: 'self.addEventListener("install", function () {});' }
+      ]
+    });
+    assert.ok(saved.ok, saved.error);
+    assert.strictEqual(saved.site.entry, 'chat.html');
+
+    // GitHub Pages serves a directory by looking for this exact name.
+    const standIn = files.get('published/neon-lobby/index.html');
+    assert.ok(standIn, 'without this, the folder URL is a 404');
+    assert.strictEqual(standIn, files.get('published/neon-lobby/chat.html'));
+
+    // It is published, not part of the project.
+    assert.deepStrictEqual(saved.site.files, ['chat.html', 'manifest.json', 'sw.js']);
+    assert.deepStrictEqual(
+      (await store.get('neon-lobby')).source.map((file) => file.name),
+      ['chat.html', 'manifest.json', 'sw.js']
+    );
+  });
+});
+
+test('renaming the entry away from index.html keeps the folder served', async () => {
+  await withFake({}, async ({ make, files }) => {
+    const store = make();
+    await store.save({ name: 'Rename', files: [{ name: 'index.html', content: '<h1>before</h1>' }] });
+    assert.match(files.get('published/rename/index.html'), /before/);
+
+    await store.save({
+      name: 'Rename',
+      slug: 'rename',
+      files: [{ name: 'chat.html', content: '<h1>after</h1>' }]
+    });
+
+    // The cleanup must not take the stand-in with the old file.
+    assert.ok(files.has('published/rename/index.html'), 'the folder URL must keep working');
+    assert.match(files.get('published/rename/index.html'), /after/);
+    assert.match(files.get('published/rename/chat.html'), /after/);
+  });
+});
+
+test('unpublishing removes the stand-in as well', async () => {
+  await withFake({}, async ({ make, files }) => {
+    const store = make();
+    await store.save({ name: 'Gone', files: [{ name: 'chat.html', content: '<h1>x</h1>' }] });
+    assert.ok(files.has('published/gone/index.html'));
+
+    await store.remove('gone');
+    const left = Array.from(files.keys()).filter((p) => p.startsWith('published/gone/'));
+    assert.deepStrictEqual(left, [], 'nothing of the deploy should remain');
+  });
+});

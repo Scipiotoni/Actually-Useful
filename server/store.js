@@ -236,7 +236,15 @@ class DeployStore {
     const wanted = name || site.entry;
     if (!wanted || !Compose.isValidName(wanted)) return null;
 
-    const file = Compose.find(site.source, wanted);
+    let file = Compose.find(site.source, wanted);
+    // index.html may be the stand-in written for a differently named entry.
+    if (!file && wanted === Compose.ENTRY && site.entry) {
+      file = Compose.find(site.source, site.entry);
+      if (file) {
+        const body = Compose.serveFile(site.source, site.entry, { title: site.name });
+        return body === null ? null : { name: Compose.ENTRY, body, type: 'html', binary: false };
+      }
+    }
     if (!file) return null;
 
     if (Compose.isBinary(wanted)) {
@@ -296,8 +304,14 @@ class DeployStore {
 
     fs.mkdirSync(dir, { recursive: true });
 
+    // A static host serves a directory by looking for index.html. When the
+    // project's entry page is called something else, publish its contents
+    // under that name too, so the folder URL is not a 404.
+    const standIn = Compose.find(files, Compose.ENTRY) ? null : Compose.ENTRY;
+
     // Drop files the project no longer has, so a rename does not leave a ghost.
     const keep = new Set(files.map((file) => file.name));
+    if (standIn) keep.add(standIn);
     for (const name of walk(dir)) {
       if (name !== 'meta.json' && !keep.has(name)) {
         fs.rmSync(path.join(dir, name), { force: true });
@@ -315,9 +329,13 @@ class DeployStore {
         fs.writeFileSync(target, Compose.serveFile(files, file.name, { title }), 'utf8');
       }
     }
+
+    if (standIn) {
+      fs.writeFileSync(path.join(dir, standIn), Compose.serveFile(files, meta.entry, { title }), 'utf8');
+    }
     fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify({ ...meta, source: files }, null, 2), 'utf8');
 
-    return { ok: true, site: meta, created: !existing };
+    return { ok: true, site: { ...meta, standIn }, created: !existing };
   }
 
   remove(slug) {

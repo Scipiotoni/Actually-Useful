@@ -282,7 +282,11 @@ class GitHubStore {
     const wanted = name || stored.meta.entry || Compose.entryOf(files);
     if (!wanted || !Compose.isValidName(wanted)) return null;
 
-    const file = Compose.find(files, wanted);
+    let file = Compose.find(files, wanted);
+    if (!file && wanted === Compose.ENTRY && stored.meta.entry) {
+      const body = Compose.serveFile(files, stored.meta.entry, { title: stored.meta.name });
+      if (body !== null) return { name: Compose.ENTRY, body, type: 'html', binary: false };
+    }
     if (!file) return null;
 
     if (Compose.isBinary(wanted)) {
@@ -335,6 +339,16 @@ class GitHubStore {
       { path: `${ROOT}/${target}/page.json`, content: JSON.stringify({ meta, source: files }, null, 2) }
     ];
 
+    // A static host serves a directory by looking for index.html; publish the
+    // entry page under that name too when it is called something else.
+    const standIn = Compose.find(files, Compose.ENTRY) ? null : Compose.ENTRY;
+    if (standIn) {
+      changes.push({
+        path: `${ROOT}/${target}/${standIn}`,
+        content: Compose.serveFile(files, meta.entry, { title })
+      });
+    }
+
     files.forEach((file) => {
       var at = `${ROOT}/${target}/${file.name}`;
       // Binaries go up as a blob; a tree entry's inline content is UTF-8 only.
@@ -347,6 +361,7 @@ class GitHubStore {
     const previous = this.pages.get(target);
     if (previous) {
       const keep = new Set(files.map((file) => file.name));
+      if (standIn) keep.add(standIn);
       Compose.toFiles(previous.source).forEach((file) => {
         if (!keep.has(file.name)) changes.push({ path: `${ROOT}/${target}/${file.name}`, remove: true });
       });
@@ -360,7 +375,7 @@ class GitHubStore {
 
     this.index = nextIndex;
     this.pages.set(target, { meta, source: files });
-    return { ok: true, site: meta, created: !existing };
+    return { ok: true, site: { ...meta, standIn }, created: !existing };
   }
 
   async remove(slug) {
@@ -377,9 +392,13 @@ class GitHubStore {
       { path: `${ROOT}/${slug}/page.json`, remove: true }
     ];
     const page = this.pages.get(slug);
-    Compose.toFiles(page ? page.source : {}).forEach((file) => {
+    const gone = Compose.toFiles(page ? page.source : {});
+    gone.forEach((file) => {
       changes.push({ path: `${ROOT}/${slug}/${file.name}`, remove: true });
     });
+    if (!Compose.find(gone, Compose.ENTRY)) {
+      changes.push({ path: `${ROOT}/${slug}/${Compose.ENTRY}`, remove: true });
+    }
 
     await this.commit(`Unpublish ${slug}`, changes);
 

@@ -600,3 +600,81 @@ test('a binary file that is not really base64 is refused', async () => {
   });
   assert.strictEqual(res.status, 400);
 });
+
+// --------------------------------------------------------------------------
+// A project whose main page is not called index.html
+// --------------------------------------------------------------------------
+
+const CHAT_APP = [
+  { name: 'chat.html', content: '<h1>Lobby</h1>' },
+  { name: 'manifest.json', content: '{"name":"Lobby","start_url":"./","scope":"./"}' },
+  { name: 'sw.js', content: 'self.addEventListener("install", function () {});' },
+  { name: 'icon-192.png', content: PIXEL.toString('base64') }
+];
+
+test('the folder URL works even when the entry is not index.html', async () => {
+  const site = await (await post({ name: 'Lobby', files: CHAT_APP })).json();
+  assert.strictEqual(site.entry, 'chat.html');
+
+  // What a static host asks for when it is given the directory.
+  const viaIndex = await fetch(`${base}/p/lobby/index.html`);
+  assert.strictEqual(viaIndex.status, 200, 'index.html must resolve to the entry page');
+  assert.match(await viaIndex.text(), /<h1>Lobby<\/h1>/);
+
+  const viaFolder = await fetch(`${base}/p/lobby/`);
+  assert.strictEqual(viaFolder.status, 200);
+  assert.match(await viaFolder.text(), /<h1>Lobby<\/h1>/);
+
+  // The real name keeps working too.
+  assert.match(await (await fetch(`${base}/p/lobby/chat.html`)).text(), /<h1>Lobby<\/h1>/);
+});
+
+test('the stand-in index is written to disk beside the project', async () => {
+  await post({ name: 'On Disk', files: CHAT_APP });
+  const dir = path.join(dataDir, 'on-disk');
+  const written = fs.readdirSync(dir).sort();
+
+  assert.ok(written.includes('index.html'), 'a static host needs an index.html here');
+  assert.ok(written.includes('chat.html'));
+  assert.strictEqual(
+    fs.readFileSync(path.join(dir, 'index.html'), 'utf8'),
+    fs.readFileSync(path.join(dir, 'chat.html'), 'utf8'),
+    'the stand-in serves the same page'
+  );
+});
+
+test('the stand-in is not shown as one of the project files', async () => {
+  const site = await (await post({ name: 'Not Listed', files: CHAT_APP })).json();
+  assert.deepStrictEqual(site.files, CHAT_APP.map((file) => file.name));
+  assert.ok(!site.files.includes('index.html'), 'it is published, not part of the project');
+
+  // Reopening the project in the editor must not gain a phantom file.
+  const reopened = await (await fetch(`${base}/api/deploys/not-listed`)).json();
+  assert.deepStrictEqual(reopened.source.map((file) => file.name), CHAT_APP.map((file) => file.name));
+});
+
+test('a project that has its own index.html gets no stand-in', async () => {
+  await post({
+    name: 'Has Index',
+    files: [{ name: 'index.html', content: '<h1>real</h1>' }, { name: 'other.html', content: '<h1>other</h1>' }]
+  });
+  const dir = path.join(dataDir, 'has-index');
+  assert.deepStrictEqual(fs.readdirSync(dir).sort(), ['index.html', 'meta.json', 'other.html']);
+  assert.match(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), /<h1>real<\/h1>/);
+});
+
+test('renaming the entry page keeps the folder URL working', async () => {
+  await post({ name: 'Renamed Entry', files: [{ name: 'index.html', content: '<h1>first</h1>' }] });
+  assert.match(await (await fetch(`${base}/p/renamed-entry/`)).text(), /<h1>first<\/h1>/);
+
+  // The exact move that broke the live site: index.html becomes chat.html.
+  await post({
+    name: 'Renamed Entry',
+    slug: 'renamed-entry',
+    files: [{ name: 'chat.html', content: '<h1>second</h1>' }]
+  });
+  const after = await fetch(`${base}/p/renamed-entry/`);
+  assert.strictEqual(after.status, 200, 'the folder must not 404 after the rename');
+  assert.match(await after.text(), /<h1>second<\/h1>/);
+  assert.match(fs.readFileSync(path.join(dataDir, 'renamed-entry', 'index.html'), 'utf8'), /<h1>second<\/h1>/);
+});

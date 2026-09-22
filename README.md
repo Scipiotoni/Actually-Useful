@@ -145,6 +145,12 @@ full document and you are in charge.**
   Nothing is added, so its own `<link>` and `<script>` tags decide what loads.
 - CSS and JS files are published as they are.
 
+A static host serves a directory by looking for `index.html`. When a project's
+entry page is called something else — `chat.html`, say — that page is also
+published under the name `index.html`, so the folder URL is not a 404. It is
+published, not added to the project: the editor still shows the one file, and
+the two paths serve the same bytes, which git stores once.
+
 Links between files are plain relative names, which is why a deploy lives at
 `/p/<slug>/` with the trailing slash — `about.html` in a page has to resolve to
 its sibling, here and on GitHub Pages alike. Requests to `/p/<slug>` are
