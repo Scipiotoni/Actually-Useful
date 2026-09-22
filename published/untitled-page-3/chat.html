@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Neon Lobby Chat</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#071316">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -140,6 +142,16 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .bgswatch[aria-pressed="true"]{border-color:var(--mint);box-shadow:var(--glow)}
 .bggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 @media (prefers-reduced-motion:reduce){.ringing .box{animation:none}#recBar .dotrec{animation:none}}
+.privacy{position:fixed;inset:0;z-index:52;display:grid;place-items:center;background:rgba(3,10,12,.55)}
+.privacy .pbox{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 28px;text-align:center;font-size:34px;color:var(--mint)}
+.privacy .pbox div{font-size:16px;color:var(--ink);margin-top:8px}
+.privacy .pbox small{color:var(--mute);font-size:13px}
+body.away #app{filter:blur(16px)}
+body.away #app img,body.away #app video,body.away #app canvas{filter:brightness(0) !important}
+body.away #app .av,body.away #app .grp{background:#000 !important;color:transparent !important;box-shadow:none !important}
+body.away #app .b,body.away #app .quote,body.away #app .sys,body.away #app .t2,body.away #app .t1,body.away #app h1,body.away #app p,body.away #app .txt{color:transparent !important;text-shadow:none !important}
+body.away #app a,body.away #app .lnk{visibility:hidden !important}
+body.away #app .b{background:var(--bubble) !important;border-color:var(--bubble) !important}
 .callstrip{display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--mint-d);border-top:1px solid var(--mint);color:var(--mint)}
 .callstrip .txt{flex:1;min-width:0;font-size:14px}
 .callpanel{position:fixed;right:16px;bottom:16px;z-index:55;width:min(340px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--mint);border-radius:18px;box-shadow:0 0 30px rgba(61,255,196,.3);overflow:hidden}
@@ -272,6 +284,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
     </div>
   </main>
 </div>
+<div class="privacy" id="privacy" hidden><div class="pbox">🔒<div>Hidden while you're away</div><small>Click anywhere to come back</small></div></div>
 <div class="callpanel" id="callPanel" hidden></div>
 <div class="catchup" id="ring" hidden></div>
 <div id="audios" hidden></div>
@@ -369,10 +382,24 @@ function squareThumb(file, px, q, png) {
     r.readAsDataURL(file);
   });
 }
+function applyAway() {
+  const away = SET.privacyScreen !== false && (!winFocused || document.hidden);
+  document.body.classList.toggle("away", away);
+  $("privacy").hidden = !away;
+}
 let winFocused = true;
-try { winFocused = document.hasFocus(); } catch (e) { winFocused = true; }
-addEventListener("focus", () => { winFocused = true; closeNotes(); });
-addEventListener("blur", () => { winFocused = false; });
+try { winFocused = document.hasFocus() || !document.hidden; } catch (e) { winFocused = true; }
+const isWindowEvent = (e) => !e || !e.target || e.target === window || e.target === document || e.target === document.body;
+addEventListener("focus", (e) => { if (!isWindowEvent(e)) return; winFocused = true; closeNotes(); applyAway(); });
+addEventListener("blur", (e) => {
+  if (!isWindowEvent(e)) return;
+  setTimeout(() => {
+    try { if (document.hasFocus && document.hasFocus()) return; } catch (err) { /* ignore */ }
+    winFocused = false; applyAway();
+  }, 0);
+});
+addEventListener("visibilitychange", applyAway);
+addEventListener("pointerdown", () => { if (document.body.classList.contains("away")) { winFocused = true; applyAway(); } }, true);
 const openNotes = [];
 function closeNotes() { while (openNotes.length) { try { openNotes.pop().close(); } catch (e) { /* ignore */ } } }
 let actx = null;
@@ -688,6 +715,7 @@ function connect() {
     if (S.lookup) sub(T.door(S.lookup.doorId));
     for (const d in S.pj) sub(T.door(S.pj[d].doorId || "x"));
     publishPresence();
+    broadcastPush();
     pub(T.hello, JSON.stringify({ t: "hello", from: me(), ts: Date.now() }));
     render();
     if (!catchupDone) {
@@ -785,6 +813,7 @@ async function onHello(payload) {
   lastHello = Date.now();
   setTimeout(() => {
     publishPresence();
+    broadcastPush();
     for (const gid in S.groups) { const g = S.groups[gid]; if (isAdmin(g) && g.coded && g.code) publishDoor(g); }
   }, 150 + Math.random() * 600);
 }
@@ -899,6 +928,7 @@ async function applyState(g, o, wire) {
     banned: Array.isArray(o.banned) ? o.banned : [], code: normCode(o.code), public: !!o.public,
     admins: Array.isArray(o.admins) ? o.admins.filter((x) => isHex(x, 16)).slice(0, 20) : [],
     adminHash: typeof o.adminHash === "string" ? o.adminHash : "",
+    ttl: Number(o.ttl) || 0,
     icon: typeof o.icon === "string" && o.icon.startsWith("data:image/") && o.icon.length < 60000 ? o.icon : "",
     desc: clip(o.desc, 300),
   });
@@ -914,6 +944,8 @@ async function acceptMsg(g, w, live) {
   if (S.ids[g.gid].has(o.id)) return;
   if (isAdmin(g) && g.invSent && g.invSent[o.from] != null) { delete g.invSent[o.from]; saveGroups(); }
   if (!o.op && (o.ts || 0) <= (g.clearedAt || 0)) return;
+  if (!o.op && g.ttl && (o.ts || 0) < Date.now() - g.ttl * 1000) return;
+  if (o.sys === "ttl" && (isDm(g) || adminsOf(g).includes(o.from))) { g.ttl = Number(o.secs) || 0; saveGroups(); }
   S.ids[g.gid].add(o.id);
   const list = S.hist[g.gid];
   list.push({ w, o });
@@ -945,7 +977,8 @@ function pruneTo(g, ts) {
 function viewOf(g) {
   const items = S.hist[g.gid] || [];
   let cut = g.clearedAt || 0;
-  for (const x of items) if (x.o.op === "clear" && x.o.from === g.admin) cut = Math.max(cut, x.o.ts || 0);
+  for (const x of items) if (x.o.op === "clear" && adminsOf(g).includes(x.o.from)) cut = Math.max(cut, x.o.ts || 0);
+  if (g.ttl) cut = Math.max(cut, Date.now() - g.ttl * 1000);
   const base = new Map();
   for (const x of items) if (!x.o.op && (x.o.ts || 0) > cut) base.set(x.o.id, Object.assign({ rx: {} }, x.o));
   for (const x of items) {
@@ -1014,6 +1047,10 @@ async function clearChat(g) {
 const syncSeen = new Set();
 async function onCtl(g, c) {
   if (!c || typeof c !== "object") return;
+  if (c.t === "pushsub" && typeof c.from === "string" && typeof c.endpoint === "string" && c.from !== me() && g.members.includes(c.from) && /^https:\/\//.test(c.endpoint)) {
+    if (S.pushsubs[c.from] !== c.endpoint) { S.pushsubs[c.from] = c.endpoint; jset("nl.pushsubs", S.pushsubs); }
+    return;
+  }
   if (c.from && c.from !== me() && isAdmin(g) && g.invSent && g.invSent[c.from] != null) { delete g.invSent[c.from]; saveGroups(); }
   if (c.t === "syncreq" && c.from !== me() && typeof c.req === "string") {
     if (!(S.hist[g.gid] || []).length) return;
@@ -1090,7 +1127,7 @@ async function publishState(g, extra) {
     names: pickKeys(g.names, g.members), keys: pickKeys(g.keys, g.members), coded: !!g.coded, approval: !!g.approval,
     banned: g.banned || [], code: g.coded ? g.code : "", public: !!(g.public && g.coded),
     admins: (g.admins || []).filter((x) => x !== g.admin), adminHash: g.adminHash || "",
-    icon: g.icon || "", desc: clip(g.desc, 300), ts: Date.now(),
+    icon: g.icon || "", desc: clip(g.desc, 300), ttl: g.ttl || 0, ts: Date.now(),
   }, extra || {});
   const w = await sign(obj);
   g.stateWire = w;
@@ -1118,6 +1155,7 @@ async function sendMsg(g, body) {
   if (payload.length > 1000000) { toast("That's too big to send. Files must be under " + size(MAX_FILE) + "."); return false; }
   if (!pub(T.g(g, "msg"), payload)) { toast("You're offline. Message not sent."); return false; }
   await acceptMsg(g, w, false);
+  pushPeers(g, o);
   return true;
 }
 function newGroup(name, admin) {
@@ -1359,6 +1397,78 @@ function sendFile(file) {
   };
   r.onerror = () => toast("Couldn't read that file.");
   r.readAsDataURL(file);
+}
+
+/* ================= push (works with the page closed) ================= */
+const VAPID_PUB = "BCemTQsWufR7OIZ3n8QncXZ0xNYazzPgB_Pd5OQ8T250MmyJgkbhk8jmr3L0A8tFx-PgHCQzakx9pyQ43OFtpEs";
+const VAPID_JWK = { kty: "EC", crv: "P-256", x: "J6ZNCxa59Hs4hnefxCdxdnTE1hrPM-AH893k5DxPbnQ", y: "MmyJgkbhk8jmr3L0A8tFx-PgHCQzakx9pyQ43OFtpEs", d: "5gNCgkHPpTh_Qs_OZ64tJoDxU1mFpXZm9Qe7GGnh3kA" };
+const b64u = (buf) => b64(buf).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const b64uStr = (str) => b64u(te.encode(str));
+function b64uToBytes(str) {
+  const pad = str.replace(/-/g, "+").replace(/_/g, "/");
+  return unb64(pad + "=".repeat((4 - pad.length % 4) % 4));
+}
+S.pushsubs = jget("nl.pushsubs") || {};
+let vapidKey = null;
+async function vapidJwt(aud) {
+  if (!vapidKey) vapidKey = await C.importKey("jwk", Object.assign({}, VAPID_JWK, { key_ops: undefined, ext: undefined }), ECDSA, false, ["sign"]);
+  const head = b64uStr(JSON.stringify({ typ: "JWT", alg: "ES256" }));
+  const body = b64uStr(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 43200, sub: "mailto:nobody@example.com" }));
+  const sig = await C.sign(SIG, vapidKey, te.encode(head + "." + body));
+  return head + "." + body + "." + b64u(sig);
+}
+async function pushTo(endpoint) {
+  const u = new URL(endpoint);
+  const jwt = await vapidJwt(u.origin);
+  const res = await fetch(endpoint, { method: "POST", headers: { TTL: "86400", Urgency: "high", Authorization: "vapid t=" + jwt + ", k=" + VAPID_PUB } });
+  return res.ok || res.status === 201;
+}
+const pushSentAt = {};
+function pushPeers(g, o) {
+  if (o.op || o.sys) return;
+  for (const uid of g.members) {
+    if (uid === me() || S.people[uid]) continue;
+    const ep = S.pushsubs[uid];
+    if (!ep) continue;
+    if (Date.now() - (pushSentAt[uid] || 0) < 20000) continue;
+    pushSentAt[uid] = Date.now();
+    pushTo(ep).catch(() => {});
+  }
+}
+function broadcastPush() {
+  if (!SET.pushEndpoint) return;
+  for (const gid in S.groups) {
+    const g = S.groups[gid];
+    groupKey(g).then(async (k) => pub(T.g(g, "ctl"), await seal(k, { t: "pushsub", from: me(), endpoint: SET.pushEndpoint })));
+  }
+}
+async function enablePush() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) { toast("This browser can't do notifications with the page closed."); return false; }
+  if (location.protocol !== "https:" && location.hostname !== "localhost") { toast("This only works on an https page."); return false; }
+  if (!(await askNotify())) return false;
+  try {
+    const reg = await navigator.serviceWorker.register("sw.js");
+    await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(VAPID_PUB) });
+    SET.push = true; SET.pushEndpoint = sub.endpoint; saveSet();
+    broadcastPush();
+    toast("On. You'll get a nudge even with the tab closed.");
+    return true;
+  } catch (e) {
+    console.warn("push", e);
+    toast("Couldn't set that up — check that sw.js sits next to this page.");
+    return false;
+  }
+}
+async function disablePush() {
+  SET.push = false; SET.pushEndpoint = ""; saveSet();
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+  } catch (e) { /* ignore */ }
+  render();
 }
 
 /* ================= voice messages ================= */
@@ -1780,6 +1890,7 @@ function sysText(o, g) {
     case "left": return t + " left";
     case "admin": return t + " is now an admin";
     case "unadmin": return t + " is no longer an admin";
+    case "ttl": return Number(o.secs) ? a + " set messages to disappear after " + ttlLabel(o.secs) : a + " turned off disappearing messages";
     case "callstart": return (o.video ? "📹 " : "📞 ") + a + " started a call";
     case "callend": return o.answered ? "📞 Call ended · " + mmss(o.secs || 0) : "📵 Missed call from " + a;
     case "admincode": return a + " set an admin code";
@@ -1794,6 +1905,37 @@ function sysText(o, g) {
     case "desc": return a + " updated the group description";
     default: return "";
   }
+}
+const TTLS = [[0, "Off"], [3600, "1 hour"], [28800, "8 hours"], [86400, "24 hours"], [604800, "7 days"], [2592000, "30 days"]];
+const ttlLabel = (secs) => { const t = TTLS.find((x) => x[0] === Number(secs)); return t ? t[1] : Math.round(secs / 3600) + " hours"; };
+async function setTtl(g, secs) {
+  secs = Number(secs) || 0;
+  if (!isDm(g) && !isAdmin(g)) return toast("Only admins can change this here.");
+  if (g.ttl === secs) return;
+  g.ttl = secs;
+  saveGroups();
+  if (!isDm(g)) await publishState(g);
+  await sendMsg(g, { sys: "ttl", secs });
+  sweepTtl();
+  render();
+}
+function sweepTtl() {
+  let changed = false;
+  for (const gid in S.groups) {
+    const g = S.groups[gid];
+    if (!g.ttl) continue;
+    const cutoff = Date.now() - g.ttl * 1000;
+    const keep = (S.hist[gid] || []).filter((x) => x.o.op === "clear" || (x.o.ts || 0) > cutoff);
+    if (keep.length !== (S.hist[gid] || []).length) {
+      S.hist[gid] = keep;
+      S.ids[gid] = new Set(keep.map((x) => x.o.id));
+      const v = keep.filter((x) => !x.o.op);
+      g.last = v.length ? { from: v[v.length - 1].o.from, text: preview(v[v.length - 1].o, g) } : null;
+      saveHist(gid);
+      changed = true;
+    }
+  }
+  if (changed) { saveGroups(); render(); }
 }
 const mmss = (s) => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
 function preview(o, g) {
@@ -1874,6 +2016,7 @@ function paint() {
 
   const g = S.groups[S.active];
   $("app").classList.toggle("chatting", !!g);
+  applyAway();
   renderCall();
   paintCallStrip();
   paintRec();
@@ -1889,9 +2032,10 @@ function paint() {
     $("headAv").replaceChildren(h("button", { class: "avbtn", title: "Group profile", onclick: () => groupProfileDialog(g) }, groupAvatar(g)));
     $("chatName").textContent = titleOf(g);
     const on = g.members.filter((m) => m !== me() && online(m)).length;
-    $("chatSub").textContent = isDm(g)
+    const ttlTag = g.ttl ? " · ⏳ " + ttlLabel(g.ttl) : "";
+    $("chatSub").textContent = (isDm(g)
       ? (online(otherOf(g)) ? "On the page now" : "Direct chat · not on the page right now")
-      : g.members.length + " members" + (on ? " · " + on + " online" : "") + " · admin: " + nameOf(g.admin, g) + (g.public ? " · public" : g.coded ? " · private, code" : " · private");
+      : g.members.length + " members" + (on ? " · " + on + " online" : "") + " · admin: " + nameOf(g.admin, g) + (g.public ? " · public" : g.coded ? " · private, code" : " · private")) + ttlTag;
     const pend = isAdmin(g) && g.pending ? Object.keys(g.pending).length : 0;
     const full = isDm(g) ? "Chat info" : pend ? "Group info (" + pend + ")" : "Group info";
     $("head").classList.toggle("compact", !!SET.compactBar);
@@ -2015,6 +2159,17 @@ function adminCodeSection(g, admin) {
   }
   return sec;
 }
+function ttlSection(g) {
+  const can = isDm(g) || isAdmin(g);
+  const sel = h("select", { class: "inp", "aria-label": "Disappearing messages", disabled: !can,
+    onchange: (e) => setTtl(g, Number(e.target.value)) },
+    TTLS.map(([secs, label]) => h("option", Object.assign({ value: secs }, Number(g.ttl || 0) === secs ? { selected: true } : {}), label)));
+  return h("div", { class: "sec" }, h("h3", null, "Disappearing messages"),
+    h("p", { style: "margin:0 0 8px;font-size:13px;color:var(--mute)" },
+      can ? "Messages older than this vanish for everyone in the chat, including from the saved history."
+        : "Set by the admins. Currently: " + (g.ttl ? ttlLabel(g.ttl) : "off") + "."),
+    h("div", { class: "field" }, sel));
+}
 function bgSection(g) {
   const cur = bgFor(g.gid);
   const all = h("input", { type: "checkbox", id: "bgAll" });
@@ -2121,6 +2276,7 @@ function paintDrawer(g) {
           h("div", { class: "t2" }, bioOf(other) || (online(other) ? "On the page now" : "Not on the page right now"))),
         h("button", { class: "ghost", onclick: () => profileDialog(other) }, "Profile")),
       h("p", { style: "margin:6px 0 0;font-size:13px;color:var(--mute)" }, "Just the two of you. Nobody is admin here, so you can each only delete your own messages.")));
+    body.append(ttlSection(g));
     body.append(bgSection(g));
     body.append(muteSection(g));
     body.append(h("button", { class: "act", onclick: () => clearChat(g) }, "Clear messages (only for me)"));
@@ -2208,6 +2364,7 @@ function paintDrawer(g) {
     }
     body.append(as);
   }
+  body.append(ttlSection(g));
   body.append(bgSection(g));
   body.append(adminCodeSection(g, admin));
   body.append(muteSection(g));
@@ -2289,6 +2446,12 @@ function settingsDialog(first) {
     h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:14px 0 4px" }, "Options"),
     h("label", { class: "chk" }, nt, "System notifications for new messages"),
     h("label", { class: "chk" }, snd, "Sound alert (works even where notifications don't)"),
+    h("label", { class: "chk" }, h("input", { type: "checkbox", checked: !!SET.push, onchange: async (e) => {
+      if (e.target.checked) { const ok = await enablePush(); e.target.checked = ok; }
+      else { disablePush(); toast("Off. You'll only get notifications while the page is open."); }
+    } }), "🔔 Notify me even when this page is closed"),
+    h("p", { style: "margin:0 0 6px" }, "Needs sw.js and manifest.json published next to this page, and Chrome running in the background. The nudge just says a new message arrived — the text stays on your device."),
+    h("label", { class: "chk" }, h("input", { type: "checkbox", checked: SET.privacyScreen !== false, onchange: (e) => { SET.privacyScreen = e.target.checked; saveSet(); applyAway(); } }), "🔒 Hide the page when it's in the background"),
     h("label", { class: "chk" }, h("input", { type: "checkbox", checked: SET.callNotify !== false, onchange: (e) => { SET.callNotify = e.target.checked; saveSet(); } }), "Pop-up for incoming calls"),
     h("label", { class: "chk" }, h("input", { type: "checkbox", checked: !SET.ringSilent, onchange: (e) => { SET.ringSilent = !e.target.checked; saveSet(); } }), "Ringtone for incoming calls"),
     h("h3", { style: "font-size:13px;color:var(--mute);font-weight:500;margin:14px 0 4px" }, "Calls on strict networks (optional)"),
@@ -2824,6 +2987,8 @@ function watchTabs() {
   }
   await loadIdentity();
   loadAll();
+  sweepTtl();
+  setInterval(sweepTtl, 20000);
   dedupeDms();
   paint();
   const m = location.hash.match(/join=([A-Za-z0-9-]{4,30})/);
