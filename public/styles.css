@@ -187,6 +187,11 @@ button { font-family: inherit; }
 .tab-dot.is-html { background: #f07178; }
 .tab-dot.is-css { background: #7fdbca; }
 .tab-dot.is-js { background: #ffcb6b; }
+.tab-dot.is-json { background: #c792ea; }
+.tab-dot.is-svg { background: #82aaff; }
+.tab-dot.is-txt,
+.tab-dot.is-md { background: #97a1b2; }
+.tab-dot.is-binary { background: transparent; border: 1.5px solid var(--text-dim); }
 
 .tab-name { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
 .tab.is-active .tab-name { font-weight: 600; }
@@ -203,6 +208,77 @@ button { font-family: inherit; }
 }
 .tab.is-active .tab-close { display: block; }
 .tab-close:hover { color: var(--err); }
+
+/* ---------- Binary files ---------- */
+/* Specific enough to beat `.editor-host { visibility: hidden }` whichever
+   order the two rules end up in. */
+.editor-host.binary-view {
+  visibility: visible;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+.editor-host.binary-view[hidden] { display: none !important; }
+
+.binary-card {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  max-width: 320px;
+  padding: 24px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: center;
+}
+.binary-thumb {
+  width: 128px;
+  height: 128px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff center / contain no-repeat;
+}
+.binary-thumb.is-blank {
+  display: grid;
+  place-items: center;
+  background: var(--bg-raised);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.binary-name { font-family: var(--font-mono); font-size: 12.5px; word-break: break-all; }
+.binary-size { color: var(--text-dim); font-size: 11.5px; }
+.binary-hint { margin: 6px 0 0; color: var(--text-dim); font-size: 11.5px; line-height: 1.6; }
+.binary-hint code {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 6px;
+  background: var(--bg-raised);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+
+/* ---------- Drop target ---------- */
+.dropveil {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 14, 20, .82);
+  border: 3px dashed var(--accent);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  z-index: 60;
+  pointer-events: none;
+}
+.dropveil[hidden] { display: none !important; }
+
+.modal-actions-wide { flex-wrap: wrap; justify-content: stretch; }
+.modal-actions-wide .btn { flex: 1 1 auto; }
 
 /* ---------- Modal ---------- */
 .modal {

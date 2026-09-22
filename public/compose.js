@@ -10,10 +10,43 @@
   else root.Compose = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   var FULL_DOC = /<html[\s>]/i;
-  var FILE_NAME = /^[a-z0-9][a-z0-9._-]{0,59}\.(html|css|js)$/;
   var ENTRY = 'index.html';
 
-  var TYPES = { html: 'html', css: 'css', js: 'js' };
+  // Editable as text, in the editor.
+  var TEXT_TYPES = {
+    html: 'html', css: 'css', js: 'js',
+    json: 'json', svg: 'svg', txt: 'txt', md: 'md'
+  };
+  // Kept as base64 and shown read-only.
+  var BINARY_TYPES = {
+    png: 'png', jpg: 'jpg', jpeg: 'jpg', gif: 'gif', webp: 'webp',
+    avif: 'avif', ico: 'ico', woff2: 'woff2', woff: 'woff'
+  };
+  var TYPES = {};
+  Object.keys(TEXT_TYPES).forEach(function (k) { TYPES[k] = TEXT_TYPES[k]; });
+  Object.keys(BINARY_TYPES).forEach(function (k) { TYPES[k] = BINARY_TYPES[k]; });
+
+  // Which highlighter a file opens with.
+  var MODE_FOR = { html: 'html', svg: 'html', css: 'css', js: 'js', json: 'js', txt: 'text', md: 'text' };
+
+  var MIME = {
+    html: 'text/html; charset=utf-8',
+    css: 'text/css; charset=utf-8',
+    js: 'text/javascript; charset=utf-8',
+    json: 'application/json; charset=utf-8',
+    svg: 'image/svg+xml',
+    txt: 'text/plain; charset=utf-8',
+    md: 'text/markdown; charset=utf-8',
+    png: 'image/png', jpg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp',
+    avif: 'image/avif', ico: 'image/x-icon',
+    woff2: 'font/woff2', woff: 'font/woff'
+  };
+
+  // A path may sit in folders, so a PWA can keep its icons in one.
+  var SEGMENT = '[A-Za-z0-9][A-Za-z0-9._-]*';
+  var FILE_NAME = new RegExp(
+    '^(?:' + SEGMENT + '\\/){0,3}' + SEGMENT + '\\.(?:' + Object.keys(TYPES).join('|') + ')$'
+  );
 
   function escapeHtml(s) {
     return String(s)
@@ -29,7 +62,29 @@
   }
 
   function isValidName(name) {
-    return FILE_NAME.test(String(name));
+    var text = String(name);
+    if (text.length > 120) return false;
+    if (text.indexOf('..') !== -1) return false;
+    return FILE_NAME.test(text);
+  }
+
+  function isBinary(name) {
+    var ext = String(name).split('.').pop().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(BINARY_TYPES, ext);
+  }
+
+  function isText(name) {
+    var ext = String(name).split('.').pop().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(TEXT_TYPES, ext);
+  }
+
+  /** The highlighter a file opens with; plain text for .txt and .md. */
+  function editorMode(name) {
+    return MODE_FOR[fileType(name)] || 'text';
+  }
+
+  function contentType(name) {
+    return MIME[fileType(name)] || 'application/octet-stream';
   }
 
   /** Turns a human name into a URL-safe slug. Always returns something usable. */
@@ -105,10 +160,11 @@
       return head ? injectBefore(html, 'head', head) : html;
     }
 
-    var links = byType(files, 'css').map(function (sheet) {
+    var linked = linkedInto(files);
+    var links = linked.styles.map(function (sheet) {
       return '<link rel="stylesheet" href="' + escapeHtml(sheet.name) + '">';
     });
-    var scripts = byType(files, 'js').map(function (script) {
+    var scripts = linked.scripts.map(function (script) {
       return '<script src="' + escapeHtml(script.name) + '"><\/script>';
     });
 
@@ -160,6 +216,14 @@
     return file.content || '';
   }
 
+  /** Files a fragment page links automatically: project stylesheets and scripts. */
+  function linkedInto(files) {
+    return {
+      styles: files.filter(function (file) { return fileType(file.name) === 'css'; }),
+      scripts: files.filter(function (file) { return fileType(file.name) === 'js'; })
+    };
+  }
+
   /** The HTML file a project opens on: index.html, else the first HTML file. */
   function entryOf(files) {
     if (find(files, ENTRY)) return ENTRY;
@@ -198,6 +262,18 @@
     return files;
   }
 
+  /**
+   * Reads a stored project, whichever shape it was written in: flat
+   * ({slug, version, source}) as the disk backend writes it, or nested
+   * ({meta, source}) as the GitHub backend does. Both exist in the wild.
+   */
+  function readStored(raw) {
+    if (!raw || typeof raw !== 'object') return { meta: {}, files: [] };
+    var meta = (raw.meta && typeof raw.meta === 'object' && !Array.isArray(raw.meta)) ? raw.meta : raw;
+    var files = toFiles(raw.source !== undefined ? raw.source : raw);
+    return { meta: meta, files: files };
+  }
+
   /** The legacy three-pane composer, kept so old callers keep working. */
   function compose(parts) {
     parts = parts || {};
@@ -214,8 +290,16 @@
     inlineLocal: inlineLocal,
     entryOf: entryOf,
     toFiles: toFiles,
+    readStored: readStored,
     fileType: fileType,
     isValidName: isValidName,
+    isBinary: isBinary,
+    isText: isText,
+    editorMode: editorMode,
+    contentType: contentType,
+    linkedInto: linkedInto,
+    TEXT_TYPES: TEXT_TYPES,
+    BINARY_TYPES: BINARY_TYPES,
     fileNameFor: fileNameFor,
     slugify: slugify,
     escapeHtml: escapeHtml,

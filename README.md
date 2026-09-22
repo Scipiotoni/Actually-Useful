@@ -27,11 +27,21 @@ mode and the app tells you so.
 
 ## What it does
 
-**Files** — a project holds as many files as you like. **＋** asks what kind
-(HTML page, CSS stylesheet, JavaScript) and what to call it; tabs switch
-between them, double-click a tab to rename, × to delete. Refer to one from
-another by its plain name: `<a href="about.html">`. Stylesheets and scripts are
-linked into every page for you, so you rarely write those tags at all.
+**Files** — a project holds as many files as you like, in folders if you want.
+**＋** asks what kind and what to call it; **Import** takes files or a whole
+folder, and dragging them from the desktop works anywhere over the editor.
+Tabs switch between them, double-click a tab to rename, × to delete. Refer to
+one from another by its plain name: `<a href="about.html">`. Stylesheets and
+scripts are linked into every page for you, so you rarely write those tags.
+
+| Kind | Extensions | In the editor |
+| --- | --- | --- |
+| Markup and code | `.html` `.css` `.js` `.json` `.svg` | Edited, with highlighting |
+| Plain text | `.txt` `.md` | Edited, no highlighting |
+| Images, icons, fonts | `.png` `.jpg` `.gif` `.webp` `.avif` `.ico` `.woff2` `.woff` | Read-only card with size and a thumbnail |
+
+Binaries are held as base64 and published byte for byte. A project can hold 60
+files: 2 MB each for text, 5 MB for binaries.
 
 **Editor** — syntax highlighting that follows the open file's type, line
 numbers, the active line marked, and a status bar showing where the caret is.
@@ -59,7 +69,8 @@ reopen any of them back into the editor or delete them.
 with its stylesheets and scripts folded in so it works on its own.
 
 Your draft is autosaved to `localStorage`, so a reload picks up where you left
-off. The preview URL says whether what you see matches what is live
+off. Once a project passes about 80% of what the browser will store, it says
+so while there is still room to act, rather than failing silently later. The preview URL says whether what you see matches what is live
 (`· live`) or whether you have `· unpublished changes`.
 
 ### Keyboard
@@ -142,8 +153,15 @@ reason, and the app serves them at `/p/assets/<name>` to mirror the layout
 GitHub Pages has.
 
 While you are drafting, nothing is served yet, so the preview folds the
-project's own stylesheets and scripts into the page instead of linking them,
-and following a link between your pages switches which one it shows.
+project's own stylesheets and scripts into the page, points every other
+reference — images, icons, fonts, and `url()` inside a stylesheet — at an
+inline `data:` URL, and switches page when you follow a link between them.
+
+Those have to be `data:` URLs rather than `blob:` ones. The preview is
+sandboxed without `allow-same-origin`, which is what stops a page you are
+writing from reaching into the editor around it; a frame with an opaque origin
+like that cannot read a blob URL minted outside it, while a `data:` URL carries
+its own bytes.
 
 The original three-pane shape (`{html, css, js}`) is still accepted by the API
 and still loads, arriving as `index.html`, `styles.css` and `app.js`.
@@ -181,6 +199,22 @@ curl -X POST localhost:3000/api/deploys \
 
 A project holds up to 40 files, each up to 2 MB. Names must end in `.html`,
 `.css` or `.js`, and at least one `.html` file is required.
+
+## Progressive web apps
+
+Because every file lands at the path shown in the panel, a project with
+`index.html`, `sw.js`, `manifest.json` and `icons/icon-192.png` deploys as a
+working PWA — the service worker sits beside the page it controls.
+
+One thing to know: a deploy lives in its own folder (`/p/<slug>/`, and
+`/published/<slug>/` on GitHub Pages) so that you can keep several projects.
+A service worker only controls its own folder downwards, so set the manifest's
+`scope` and `start_url` to `.` and the app works from there. It cannot claim
+the whole site unless one project owns the whole repository.
+
+The preview cannot register a service worker at all — it runs in a sandboxed
+frame with no origin of its own — so `navigator.serviceWorker.register` is
+answered with a note in the console panel instead of throwing.
 
 ## Images
 

@@ -8,6 +8,7 @@ const { DeployStore } = require('./store.js');
 const auth = require('./auth.js');
 const { GitHubStore } = require('./github-store.js');
 const { contentType, ASSET_NAME_RE } = require('./assets.js');
+const Compose = require('../public/compose.js');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const DATA_DIR = process.env.AU_DATA_DIR || path.join(__dirname, '..', 'data', 'sites');
@@ -188,9 +189,13 @@ function createApp(options = {}) {
         if (!served) {
           return sendText(res, 404, notFoundPage(pageMatch[1], pageMatch[2]), 'text/html; charset=utf-8');
         }
+        const type = Compose.contentType(served.name);
         res.writeHead(200, {
-          'content-type': CONTENT_TYPES[served.type] || 'text/plain; charset=utf-8',
+          'content-type': type,
+          'content-length': Buffer.byteLength(served.body),
           'x-content-type-options': 'nosniff',
+          // An SVG can carry script, so deny it an origin to run against.
+          ...(type === 'image/svg+xml' ? { 'content-security-policy': 'sandbox' } : {}),
           'cache-control': 'no-cache'
         });
         return res.end(req.method === 'HEAD' ? undefined : served.body);

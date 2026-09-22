@@ -2,7 +2,7 @@
 
 const Compose = require('../public/compose.js');
 const { escapeHtml } = Compose;
-const { SLUG_RE, validateSource, nextFreeSlug } = require('./store.js');
+const { SLUG_RE, validateSource, nextFreeSlug, binaryBytes } = require('./store.js');
 const { ASSET_NAME_RE, assetName, nextFreeName, decodeUpload } = require('./assets.js');
 
 const DEFAULT_API = 'https://api.github.com';
@@ -249,7 +249,7 @@ class GitHubStore {
     return Array.from(this.index.values())
       .map((meta) => {
         const page = this.pages.get(meta.slug);
-        const files = page ? Compose.toFiles(page.source) : [];
+        const files = page ? Compose.readStored(page).files : [];
         return { ...meta, files: files.map((file) => file.name), source: files };
       })
       .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
@@ -260,11 +260,12 @@ class GitHubStore {
     await this.ready();
     const page = this.pages.get(slug);
     if (!page) return null;
-    const files = Compose.toFiles(page.source);
+    const stored = Compose.readStored(page);
+    const files = stored.files;
     return {
-      ...page.meta,
+      ...stored.meta,
       files: files.map((file) => file.name),
-      entry: page.meta.entry || Compose.entryOf(files),
+      entry: stored.meta.entry || Compose.entryOf(files),
       source: files
     };
   }
@@ -276,12 +277,20 @@ class GitHubStore {
     const page = this.pages.get(slug);
     if (!page) return null;
 
-    const files = Compose.toFiles(page.source);
-    const wanted = name || page.meta.entry || Compose.entryOf(files);
+    const stored = Compose.readStored(page);
+    const files = stored.files;
+    const wanted = name || stored.meta.entry || Compose.entryOf(files);
     if (!wanted || !Compose.isValidName(wanted)) return null;
 
-    const body = Compose.serveFile(files, wanted, { title: page.meta.name });
-    return body === null ? null : { name: wanted, body, type: Compose.fileType(wanted) };
+    const file = Compose.find(files, wanted);
+    if (!file) return null;
+
+    if (Compose.isBinary(wanted)) {
+      const bytes = binaryBytes(file);
+      return bytes ? { name: wanted, body: bytes, type: Compose.fileType(wanted), binary: true } : null;
+    }
+    const body = Compose.serveFile(files, wanted, { title: stored.meta.name });
+    return body === null ? null : { name: wanted, body, type: Compose.fileType(wanted), binary: false };
   }
 
   async html(slug) {
@@ -327,10 +336,10 @@ class GitHubStore {
     ];
 
     files.forEach((file) => {
-      changes.push({
-        path: `${ROOT}/${target}/${file.name}`,
-        content: Compose.serveFile(files, file.name, { title })
-      });
+      var at = `${ROOT}/${target}/${file.name}`;
+      // Binaries go up as a blob; a tree entry's inline content is UTF-8 only.
+      if (Compose.isBinary(file.name)) changes.push({ path: at, bytes: binaryBytes(file) });
+      else changes.push({ path: at, content: Compose.serveFile(files, file.name, { title }) });
     });
 
     // A file the project no longer has must be deleted, or the old copy would

@@ -10,7 +10,26 @@ const { ASSET_NAME_RE, assetName, nextFreeName, decodeUpload } = require('./asse
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,59}$/;
 const MAX_SOURCE_BYTES = 2 * 1024 * 1024; // per pane
 
-const MAX_FILES = 40;
+const MAX_FILES = 60;
+const MAX_BINARY_BYTES = 5 * 1024 * 1024;
+
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
+
+/**
+ * Decodes a stored binary file, or null when the text is not really base64.
+ * Buffer.from silently drops characters it does not recognise, so the string
+ * is checked before it is trusted.
+ */
+function binaryBytes(file) {
+  if (typeof file.content !== 'string') return null;
+
+  // A data: URL is what a browser hands over; keep only the payload.
+  const payload = file.content.replace(/^data:[^,]*,/, '').replace(/\s+/g, '');
+  if (!payload) return Buffer.alloc(0);
+  if (payload.length % 4 !== 0 || !BASE64.test(payload)) return null;
+
+  return Buffer.from(payload, 'base64');
+}
 
 /**
  * Checks the files a deploy carries, accepting the original three-pane shape
@@ -42,7 +61,16 @@ function validateSource(input) {
     if (typeof file.content !== 'string') {
       return { ok: false, status: 400, error: `"${file.name}" must hold text` };
     }
-    if (Buffer.byteLength(file.content, 'utf8') > MAX_SOURCE_BYTES) {
+
+    if (Compose.isBinary(file.name)) {
+      const bytes = binaryBytes(file);
+      if (!bytes) {
+        return { ok: false, status: 400, error: `"${file.name}" must be base64-encoded` };
+      }
+      if (bytes.length > MAX_BINARY_BYTES) {
+        return { ok: false, status: 413, error: `"${file.name}" exceeds the 5 MB limit` };
+      }
+    } else if (Buffer.byteLength(file.content, 'utf8') > MAX_SOURCE_BYTES) {
       return { ok: false, status: 413, error: `"${file.name}" exceeds the 2 MB limit` };
     }
   }
@@ -63,6 +91,26 @@ function nextFreeSlug(base, taken) {
     if (!taken.has(candidate)) return candidate;
   }
   return `${root}-${crypto.randomBytes(3).toString('hex')}`.slice(0, 60);
+}
+
+/** Every file under a directory, as paths relative to it. */
+function walk(dir, prefix = '') {
+  let entries = [];
+  try {
+    entries = fs.readdirSync(path.join(dir, prefix), { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries.flatMap((entry) => {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    return entry.isDirectory() ? walk(dir, rel) : [rel];
+  });
+}
+
+/** Resolves a project-relative path, refusing anything that leaves the root. */
+function within(root, name) {
+  const target = path.resolve(root, name);
+  return target.startsWith(root + path.sep) ? target : null;
 }
 
 /**
@@ -167,13 +215,13 @@ class DeployStore {
     const dir = this.dirFor(slug);
     if (!dir) return null;
     try {
-      const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
-      const files = Compose.toFiles(meta.source !== undefined ? meta.source : meta);
+      const stored = Compose.readStored(JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')));
+      const files = stored.files;
       return {
-        ...meta,
+        ...stored.meta,
         slug,
         files: files.map((file) => file.name),
-        entry: meta.entry || Compose.entryOf(files),
+        entry: stored.meta.entry || Compose.entryOf(files),
         source: files
       };
     } catch {
@@ -186,9 +234,17 @@ class DeployStore {
     const site = this.get(slug);
     if (!site) return null;
     const wanted = name || site.entry;
-    if (!Compose.isValidName(wanted)) return null;
+    if (!wanted || !Compose.isValidName(wanted)) return null;
+
+    const file = Compose.find(site.source, wanted);
+    if (!file) return null;
+
+    if (Compose.isBinary(wanted)) {
+      const bytes = binaryBytes(file);
+      return bytes ? { name: wanted, body: bytes, type: Compose.fileType(wanted), binary: true } : null;
+    }
     const body = Compose.serveFile(site.source, wanted, { title: site.name });
-    return body === null ? null : { name: wanted, body, type: Compose.fileType(wanted) };
+    return body === null ? null : { name: wanted, body, type: Compose.fileType(wanted), binary: false };
   }
 
   /** The deploy's entry page, for callers that just want the page. */
@@ -242,14 +298,22 @@ class DeployStore {
 
     // Drop files the project no longer has, so a rename does not leave a ghost.
     const keep = new Set(files.map((file) => file.name));
-    for (const name of fs.readdirSync(dir)) {
+    for (const name of walk(dir)) {
       if (name !== 'meta.json' && !keep.has(name)) {
         fs.rmSync(path.join(dir, name), { force: true });
       }
     }
 
     for (const file of files) {
-      fs.writeFileSync(path.join(dir, file.name), Compose.serveFile(files, file.name, { title }), 'utf8');
+      const target = within(dir, file.name);
+      if (!target) return { ok: false, status: 400, error: `Invalid path "${file.name}"` };
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+
+      if (Compose.isBinary(file.name)) {
+        fs.writeFileSync(target, binaryBytes(file));
+      } else {
+        fs.writeFileSync(target, Compose.serveFile(files, file.name, { title }), 'utf8');
+      }
     }
     fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify({ ...meta, source: files }, null, 2), 'utf8');
 
@@ -264,4 +328,4 @@ class DeployStore {
   }
 }
 
-module.exports = { DeployStore, SLUG_RE, MAX_SOURCE_BYTES, MAX_FILES, validateSource, nextFreeSlug };
+module.exports = { DeployStore, SLUG_RE, MAX_SOURCE_BYTES, MAX_BINARY_BYTES, MAX_FILES, validateSource, nextFreeSlug, binaryBytes };

@@ -121,6 +121,8 @@
   }
 
   var MODES = {
+    // .txt and .md carry no syntax to colour.
+    text: function (src) { return esc(src); },
     html: highlightHtml,
     css: function (src) { return scan(src, CSS_RULES); },
     js: function (src) { return scan(src, JS_RULES); }

@@ -511,8 +511,12 @@ test('bad file names and duplicates are refused', async () => {
     assert.strictEqual(res.status, 400, `should reject ${why}`);
   }
 
-  const tooMany = Array.from({ length: 41 }, (_, i) => ({ name: `p${i}.html`, content: '' }));
+  const tooMany = Array.from({ length: 61 }, (_, i) => ({ name: `p${i}.html`, content: '' }));
   assert.strictEqual((await post({ name: 'Many', files: tooMany })).status, 413);
+
+  // A project with icons and fonts needs room, so 60 is fine.
+  const plenty = Array.from({ length: 60 }, (_, i) => ({ name: `p${i}.html`, content: '' }));
+  assert.strictEqual((await post({ name: 'Plenty', files: plenty })).status, 201);
 });
 
 test('a project published before multi-file still loads and serves', async () => {
@@ -523,4 +527,76 @@ test('a project published before multi-file still loads and serves', async () =>
   assert.ok(Array.isArray(fetched.source));
   assert.strictEqual(fetched.source[0].name, 'index.html');
   assert.match(await (await fetch(`${base}/p/${legacy.slug}/`)).text(), /<p>old<\/p>/);
+});
+
+// --------------------------------------------------------------------------
+// Binaries, folders, and a project that is a real PWA
+// --------------------------------------------------------------------------
+
+const ICON = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.from('icon bytes')
+]);
+
+const PWA = [
+  {
+    name: 'index.html',
+    content: '<!doctype html><html><head><link rel="manifest" href="manifest.json">' +
+      '</head><body><h1>App</h1><script src="sw-register.js"></script></body></html>'
+  },
+  { name: 'sw.js', content: "self.addEventListener('fetch', function () {});" },
+  { name: 'sw-register.js', content: "navigator.serviceWorker.register('sw.js');" },
+  { name: 'manifest.json', content: '{"name":"App","start_url":".","icons":[{"src":"icons/icon-192.png"}]}' },
+  { name: 'icons/icon-192.png', content: ICON.toString('base64') },
+  { name: 'notes.md', content: '# Notes' }
+];
+
+test('a PWA deploys with every file at the path shown in the panel', async () => {
+  const site = await (await post({ name: 'My App', files: PWA })).json();
+  assert.deepStrictEqual(site.files, PWA.map((file) => file.name));
+
+  // The service worker has to sit beside index.html, or its scope is wrong.
+  const worker = await fetch(`${base}/p/my-app/sw.js`);
+  assert.strictEqual(worker.status, 200);
+  assert.match(worker.headers.get('content-type'), /javascript/);
+  assert.match(await worker.text(), /addEventListener/);
+
+  const manifest = await fetch(`${base}/p/my-app/manifest.json`);
+  assert.match(manifest.headers.get('content-type'), /application\/json/);
+  assert.deepStrictEqual((await manifest.json()).name, 'App');
+
+  const markdown = await fetch(`${base}/p/my-app/notes.md`);
+  assert.match(markdown.headers.get('content-type'), /text\/markdown/);
+  assert.strictEqual(await markdown.text(), '# Notes');
+});
+
+test('a binary file survives the round trip byte for byte', async () => {
+  await post({ name: 'With Icon', files: PWA });
+  const icon = await fetch(`${base}/p/with-icon/icons/icon-192.png`);
+  assert.strictEqual(icon.status, 200);
+  assert.strictEqual(icon.headers.get('content-type'), 'image/png');
+  assert.ok(Buffer.from(await icon.arrayBuffer()).equals(ICON), 'the bytes must come back unchanged');
+});
+
+test('a full HTML document keeps its own manifest and script tags', async () => {
+  await post({ name: 'Untouched', files: PWA });
+  const html = await (await fetch(`${base}/p/untouched/`)).text();
+  assert.match(html, /rel="manifest" href="manifest\.json"/);
+  // Nothing auto-linked into a complete document.
+  assert.ok(!html.includes('<link rel="stylesheet"'));
+});
+
+test('a file path cannot climb out of the project', async () => {
+  for (const name of ['../escape.html', 'icons/../../escape.png', '/abs.html', 'a//b.png']) {
+    const res = await post({ name: 'Escape', files: [{ name: 'index.html', content: '' }, { name, content: '' }] });
+    assert.strictEqual(res.status, 400, `${name} must be refused`);
+  }
+});
+
+test('a binary file that is not really base64 is refused', async () => {
+  const res = await post({
+    name: 'Broken',
+    files: [{ name: 'index.html', content: '' }, { name: 'logo.png', content: '!!!not base64!!!' }]
+  });
+  assert.strictEqual(res.status, 400);
 });

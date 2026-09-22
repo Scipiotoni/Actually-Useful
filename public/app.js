@@ -97,6 +97,20 @@
     format: $('btn-format'),
     reset: $('btn-reset'),
     tabStrip: $('tab-strip'),
+    binaryView: $('ed-binary'),
+    binaryThumb: $('binary-thumb'),
+    binaryName: $('binary-name'),
+    binarySize: $('binary-size'),
+    binaryRef: $('binary-ref'),
+    importBtn: $('btn-import'),
+    importModal: $('import-modal'),
+    importFiles: $('import-files'),
+    importFolder: $('import-folder'),
+    importPickFiles: $('import-pick-files'),
+    importPickFolder: $('import-pick-folder'),
+    importCancel: $('import-cancel'),
+    dropveil: $('dropveil'),
+    editorHost: $('ed-main'),
     newFile: $('btn-new-file'),
     fileModal: $('file-modal'),
     fileForm: $('file-form'),
@@ -150,7 +164,7 @@
   };
 
   var editors = {};
-  var state = { slug: null, deployed: null, storage: 'disk', files: [], active: 'index.html', previewFile: null, wrapped: false, renderTimer: null, saveTimer: null, consoleCount: 0 };
+  var state = { slug: null, deployed: null, storage: 'disk', files: [], active: 'index.html', previewFile: null, wrapped: false, quotaWarned: false, renderTimer: null, saveTimer: null, consoleCount: 0 };
 
   // ---------------------------------------------------------------- editors
   // One editor serves every file; switching tabs swaps its contents and mode.
@@ -174,19 +188,24 @@
   });
   editors.main = editor;
 
+  /** Whether the open file is one the editor actually holds. */
+  function editingText() {
+    return Boolean(state.active) && !Compose.isBinary(state.active);
+  }
+
   /** The project as the API wants it, with the open file's latest text. */
   function source() {
     var files = state.files.map(function (file) {
-      return {
-        name: file.name,
-        content: file.name === state.active ? editor.getValue() : file.content
-      };
+      // A binary is never in the editor, so its bytes must not be taken from it.
+      var live = editingText() && file.name === state.active;
+      return { name: file.name, content: live ? editor.getValue() : file.content };
     });
     return { name: els.name.value.trim() || 'Untitled page', files: files };
   }
 
   /** Copies what is on screen back into the file list. */
   function commitActive() {
+    if (!editingText()) return;
     var file = Compose.find(state.files, state.active);
     if (file) file.content = editor.getValue();
   }
@@ -211,11 +230,46 @@
     if (!skipCommit) commitActive();
 
     state.active = name;
-    editor.setMode(Compose.fileType(name));
+
+    if (Compose.isBinary(name)) {
+      showBinary(file);
+      renderTabs();
+      return;
+    }
+
+    els.binaryView.hidden = true;
+    els.editorHost.hidden = false;
+    editor.setMode(Compose.editorMode(name));
     editor.setValue(file.content);
     editor.refresh();
     renderTabs();
     if (!els.findbar.hidden) runFind(false);
+  }
+
+  /** Binary files are shown, not edited: size, a thumbnail, and their path. */
+  function showBinary(file) {
+    els.editorHost.hidden = true;
+    els.binaryView.hidden = false;
+
+    var bytes = Math.ceil((file.content || '').replace(/\s+/g, '').length * 3 / 4);
+    els.binaryName.textContent = file.name;
+    els.binarySize.textContent = formatSize(bytes);
+    els.binaryRef.textContent = Compose.fileType(file.name) === 'woff2' ||
+      Compose.fileType(file.name) === 'woff'
+      ? 'url("' + file.name + '")'
+      : '<img src="' + file.name + '">';
+
+    var previewable = /^(png|jpg|gif|webp|avif|ico)$/.test(Compose.fileType(file.name));
+    if (previewable && file.content) {
+      els.binaryThumb.className = 'binary-thumb';
+      els.binaryThumb.style.backgroundImage =
+        'url("data:' + Compose.contentType(file.name) + ';base64,' + file.content.replace(/\s+/g, '') + '")';
+      els.binaryThumb.textContent = '';
+    } else {
+      els.binaryThumb.className = 'binary-thumb is-blank';
+      els.binaryThumb.style.backgroundImage = '';
+      els.binaryThumb.textContent = '.' + Compose.fileType(file.name);
+    }
   }
 
   function refreshEditors() { editor.refresh(); }
@@ -227,7 +281,8 @@
       return '<button class="tab' + (on ? ' is-active' : '') + '" role="tab" ' +
         'aria-selected="' + on + '" data-file="' + Compose.escapeHtml(file.name) + '" ' +
         'title="Double-click to rename">' +
-        '<span class="tab-dot is-' + Compose.fileType(file.name) + '"></span>' +
+        '<span class="tab-dot is-' +
+        (Compose.isBinary(file.name) ? 'binary' : Compose.fileType(file.name)) + '"></span>' +
         '<span class="tab-name">' + Compose.escapeHtml(file.name) + '</span>' +
         (state.files.length > 1
           ? '<span class="tab-close" role="button" data-close="1" aria-label="Delete ' +
@@ -372,6 +427,41 @@
   // ---------------------------------------------------------------- preview
   var PREVIEW_BASE = '<base href="' + location.origin + '/p/x/">';
 
+  // A service worker cannot register inside the preview iframe, so say so once
+  // rather than letting the call throw.
+  var WORKER_BRIDGE = [
+    '<script>',
+    '(function () {',
+    '  function note(script) {',
+    '    try {',
+    '      parent.postMessage({ __au: true, level: "info", text:',
+    '        "Service worker " + JSON.stringify(String(script)) + " is not registered in the preview — it runs once deployed." }, "*");',
+    '    } catch (e) {}',
+    '    return Promise.resolve({',
+    '      scope: location.href, installing: null, waiting: null, active: null,',
+    '      addEventListener: function () {}, update: function () { return Promise.resolve(); },',
+    '      unregister: function () { return Promise.resolve(true); }',
+    '    });',
+    '  }',
+    '  var present = false;',
+    '  // Reading the property throws outright in a sandboxed frame, so guard it.',
+    '  try { present = Boolean(navigator.serviceWorker); } catch (e) { present = false; }',
+    '  try {',
+    '    if (present) { navigator.serviceWorker.register = note; }',
+    '    else {',
+    '      Object.defineProperty(navigator, "serviceWorker", {',
+    '        configurable: true,',
+    '        value: { register: note, ready: new Promise(function () {}),',
+    '                 getRegistration: function () { return Promise.resolve(undefined); },',
+    '                 getRegistrations: function () { return Promise.resolve([]); },',
+    '                 addEventListener: function () {} }',
+    '      });',
+    '    }',
+    '  } catch (e) {}',
+    '}());',
+    '<\/script>'
+  ].join('\n');
+
   var NAV_BRIDGE = [
     '<script>',
     '(function () {',
@@ -427,16 +517,65 @@
     }
 
     var doc = Compose.composeFile(parts.files, page, {
-      head: PREVIEW_BASE + '\n' + CONSOLE_BRIDGE + '\n' + NAV_BRIDGE,
+      head: PREVIEW_BASE + '\n' + CONSOLE_BRIDGE + '\n' + WORKER_BRIDGE + '\n' + NAV_BRIDGE,
       title: parts.name
     });
     // Nothing is served yet while drafting, so the project's own stylesheets
-    // and scripts are folded in rather than linked.
-    els.preview.srcdoc = Compose.inlineLocal(doc, parts.files);
+    // and scripts are folded in, and its assets are pointed at blob URLs.
+    els.preview.srcdoc = withPreviewAssets(Compose.inlineLocal(doc, parts.files), parts.files);
 
     state.previewFile = page;
     els.previewUrl.textContent = previewLabel(parts, page);
     renderPreviewPage(parts, page);
+  }
+
+  /**
+   * Points every reference to a project file at an inline data: URL, so
+   * images, icons and fonts render before anything is deployed. Links between
+   * pages are left alone — those switch the previewed page instead.
+   *
+   * These have to be data: URLs rather than blob: ones. The preview runs
+   * sandboxed without allow-same-origin, which is what stops a page you are
+   * writing from reaching into the editor; an opaque origin like that cannot
+   * read a blob URL minted out here, but a data: URL carries its own bytes.
+   */
+  function withPreviewAssets(doc, files) {
+    var urls = {};
+    files.forEach(function (file) {
+      if (Compose.fileType(file.name) === 'html') return;
+      var type = Compose.contentType(file.name);
+      urls[file.name] = Compose.isBinary(file.name)
+        ? 'data:' + type + ';base64,' + (file.content || '').replace(/\s+/g, '')
+        : 'data:' + type + ';base64,' + b64(file.content || '');
+    });
+
+    var replaceRef = function (text) {
+      return text.replace(/(src|href)=("|')([^"']+)\2/gi, function (whole, attr, quote, ref) {
+        var clean = ref.replace(/^\.\//, '').split(/[?#]/)[0];
+        return urls[clean] ? attr + '=' + quote + urls[clean] + quote : whole;
+      });
+    };
+
+    // Inside CSS too, or url(icon.png) in a stylesheet would not resolve.
+    var out = doc.replace(/<style>([\s\S]*?)<\/style>/gi, function (whole, css) {
+      return '<style>' + css.replace(/url\((["']?)([^)"']+)\1\)/gi, function (ref, quote, target) {
+        var clean = target.replace(/^\.\//, '').split(/[?#]/)[0];
+        return urls[clean] ? 'url(' + quote + urls[clean] + quote + ')' : ref;
+      }) + '</style>';
+    });
+
+    // <a href> keeps its plain name so following it switches the preview.
+    return out.replace(/<(?!a\b)([a-z][\w-]*)\b([^>]*)>/gi, function (whole, tag, attrs) {
+      return '<' + tag + replaceRef(attrs) + '>';
+    });
+  }
+
+  /** UTF-8 safe base64, since btoa alone rejects anything outside Latin-1. */
+  function b64(text) {
+    var bytes = new TextEncoder().encode(text);
+    var binary = '';
+    for (var i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
   }
 
   /** Lets you jump back to the entry page once you have followed a link. */
@@ -559,13 +698,28 @@
     els.previewUrl.textContent = previewLabel(source(), state.previewFile);
   }
 
+  // Browsers give a page a few MB; warn while there is still room to act.
+  var QUOTA_BYTES = 5 * 1024 * 1024;
+  var QUOTA_WARN_AT = 0.8;
+
   function saveLocal() {
     commitActive();
     var data = source();
     data.slug = state.slug;
     data.active = state.active;
+
+    var payload = JSON.stringify(data);
+    var share = payload.length / QUOTA_BYTES;
+    if (share >= QUOTA_WARN_AT && !state.quotaWarned) {
+      state.quotaWarned = true;
+      toast('This project is using about ' + Math.round(share * 100) + '% of what this ' +
+        'browser will store. Deploy it, or move big images into <strong>Images</strong>, ' +
+        'before it stops saving.', 'err', 12000);
+    }
+    if (share < QUOTA_WARN_AT * 0.75) state.quotaWarned = false;
+
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, payload);
       els.saveState.textContent = 'Saved locally · ' + new Date().toLocaleTimeString();
       els.saveState.classList.remove('is-dirty');
     } catch (err) {
@@ -751,6 +905,139 @@
     if (hours < 24) return hours + 'h ago';
     return Math.round(hours / 24) + 'd ago';
   }
+
+  // ----------------------------------------------------------------- import
+  var IMPORT_LIMITS = { files: 60, textBytes: 2 * 1024 * 1024, binaryBytes: 5 * 1024 * 1024 };
+
+  /** Reads one dropped or chosen file into a project file. */
+  function readImported(file, pathName) {
+    return new Promise(function (resolve) {
+      var name = String(pathName || file.name).replace(/^\/+/, '');
+      // A folder pick reports "myapp/index.html"; drop the wrapping folder.
+      if (name.indexOf('/') !== -1 && els.importFolder.dataset.stripRoot === '1') {
+        name = name.split('/').slice(1).join('/');
+      }
+
+      if (!Compose.isValidName(name)) {
+        return resolve({ error: name + ' — unsupported file type' });
+      }
+
+      var binary = Compose.isBinary(name);
+      var cap = binary ? IMPORT_LIMITS.binaryBytes : IMPORT_LIMITS.textBytes;
+      if (file.size > cap) {
+        return resolve({ error: name + ' — larger than ' + formatSize(cap) });
+      }
+
+      var reader = new FileReader();
+      reader.onerror = function () { resolve({ error: name + ' — could not be read' }); };
+      reader.onload = function () {
+        if (binary) {
+          resolve({ file: { name: name, content: String(reader.result).replace(/^data:[^,]*,/, '') } });
+        } else {
+          resolve({ file: { name: name, content: String(reader.result) } });
+        }
+      };
+      if (binary) reader.readAsDataURL(file);
+      else reader.readAsText(file);
+    });
+  }
+
+  function importAll(list, paths) {
+    var items = Array.prototype.slice.call(list);
+    if (!items.length) return;
+
+    commitActive();
+    Promise.all(items.map(function (file, i) {
+      return readImported(file, paths ? paths[i] : null);
+    })).then(function (results) {
+      var added = [];
+      var replaced = [];
+      var failed = [];
+
+      results.forEach(function (result) {
+        if (result.error) return failed.push(result.error);
+        var existing = Compose.find(state.files, result.file.name);
+        if (existing) {
+          existing.content = result.file.content;
+          replaced.push(result.file.name);
+        } else {
+          if (state.files.length >= IMPORT_LIMITS.files) {
+            return failed.push(result.file.name + ' — the project is full (' + IMPORT_LIMITS.files + ' files)');
+          }
+          state.files.push(result.file);
+          added.push(result.file.name);
+        }
+      });
+
+      if (added.length || replaced.length) {
+        var open = added[0] || replaced[0];
+        var page = Compose.entryOf(state.files);
+        state.active = Compose.find(state.files, state.active) ? state.active : (page || open);
+        openFile(state.active, true);
+        onEdit();
+
+        var parts = [];
+        if (added.length) parts.push('Added ' + added.length);
+        if (replaced.length) parts.push('replaced ' + replaced.length);
+        toast(parts.join(', ') + '. Deploy to publish.', 'ok');
+      }
+      failed.slice(0, 4).forEach(function (message) { toast(message, 'err', 7000); });
+      if (failed.length > 4) toast((failed.length - 4) + ' more files were skipped.', 'err', 7000);
+    });
+  }
+
+  els.importBtn.addEventListener('click', function () { els.importModal.hidden = false; });
+  els.importCancel.addEventListener('click', function () { els.importModal.hidden = true; });
+  els.importModal.addEventListener('click', function (event) {
+    if (event.target === els.importModal) els.importModal.hidden = true;
+  });
+  els.importPickFiles.addEventListener('click', function () {
+    els.importFolder.dataset.stripRoot = '0';
+    els.importFiles.click();
+  });
+  els.importPickFolder.addEventListener('click', function () {
+    els.importFolder.dataset.stripRoot = '1';
+    els.importFolder.click();
+  });
+
+  els.importFiles.addEventListener('change', function () {
+    els.importModal.hidden = true;
+    importAll(els.importFiles.files);
+    els.importFiles.value = '';
+  });
+  els.importFolder.addEventListener('change', function () {
+    els.importModal.hidden = true;
+    var picked = Array.prototype.slice.call(els.importFolder.files);
+    importAll(picked, picked.map(function (file) {
+      return file.webkitRelativePath || file.name;
+    }));
+    els.importFolder.value = '';
+  });
+
+  // Dropping files anywhere over the editor adds them to the project.
+  var dragDepth = 0;
+  window.addEventListener('dragenter', function (event) {
+    if (!event.dataTransfer || event.dataTransfer.types.indexOf('Files') === -1) return;
+    dragDepth += 1;
+    els.dropveil.hidden = false;
+  });
+  window.addEventListener('dragover', function (event) {
+    if (els.dropveil.hidden) return;
+    event.preventDefault();
+  });
+  window.addEventListener('dragleave', function () {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) els.dropveil.hidden = true;
+  });
+  window.addEventListener('drop', function (event) {
+    if (!event.dataTransfer || event.dataTransfer.types.indexOf('Files') === -1) return;
+    event.preventDefault();
+    dragDepth = 0;
+    els.dropveil.hidden = true;
+    // The Images drawer has its own drop handler for picture uploads.
+    if (event.target.closest && event.target.closest('#dropzone')) return;
+    importAll(event.dataTransfer.files);
+  });
 
   // ------------------------------------------------------------------- find
   function activeEditor() { return editor; }

@@ -41,6 +41,9 @@
     <div class="tabs">
       <div class="tab-strip" id="tab-strip" role="tablist"></div>
       <button class="tab tab-add" id="btn-new-file" title="New file">＋</button>
+      <button class="tab tab-action" id="btn-import" title="Import files or a folder">Import</button>
+      <input type="file" id="import-files" multiple hidden>
+      <input type="file" id="import-folder" webkitdirectory directory hidden>
       <span class="tabs-spacer"></span>
       <button class="tab tab-action" id="btn-format" title="Tidy up indentation">Format</button>
       <button class="tab tab-action" id="btn-reset" title="Start a new project">Reset</button>
@@ -67,6 +70,17 @@
 
     <div class="editors">
       <div class="editor-host is-active" id="ed-main"></div>
+      <div class="editor-host binary-view" id="ed-binary" hidden>
+        <div class="binary-card">
+          <div class="binary-thumb" id="binary-thumb"></div>
+          <strong class="binary-name" id="binary-name"></strong>
+          <span class="binary-size" id="binary-size"></span>
+          <p class="binary-hint">
+            Stored as-is and published at this path. Reference it with
+            <code id="binary-ref"></code>
+          </p>
+        </div>
+      </div>
     </div>
     <footer class="statusbar">
       <span id="save-state" class="status-item">Saved locally</span>
@@ -145,6 +159,24 @@
   <p class="drawer-note">Ctrl on Windows and Linux, Cmd on a Mac.</p>
   <dl class="shortcuts" id="shortcut-list"></dl>
 </aside>
+
+<div class="modal" id="import-modal" hidden>
+  <div class="modal-card">
+    <h2>Import into this project</h2>
+    <p class="field-hint">
+      Files keep the names they arrive with, so links between them keep working.
+      Pages, styles, scripts, JSON, SVG, text and Markdown open in the editor;
+      images, icons and fonts are stored as they are.
+    </p>
+    <div class="modal-actions modal-actions-wide">
+      <button type="button" class="btn" id="import-pick-files">Choose files…</button>
+      <button type="button" class="btn" id="import-pick-folder">Choose a folder…</button>
+      <button type="button" class="btn btn-ghost" id="import-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="dropveil" id="dropveil" hidden><span>Drop files to add them to the project</span></div>
 
 <div class="modal" id="file-modal" hidden>
   <form class="modal-card" id="file-form">
