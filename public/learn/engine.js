@@ -1,0 +1,512 @@
+/*
+ * The rules of Learn mode, with no DOM in sight: marking answers, checking a
+ * program's output, the checker that tests your functions, spaced repetition,
+ * XP and levels, streaks, and merging progress from two devices.
+ *
+ * Shared verbatim by the browser and the server (which merges progress), and
+ * tested in Node.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.LearnEngine = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  // ------------------------------------------------------------ output
+
+  /** Line endings unified, trailing spaces and trailing blank lines dropped. */
+  function normalizeOutput(text) {
+    return String(text == null ? '' : text)
+      .replace(/\r\n?/g, '\n')
+      .split('\n')
+      .map(function (line) { return line.replace(/[ \t]+$/, ''); })
+      .join('\n')
+      .replace(/\n+$/, '');
+  }
+
+  /**
+   * Compares what a program printed with what it should have printed.
+   * @returns {{ok: boolean, line?: number, got?: string, want?: string}}
+   */
+  function compareOutput(got, want) {
+    var a = normalizeOutput(got);
+    var b = normalizeOutput(want);
+    if (a === b) return { ok: true };
+    var la = a.split('\n');
+    var lb = b.split('\n');
+    for (var i = 0; i < Math.max(la.length, lb.length); i += 1) {
+      if (la[i] !== lb[i]) {
+        return {
+          ok: false,
+          line: i + 1,
+          got: la[i] === undefined ? null : la[i],
+          want: lb[i] === undefined ? null : lb[i]
+        };
+      }
+    }
+    return { ok: false, line: 1, got: a, want: b };
+  }
+
+  // ------------------------------------------------------------ checker
+
+  var MARK = '\u001e';
+  var SEP = '\u001f';
+
+  /**
+   * C++ appended after a learner's code so their functions can be tested
+   * without them writing main(). CHECK(expr, expected) prints one result line.
+   */
+  var PRELUDE = [
+    '#line 1 "checks.cpp"',
+    '#include <cmath>',
+    '#include <exception>',
+    '#include <iostream>',
+    '#include <sstream>',
+    '#include <string>',
+    '#include <type_traits>',
+    '#include <utility>',
+    '#include <vector>',
+    '#pragma GCC diagnostic ignored "-Wsign-compare"',
+    '#pragma GCC diagnostic ignored "-Wunused-variable"',
+    '#pragma GCC diagnostic ignored "-Wunused-but-set-variable"',
+    '#pragma GCC diagnostic ignored "-Wfloat-equal"',
+    'namespace au_check {',
+    'template <class T, class = void> struct streamable : std::false_type {};',
+    'template <class T> struct streamable<T, std::void_t<decltype(std::declval<std::ostream&>() << std::declval<const T&>())>> : std::true_type {};',
+    'inline std::string quote(const std::string& s) { return "\\"" + s + "\\""; }',
+    'template <class T> std::string show(const T& v);',
+    'template <class T> std::string show(const std::vector<T>& v);',
+    'template <class A, class B> std::string show(const std::pair<A, B>& p);',
+    'inline std::string show(const std::string& s) { return quote(s); }',
+    'inline std::string show(const char* s) { return s ? quote(s) : std::string("nullptr"); }',
+    'inline std::string show(char c) { return std::string("\'") + c + "\'"; }',
+    'inline std::string show(bool b) { return b ? "true" : "false"; }',
+    'inline std::string show(double d) { std::ostringstream o; o.precision(12); o << d; return o.str(); }',
+    'inline std::string show(float d) { return show(static_cast<double>(d)); }',
+    'template <class T> std::string show(const std::vector<T>& v) { std::string s = "{"; for (std::size_t i = 0; i < v.size(); ++i) { if (i) s += ", "; s += show(v[i]); } return s + "}"; }',
+    'template <class A, class B> std::string show(const std::pair<A, B>& p) { return "(" + show(p.first) + ", " + show(p.second) + ")"; }',
+    'template <class T> std::string show(const T& v) { if constexpr (streamable<T>::value) { std::ostringstream o; o << v; return o.str(); } else { return "(a value that cannot be printed)"; } }',
+    'inline std::string clean(std::string s) { for (char& c : s) if (c == \'\\n\') c = \'\\x1d\'; return s; }',
+    'inline void report(bool ok, const char* expr, const std::string& got, const std::string& want) {',
+    '  std::cout << std::flush; std::cout << "\\n\\x1e" << (ok ? "PASS" : "FAIL") << "\\x1f" << clean(expr) << "\\x1f" << clean(got) << "\\x1f" << clean(want) << "\\n" << std::flush;',
+    '}',
+    'template <class A, class B> bool same(const A& a, const B& b) {',
+    '  if constexpr (std::is_floating_point<A>::value || std::is_floating_point<B>::value) { return std::fabs(static_cast<double>(a) - static_cast<double>(b)) < 1e-6; }',
+    '  else { return a == b; }',
+    '}',
+    'template <class F, class B> void check(const char* expr, F get, const B& want) {',
+    '  try { auto got = get(); report(same(got, want), expr, show(got), show(want)); }',
+    '  catch (const std::exception& e) { report(false, expr, std::string("threw an exception: ") + e.what(), show(want)); }',
+    '  catch (...) { report(false, expr, "threw an exception", show(want)); }',
+    '}',
+    'template <class F> void throws(const char* expr, F run) {',
+    '  try { run(); report(false, expr, "no exception", "an exception"); }',
+    '  catch (...) { report(true, expr, "an exception", "an exception"); }',
+    '}',
+    'struct Restore { std::streambuf* old; ~Restore() { std::cout.rdbuf(old); } };',
+    'template <class F> std::string capture(F run) { std::ostringstream out; Restore r{std::cout.rdbuf(out.rdbuf())}; run(); return out.str(); }',
+    '}',
+    '#define CHECK(expr, want) ::au_check::check(#expr, [&]() { return (expr); }, (want))',
+    '#define CHECK_THROWS(expr) ::au_check::throws(#expr, [&]() { (void)(expr); })',
+    '#define OUTPUT(...) ::au_check::capture([&]() { __VA_ARGS__; })'
+  ].join('\n');
+
+  /** A learner's code plus the checks, as one program. */
+  function buildChecked(code, harness, pre) {
+    return String(code).replace(/\s*$/, '\n') + '\n' + PRELUDE + '\n' +
+      (pre ? String(pre) + '\n' : '') +
+      'int main() {\n' + String(harness) + '\n  std::cout << "\\n\\x1e" "DONE\\n";\n  return 0;\n}\n';
+  }
+
+  /** Splits a checked program's output into results and ordinary prints. */
+  function parseChecked(stdout) {
+    var checks = [];
+    var done = false;
+    var other = [];
+    String(stdout || '').split('\n').forEach(function (line) {
+      if (line.charAt(0) !== MARK) { other.push(line); return; }
+      var body = line.slice(1);
+      if (body === 'DONE') { done = true; return; }
+      var parts = body.split(SEP);
+      var restore = function (s) { return String(s == null ? '' : s).replace(/\u001d/g, '\n'); };
+      checks.push({ ok: parts[0] === 'PASS', expr: restore(parts[1]), got: restore(parts[2]), want: restore(parts[3]) });
+    });
+    // The checker starts each result on a fresh line; drop the blanks it adds.
+    var printed = other.join('\n').replace(/\n{2,}/g, '\n').replace(/^\n+|\n+$/g, '');
+    return { checks: checks, done: done, output: printed };
+  }
+
+  /** Warnings and errors that point into the checker are noise for a learner. */
+  function learnerDiagnostics(text) {
+    var blocks = String(text || '').split(/\n(?=\S)/);
+    return blocks.filter(function (block) { return !/checks\.cpp/.test(block); }).join('\n').trim();
+  }
+
+  // ------------------------------------------------------------ answers
+
+  /** Code without the spaces that do not matter; quoted text kept as typed. */
+  function squash(text) {
+    var s = String(text == null ? '' : text).trim().replace(/;+$/, '');
+    var out = '';
+    var quote = null;
+    for (var i = 0; i < s.length; i += 1) {
+      var c = s.charAt(i);
+      if (quote) {
+        out += c;
+        if (c === '\\' && i + 1 < s.length) { out += s.charAt(i + 1); i += 1; continue; }
+        if (c === quote) quote = null;
+      } else if (c === '"' || c === "'") {
+        quote = c;
+        out += c;
+      } else if (!/\s/.test(c)) {
+        out += c;
+      }
+    }
+    return out;
+  }
+
+  function asList(value) {
+    if (Array.isArray(value)) return value;
+    if (value === undefined || value === null) return [];
+    return [value];
+  }
+
+  /**
+   * Marks one answer.
+   * @returns {{ok: boolean, expected?: any}}
+   */
+  function checkAnswer(q, response) {
+    switch (q.type) {
+      case 'mcq': {
+        var want = asList(q.answer).map(Number).sort();
+        var got = asList(response).map(Number).sort();
+        return { ok: want.length === got.length && want.every(function (v, i) { return v === got[i]; }) };
+      }
+      case 'tf':
+        return { ok: Boolean(response) === Boolean(q.answer) && response !== undefined && response !== null };
+      case 'output':
+        return { ok: normalizeOutput(response) === normalizeOutput(q.answer) };
+      case 'fill': {
+        var blanks = q.blanks || [];
+        var given = asList(response);
+        var ok = blanks.every(function (accepted, i) {
+          var mine = squash(given[i]);
+          return mine !== '' && asList(accepted).some(function (option) { return squash(option) === mine; });
+        });
+        return { ok: ok };
+      }
+      case 'order': {
+        var order = asList(response).map(Number);
+        var right = function (target) {
+          return target.length === order.length && target.every(function (v, i) { return v === order[i]; });
+        };
+        var natural = (q.lines || []).map(function (_, i) { return i; });
+        return { ok: right(natural) || (q.alternatives || []).some(right) };
+      }
+      case 'spot':
+        return { ok: asList(q.answer).map(Number).indexOf(Number(response)) !== -1 };
+      default:
+        return { ok: false };
+    }
+  }
+
+  // ------------------------------------------------------------ dates
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  /** The local calendar day of a moment, as YYYY-MM-DD. */
+  function dayKey(date) {
+    var d = date instanceof Date ? date : new Date(date === undefined ? Date.now() : date);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  function addDays(key, days) {
+    var parts = String(key).split('-').map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2] + days);
+    return dayKey(d);
+  }
+
+  function daysBetween(fromKey, toKey) {
+    var a = String(fromKey).split('-').map(Number);
+    var b = String(toKey).split('-').map(Number);
+    var ms = Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2]);
+    return Math.round(ms / 86400000);
+  }
+
+  // ------------------------------------------------------------ spaced repetition
+
+  var GRADES = ['again', 'hard', 'good', 'easy'];
+
+  function newCard(today) {
+    return { ease: 2.5, interval: 0, reps: 0, lapses: 0, due: today || dayKey() };
+  }
+
+  /**
+   * SM-2, simplified to four buttons. A card you know drifts out to weeks and
+   * months; one you forget comes back today.
+   */
+  function schedule(card, grade, now) {
+    var today = dayKey(now);
+    var c = Object.assign(newCard(today), card || {});
+    var g = typeof grade === 'number' ? grade : GRADES.indexOf(grade);
+    var interval;
+
+    if (g <= 0) {
+      c.reps = 0;
+      c.lapses += 1;
+      c.ease = Math.max(1.3, c.ease - 0.2);
+      interval = 0;
+    } else if (g === 1) {
+      c.ease = Math.max(1.3, c.ease - 0.15);
+      interval = Math.max(1, Math.round(c.interval * 1.2));
+      c.reps += 1;
+    } else if (g === 2) {
+      interval = c.reps === 0 ? 1 : c.reps === 1 ? 3 : Math.max(c.interval + 1, Math.round(c.interval * c.ease));
+      c.reps += 1;
+    } else {
+      interval = c.reps === 0 ? 3 : Math.max(c.interval + 2, Math.round(c.interval * c.ease * 1.3));
+      c.ease += 0.15;
+      c.reps += 1;
+    }
+
+    c.interval = Math.min(interval, 365);
+    c.due = addDays(today, c.interval);
+    c.at = new Date(now === undefined ? Date.now() : now).toISOString();
+    c.ease = Math.round(c.ease * 100) / 100;
+    return c;
+  }
+
+  function isDue(card, now) {
+    return Boolean(card) && String(card.due) <= dayKey(now);
+  }
+
+  // ------------------------------------------------------------ XP and levels
+
+  var XP = {
+    lesson: 20,
+    check: 3,
+    task: 15,
+    quiz: 25,
+    challenge: [0, 30, 50, 80],
+    exam: 100,
+    milestone: 40,
+    review: 2
+  };
+
+  var LEVELS = [
+    { xp: 0, title: 'Newcomer' },
+    { xp: 100, title: 'First Steps' },
+    { xp: 300, title: 'Beginner' },
+    { xp: 600, title: 'Apprentice' },
+    { xp: 1000, title: 'Coder' },
+    { xp: 1600, title: 'Programmer' },
+    { xp: 2400, title: 'Developer' },
+    { xp: 3400, title: 'Engineer' },
+    { xp: 4800, title: 'Expert' },
+    { xp: 6500, title: 'Master' },
+    { xp: 9000, title: 'Grandmaster' }
+  ];
+
+  function levelFor(xp) {
+    var index = 0;
+    for (var i = 0; i < LEVELS.length; i += 1) if (xp >= LEVELS[i].xp) index = i;
+    var next = LEVELS[index + 1] || null;
+    var floor = LEVELS[index].xp;
+    return {
+      level: index + 1,
+      title: LEVELS[index].title,
+      xp: xp,
+      floor: floor,
+      next: next ? next.xp : null,
+      progress: next ? (xp - floor) / (next.xp - floor) : 1
+    };
+  }
+
+  /** Consecutive active days ending today (or yesterday, if today is still open). */
+  function streak(days, now) {
+    var today = dayKey(now);
+    var active = function (key) { return Boolean(days && days[key] > 0); };
+    var cursor = active(today) ? today : addDays(today, -1);
+    var count = 0;
+    while (active(cursor)) {
+      count += 1;
+      cursor = addDays(cursor, -1);
+    }
+    return count;
+  }
+
+  // ------------------------------------------------------------ progress
+
+  function emptyProgress() {
+    return {
+      v: 1,
+      updatedAt: '',
+      resetAt: '',
+      items: {},      // id -> {status, best, attempts, xp, at}
+      code: {},       // id -> {src, at}
+      cards: {},      // card id -> schedule
+      notes: {},      // lesson id -> {text, at}
+      exams: {},      // exam id -> [{score, passed, at}]
+      mistakes: {},   // question id -> {count, streak, cleared, at}
+      days: {},       // YYYY-MM-DD -> xp earned
+      unlocked: {},   // chapter id -> at
+      badges: {},     // badge id -> at
+      stats: {},      // counter -> number
+      settings: {},
+      snippets: {}    // playground snippets: id -> {name, src, at}
+    };
+  }
+
+  function stamp(entry) { return String(entry && entry.at || ''); }
+  function newer(a, b) { return stamp(a) >= stamp(b) ? a : b; }
+
+  function mergeItem(a, b) {
+    if (!a) return b;
+    if (!b) return a;
+    var base = Object.assign({}, newer(a, b) === a ? b : a, newer(a, b));
+    base.status = a.status === 'done' || b.status === 'done' ? 'done' : (a.status || b.status);
+    base.best = Math.max(Number(a.best) || 0, Number(b.best) || 0);
+    base.attempts = Math.max(Number(a.attempts) || 0, Number(b.attempts) || 0);
+    base.xp = Math.max(Number(a.xp) || 0, Number(b.xp) || 0);
+    if (a.doneAt || b.doneAt) {
+      base.doneAt = [a.doneAt, b.doneAt].filter(Boolean).sort()[0];
+    }
+    return base;
+  }
+
+  function mergeMaps(a, b, pick) {
+    var out = {};
+    var keys = {};
+    Object.keys(a || {}).forEach(function (k) { keys[k] = true; });
+    Object.keys(b || {}).forEach(function (k) { keys[k] = true; });
+    Object.keys(keys).forEach(function (k) {
+      var x = a ? a[k] : undefined;
+      var y = b ? b[k] : undefined;
+      out[k] = x === undefined ? y : y === undefined ? x : pick(x, y);
+    });
+    return out;
+  }
+
+  function earliest(x, y) { return String(x) <= String(y) ? x : y; }
+
+  /**
+   * Combines progress from two devices. Nothing earned is ever lost: a done
+   * item stays done, best scores only rise, and the newer copy of anything
+   * edited (code, notes, flashcards) wins. A reset on either side wipes
+   * whatever came before it.
+   */
+  function mergeProgress(a, b) {
+    a = Object.assign(emptyProgress(), a || {});
+    b = Object.assign(emptyProgress(), b || {});
+    var out = emptyProgress();
+
+    out.resetAt = [a.resetAt, b.resetAt].sort().pop() || '';
+    var keep = function (source) {
+      if (!out.resetAt) return source;
+      var filtered = {};
+      Object.keys(source || {}).forEach(function (k) {
+        var entry = source[k];
+        var at = Array.isArray(entry) ? '' : typeof entry === 'string' ? entry : stamp(entry);
+        if (Array.isArray(entry)) {
+          var list = entry.filter(function (e) { return stamp(e) >= out.resetAt; });
+          if (list.length) filtered[k] = list;
+        } else if (at >= out.resetAt) {
+          filtered[k] = entry;
+        }
+      });
+      return filtered;
+    };
+
+    out.items = mergeMaps(keep(a.items), keep(b.items), mergeItem);
+    out.code = mergeMaps(keep(a.code), keep(b.code), newer);
+    out.cards = mergeMaps(keep(a.cards), keep(b.cards), newer);
+    out.notes = mergeMaps(keep(a.notes), keep(b.notes), newer);
+    out.mistakes = mergeMaps(keep(a.mistakes), keep(b.mistakes), newer);
+    out.snippets = mergeMaps(keep(a.snippets), keep(b.snippets), newer);
+    out.exams = mergeMaps(keep(a.exams), keep(b.exams), function (x, y) {
+      var seen = {};
+      return x.concat(y).filter(function (e) {
+        var key = stamp(e) + '|' + e.score;
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
+      }).sort(function (p, q) { return stamp(p).localeCompare(stamp(q)); }).slice(-50);
+    });
+    out.unlocked = mergeMaps(keep(a.unlocked), keep(b.unlocked), earliest);
+    out.badges = mergeMaps(keep(a.badges), keep(b.badges), earliest);
+
+    // Counters and daily XP only grow; a reset starts them again from zero.
+    var resetA = a.resetAt === out.resetAt;
+    var resetB = b.resetAt === out.resetAt;
+    var counters = function (x, y) { return Math.max(Number(x) || 0, Number(y) || 0); };
+    out.days = mergeMaps(resetA ? a.days : {}, resetB ? b.days : {}, counters);
+    out.stats = mergeMaps(resetA ? a.stats : {}, resetB ? b.stats : {}, counters);
+
+    out.settings = newer(a.settings || {}, b.settings || {});
+    out.updatedAt = [a.updatedAt, b.updatedAt].sort().pop() || '';
+    return out;
+  }
+
+  /** Total XP: what each item earned plus flashcard reviews. */
+  function totalXp(progress) {
+    var sum = 0;
+    var items = (progress && progress.items) || {};
+    Object.keys(items).forEach(function (k) { sum += Number(items[k].xp) || 0; });
+    sum += (Number(progress && progress.stats && progress.stats.reviews) || 0) * XP.review;
+    return sum;
+  }
+
+  // ------------------------------------------------------------ helpers
+
+  /** Fisher–Yates with an optional seed, so an exam attempt is reproducible. */
+  function shuffle(list, seed) {
+    var out = list.slice();
+    var s = seed === undefined ? Math.floor(Math.random() * 2147483647) : seed;
+    var rand = function () {
+      s = (s * 48271) % 2147483647;
+      return s / 2147483647;
+    };
+    if (s <= 0) s += 2147483646;
+    for (var i = out.length - 1; i > 0; i -= 1) {
+      var j = Math.floor(rand() * (i + 1));
+      var t = out[i]; out[i] = out[j]; out[j] = t;
+    }
+    return out;
+  }
+
+  /** Does a program read from std::cin (so it needs input to be typed)? */
+  function readsInput(code) {
+    var stripped = String(code || '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/[^\n]*/g, '')
+      .replace(/"(?:\\.|[^"\\\n])*"/g, '""');
+    return /\b(?:std::)?(?:cin|getline)\b/.test(stripped) || /\bscanf\s*\(/.test(stripped);
+  }
+
+  return {
+    normalizeOutput: normalizeOutput,
+    compareOutput: compareOutput,
+    PRELUDE: PRELUDE,
+    buildChecked: buildChecked,
+    parseChecked: parseChecked,
+    learnerDiagnostics: learnerDiagnostics,
+    squash: squash,
+    checkAnswer: checkAnswer,
+    dayKey: dayKey,
+    addDays: addDays,
+    daysBetween: daysBetween,
+    GRADES: GRADES,
+    newCard: newCard,
+    schedule: schedule,
+    isDue: isDue,
+    XP: XP,
+    LEVELS: LEVELS,
+    levelFor: levelFor,
+    streak: streak,
+    emptyProgress: emptyProgress,
+    mergeProgress: mergeProgress,
+    totalXp: totalXp,
+    shuffle: shuffle,
+    readsInput: readsInput
+  };
+});

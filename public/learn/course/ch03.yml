@@ -1,0 +1,1822 @@
+id: ch03
+number: 3
+part: p1
+title: Operators and Expressions
+blurb: Calculate anything — and know exactly what C++ will do with whole numbers, decimals and the limits of both.
+hours: 4.5
+goals:
+  - Predict the value of an expression using precedence and parentheses
+  - Use integer division `/` and remainder `%` to split numbers apart
+  - Update variables with `+=`, `-=`, `++` and friends
+  - Mix `int` and `double` safely, and convert on purpose with `static_cast`
+  - Use `<cmath>` functions and explain why decimals are sometimes slightly off
+  - Format numbers with a fixed number of decimals and column widths
+  - Explain overflow and the limits of each numeric type
+
+items:
+  - type: lesson
+    id: c3-arith
+    title: Arithmetic and precedence
+    minutes: 14
+    objectives:
+      - Use the arithmetic operators `+ - * / %`
+      - Predict the order in which an expression is evaluated
+      - Use parentheses to control the order and to make intent clear
+    body: |
+      An **expression** is anything that produces a value: `42`, `price`,
+      `width * height`, `(a + b) / 2`. The symbols that combine values are
+      **operators**.
+
+      | Operator | Meaning | Example | Result |
+      |---|---|---|---|
+      | `+` | add | `7 + 2` | `9` |
+      | `-` | subtract | `7 - 2` | `5` |
+      | `*` | multiply | `7 * 2` | `14` |
+      | `/` | divide | `7.0 / 2` | `3.5` |
+      | `%` | remainder | `7 % 2` | `1` |
+
+      (Division and remainder have a surprise for whole numbers — that's the
+      next lesson.)
+
+      ## Order of operations
+
+      C++ follows the same rules as maths: `*`, `/` and `%` happen before `+`
+      and `-`. Operators of the same level go **left to right**. Parentheses
+      go first of all.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << 2 + 3 * 4 << '\n';     // 3 * 4 first
+          std::cout << (2 + 3) * 4 << '\n';   // parentheses first
+          std::cout << 20 - 5 - 3 << '\n';    // left to right: (20 - 5) - 3
+          std::cout << 20 / 5 * 2 << '\n';    // left to right: (20 / 5) * 2
+          std::cout << -3 * -3 << '\n';       // unary minus
+          return 0;
+      }
+      ```
+
+      ```output
+      14
+      20
+      12
+      8
+      9
+      ```
+
+      > [!tip]
+      > When in doubt, add parentheses. `(a * b) + c` means the same as
+      > `a * b + c`, but nobody has to stop and think. Clear beats clever.
+
+      {{check precedence}}
+
+      {{check average-bug}}
+    checks:
+      - id: precedence
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << 10 - 2 * 3 << '\n';
+              std::cout << (10 - 2) * 3 << '\n';
+              std::cout << 100 / 10 / 5 << '\n';
+              return 0;
+          }
+        answer: |
+          4
+          24
+          2
+        why: "`2 * 3` happens first (10 − 6 = 4). Parentheses force the subtraction first (8 × 3 = 24). Division goes left to right: 100 / 10 = 10, then 10 / 5 = 2."
+      - id: average-bug
+        type: mcq
+        prompt: "A student writes `double average = a + b + c / 3.0;` to average three numbers. What's wrong?"
+        options:
+          - Nothing, it's correct
+          - Only `c` is divided by 3 — it needs `(a + b + c) / 3.0`
+          - "`/ 3.0` should be `/ 3`"
+          - "`average` should be an `int`"
+        answer: 1
+        why: Division happens before addition, so only `c` is divided. Parentheses make the sum happen first.
+    cards:
+      - front: In `2 + 3 * 4`, which operation happens first?
+        back: "`3 * 4` — multiplication and division (and `%`) come before addition and subtraction. Result: 14."
+      - front: How is `20 - 5 - 3` evaluated?
+        back: Left to right, as `(20 - 5) - 3` = 12.
+      - front: What is an **expression**?
+        back: Any piece of code that produces a value, like `42`, `x`, or `(a + b) / 2`.
+
+  - type: lesson
+    id: c3-intdiv
+    title: Integer division and the remainder
+    minutes: 20
+    objectives:
+      - Predict the result of `/` between two integers
+      - Use `%` to get the remainder of a division
+      - Split a quantity into units (hours/minutes, digits) with `/` and `%`
+      - Explain why dividing an integer by zero crashes a program
+    body: |
+      Here is the biggest surprise for new C++ programmers:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << 7 / 2 << '\n';
+          std::cout << 7.0 / 2 << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      3
+      3.5
+      ```
+
+      When **both** sides of `/` are integers, C++ does **integer division**:
+      the result is an integer too, and the fractional part is simply thrown
+      away — not rounded. `7 / 2` is `3`, `9 / 10` is `0`, `99 / 100` is `0`.
+
+      If at least one side is a `double`, you get normal division: `7.0 / 2`
+      is `3.5`.
+
+      > [!mistake] The classic bug
+      > ```cpp static
+      > int total{7};
+      > int count{2};
+      > double average = total / count;   // 3, not 3.5!
+      > ```
+      > The division happens between two `int`s *first* (giving 3), and only
+      > then is the result stored in a `double`. Storing it in a `double`
+      > doesn't bring back the lost `.5`. You'll see the fix in lesson 3.4.
+
+      {{check int-div}}
+
+      ## The remainder operator `%`
+
+      `%` (called *modulo* or *mod*) gives what's **left over** after integer
+      division. Think of sharing sweets: 17 sweets among 5 children is 3 each
+      (`17 / 5`) with 2 left over (`17 % 5`).
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << 17 / 5 << " remainder " << 17 % 5 << '\n';
+          std::cout << 10 % 2 << ' ' << 11 % 2 << '\n';
+          std::cout << 3 % 7 << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      3 remainder 2
+      0 1
+      3
+      ```
+
+      `%` is one of the most useful operators in programming:
+
+      - **Even or odd?** `n % 2` is `0` for even numbers and `1` for odd ones.
+      - **Divisible by k?** `n % k == 0`.
+      - **The last digit** of a number: `n % 10`. And `n / 10` removes it.
+      - **Wrapping around**, like a clock: `(hour + 5) % 24`.
+
+      ## Splitting into units
+
+      Together, `/` and `%` split a quantity into bigger and smaller units:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int totalMinutes{135};
+          int hours = totalMinutes / 60;
+          int minutes = totalMinutes % 60;
+          std::cout << totalMinutes << " minutes is " << hours << "h " << minutes << "min\n";
+
+          int number{472};
+          std::cout << "Hundreds: " << number / 100 << '\n';
+          std::cout << "Tens: " << number / 10 % 10 << '\n';
+          std::cout << "Units: " << number % 10 << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      135 minutes is 2h 15min
+      Hundreds: 4
+      Tens: 7
+      Units: 2
+      ```
+
+      Trace `number / 10 % 10`: left to right, `472 / 10` is `47`, and
+      `47 % 10` is `7`.
+
+      {{check digits}}
+
+      ## Negative numbers
+
+      Integer division always **truncates towards zero**: `-7 / 2` is `-3`
+      (not `-4`), and the remainder takes the sign of the left side: `-7 % 2`
+      is `-1`. Keep this in mind when checking for odd numbers: test
+      `n % 2 != 0`, not `n % 2 == 1`.
+
+      ## Dividing by zero
+
+      Dividing an integer by zero has no answer. It's a **run-time error**:
+      on most computers the program crashes on the spot. Run this with the
+      input `0` to see:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int people{};
+          std::cin >> people;
+          std::cout << "Each gets " << 100 / people << '\n';
+          return 0;
+      }
+      ```
+
+      ```stdin
+      0
+      ```
+
+      Change the input to `4` and it works. You'll learn to guard against
+      this with `if` in Chapter 4.
+
+      {{task minutes}}
+    checks:
+      - id: int-div
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << 9 / 4 << ' ' << 9.0 / 4 << ' ' << 1 / 3 << '\n';
+              return 0;
+          }
+        answer: |
+          2 2.25 0
+        why: "`9 / 4` and `1 / 3` are integer divisions: the fractions are dropped (2 and 0). `9.0 / 4` has a double, so it's 2.25."
+      - id: digits
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{3859};
+              std::cout << n % 10 << ' ' << n / 10 << ' ' << n / 100 % 10 << '\n';
+              return 0;
+          }
+        answer: |
+          9 385 8
+        why: "`% 10` is the last digit (9). `/ 10` drops it (385). `3859 / 100` is 38, and `38 % 10` is 8."
+      - id: even
+        type: mcq
+        prompt: Which expression is `0` exactly when `n` is even?
+        options:
+          - "`n / 2`"
+          - "`n % 2`"
+          - "`n * 2`"
+          - "`n - 2`"
+        answer: 1
+        why: An even number divided by 2 leaves no remainder, so `n % 2` is 0.
+    tasks:
+      - id: minutes
+        title: Minutes and seconds
+        prompt: |
+          Read a whole number of seconds and print it as minutes and seconds.
+          For input `200`:
+
+          ```text
+          3 min 20 s
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int total{};
+              std::cin >> total;
+
+              return 0;
+          }
+        tests:
+          - in: "200"
+            out: |
+              3 min 20 s
+          - in: "59"
+            out: |
+              0 min 59 s
+          - in: "3600"
+            out: |
+              60 min 0 s
+            hidden: true
+        hints:
+          - "Minutes: `total / 60`. Seconds left over: `total % 60`."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int total{};
+              std::cin >> total;
+              std::cout << total / 60 << " min " << total % 60 << " s\n";
+              return 0;
+          }
+    cards:
+      - front: What is `7 / 2` in C++, and why?
+        back: "`3`. Both sides are integers, so it's **integer division**: the fraction is discarded (not rounded)."
+      - front: What does `%` compute?
+        back: The remainder of integer division. `17 % 5` is `2`.
+      - front: How do you get the last digit of an integer `n`? And remove it?
+        back: "Last digit: `n % 10`. Remove it: `n / 10`."
+      - front: How do you test whether `n` is even?
+        back: "`n % 2 == 0`."
+      - front: What happens if a program divides an integer by zero?
+        back: A run-time error — usually the program crashes immediately.
+
+  - type: lesson
+    id: c3-assign
+    title: Shortcuts for updating variables
+    minutes: 12
+    objectives:
+      - Use compound assignment `+= -= *= /= %=`
+      - Use `++` and `--` to add or subtract one
+      - Explain the difference between `++x` and `x++`
+    body: |
+      Changing a variable based on its own value is so common that C++ has
+      shortcuts:
+
+      | Long form | Shortcut |
+      |---|---|
+      | `x = x + 5;` | `x += 5;` |
+      | `x = x - 5;` | `x -= 5;` |
+      | `x = x * 5;` | `x *= 5;` |
+      | `x = x / 5;` | `x /= 5;` |
+      | `x = x % 5;` | `x %= 5;` |
+      | `x = x + 1;` | `++x;` or `x++;` |
+      | `x = x - 1;` | `--x;` or `x--;` |
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int points{10};
+          points += 5;    // 15
+          points *= 2;    // 30
+          points -= 4;    // 26
+          points /= 4;    // 6  (integer division!)
+          ++points;       // 7
+          std::cout << points << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      7
+      ```
+
+      ## `++x` versus `x++`
+
+      On their own line, `++x;` and `x++;` do the same thing: add one. The
+      difference only shows when you use the result *inside* a bigger
+      expression:
+
+      - `++x` (**prefix**) adds one, then gives the **new** value.
+      - `x++` (**postfix**) gives the **old** value, then adds one.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int a{5};
+          int x = ++a;   // a becomes 6, then x gets the new value, 6
+          std::cout << x << ' ' << a << '\n';
+
+          int b{5};
+          int y = b++;   // y gets the old value, 5, then b becomes 6
+          std::cout << y << ' ' << b << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      6 6
+      5 6
+      ```
+
+      > [!pro]
+      > Use `++x` on its own line — it says exactly what you mean. Avoid using
+      > `++` or `--` in the middle of bigger expressions: it's hard to read,
+      > and using the same variable twice in one expression while changing it
+      > can even be undefined behaviour.
+
+      {{check compound}}
+
+      {{check prefix}}
+    checks:
+      - id: compound
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{3};
+              x *= 4;
+              x -= 2;
+              x %= 4;
+              --x;
+              std::cout << x << '\n';
+              return 0;
+          }
+        answer: |
+          1
+        why: "3 → 12 → 10 → 10 % 4 = 2 → 1."
+      - id: prefix
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{10};
+              int a = n++;
+              int b = ++n;
+              std::cout << a << ' ' << b << ' ' << n << '\n';
+              return 0;
+          }
+        answer: |
+          10 12 12
+        why: "`n++` gives the old value 10 and makes `n` 11. Then `++n` makes `n` 12 and gives 12."
+    cards:
+      - front: What does `x += 3;` mean?
+        back: "`x = x + 3;` — add 3 to `x`. Also `-=`, `*=`, `/=`, `%=`."
+      - front: "`++x` vs `x++` inside an expression?"
+        back: "`++x` increments then gives the **new** value; `x++` gives the **old** value, then increments. On their own line they're the same."
+
+  - type: quiz
+    id: c3-quiz1
+    title: "Quiz: arithmetic"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << 3 + 4 * 2 << ' ' << (3 + 4) * 2 << '\n';
+              return 0;
+          }
+        answer: |
+          11 14
+        why: Multiplication first gives 3 + 8 = 11; parentheses first gives 7 × 2 = 14.
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << 25 / 7 << ' ' << 25 % 7 << '\n';
+              return 0;
+          }
+        answer: |
+          3 4
+        why: 7 goes into 25 three times (21), leaving 4.
+      - type: mcq
+        prompt: "What is `double d = 5 / 2;`?"
+        options:
+          - "2.5"
+          - "2"
+          - "3"
+          - A compile error
+        answer: 1
+        why: "`5 / 2` is integer division (2) *before* the value is stored in the double, so `d` is 2.0 — printed as `2`."
+      - type: fill
+        prompt: Complete the expression so that it gives the tens digit of a number `n` (e.g. 4 for 347).
+        code: |
+          int tens = n ___ 10 ___ 10;
+        blanks:
+          - ['/']
+          - ['%']
+        why: "`n / 10` removes the last digit (34), then `% 10` takes the new last digit (4)."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int lives{3};
+              lives--;
+              lives += 10;
+              lives /= 3;
+              std::cout << lives << '\n';
+              return 0;
+          }
+        answer: |
+          4
+        why: "3 → 2 → 12 → 12 / 3 = 4."
+      - type: tf
+        prompt: "`-9 / 2` is `-4` in C++."
+        answer: true
+        why: "Integer division truncates towards zero: −4.5 becomes −4."
+
+  - type: lesson
+    id: c3-convert
+    title: Mixing types and static_cast
+    minutes: 18
+    objectives:
+      - Predict the type and value when `int` and `double` are mixed
+      - Convert a value on purpose with `static_cast`
+      - Compute a correct average of whole numbers
+    body: |
+      When an operator gets two different types, C++ first converts them to
+      a common type. For numbers, the rule of thumb is: **the "smaller" type
+      is converted to the "bigger" one.** Mix an `int` and a `double`, and the
+      `int` becomes a `double`:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int apples{7};
+          double weight{0.2};
+          std::cout << apples * weight << '\n';   // 7.0 * 0.2
+          std::cout << apples / 2 << '\n';        // int / int
+          std::cout << apples / 2.0 << '\n';      // int / double
+          return 0;
+      }
+      ```
+
+      ```output
+      1.4
+      3
+      3.5
+      ```
+
+      These are **implicit** conversions — the compiler does them
+      automatically.
+
+      ## The other way: double to int
+
+      Putting a `double` into an `int` variable (with `=`) **truncates**: it
+      chops off the fraction, towards zero. `3.99` becomes `3`, `-3.99` becomes
+      `-3`. It doesn't round.
+
+      ## Converting on purpose: `static_cast`
+
+      To convert a value deliberately, use **`static_cast<Type>(value)`**. It's
+      the fix for the average bug:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int total{7};
+          int count{2};
+
+          double wrong = total / count;
+          double right = static_cast<double>(total) / count;
+
+          std::cout << wrong << ' ' << right << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      3 3.5
+      ```
+
+      `static_cast<double>(total)` makes a `double` copy of `total` (`7.0`), so
+      the division is `double / int`, which is real division. Note what the
+      cast applies to: `static_cast<double>(total / count)` would convert the
+      *already-truncated* result `3` — too late.
+
+      `static_cast` works in the other direction too — to deliberately drop a
+      fraction, or to see a `char`'s code:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          double price{19.99};
+          int euros = static_cast<int>(price);
+          std::cout << euros << '\n';
+          std::cout << static_cast<int>('a') << '\n';
+          std::cout << static_cast<char>(98) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      19
+      97
+      b
+      ```
+
+      > [!pro] Why not just `(double)total`?
+      > You'll see that older C-style cast in other code. `static_cast` is
+      > safer (it refuses some dangerous conversions) and much easier to spot
+      > when searching code. Prefer it.
+
+      {{check where-cast}}
+
+      {{check truncate}}
+
+      {{task average}}
+    checks:
+      - id: where-cast
+        type: mcq
+        prompt: "`a` and `b` are `int`s with values 9 and 2. Which gives `4.5`?"
+        options:
+          - "`static_cast<double>(a / b)`"
+          - "`static_cast<double>(a) / b`"
+          - "`double(a / b)`"
+          - "`a / b * 1.0`"
+        answer: 1
+        why: "The cast must happen **before** dividing. In the others, `a / b` is integer division (4) done first."
+      - id: truncate
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a = static_cast<int>(8.9);
+              int b = static_cast<int>(-8.9);
+              std::cout << a << ' ' << b << '\n';
+              return 0;
+          }
+        answer: |
+          8 -8
+        why: Converting to `int` truncates towards zero — it doesn't round.
+    tasks:
+      - id: average
+        title: Average of three
+        prompt: |
+          Read three whole numbers and print their average as a decimal. For
+          input `4 5 7`:
+
+          ```text
+          Average: 5.33333
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int a{};
+              int b{};
+              int c{};
+              std::cin >> a >> b >> c;
+
+              return 0;
+          }
+        tests:
+          - in: "4 5 7"
+            out: |
+              Average: 5.33333
+          - in: "2 2 3"
+            out: |
+              Average: 2.33333
+          - in: "10 20 30"
+            out: |
+              Average: 20
+        hints:
+          - "Add them first — in parentheses — then divide."
+          - "Make the division a real one: `static_cast<double>(a + b + c) / 3` or divide by `3.0`."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int a{};
+              int b{};
+              int c{};
+              std::cin >> a >> b >> c;
+              double average = static_cast<double>(a + b + c) / 3;
+              std::cout << "Average: " << average << '\n';
+              return 0;
+          }
+    cards:
+      - front: What happens in `7 * 0.5` where `7` is an `int`?
+        back: The `int` is implicitly converted to `double`, so it's `7.0 * 0.5` = 3.5.
+      - front: How do you convert a value deliberately?
+        back: "`static_cast<Type>(value)`, e.g. `static_cast<double>(total)`."
+      - front: How do you compute a correct average of `int`s `sum` and `count`?
+        back: "`static_cast<double>(sum) / count` — convert **before** dividing."
+      - front: What does converting `3.99` to `int` give?
+        back: "`3`. Conversion to an integer truncates towards zero; it doesn't round."
+
+  - type: lesson
+    id: c3-math
+    title: The maths library and floating-point
+    minutes: 18
+    objectives:
+      - Use `std::sqrt`, `std::pow`, `std::abs`, `std::round`, `std::floor` and `std::ceil`
+      - Use `std::max` and `std::min`
+      - Explain why `0.1 + 0.2` isn't exactly `0.3`
+    body: |
+      For anything beyond `+ - * / %`, the standard library has
+      **`<cmath>`**:
+
+      | Function | Does | Example | Result |
+      |---|---|---|---|
+      | `std::sqrt(x)` | square root | `std::sqrt(16.0)` | `4` |
+      | `std::pow(x, y)` | x to the power y | `std::pow(2.0, 10.0)` | `1024` |
+      | `std::abs(x)` | absolute value | `std::abs(-7)` | `7` |
+      | `std::round(x)` | nearest whole number | `std::round(2.5)` | `3` |
+      | `std::floor(x)` | round down | `std::floor(2.9)` | `2` |
+      | `std::ceil(x)` | round up | `std::ceil(2.1)` | `3` |
+
+      ```cpp
+      #include <cmath>
+      #include <iostream>
+
+      int main() {
+          double a{3.0};
+          double b{4.0};
+          double c = std::sqrt(a * a + b * b);   // Pythagoras
+          std::cout << "Hypotenuse: " << c << '\n';
+          std::cout << "2^8 = " << std::pow(2.0, 8.0) << '\n';
+          std::cout << std::floor(-2.5) << ' ' << std::ceil(-2.5) << ' ' << std::round(-2.5) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Hypotenuse: 5
+      2^8 = 256
+      -3 -2 -3
+      ```
+
+      These are **functions**: you *call* them by writing their name followed
+      by the input values (*arguments*) in parentheses, and the call is
+      replaced by the answer. You'll write your own in Chapter 6.
+
+      > [!tip]
+      > `std::round`, `std::floor` and `std::ceil` return a `double` (like
+      > `3.0`). To use the result as an `int`, cast it:
+      > `static_cast<int>(std::round(x))`.
+
+      ## Bigger and smaller: `std::max`, `std::min`
+
+      `std::max(a, b)` gives the larger of two values, `std::min(a, b)` the
+      smaller. They live in `<algorithm>`, and both arguments must have the
+      same type:
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+
+      int main() {
+          int a{12};
+          int b{7};
+          std::cout << std::max(a, b) << ' ' << std::min(a, b) << '\n';
+          std::cout << std::max(3.5, 2.0) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      12 7
+      3.5
+      ```
+
+      {{check cmath}}
+
+      ## Why decimals are sometimes slightly wrong
+
+      Try this:
+
+      ```cpp
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          double x{0.1 + 0.2};
+          std::cout << x << '\n';
+          std::cout << std::setprecision(17) << x << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      0.3
+      0.30000000000000004
+      ```
+
+      A `double` stores numbers in **binary**, and most decimal fractions —
+      like 0.1 — can't be written exactly in binary, just as 1/3 can't be
+      written exactly in decimal (0.3333…). So a `double` holds the *closest*
+      binary fraction, and tiny errors appear. Printing with the default six
+      digits hides them; `std::setprecision(17)` reveals them.
+
+      This is not a C++ bug — every language using standard floating-point
+      numbers behaves this way. The consequences:
+
+      - Never test doubles for *exact* equality after calculations. Check whether they're *close enough* (Chapter 4).
+      - For money, many programs count whole **cents** in an integer instead.
+
+      {{check float}}
+    checks:
+      - id: cmath
+        type: output
+        code: |
+          #include <cmath>
+          #include <iostream>
+
+          int main() {
+              std::cout << std::sqrt(81.0) << ' ' << std::abs(-12) << ' ' << std::ceil(4.01) << '\n';
+              return 0;
+          }
+        answer: |
+          9 12 5
+        why: "√81 = 9, |−12| = 12, and 4.01 rounded **up** is 5."
+      - id: float
+        type: mcq
+        prompt: Why isn't `0.1 + 0.2` exactly `0.3` in a `double`?
+        options:
+          - It's a bug in C++
+          - 0.1 and 0.2 can't be stored exactly in binary, so tiny rounding errors appear
+          - "`double` only stores whole numbers"
+          - Because `std::cout` rounds incorrectly
+        answer: 1
+        why: Most decimal fractions have no exact binary representation, so the stored values are very close approximations.
+      - id: round-int
+        type: mcq
+        prompt: How do you get the nearest whole number to `x` as an `int`?
+        options:
+          - "`static_cast<int>(x)`"
+          - "`static_cast<int>(std::round(x))`"
+          - "`std::floor(x)`"
+          - "`int(x + 1)`"
+        answer: 1
+        why: "`std::round` rounds to nearest (giving a double), then the cast makes it an `int`. A cast alone truncates."
+    cards:
+      - front: Which header has `std::sqrt`, `std::pow`, `std::round`?
+        back: "`<cmath>`"
+      - front: "`std::floor`, `std::ceil`, `std::round` — what does each do?"
+        back: "`floor` rounds down, `ceil` rounds up, `round` rounds to the nearest (halves away from zero). All return a `double`."
+      - front: Where are `std::max` and `std::min`?
+        back: "In `<algorithm>`. Both arguments must be the same type."
+      - front: Why should you not compare doubles with exact equality after calculations?
+        back: Doubles store binary approximations, so tiny rounding errors appear (0.1 + 0.2 is 0.30000000000000004).
+
+  - type: lesson
+    id: c3-format
+    title: Formatting numbers
+    minutes: 16
+    objectives:
+      - Print a fixed number of decimals with `std::fixed` and `std::setprecision`
+      - Line up columns with `std::setw`, `std::left` and `std::right`
+    body: |
+      Prices should show two decimals: `4.50`, not `4.5`. For this, include
+      **`<iomanip>`** (*input/output manipulators*).
+
+      ## Fixed decimals
+
+      ```cpp
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          double price{4.5};
+          double pi{3.14159265};
+          std::cout << std::fixed << std::setprecision(2);
+          std::cout << price << '\n';
+          std::cout << pi << '\n';
+          std::cout << 10.0 << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      4.50
+      3.14
+      10.00
+      ```
+
+      - `std::fixed` says: always use normal decimal notation (never `1e+06`).
+      - `std::setprecision(2)` then means: exactly **2 digits after the point**, rounded.
+
+      Both **stay in effect** for everything printed afterwards, until you
+      change them. Without `std::fixed`, `setprecision(n)` means *n significant
+      digits in total* — that's what you saw with `setprecision(17)`.
+
+      ## Column widths
+
+      `std::setw(n)` makes the **next** value take up at least `n` characters,
+      padding with spaces. Numbers are right-aligned by default; use
+      `std::left` to align to the left. Unlike the others, `setw` applies
+      **only to the next value**.
+
+      ```cpp
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          std::cout << std::fixed << std::setprecision(2);
+          std::cout << std::left << std::setw(8) << "Item" << std::right << std::setw(8) << "Price" << '\n';
+          std::cout << std::left << std::setw(8) << "Tea" << std::right << std::setw(8) << 1.5 << '\n';
+          std::cout << std::left << std::setw(8) << "Cake" << std::right << std::setw(8) << 12.25 << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Item       Price
+      Tea         1.50
+      Cake       12.25
+      ```
+
+      > [!deep] Filling with other characters
+      > `std::setfill('0')` pads with zeros instead of spaces — handy for
+      > times: `std::setfill('0') << std::setw(2) << 7` prints `07`.
+
+      {{check fixed}}
+
+      {{task temperature}}
+    checks:
+      - id: fixed
+        type: output
+        code: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+              std::cout << std::fixed << std::setprecision(1);
+              std::cout << 2.26 << ' ' << 7.0 << ' ' << 0.04 << '\n';
+              return 0;
+          }
+        answer: |
+          2.3 7.0 0.0
+        why: "One digit after the point, rounded: 2.26 → 2.3. With `std::fixed`, 7.0 keeps its `.0`, and 0.04 rounds to 0.0."
+      - id: setw-once
+        type: mcq
+        prompt: Which manipulator affects **only the next** value printed?
+        options:
+          - "`std::fixed`"
+          - "`std::setprecision(2)`"
+          - "`std::setw(5)`"
+          - "`std::left`"
+        answer: 2
+        why: "`setw` resets after each value. `fixed`, `setprecision` and `left` stay in effect."
+    tasks:
+      - id: temperature
+        title: Celsius to Fahrenheit
+        prompt: |
+          Read a temperature in Celsius (a decimal number) and print it in
+          Fahrenheit with **one** decimal. The formula is F = C × 9 / 5 + 32.
+          For input `21.5`:
+
+          ```text
+          21.5 C = 70.7 F
+          ```
+        starter: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "21.5"
+            out: |
+              21.5 C = 70.7 F
+          - in: "-40"
+            out: |
+              -40.0 C = -40.0 F
+          - in: "100"
+            out: |
+              100.0 C = 212.0 F
+        hints:
+          - "Read into a `double`. Compute `celsius * 9 / 5 + 32` — with a double on the left, every step is real division."
+          - "Print with `std::fixed << std::setprecision(1)` before the numbers."
+        solution: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+              double celsius{};
+              std::cin >> celsius;
+              double fahrenheit = celsius * 9 / 5 + 32;
+              std::cout << std::fixed << std::setprecision(1);
+              std::cout << celsius << " C = " << fahrenheit << " F\n";
+              return 0;
+          }
+    cards:
+      - front: How do you print a double with exactly 2 decimals?
+        back: "`#include <iomanip>`, then `std::cout << std::fixed << std::setprecision(2) << x;`"
+      - front: What does `std::setw(6)` do?
+        back: Makes the **next** printed value at least 6 characters wide (padded with spaces). It applies only once.
+      - front: Which manipulators stay in effect after you use them?
+        back: "`std::fixed`, `std::setprecision`, `std::left`/`std::right`, `std::setfill` (but not `std::setw`)."
+
+  - type: lesson
+    id: c3-limits
+    title: Limits and overflow
+    minutes: 14
+    objectives:
+      - Find the largest and smallest value of a type with `std::numeric_limits`
+      - Explain what overflow is and why signed overflow is undefined behaviour
+      - Explain why `unsigned` types wrap around, and why they're risky for quantities
+    body: |
+      Every numeric type has a fixed size, and so a fixed range. You can ask
+      for it with `std::numeric_limits` from `<limits>`:
+
+      ```cpp
+      #include <iostream>
+      #include <limits>
+
+      int main() {
+          std::cout << "int:       " << std::numeric_limits<int>::min() << " to "
+                    << std::numeric_limits<int>::max() << '\n';
+          std::cout << "long long: " << std::numeric_limits<long long>::max() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      int:       -2147483648 to 2147483647
+      long long: 9223372036854775807
+      ```
+
+      ## Overflow
+
+      What happens if a calculation goes past the maximum? This is called
+      **overflow**, and for signed types like `int` it is **undefined
+      behaviour** — the rules don't say what happens. In practice you often
+      get a weird wrapped-around negative number, but you can't rely on it:
+
+      ```cpp ub
+      #include <iostream>
+
+      int main() {
+          int big{2'000'000'000};
+          int bigger = big + big;   // overflow: undefined behaviour
+          std::cout << bigger << '\n';
+          return 0;
+      }
+      ```
+
+      The fix is to use a type that's big enough: if values could exceed two
+      billion, use `long long`. Be careful where the calculation happens:
+      `long long x = big + big;` still overflows, because `big + big` is
+      computed as `int` *before* being stored. Convert first:
+      `static_cast<long long>(big) + big`.
+
+      ## Unsigned types
+
+      C++ also has **unsigned** types, which hold only non-negative values
+      (e.g. `unsigned int`: 0 to about 4.3 billion). For them, overflow is
+      defined: they **wrap around**, like a car's odometer:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          unsigned int u{0};
+          u = u - 1;
+          std::cout << u << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      4294967295
+      ```
+
+      0 minus 1 wrapped to the largest value. That makes `unsigned` a trap for
+      quantities: a subtraction that "goes below zero" silently becomes a huge
+      number. **Use `int` for quantities, even ones that can't be negative.**
+      You'll meet one unsigned type that's unavoidable — `std::size_t`, the
+      type of sizes — in Chapter 7.
+
+      {{check overflow}}
+
+      {{check unsigned}}
+    checks:
+      - id: overflow
+        type: mcq
+        prompt: What happens when an `int` calculation goes past `2147483647`?
+        options:
+          - The value is clamped at 2147483647
+          - C++ automatically switches to `long long`
+          - Signed overflow — undefined behaviour
+          - A compile error, always
+        answer: 2
+        why: Signed integer overflow is undefined behaviour. Use a bigger type (like `long long`) when values can be that large.
+      - id: unsigned
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              unsigned int stock{3};
+              stock = stock - 5;
+              std::cout << (stock > 1000) << '\n';
+              return 0;
+          }
+        answer: |
+          1
+        why: "3 − 5 wraps around to a huge unsigned number (4294967294), which is certainly more than 1000 — printed as `1` (true). This is why `unsigned` is risky for quantities."
+    cards:
+      - front: How do you find the maximum value an `int` can hold?
+        back: "`std::numeric_limits<int>::max()` from `<limits>` — usually 2147483647."
+      - front: What is **overflow**, and what happens for `int`?
+        back: A result too big (or small) for its type. For signed types like `int`, it's undefined behaviour.
+      - front: What happens when an `unsigned int` goes below 0?
+        back: It wraps around to a huge value (e.g. 0 − 1 = 4294967295). That's why `int` is preferred for quantities.
+
+  - type: quiz
+    id: c3-quiz2
+    title: "Quiz: conversions, maths and formatting"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{10};
+              int b{4};
+              std::cout << a / b << ' ' << a / static_cast<double>(b) << '\n';
+              return 0;
+          }
+        answer: |
+          2 2.5
+        why: "The first is integer division. Casting `b` to double makes the second a real division."
+      - type: output
+        code: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+              std::cout << std::fixed << std::setprecision(3) << 2.0 / 3 << '\n';
+              return 0;
+          }
+        answer: |
+          0.667
+        why: "2.0 / 3 is 0.6666…, shown with 3 decimals and rounded: 0.667."
+      - type: mcq
+        prompt: What does `std::pow(10.0, 3.0)` return?
+        options:
+          - "30"
+          - "13"
+          - "1000"
+          - "0.001"
+        answer: 2
+        why: 10 to the power 3 is 1000.
+      - type: output
+        code: |
+          #include <cmath>
+          #include <iostream>
+
+          int main() {
+              std::cout << std::round(3.5) << ' ' << std::floor(3.5) << ' ' << static_cast<int>(3.99) << '\n';
+              return 0;
+          }
+        answer: |
+          4 3 3
+        why: "`round` goes to the nearest (halves away from zero), `floor` goes down, and a cast to int truncates."
+      - type: tf
+        prompt: "`long long total = 2'000'000'000 + 2'000'000'000;` is safe because the result is stored in a `long long`."
+        answer: false
+        why: "Both literals are `int`, so the addition is done in `int` and overflows *before* the result is stored."
+      - type: spot
+        prompt: This program should print the average of 3 and 4 as `3.5`, but prints `3`. Which line is wrong?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{3};
+              int b{4};
+              double avg = (a + b) / 2;
+              std::cout << avg << '\n';
+              return 0;
+          }
+        answer: 6
+        why: "`(a + b) / 2` is integer division. Use `/ 2.0` or cast the sum to `double`."
+
+  - type: challenge
+    id: c3-ch-hms
+    title: Seconds to clock time
+    difficulty: 1
+    tags: [division, remainder]
+    prompt: |
+      Read a whole number of seconds and print it as hours, minutes and
+      seconds. For input `3725`:
+
+      ```text
+      1h 2m 5s
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "3725"
+        out: |
+          1h 2m 5s
+      - in: "59"
+        out: |
+          0h 0m 59s
+      - in: "86399"
+        out: |
+          23h 59m 59s
+      - in: "7200"
+        out: |
+          2h 0m 0s
+        hidden: true
+    hints:
+      - "Hours: `total / 3600`."
+      - "Minutes: what's left after removing whole hours, `total % 3600`, divided by 60."
+      - "Seconds: `total % 60`."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          int total{};
+          std::cin >> total;
+          int hours = total / 3600;
+          int minutes = total % 3600 / 60;
+          int seconds = total % 60;
+          std::cout << hours << "h " << minutes << "m " << seconds << "s\n";
+          return 0;
+      }
+
+  - type: challenge
+    id: c3-ch-coins
+    title: Making change
+    difficulty: 2
+    tags: [division, remainder]
+    prompt: |
+      A cash machine gives change using coins of **200, 100, 50, 20, 10, 5, 2
+      and 1** cents, always using the biggest coins first. Read an amount in
+      cents and print how many of each coin it gives. For input `388`:
+
+      ```text
+      200: 1
+      100: 1
+      50: 1
+      20: 1
+      10: 1
+      5: 1
+      2: 1
+      1: 1
+      ```
+
+      (388 = 200 + 100 + 50 + 20 + 10 + 5 + 2 + 1.)
+    starter: |
+      #include <iostream>
+
+      int main() {
+          int cents{};
+          std::cin >> cents;
+
+          return 0;
+      }
+    tests:
+      - in: "388"
+        out: |
+          200: 1
+          100: 1
+          50: 1
+          20: 1
+          10: 1
+          5: 1
+          2: 1
+          1: 1
+      - in: "90"
+        out: |
+          200: 0
+          100: 0
+          50: 1
+          20: 2
+          10: 0
+          5: 0
+          2: 0
+          1: 0
+      - in: "1234"
+        out: |
+          200: 6
+          100: 0
+          50: 0
+          20: 1
+          10: 1
+          5: 0
+          2: 2
+          1: 0
+        hidden: true
+    hints:
+      - "For each coin: count = `cents / coin`, then keep only the rest: `cents %= coin`."
+      - "Do it for 200 first, then 100, and so on down to 1. (With loops, in Chapter 5, this becomes much shorter.)"
+    solution: |
+      #include <iostream>
+
+      int main() {
+          int cents{};
+          std::cin >> cents;
+
+          std::cout << "200: " << cents / 200 << '\n';
+          cents %= 200;
+          std::cout << "100: " << cents / 100 << '\n';
+          cents %= 100;
+          std::cout << "50: " << cents / 50 << '\n';
+          cents %= 50;
+          std::cout << "20: " << cents / 20 << '\n';
+          cents %= 20;
+          std::cout << "10: " << cents / 10 << '\n';
+          cents %= 10;
+          std::cout << "5: " << cents / 5 << '\n';
+          cents %= 5;
+          std::cout << "2: " << cents / 2 << '\n';
+          cents %= 2;
+          std::cout << "1: " << cents << '\n';
+          return 0;
+      }
+    explain: |
+      Each step uses `/` to count coins and `%=` to keep the remainder for
+      the next, smaller coin. Notice the repetition — eight nearly identical
+      pairs of lines. That itch is exactly what loops and arrays will scratch.
+
+  - type: challenge
+    id: c3-ch-digitsum
+    title: Digit sum
+    difficulty: 1
+    tags: [remainder]
+    prompt: |
+      Read a whole number between 100 and 999 and print the sum of its three
+      digits. For input `472`:
+
+      ```text
+      13
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "472"
+        out: |
+          13
+      - in: "100"
+        out: |
+          1
+      - in: "999"
+        out: |
+          27
+        hidden: true
+    hints:
+      - "Units: `n % 10`. Tens: `n / 10 % 10`. Hundreds: `n / 100`."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          int n{};
+          std::cin >> n;
+          int hundreds = n / 100;
+          int tens = n / 10 % 10;
+          int units = n % 10;
+          std::cout << hundreds + tens + units << '\n';
+          return 0;
+      }
+
+  - type: challenge
+    id: c3-ch-distance
+    title: Distance between two points
+    difficulty: 2
+    tags: [cmath, formatting]
+    prompt: |
+      Read two points `x1 y1 x2 y2` (decimal numbers) and print the straight-
+      line distance between them with **2 decimals**. The distance is
+      √((x2−x1)² + (y2−y1)²). For input `0 0 3 4`:
+
+      ```text
+      Distance: 5.00
+      ```
+    starter: |
+      #include <cmath>
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "0 0 3 4"
+        out: |
+          Distance: 5.00
+      - in: "1 1 2 2"
+        out: |
+          Distance: 1.41
+      - in: "-2.5 3 4 -1.5"
+        out: |
+          Distance: 7.91
+        hidden: true
+    hints:
+      - "Compute `dx = x2 - x1` and `dy = y2 - y1` first."
+      - "`std::sqrt(dx * dx + dy * dy)`, printed with `std::fixed << std::setprecision(2)`."
+    solution: |
+      #include <cmath>
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          double x1{};
+          double y1{};
+          double x2{};
+          double y2{};
+          std::cin >> x1 >> y1 >> x2 >> y2;
+          double dx = x2 - x1;
+          double dy = y2 - y1;
+          double distance = std::sqrt(dx * dx + dy * dy);
+          std::cout << std::fixed << std::setprecision(2) << "Distance: " << distance << '\n';
+          return 0;
+      }
+
+  - type: challenge
+    id: c3-ch-interest
+    title: Savings calculator
+    difficulty: 3
+    tags: [cmath, formatting, conversion]
+    prompt: |
+      Money in a savings account grows with **compound interest**: after `y`
+      years at a yearly rate of `r` percent, an amount `p` becomes
+
+      p × (1 + r/100)^y
+
+      Read `p` (decimal), `r` (decimal) and `y` (whole number). Print the final
+      amount with 2 decimals, and how much of it is interest, also with 2
+      decimals. Finally print the final amount **rounded to the nearest whole
+      euro**, as a whole number. For input `1000 5 10`:
+
+      ```text
+      Final: 1628.89
+      Interest: 628.89
+      Rounded: 1629
+      ```
+    starter: |
+      #include <cmath>
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "1000 5 10"
+        out: |
+          Final: 1628.89
+          Interest: 628.89
+          Rounded: 1629
+      - in: "250 2.5 4"
+        out: |
+          Final: 275.95
+          Interest: 25.95
+          Rounded: 276
+      - in: "100 0 20"
+        out: |
+          Final: 100.00
+          Interest: 0.00
+          Rounded: 100
+        hidden: true
+    hints:
+      - "`std::pow(1 + rate / 100, years)` gives the growth factor."
+      - "For the last line, `static_cast<int>(std::round(finalAmount))` — and print it as an `int`, so `std::fixed` doesn't add decimals."
+    solution: |
+      #include <cmath>
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          double principal{};
+          double rate{};
+          int years{};
+          std::cin >> principal >> rate >> years;
+
+          double finalAmount = principal * std::pow(1 + rate / 100, years);
+          std::cout << std::fixed << std::setprecision(2);
+          std::cout << "Final: " << finalAmount << '\n';
+          std::cout << "Interest: " << finalAmount - principal << '\n';
+          std::cout << "Rounded: " << static_cast<int>(std::round(finalAmount)) << '\n';
+          return 0;
+      }
+    explain: |
+      `std::fixed` and `setprecision` only affect floating-point values. The
+      rounded value is an `int`, so it prints with no decimals — that's why
+      the cast matters here.
+
+  - type: review
+    id: c3-review
+    title: "Chapter 3 review"
+    body: |
+      ## Cheat sheet
+
+      | Expression | Value | Why |
+      |---|---|---|
+      | `2 + 3 * 4` | `14` | `*` before `+` |
+      | `7 / 2` | `3` | integer division drops the fraction |
+      | `7 % 2` | `1` | remainder |
+      | `7 / 2.0` | `3.5` | one side is a double |
+      | `static_cast<double>(7) / 2` | `3.5` | convert *before* dividing |
+      | `static_cast<int>(3.9)` | `3` | truncates towards zero |
+      | `std::round(3.5)` | `4` | nearest, halves away from zero |
+      | `n % 10`, `n / 10` | last digit, number without it | |
+      | `x += 3` | `x = x + 3` | also `-= *= /= %=` |
+
+      ```cpp static
+      #include <cmath>      // std::sqrt std::pow std::abs std::round std::floor std::ceil
+      #include <algorithm>  // std::max std::min
+      #include <iomanip>    // std::fixed std::setprecision std::setw std::left std::setfill
+      #include <limits>     // std::numeric_limits<int>::max()
+
+      std::cout << std::fixed << std::setprecision(2) << price;   // 4.50
+      std::cout << std::setw(8) << value;                          // padded, once
+      ```
+
+      ## Key ideas
+
+      - Integer division is the #1 surprise: both sides `int` ⇒ fraction dropped.
+      - `/` and `%` together split numbers into units and digits.
+      - Mixed `int`/`double` arithmetic converts the `int` to `double`.
+      - Doubles are binary approximations: never test exact equality after arithmetic.
+      - `int` overflow is undefined behaviour; `unsigned` wraps around. Use `int`, or `long long` for big values.
+    questions:
+      - type: output
+        prompt: "Interleaving: this uses Chapters 1–3. Input: `17`"
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              std::cout << "\"" << n / 5 << "r" << n % 5 << "\"\n";
+              return 0;
+          }
+        stdin: "17"
+        answer: |
+          "3r2"
+        why: "17 / 5 = 3 remainder 2, printed between escaped quotes."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"abc"};
+              int len = s.length();
+              std::cout << len * 2 / 4 << ' ' << len * 2 % 4 << '\n';
+              return 0;
+          }
+        answer: |
+          1 2
+        why: "len is 3, so len × 2 = 6; 6 / 4 = 1, 6 % 4 = 2."
+      - type: mcq
+        prompt: Which is the best type for a population count that could exceed 3 billion?
+        options:
+          - "`int`"
+          - "`unsigned int`"
+          - "`long long`"
+          - "`double`"
+        answer: 2
+        why: "`int` tops out at about 2.1 billion. `long long` holds whole numbers up to about 9.2 × 10¹⁸."
+
+  - type: exam
+    id: c3-exam
+    title: "Chapter 3 exam"
+    minutes: 30
+    pick: 13
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << 8 + 12 / 4 * 2 << '\n';
+              return 0;
+          }
+        answer: |
+          14
+        why: "`12 / 4 * 2` left to right is `3 * 2 = 6`, then 8 + 6 = 14."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{29};
+              std::cout << x / 10 << ' ' << x % 10 << ' ' << x / 3.0 * 0 << '\n';
+              return 0;
+          }
+        answer: |
+          2 9 0
+        why: "29 / 10 = 2, 29 % 10 = 9, and anything times 0 is 0."
+      - type: mcq
+        prompt: "`int a{7}; int b{2};` Which expression equals `3.5`?"
+        options:
+          - "`a / b`"
+          - "`static_cast<double>(a / b)`"
+          - "`static_cast<double>(a) / b`"
+          - "`a % b`"
+        answer: 2
+        why: Convert before dividing so the division is real, not integer.
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{5};
+              n += 3;
+              n *= n;
+              n %= 10;
+              int old = n++;
+              std::cout << old << ' ' << n << '\n';
+              return 0;
+          }
+        answer: |
+          4 5
+        why: "5 → 8 → 64 → 4. `n++` gives the old value 4 to `old`, then `n` becomes 5."
+      - type: output
+        code: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+              double a{1.0 / 3};
+              std::cout << a << ' ';
+              std::cout << std::fixed << std::setprecision(2) << a << '\n';
+              return 0;
+          }
+        answer: |
+          0.333333 0.33
+        why: "By default a double prints with 6 significant digits. With `std::fixed` and 2 decimals, it prints 0.33."
+      - type: mcq
+        prompt: Which header do you need for `std::setprecision`?
+        options:
+          - "`<cmath>`"
+          - "`<iomanip>`"
+          - "`<limits>`"
+          - "`<string>`"
+        answer: 1
+        why: Manipulators that take arguments, like `setprecision` and `setw`, are in `<iomanip>`.
+      - type: tf
+        prompt: "`std::setw(10)` stays in effect for every value printed afterwards."
+        answer: false
+        why: "`setw` applies only to the next value printed."
+      - type: output
+        code: |
+          #include <cmath>
+          #include <iostream>
+
+          int main() {
+              std::cout << std::abs(-3 - 4) << ' ' << std::sqrt(2.25) << ' ' << std::pow(3.0, 2.0) << '\n';
+              return 0;
+          }
+        answer: |
+          7 1.5 9
+        why: "|−7| = 7, √2.25 = 1.5, 3² = 9."
+      - type: mcq
+        prompt: "What is `-17 % 5` in C++?"
+        options:
+          - "3"
+          - "-2"
+          - "2"
+          - "-3"
+        answer: 1
+        why: "−17 / 5 truncates to −3; −3 × 5 = −15, and −17 − (−15) = −2. The remainder has the sign of the left operand."
+      - type: spot
+        prompt: Which line risks overflow?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int secondsPerDay{86400};
+              int days{36500};
+              int total = secondsPerDay * days;
+              std::cout << total << '\n';
+              return 0;
+          }
+        answer: 6
+        why: "86400 × 36500 is over 3 billion, beyond an `int`'s maximum. Use `long long` (and convert before multiplying)."
+      - type: mcq
+        prompt: "You need a whole number of boxes to pack `items` items, 6 per box (a partly full box still counts). Which works for any positive `items`?"
+        options:
+          - "`items / 6`"
+          - "`items / 6 + 1`"
+          - "`(items + 5) / 6`"
+          - "`items % 6`"
+        answer: 2
+        why: "Adding 5 before integer division rounds *up*: 12 → 17/6 = 2, 13 → 18/6 = 3. `items / 6 + 1` is wrong when items is a multiple of 6."
+      - type: fill
+        prompt: Complete the program to print the area of a circle of radius 2 with exactly 3 decimals (`12.566`).
+        code: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+              constexpr double pi{3.14159265};
+              double r{2.0};
+              std::cout << std::___ << std::setprecision(___) << pi * r * r << '\n';
+              return 0;
+          }
+        blanks:
+          - [fixed]
+          - ['3']
+        output: |
+          12.566
+        why: "`std::fixed` with `setprecision(3)` gives exactly 3 digits after the point."
+      - type: code
+        prompt: |
+          Read a number of days (whole number) and print how many weeks and
+          remaining days that is, and what fraction of a year (365 days) it
+          is, as a percentage with 1 decimal. For input `100`:
+
+          ```text
+          14 weeks and 2 days
+          27.4% of a year
+          ```
+        starter: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "100"
+            out: |
+              14 weeks and 2 days
+              27.4% of a year
+          - in: "7"
+            out: |
+              1 weeks and 0 days
+              1.9% of a year
+          - in: "365"
+            out: |
+              52 weeks and 1 days
+              100.0% of a year
+        solution: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+              int days{};
+              std::cin >> days;
+              std::cout << days / 7 << " weeks and " << days % 7 << " days\n";
+              double percent = static_cast<double>(days) / 365 * 100;
+              std::cout << std::fixed << std::setprecision(1) << percent << "% of a year\n";
+              return 0;
+          }
+      - type: code
+        prompt: |
+          A pizza costs a decimal price and is cut into slices. Read the price
+          and the number of friends (whole number). Each friend gets the same
+          whole number of slices from 8 per pizza, and you buy just enough
+          pizzas so everyone gets **at least 3 slices**. Print the pizzas
+          needed and the cost with 2 decimals. For input `12.5 5`:
+
+          ```text
+          Pizzas: 2
+          Cost: 25.00
+          ```
+
+          (5 friends × 3 slices = 15 slices; 8 per pizza, so 2 pizzas.)
+        starter: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "12.5 5"
+            out: |
+              Pizzas: 2
+              Cost: 25.00
+          - in: "9.99 8"
+            out: |
+              Pizzas: 3
+              Cost: 29.97
+          - in: "10 1"
+            out: |
+              Pizzas: 1
+              Cost: 10.00
+        solution: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+              double price{};
+              int friends{};
+              std::cin >> price >> friends;
+              int slicesNeeded = friends * 3;
+              int pizzas = (slicesNeeded + 7) / 8;
+              std::cout << "Pizzas: " << pizzas << '\n';
+              std::cout << std::fixed << std::setprecision(2) << "Cost: " << pizzas * price << '\n';
+              return 0;
+          }

@@ -1,0 +1,757 @@
+id: ch00
+number: 0
+part: p1
+title: Start Here
+blurb: What a program is, what C++ is, and your very first program.
+hours: 1.5
+goals:
+  - Explain in plain words what a program, source code and a compiler are
+  - Run, edit and re-run code in this course, and use the review system
+  - Write, from memory, a C++ program that prints text
+  - Name each part of a Hello World program and say what it does
+
+items:
+  - type: lesson
+    id: c0-what
+    title: What programming really is
+    minutes: 12
+    objectives:
+      - Say what a program is and why computers need one
+      - Explain what source code and a compiler are
+      - Describe what makes C++ different from other languages
+    body: |
+      A computer is astonishingly fast and astonishingly obedient — and has no
+      idea what you *want*. It does exactly what it is told, one tiny step at a
+      time, billions of times a second. A **program** is that list of steps.
+
+      **Programming** is writing those steps down so precisely that a machine
+      can follow them with no common sense at all.
+
+      > [!analogy]
+      > Imagine explaining to a robot how to make a sandwich. "Put peanut butter
+      > on the bread" is not enough: which bread? Which side? With what? Open the
+      > jar first? A program is the version with *every* step spelled out.
+
+      ## Languages: for humans *and* machines
+
+      A processor only understands **machine code**: long strings of numbers
+      that are almost impossible for people to read or write. So instead we
+      write in a **programming language** — something people can read — and
+      let a tool translate it.
+
+      The text you write is called **source code**. Here is a tiny piece of
+      C++ source code:
+
+      ```cpp static
+      std::cout << "Hello!\n";
+      ```
+
+      Even without knowing C++, you can probably guess it has something to do
+      with showing the word *Hello!*. That's the point of a programming
+      language: it's precise enough for a machine, readable enough for you.
+
+      ## The compiler
+
+      C++ is a **compiled** language. A program called a **compiler** reads your
+      whole source code, checks that it follows the rules of C++, and
+      translates it into machine code — an **executable** file the computer
+      can run directly.
+
+      | Step | What happens | Who does it |
+      |---|---|---|
+      | 1. Write | You type source code in a `.cpp` file | You |
+      | 2. Compile | The compiler checks it and translates it to machine code | The compiler |
+      | 3. Run | The computer executes the machine code | The computer |
+
+      If your code breaks a rule — a missing symbol, a misspelled word — the
+      compiler refuses to translate it and tells you what is wrong. That is a
+      **compile error**, and you will meet many of them. They are not failures:
+      they are the compiler catching mistakes *before* your program runs.
+
+      {{check compiler}}
+
+      ## Why C++?
+
+      C++ was created by Bjarne Stroustrup in the 1980s and is still one of the
+      most important languages in the world. It runs underneath a huge amount
+      of the software you use:
+
+      - **Games and game engines** — Unreal Engine, most big console and PC games
+      - **Browsers** — Chrome, Firefox and Safari are largely C++
+      - **Operating systems, databases and servers**, where every millisecond counts
+      - **Robots, cars, drones, medical devices** and other *embedded* systems
+      - **Finance, science and AI** — the fast parts of libraries like TensorFlow and PyTorch
+
+      What makes C++ special is that it gives you **both** high-level tools
+      (to express ideas clearly) **and** low-level control (over exactly how
+      memory and hardware are used). That combination makes it fast — and
+      means there is a lot to learn. You'll learn it the way it's written
+      today: modern C++, step by step.
+
+      > [!remember]
+      > **Source code** is what you write. The **compiler** checks it and turns
+      > it into an **executable** — machine code the computer runs.
+
+      {{check tf-direct}}
+
+      ## What you need
+
+      Nothing but this page. Every example here runs on a real C++ compiler on
+      the server, and prints its result right under the code. Later (Chapter
+      17) you will also learn to install a compiler on your own computer.
+    checks:
+      - id: compiler
+        type: mcq
+        prompt: What does a **compiler** do?
+        options:
+          - It runs your program line by line as you type
+          - It translates your source code into machine code the computer can run
+          - It fixes the mistakes in your code automatically
+          - It stores your code on the internet
+        answer: 1
+        why: |
+          A compiler *translates* the whole source code into machine code (an
+          executable). If the code breaks C++'s rules, it stops and reports a
+          compile error — but it never fixes the code for you.
+      - id: tf-direct
+        type: tf
+        prompt: A processor can understand C++ source code directly, without any translation.
+        answer: false
+        why: |
+          Processors only understand machine code. C++ must be compiled into
+          machine code first — that's the compiler's whole job.
+      - id: where
+        type: mcq
+        prompt: Which of these is **not** a typical use of C++?
+        options:
+          - Game engines
+          - Web browsers
+          - Styling the colours of a web page
+          - Software for robots and cars
+        answer: 2
+        why: |
+          Styling web pages is the job of CSS. C++ is used where speed and
+          control matter: engines, browsers, embedded systems, servers.
+    cards:
+      - front: What is a **program**?
+        back: A precise list of instructions that a computer follows, step by step.
+      - front: What is **source code**?
+        back: The human-readable text of a program, written in a programming language like C++ (in files ending in `.cpp`).
+      - front: What does a **compiler** do?
+        back: It checks source code against the rules of the language and translates it into machine code — an **executable** the computer can run.
+      - front: What is a **compile error**?
+        back: A message from the compiler saying your code breaks a rule of the language, so it could not be translated. You fix the code and compile again.
+
+  - type: lesson
+    id: c0-how
+    title: How to learn with this course
+    minutes: 10
+    objectives:
+      - Run an example, edit it and run it again
+      - Use the Predict → Run → Modify habit on every example
+      - Know where your flashcards, mistakes and progress live
+    body: |
+      Before any C++, a few minutes on *how* to use this course. It will save
+      you hours later.
+
+      ## Examples you can run
+
+      Every box of code like the one below has a **▶ Run** button. Press it.
+      The code is sent to a real C++ compiler, compiled, run, and whatever the
+      program prints appears underneath.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << "It works! You just ran a C++ program.\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      It works! You just ran a C++ program.
+      ```
+
+      Now press **Edit**. The code becomes editable. Change the text between
+      the quotes to anything you like, and press **▶ Run** again (or
+      [[Ctrl+Enter]] while typing). You have just modified a C++ program.
+      **Reset** puts the original back — you can't break anything.
+
+      > [!tip] The single most useful habit
+      > Before you press Run, **predict** what will happen. Say it out loud or
+      > write it down. Then run it. When your prediction is wrong, stop and
+      > work out *why* — that's where the learning happens. Then change
+      > something and predict again.
+
+      {{check predict}}
+
+      ## Checks, exercises and XP
+
+      Lessons contain small **checks** like the one above, and end with
+      **exercises** where you write code yourself. Your code is checked
+      automatically by running it against tests. Everything you finish earns
+      **XP** and moves your level up — see the top right corner.
+
+      ## Your memory, managed for you
+
+      When you complete a lesson, its key ideas become **flashcards** in your
+      **Review** deck. They come back on a schedule: tomorrow, then in a few
+      days, then weeks. And every question you get wrong goes into your
+      **mistake bank** until you've answered it right twice. Five minutes of
+      review a day will keep everything you learn.
+
+      ## Exams unlock chapters
+
+      Each chapter ends with an exam. Pass it with **80%** and the next chapter
+      opens. If you don't pass, the exam shows exactly what to revisit — and
+      you can retake it as many times as you like.
+
+      ## Your progress follows you
+
+      Your progress is saved in the browser *and* on the server, so you can
+      continue on your phone, on another computer, anywhere you can sign in.
+
+      {{check routine}}
+    checks:
+      - id: predict
+        type: mcq
+        prompt: What should you do **before** pressing ▶ Run on an example?
+        options:
+          - Nothing — just run it and read the result
+          - Predict what it will print
+          - Copy it into a separate file
+          - Delete the parts you don't understand
+        answer: 1
+        why: |
+          Predicting first turns reading into thinking. When the result
+          surprises you, you've found exactly the thing you didn't understand
+          yet.
+      - id: routine
+        type: mcq
+        prompt: Which study routine will make you learn the most?
+        options:
+          - Five hours every Sunday, re-reading lessons
+          - 45 minutes a day, including a few minutes of review
+          - Reading every lesson once, then doing all the exams at the end
+          - Watching someone else code
+        answer: 1
+        why: |
+          Short daily sessions give your brain time to consolidate between
+          them, and daily review fights forgetting. Re-reading feels
+          productive but is one of the least effective ways to study.
+    cards:
+      - front: What are the steps of the habit to use on every example?
+        back: "**Predict** what it does → **Run** it → **Investigate** why → **Modify** it → **Make** your own."
+      - front: Why is *predicting* before running so useful?
+        back: When your prediction is wrong, you've found exactly what you don't understand yet — and fixing that is learning.
+
+  - type: lesson
+    id: c0-hello
+    title: "Hello, World!"
+    minutes: 20
+    objectives:
+      - Write a complete C++ program that prints a line of text
+      - Name the job of `#include <iostream>`, `int main()`, `std::cout`, `;` and `return 0;`
+      - Print several lines of text
+    body: |
+      By tradition, the first program in any language prints *Hello, World!*.
+      Here it is in C++. Press **▶ Run**:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << "Hello, World!\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      Hello, World!
+      ```
+
+      Five lines. Let's take them one at a time — every C++ program you ever
+      write will have this same skeleton.
+
+      ## `#include <iostream>`
+
+      C++ on its own knows very little. Useful tools come in **libraries**, and
+      the **standard library** comes with every C++ compiler. This line says:
+      *"bring in the part of the standard library for input and output"*.
+      `iostream` stands for **i**nput/**o**utput **stream**. Without it, C++
+      doesn't know what `std::cout` is.
+
+      ## `int main() { ... }`
+
+      This is the **main function**. When your program starts, the computer
+      runs whatever is between its curly braces `{` and `}`, from top to
+      bottom. Every C++ program has exactly one `main`. The braces must come
+      in pairs: `{` opens a block, `}` closes it.
+
+      (The `int` means `main` gives back a whole number when it finishes —
+      more on that in a moment.)
+
+      ## `std::cout << "Hello, World!\n";`
+
+      This is the line that does the work. It is a **statement** — one
+      instruction.
+
+      - `std::cout` (say *"see-out"*) is the **console output**: the text window your program prints to.
+      - `<<` means *"send this into it"*. Picture the arrows pointing the text towards `cout`.
+      - `"Hello, World!\n"` is a **string literal**: text inside double quotes, printed exactly as written.
+      - `\n` is a special code meaning **new line** — "move to the start of the next line".
+      - `;` — the **semicolon** ends the statement, like a full stop ends a sentence.
+
+      The `std::` in front means *"from the standard library"*. You'll see it
+      everywhere.
+
+      {{check fill-cout}}
+
+      ## `return 0;`
+
+      This ends `main` and hands the number `0` back to whoever started the
+      program. By convention, `0` means *"everything went fine"*.
+
+      > [!remember]
+      > The skeleton of every program:
+      > ```cpp static
+      > #include <iostream>
+      >
+      > int main() {
+      >     // your statements go here, one per line, each ending in ;
+      >     return 0;
+      > }
+      > ```
+
+      ## Printing more lines
+
+      Statements run in order, top to bottom. Each `\n` starts a new line:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << "Roses are red,\n";
+          std::cout << "Violets are blue,\n";
+          std::cout << "C++ is fast,\n";
+          std::cout << "and now so are you.\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      Roses are red,
+      Violets are blue,
+      C++ is fast,
+      and now so are you.
+      ```
+
+      {{check predict-no-newline}}
+
+      > [!try]
+      > Press **Edit** on the poem and remove one of the `\n`. Predict what
+      > happens, then run it.
+
+      ## Details that matter
+
+      - **Case matters.** `std::cout` works; `std::Cout` or `STD::COUT` do not. C++ is **case-sensitive**.
+      - **Quotes must be straight** `"` — not the curly “ ” a word processor makes.
+      - **Spaces and blank lines** between parts of the code don't matter to the compiler. Indenting the inside of `main` by four spaces is for *people* — do it anyway, always.
+      - **Every statement ends with `;`**, but `#include` lines and the lines with `{` or `}` don't.
+
+      {{check order-hello}}
+
+      {{task hello}}
+
+      {{task three-lines}}
+    checks:
+      - id: fill-cout
+        type: fill
+        prompt: Complete the statement so it prints `Hi`.
+        code: |
+          std::___ << "Hi\n";
+        blanks:
+          - [cout]
+        why: |
+          `std::cout` is the console output. The `<<` sends the text into it.
+      - id: predict-no-newline
+        type: output
+        prompt: What does this program print? (Careful with the `\n`!)
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Ping";
+              std::cout << "Pong\n";
+              std::cout << "Done\n";
+              return 0;
+          }
+        answer: |
+          PingPong
+          Done
+        why: |
+          The first line has no `\n`, so the output stays on the same line and
+          `Pong` is printed right after `Ping`. Only `\n` moves to a new line —
+          a new `std::cout` statement does not.
+      - id: order-hello
+        type: order
+        prompt: Put the lines of this program in order.
+        lines:
+          - "#include <iostream>"
+          - "int main() {"
+          - "    std::cout << \"Order matters!\\n\";"
+          - "    return 0;"
+          - "}"
+        output: |
+          Order matters!
+        why: |
+          First the `#include`, then `main` opens its block with `{`, the
+          statements run inside it in order, and `}` closes it at the end.
+      - id: semicolon
+        type: mcq
+        prompt: Which of these lines needs a semicolon `;` at the end?
+        options:
+          - "`#include <iostream>`"
+          - "`int main() {`"
+          - "`std::cout << \"Hi\\n\"`"
+          - "`}`"
+        answer: 2
+        why: |
+          Statements end with a semicolon. `#include` lines, and lines that only
+          open or close a block with `{` or `}`, are not statements.
+    tasks:
+      - id: hello
+        title: Your own greeting
+        prompt: |
+          Write a program that prints exactly:
+
+          ```text
+          Hello, C++!
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+              // Write your statement here
+
+              return 0;
+          }
+        tests:
+          - in: ""
+            out: |
+              Hello, C++!
+        hints:
+          - Use `std::cout << "...";` with the text between the quotes.
+          - Don't forget the `\n` at the end of the text, and the `;` at the end of the statement.
+        solution: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Hello, C++!\n";
+              return 0;
+          }
+      - id: three-lines
+        title: Three lines
+        prompt: |
+          Print these three lines, exactly as shown (capital letters and
+          punctuation included):
+
+          ```text
+          My name is Ada.
+          I am learning C++.
+          This is my first program!
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: ""
+            out: |
+              My name is Ada.
+              I am learning C++.
+              This is my first program!
+        hints:
+          - One `std::cout` statement per line is the clearest way.
+          - Each line of text needs its own `\n` at the end.
+        solution: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "My name is Ada.\n";
+              std::cout << "I am learning C++.\n";
+              std::cout << "This is my first program!\n";
+              return 0;
+          }
+    cards:
+      - front: What does `#include <iostream>` do?
+        back: It brings in the standard library's input/output tools, such as `std::cout`. Without it, C++ doesn't know what `std::cout` is.
+      - front: What is `main`?
+        back: The function where every C++ program starts. The statements between its `{` and `}` run from top to bottom.
+      - front: What does `\n` mean inside a string?
+        back: "*New line*: move to the start of the next line."
+      - front: What ends a statement in C++?
+        back: A semicolon `;`.
+      - front: What does `return 0;` at the end of `main` mean?
+        back: "`main` ends and reports `0` to whoever started the program, meaning \"finished without problems\"."
+      - front: Is C++ case-sensitive?
+        back: Yes. `cout` and `Cout` are different names — only `std::cout` works.
+
+  - type: quiz
+    id: c0-quiz
+    title: "Quiz: your first program"
+    questions:
+      - type: mcq
+        prompt: Which line is needed so that C++ knows what `std::cout` is?
+        options:
+          - "`int main()`"
+          - "`#include <iostream>`"
+          - "`return 0;`"
+          - "`using cout;`"
+        answer: 1
+        why: "`std::cout` lives in the `<iostream>` part of the standard library, which you bring in with `#include <iostream>`."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "A\n";
+              std::cout << "B";
+              std::cout << "C\n";
+              return 0;
+          }
+        answer: |
+          A
+          BC
+        why: "`A` ends with `\\n`, so `B` starts a new line. `B` has no `\\n`, so `C` follows right after it."
+      - type: spot
+        prompt: This program does not compile. Which line has the mistake?
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Almost!\n"
+              return 0;
+          }
+        answer: 4
+        why: The statement on line 4 is missing its semicolon `;`. (The compiler will point at line 5, because that's where it notices.)
+      - type: tf
+        prompt: The computer runs the statements in `main` from top to bottom.
+        answer: true
+        why: Statements run in order, one after another, from the first line inside `main` to the last.
+      - type: mcq
+        prompt: "What is `\"Hello\"` (with the quotes) called in C++?"
+        options:
+          - A statement
+          - A string literal
+          - A library
+          - A function
+        answer: 1
+        why: Text written directly in the code between double quotes is a string literal.
+      - type: mcq
+        prompt: Why do we indent the code inside `main`?
+        options:
+          - The compiler requires exactly four spaces
+          - To make the code easier for people to read
+          - It makes the program run faster
+          - It is needed for `std::cout` to work
+        answer: 1
+        why: The compiler ignores indentation. It is for humans — and it matters a lot, because code is read far more often than it is written.
+
+  - type: challenge
+    id: c0-ch-card
+    title: Greeting card
+    difficulty: 1
+    tags: [output]
+    prompt: |
+      Print this greeting card exactly — including the border lines made of
+      `*` characters:
+
+      ```text
+      *****************
+      * Happy coding! *
+      *****************
+      ```
+
+      Every character counts: count the stars and the spaces carefully.
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: ""
+        out: |
+          *****************
+          * Happy coding! *
+          *****************
+    hints:
+      - "Use three `std::cout` statements, one per line of the card."
+      - "The border is 17 stars. The middle line is `* Happy coding! *` — a star, a space, the text, a space, a star."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          std::cout << "*****************\n";
+          std::cout << "* Happy coding! *\n";
+          std::cout << "*****************\n";
+          return 0;
+      }
+    explain: |
+      Output has to match *exactly* — computers check character by character.
+      Getting used to that precision is part of learning to program.
+
+  - type: challenge
+    id: c0-ch-tree
+    title: A little tree
+    difficulty: 1
+    tags: [output]
+    prompt: |
+      Print this tree. The spaces at the start of each line matter.
+
+      ```text
+          *
+         ***
+        *****
+       *******
+          |
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: ""
+        out: "    *\n   ***\n  *****\n *******\n    |\n"
+    hints:
+      - The first line starts with 4 spaces, the next with 3, then 2, then 1. The trunk has 4 spaces before `|`.
+      - "Spaces inside the quotes are printed exactly: `\"    *\\n\"`."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          std::cout << "    *\n";
+          std::cout << "   ***\n";
+          std::cout << "  *****\n";
+          std::cout << " *******\n";
+          std::cout << "    |\n";
+          return 0;
+      }
+
+  - type: exam
+    id: c0-exam
+    title: "Checkpoint: Start Here"
+    minutes: 10
+    body: |
+      A short checkpoint to make sure the basics are solid. Pass it to open
+      Chapter 1.
+    questions:
+      - type: mcq
+        prompt: What is the job of the compiler?
+        options:
+          - To translate source code into machine code
+          - To run the program on a web page
+          - To correct spelling mistakes in code
+          - To make programs look nicer
+        answer: 0
+        why: The compiler checks your source code and translates it into an executable.
+      - type: mcq
+        prompt: Where does a C++ program start running?
+        options:
+          - At the first line of the file
+          - At the `#include` line
+          - At the start of the `main` function
+          - At the last line of the file
+        answer: 2
+        why: Execution always begins at the start of `main`.
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "one ";
+              std::cout << "two\n";
+              std::cout << "three\n";
+              return 0;
+          }
+        answer: |
+          one two
+          three
+        why: "`\"one \"` has no newline, so `two` follows on the same line (after the space). `\\n` after `two` moves `three` to the next line."
+      - type: fill
+        prompt: Complete the program.
+        code: |
+          #include <___>
+
+          int ___() {
+              std::cout << "Ready\n";
+              return 0;
+          }
+        blanks:
+          - [iostream]
+          - [main]
+        output: |
+          Ready
+        why: "`#include <iostream>` brings in `std::cout`, and every program starts in `main`."
+      - type: spot
+        prompt: Which line stops this program from compiling?
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Hi\n";
+              std::Cout << "there\n";
+              return 0;
+          }
+        answer: 5
+        why: C++ is case-sensitive. `std::Cout` doesn't exist — it must be `std::cout`.
+      - type: tf
+        prompt: "`return 0;` at the end of `main` tells the system the program finished successfully."
+        answer: true
+        why: By convention, returning 0 from `main` means success.
+      - type: mcq
+        prompt: Which of these prints `Hi` and then moves to a new line?
+        options:
+          - "`std::cout << Hi;`"
+          - "`std::cout << \"Hi\\n\";`"
+          - "`std::cout >> \"Hi\\n\";`"
+          - "`cout \"Hi\";`"
+        answer: 1
+        why: Text needs double quotes, `<<` points towards `std::cout`, and `\n` makes the new line.
+      - type: code
+        prompt: |
+          Write a complete program that prints exactly these two lines:
+
+          ```text
+          I can write C++.
+          Chapter 1, here I come!
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: ""
+            out: |
+              I can write C++.
+              Chapter 1, here I come!
+        solution: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "I can write C++.\n";
+              std::cout << "Chapter 1, here I come!\n";
+              return 0;
+          }

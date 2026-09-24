@@ -1,0 +1,1426 @@
+id: ch01
+number: 1
+part: p1
+title: Output, Comments and Errors
+blurb: Print anything you want, write code people can read, and learn to read what the compiler tells you.
+hours: 3
+goals:
+  - Print text and numbers with `std::cout`, controlling lines and spacing
+  - Print quotes, backslashes and tabs with escape sequences
+  - Write useful comments and neatly laid-out code
+  - Tell compile errors, run-time errors and logic errors apart
+  - Read a compiler message and find the mistake it points to
+  - Explain what `std::` means and what `using namespace std;` does
+
+items:
+  - type: lesson
+    id: c1-cout
+    title: More about std::cout
+    minutes: 15
+    objectives:
+      - Chain several values in one `std::cout` statement with `<<`
+      - Print numbers and the results of calculations
+      - Choose between `'\n'` and `std::endl`
+    body: |
+      In Chapter 0 you printed one piece of text per statement. `std::cout`
+      can do much more.
+
+      ## Chaining with `<<`
+
+      You can send several things to `std::cout` in one statement: just keep
+      adding `<<`. They are printed one after another, left to right.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << "Hello" << ", " << "World" << "!\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      Hello, World!
+      ```
+
+      This is exactly the same as four separate statements — just shorter.
+      Notice that nothing is added between the pieces: if you want a space,
+      you must put it inside the quotes yourself.
+
+      ## Printing numbers
+
+      Numbers don't need quotes. And when you write a calculation, C++
+      **works it out first** and prints the result:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << 42 << '\n';
+          std::cout << 2 + 3 << '\n';
+          std::cout << "2 + 3" << '\n';
+          std::cout << 7 * 6 << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      42
+      5
+      2 + 3
+      42
+      ```
+
+      Look carefully at lines two and three. `2 + 3` without quotes is a
+      calculation: C++ prints `5`. `"2 + 3"` in quotes is just text: C++
+      prints it exactly as written. In C++, `*` means *multiply* (there is no
+      `×` key on a keyboard).
+
+      {{check text-or-number}}
+
+      ## Mixing text and numbers
+
+      Chaining is how you build useful messages:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << "There are " << 7 << " days in a week.\n";
+          std::cout << "A week has " << 7 * 24 << " hours.\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      There are 7 days in a week.
+      A week has 168 hours.
+      ```
+
+      ## Two ways to write a new line: `'\n'` and `std::endl`
+
+      You've been writing `\n` inside the text. It can also stand alone, in
+      **single** quotes: `'\n'`. Single quotes hold exactly one character; the
+      two symbols `\` and `n` together count as the single "new line"
+      character.
+
+      You will also see `std::endl` (*end line*) in other people's code:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << "First line" << std::endl;
+          std::cout << "Second line" << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      First line
+      Second line
+      ```
+
+      Both start a new line. The difference: `std::endl` also **flushes** —
+      forces everything waiting to be printed out to the screen right now. That
+      is slower, and almost never needed. Prefer `'\n'`.
+
+      > [!deep] Why is output buffered?
+      > Sending text to the screen is slow compared with the processor, so
+      > `std::cout` collects output in a **buffer** and sends it in batches.
+      > Flushing after every line throws that speed-up away. In programs that
+      > print a lot, `std::endl` can make printing several times slower.
+
+      {{check chain-output}}
+
+      {{check endl}}
+
+      {{task hours}}
+    checks:
+      - id: text-or-number
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << 10 - 4 << '\n';
+              std::cout << "10 - 4" << '\n';
+              return 0;
+          }
+        answer: |
+          6
+          10 - 4
+        why: |
+          Without quotes, `10 - 4` is a calculation and prints `6`. With quotes
+          it is text, printed exactly as written.
+      - id: chain-output
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Score:" << 3 * 5 << "points" << '\n';
+              return 0;
+          }
+        answer: |
+          Score:15points
+        why: |
+          Chained values are printed with nothing in between. To get
+          `Score: 15 points` you'd write `"Score: " << 3 * 5 << " points"` —
+          the spaces go inside the quotes.
+      - id: endl
+        type: mcq
+        prompt: What is the difference between `'\n'` and `std::endl`?
+        options:
+          - "`'\\n'` doesn't start a new line; `std::endl` does"
+          - Both start a new line, but `std::endl` also flushes the output, which is slower
+          - "`std::endl` only works at the end of a program"
+          - There is no difference at all
+        answer: 1
+        why: |
+          Both end the line. `std::endl` additionally flushes the output
+          buffer, which costs time and is rarely needed — so prefer `'\n'`.
+    tasks:
+      - id: hours
+        title: Seconds in a day
+        prompt: |
+          Print exactly this line — but let C++ **calculate** the number:
+          write `24 * 60 * 60` in your code rather than typing the answer.
+
+          ```text
+          A day has 86400 seconds.
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "A day has " << ... << " seconds.\n";
+              return 0;
+          }
+        starter_broken: true
+        tests:
+          - in: ""
+            out: |
+              A day has 86400 seconds.
+        hints:
+          - Replace the `...` with the calculation `24 * 60 * 60` (no quotes).
+        solution: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "A day has " << 24 * 60 * 60 << " seconds.\n";
+              return 0;
+          }
+    cards:
+      - front: How do you print several values in one `std::cout` statement?
+        back: "Chain them with `<<`: `std::cout << \"Age: \" << 15 << '\\n';` They are printed in order, with nothing added in between."
+      - front: What is the difference between `std::cout << 2 + 3;` and `std::cout << "2 + 3";`?
+        back: The first computes the sum and prints `5`. The second prints the text `2 + 3` exactly.
+      - front: "`'\\n'` or `std::endl` — which should you usually use, and why?"
+        back: "`'\\n'`. Both end the line, but `std::endl` also flushes the output buffer every time, which is slower and rarely needed."
+
+  - type: lesson
+    id: c1-escape
+    title: Special characters
+    minutes: 15
+    objectives:
+      - Print double quotes and backslashes inside text
+      - Use `\t` to line up output in columns
+      - Recognise the escape sequences `\n \t \" \' \\`
+    body: |
+      Suppose you want to print this line:
+
+      ```text
+      She said "hi" to me.
+      ```
+
+      The obvious attempt doesn't compile:
+
+      ```cpp error
+      #include <iostream>
+
+      int main() {
+          std::cout << "She said "hi" to me.\n";
+          return 0;
+      }
+      ```
+
+      The compiler sees the text `"She said "`, then the word `hi` (which
+      means nothing to it), then another text `" to me.\n"`. A `"` *ends* the
+      text. So how do you put a `"` inside it?
+
+      ## Escape sequences
+
+      A backslash `\` inside text means: *the next character is special*. The
+      pair is called an **escape sequence**. You already know one: `\n`.
+
+      | Write | To get | Name |
+      |---|---|---|
+      | `\n` | a new line | newline |
+      | `\t` | a jump to the next tab stop | tab |
+      | `\"` | a `"` that doesn't end the text | double quote |
+      | `\'` | a `'` (needed inside single quotes) | single quote |
+      | `\\` | one backslash `\` | backslash |
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << "She said \"hi\" to me.\n";
+          std::cout << "A backslash looks like this: \\\n";
+          std::cout << "My files are in C:\\Users\\Ada\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      She said "hi" to me.
+      A backslash looks like this: \
+      My files are in C:\Users\Ada
+      ```
+
+      Read `"...like this: \\\n"` slowly: `\\` is one backslash, then `\n` is
+      the new line.
+
+      {{check print-quote}}
+
+      ## Lining things up with `\t`
+
+      `\t` (tab) moves to the next *tab stop* — usually every 8 columns. It's
+      a quick way to line up columns:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << "Name\tAge\n";
+          std::cout << "Ada\t36\n";
+          std::cout << "Alan\t41\n";
+          return 0;
+      }
+      ```
+
+      Tabs are fine for quick tables; Chapter 3 shows a more precise tool for
+      column widths.
+
+      > [!mistake] Using `/` instead of `\`
+      > Escape sequences use the **backslash** `\` (top-left to bottom-right),
+      > not the slash `/`. `"/n"` prints the two characters `/n`.
+
+      {{check backslash}}
+
+      > [!deep] Raw strings
+      > When text has lots of backslashes, a **raw string literal** turns
+      > escapes off: `R"(C:\Users\Ada)"` is the text `C:\Users\Ada` exactly.
+      > Everything between `R"(` and `)"` is taken literally, even line breaks.
+
+      {{task quote}}
+    checks:
+      - id: print-quote
+        type: fill
+        prompt: Complete the statement so it prints `Say "cheese"!` and ends the line.
+        code: |
+          std::cout << "Say ___cheese___!\n";
+        blanks:
+          - ['\"']
+          - ['\"']
+        why: |
+          Each `"` inside the text must be written `\"` so it doesn't end the
+          string literal.
+      - id: backslash
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "1\\2\n";
+              std::cout << "a/nb\n";
+              return 0;
+          }
+        answer: |
+          1\2
+          a/nb
+        why: |
+          `\\` prints a single backslash. `/n` uses a *slash*, which is not an
+          escape at all, so `a/nb` is printed as is.
+      - id: which-escape
+        type: mcq
+        prompt: Which escape sequence prints a single backslash?
+        options:
+          - "`\\b`"
+          - "`/\\`"
+          - "`\\\\`"
+          - "`\\/`"
+        answer: 2
+        why: A backslash starts an escape, so to print one you escape it with another: `\\`.
+    tasks:
+      - id: quote
+        title: Quote and path
+        prompt: |
+          Print exactly these two lines:
+
+          ```text
+          "Talk is cheap. Show me the code." - Linus Torvalds
+          Saved to D:\code\hello.cpp
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: ""
+            out: |
+              "Talk is cheap. Show me the code." - Linus Torvalds
+              Saved to D:\code\hello.cpp
+        hints:
+          - Each `"` you want to print is written `\"` inside the text.
+          - Each `\` you want to print is written `\\`. Be careful — `\c` and `\h` are not valid escapes.
+        solution: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "\"Talk is cheap. Show me the code.\" - Linus Torvalds\n";
+              std::cout << "Saved to D:\\code\\hello.cpp\n";
+              return 0;
+          }
+    cards:
+      - front: What is an **escape sequence**?
+        back: A backslash `\` followed by a character, inside text, meaning something special — like `\n` (new line) or `\"` (a quote that doesn't end the text).
+      - front: How do you print a double quote `"` inside a string?
+        back: "Write `\\\"`, e.g. `\"She said \\\"hi\\\"\"`."
+      - front: How do you print a backslash?
+        back: "Write two: `\\\\`."
+      - front: What does `\t` do?
+        back: It prints a tab — a jump to the next tab stop — handy for lining up columns.
+
+  - type: lesson
+    id: c1-comments
+    title: Comments and code style
+    minutes: 12
+    objectives:
+      - Write single-line `//` and multi-line `/* */` comments
+      - Tell a useful comment from a useless one
+      - Lay out code so it is easy to read
+      - "Comment out" a line to switch it off temporarily
+    body: |
+      Code is read far more often than it is written — by other people, and
+      by you in three weeks' time, when you'll have forgotten everything. Two
+      tools make it readable: **comments** and **layout**.
+
+      ## Comments
+
+      A **comment** is a note for humans. The compiler ignores it completely.
+
+      ```cpp
+      #include <iostream>
+
+      // This whole line is a comment.
+      int main() {
+          std::cout << "Hi\n"; // A comment can follow code on the same line.
+
+          /* This is a multi-line comment.
+             It goes on until the closing star-slash. */
+          std::cout << "Bye\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      Hi
+      Bye
+      ```
+
+      - `//` starts a comment that lasts until the end of the line.
+      - `/*` starts a comment that lasts until `*/`, across as many lines as you like.
+
+      ## Good comments explain *why*
+
+      The code already says *what* it does. A comment that repeats it is just
+      noise:
+
+      ```cpp static
+      std::cout << "Hello\n"; // print Hello        <- useless: the code says that
+      ```
+
+      Useful comments explain what the code **can't** say: the reason, the
+      intention, a trap to avoid.
+
+      ```cpp static
+      // Prices are stored in cents to avoid rounding errors with money.
+      ```
+
+      ## Commenting out
+
+      Programmers often switch a line off by turning it into a comment, to
+      see what happens without it — without deleting it:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << "Step 1\n";
+          // std::cout << "Step 2\n";
+          std::cout << "Step 3\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      Step 1
+      Step 3
+      ```
+
+      {{check commented}}
+
+      ## Layout
+
+      The compiler doesn't care about spaces, tabs and line breaks between
+      the pieces of your code. This is a valid program:
+
+      ```cpp
+      #include <iostream>
+      int main(){std::cout<<"Squashed!\n";return 0;}
+      ```
+
+      It works — and it's horrible to read. Real programs are thousands of
+      lines long. Follow these rules and your code will look professional:
+
+      1. **One statement per line.**
+      2. **Indent** everything inside `{ }` by four spaces (or one tab — be consistent).
+      3. **Put a space** around operators: `2 + 3`, not `2+3`; and `std::cout << x`, not `std::cout<<x`.
+      4. **Use blank lines** to separate groups of related lines, like paragraphs.
+
+      > [!pro]
+      > Professional teams use an automatic formatter (such as clang-format)
+      > so everyone's code looks the same. The **Format** button in the main
+      > editor does a simple version of this.
+
+      {{check good-comment}}
+
+      {{task comment-out}}
+    checks:
+      - id: commented
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "A"; // std::cout << "B";
+              /* std::cout << "C"; */
+              std::cout << "D\n";
+              return 0;
+          }
+        answer: |
+          AD
+        why: |
+          Everything after `//` on a line, and everything between `/*` and
+          `*/`, is ignored. Only `A` and `D` are printed.
+      - id: good-comment
+        type: mcq
+        prompt: Which comment is the most useful?
+        options:
+          - "`// print the total`"
+          - "`// add 1`"
+          - "`// Hours are rounded up because the car park charges for any part of an hour`"
+          - "`// this is a line of code`"
+        answer: 2
+        why: |
+          It explains *why* the code does something — information the code
+          itself can't show. The others just repeat what the code already says.
+      - id: whitespace
+        type: tf
+        prompt: Changing the indentation of a program changes what it does.
+        answer: false
+        why: |
+          In C++, indentation is only for people; the compiler ignores it. (That's
+          exactly why you must keep it honest: misleading indentation hides bugs.)
+    tasks:
+      - id: comment-out
+        title: Switch a line off
+        prompt: |
+          This program prints four lines. Make it print only these three
+          **without deleting any code** — turn one line into a comment:
+
+          ```text
+          Ready
+          Set
+          Go!
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Ready\n";
+              std::cout << "Set\n";
+              std::cout << "Wait...\n";
+              std::cout << "Go!\n";
+              return 0;
+          }
+        tests:
+          - in: ""
+            out: |
+              Ready
+              Set
+              Go!
+        hints:
+          - Put `//` at the start of the line you want to switch off.
+        solution: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Ready\n";
+              std::cout << "Set\n";
+              // std::cout << "Wait...\n";
+              std::cout << "Go!\n";
+              return 0;
+          }
+    cards:
+      - front: What are the two kinds of comment in C++?
+        back: "`// ...` lasts until the end of the line. `/* ... */` can span several lines."
+      - front: What should a good comment explain?
+        back: "*Why* the code does something — the reason or intention — not *what* it does, which the code already shows."
+      - front: What does "commenting out" a line mean?
+        back: Turning a line of code into a comment so the compiler ignores it, without deleting it — useful for testing.
+
+  - type: lesson
+    id: c1-errors
+    title: The three kinds of errors
+    minutes: 22
+    objectives:
+      - Tell compile errors, run-time errors and logic errors apart
+      - Read a compiler message and find the line and problem it describes
+      - Fix the most common beginner compile errors
+      - Treat warnings as useful advice
+    body: |
+      Everyone's code has errors. The difference between a beginner and an
+      expert is not that experts make fewer mistakes — it's that they find
+      and fix them fast. That starts with knowing what *kind* of error you
+      have.
+
+      | Kind | When it shows up | Who catches it |
+      |---|---|---|
+      | **Compile error** | When compiling — the program never runs | The compiler |
+      | **Run-time error** | While running — the program crashes or stops | The operating system (a crash) |
+      | **Logic error** (a *bug*) | While running — but no crash, just a wrong result | Only you, by testing |
+
+      ## Compile errors
+
+      A compile error means the code breaks the rules of C++ (its *syntax*),
+      so the compiler cannot translate it. Run this one and read the message:
+
+      ```cpp error
+      #include <iostream>
+
+      int main() {
+          std::cout << "Missing something\n"
+          return 0;
+      }
+      ```
+
+      The message from the compiler (GCC) looks like this:
+
+      ```text
+      main.cpp: In function 'int main()':
+      main.cpp:4:39: error: expected ';' before 'return'
+          4 |     std::cout << "Missing something\n"
+            |                                       ^
+            |                                       ;
+      ```
+
+      Read it piece by piece:
+
+      - `main.cpp:4:39` — the **file**, the **line** (4) and the **column** (39).
+      - `error:` — this is an error (as opposed to a `warning:`).
+      - `expected ';' before 'return'` — what the compiler expected and didn't find.
+      - The lines underneath show the code, with `^` pointing at the spot — and even a suggested fix.
+
+      This course adds a plain-English explanation under each message, and a
+      **line** button that jumps to the right place in the editor.
+
+      > [!tip] Two rules for compile errors
+      > 1. **Fix the first error first.** One mistake can confuse the compiler into reporting many more that aren't real. Fix the first, compile again.
+      > 2. **Look at the line *before* too.** A missing `;` or `"` is often only noticed on the next line.
+
+      ### The usual suspects
+
+      Here are the compile errors beginners meet most. Run each one and read
+      what the compiler says:
+
+      ```cpp error
+      #include <iostream>
+
+      int main() {
+          std::cot << "Typo in cout\n";
+          return 0;
+      }
+      ```
+
+      ```cpp error
+      int main() {
+          std::cout << "Forgot the include\n";
+          return 0;
+      }
+      ```
+
+      ```cpp error
+      #include <iostream>
+
+      int main() {
+          std::cout << "Forgot to close the quote\n;
+          return 0;
+      }
+      ```
+
+      ```cpp error
+      #include <iostream>
+
+      int main() {
+          std::cout << "Forgot the closing brace\n";
+          return 0;
+      ```
+
+      {{check read-message}}
+
+      ## Run-time errors
+
+      Some mistakes can't be seen by the compiler: the code is valid C++, but
+      something goes wrong *while it runs*. A classic example is dividing a
+      whole number by zero, which crashes the program. You'll meet these
+      properly from Chapter 3 on; for now, just know that "it compiled" does
+      not mean "it works".
+
+      ## Logic errors: the sneaky ones
+
+      A **logic error** — a *bug* — is when the program runs happily and
+      gives the wrong answer. The compiler can't help: it doesn't know what
+      you *meant*.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          // Should print the number of minutes in 3 hours.
+          std::cout << "3 hours = " << 3 * 24 << " minutes\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      3 hours = 72 minutes
+      ```
+
+      It compiles, it runs, and it's wrong: it should be `3 * 60`. The only
+      defence against logic errors is **testing**: check the output against
+      what you know it should be. That's why every exercise in this course
+      comes with tests.
+
+      {{check kinds}}
+
+      ## Warnings
+
+      Sometimes the compiler says `warning:` instead of `error:`. The program
+      still compiles, but the compiler thinks something looks suspicious.
+      **Take warnings seriously** — they very often point at a real bug. This
+      course shows them above the output, marked ⚠.
+
+      {{check first-error}}
+
+      {{task fix-it}}
+    checks:
+      - id: read-message
+        type: mcq
+        prompt: "The compiler says `main.cpp:12:5: error: 'Cout' is not a member of 'std'`. Where is the problem, and what is it?"
+        options:
+          - Line 5, column 12 — a missing semicolon
+          - Line 12, column 5 — `Cout` should be `cout` (C++ is case-sensitive)
+          - Line 12 — the `#include` is missing
+          - The file is called Cout
+        answer: 1
+        why: |
+          The format is `file:line:column`. The message says `std` has nothing
+          called `Cout` — because the name is `cout`, all lower case.
+      - id: kinds
+        type: mcq
+        prompt: A program compiles and runs, but prints `The total is 9` when the total should be 12. What kind of error is this?
+        options:
+          - A compile error
+          - A run-time error
+          - A logic error
+          - A warning
+        answer: 2
+        why: |
+          It compiled (no compile error) and didn't crash (no run-time error),
+          but the result is wrong: a logic error — a bug. Only testing reveals it.
+      - id: first-error
+        type: mcq
+        prompt: The compiler reports 14 errors. What is the best first move?
+        options:
+          - Start with the last one, since it's the most recent
+          - Fix the first one, then compile again
+          - Delete the program and start over
+          - Ignore them and look for warnings
+        answer: 1
+        why: |
+          One real mistake (say, a missing `"`) can make the compiler misread
+          everything after it and report many errors that aren't real. Fix
+          the first, compile again, and often most of the rest disappear.
+      - id: compiled-correct
+        type: tf
+        prompt: If a program compiles without errors, it is correct.
+        answer: false
+        why: |
+          Compiling only means the code follows C++'s rules. It can still crash
+          (run-time error) or give wrong answers (logic error). Testing is what
+          shows it's correct.
+    tasks:
+      - id: fix-it
+        title: Fix three mistakes
+        prompt: |
+          This program has **three** mistakes that stop it compiling. Fix them
+          so that it prints:
+
+          ```text
+          Errors are normal.
+          Reading them is a skill.
+          ```
+
+          Compile first and let the error messages guide you — that's the
+          skill you're practising.
+        starter: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Errors are normal.\n"
+              std::Cout << "Reading them is a skill.\n";
+              return 0;
+        starter_broken: true
+        tests:
+          - in: ""
+            out: |
+              Errors are normal.
+              Reading them is a skill.
+        hints:
+          - The first `std::cout` line is missing something at its end.
+          - C++ is case-sensitive. Check the second `std::cout` carefully.
+          - Count the `{` and `}` — every opening brace needs a closing one.
+        solution: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Errors are normal.\n";
+              std::cout << "Reading them is a skill.\n";
+              return 0;
+          }
+    cards:
+      - front: What are the three kinds of error?
+        back: "**Compile errors** (code breaks C++'s rules; the compiler refuses), **run-time errors** (crash while running), **logic errors** or bugs (runs, but wrong result)."
+      - front: "What do the numbers in `main.cpp:4:39: error: ...` mean?"
+        back: The error is in file `main.cpp`, on **line 4**, at **column 39**.
+      - front: The compiler shows many errors. Which do you fix first?
+        back: The **first** one. Later errors are often side effects of it. Fix it and compile again.
+      - front: Why look at the line *before* the one a compile error points to?
+        back: Mistakes like a missing `;` or `"` are often only noticed when the compiler reaches the next line.
+      - front: What is the only defence against logic errors?
+        back: Testing — comparing the program's output with what you know it should be.
+
+  - type: lesson
+    id: c1-std
+    title: What std:: means
+    minutes: 10
+    objectives:
+      - Explain what a namespace is and why `std::` is written before standard names
+      - Read code that uses `using namespace std;`
+      - Explain why this course writes `std::` explicitly
+    body: |
+      You've been typing `std::` in front of `cout`. Time to understand why.
+
+      ## Namespaces
+
+      Large programs combine code from many places — your code, the standard
+      library, other libraries. What if two of them use the same name? C++
+      solves this with **namespaces**: named groups of names. Everything in
+      the standard library lives in the namespace called `std` (for
+      *standard*).
+
+      The `::` means *"inside"*. So `std::cout` means *"the `cout` that is
+      inside `std`"*. It's like a surname: there may be many people called
+      Ada, but only one Ada Lovelace.
+
+      ## The shortcut: `using namespace std;`
+
+      Many tutorials and books start their programs with this line:
+
+      ```cpp
+      #include <iostream>
+      using namespace std;
+
+      int main() {
+          cout << "No std:: needed here\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      No std:: needed here
+      ```
+
+      `using namespace std;` tells the compiler: *"when you can't find a name,
+      look inside `std` too"*. You will see this a lot, so it's important to
+      recognise it.
+
+      ## Why this course writes `std::`
+
+      The standard library contains **hundreds** of names: `count`, `find`,
+      `max`, `size`, `data`, `list`… With `using namespace std;` all of them
+      become ordinary names in your program, and they can clash with your own.
+      If you write a function called `count` (you will!), the compiler may
+      pick the wrong one — or report a confusing error.
+
+      Writing `std::` costs five characters and makes it **obvious** where a
+      name comes from. Most professional style guides (including the C++ Core
+      Guidelines) recommend it, and it's what this course does.
+
+      > [!tip] A middle way
+      > `using std::cout;` brings in just that one name. That's fine inside a
+      > `.cpp` file. What you should never do is put `using namespace std;` in a
+      > header file (Chapter 17), where it would spread into everyone's code.
+
+      {{check meaning}}
+
+      {{check using-output}}
+    checks:
+      - id: meaning
+        type: mcq
+        prompt: What does `std::cout` mean?
+        options:
+          - "\"standard output\", abbreviated"
+          - "The `cout` that belongs to the namespace `std`"
+          - Two separate commands, `std` and `cout`
+          - A cout that is extra fast
+        answer: 1
+        why: "`::` means *inside*: `cout` inside the namespace `std`, where the whole standard library lives."
+      - id: using-output
+        type: mcq
+        prompt: "Does this program compile?"
+        code: |
+          #include <iostream>
+          using namespace std;
+
+          int main() {
+              cout << "One\n";
+              std::cout << "Two\n";
+              return 0;
+          }
+        options:
+          - Yes — both lines work
+          - No — you can't use `std::` after `using namespace std;`
+          - No — `cout` without `std::` never works
+        answer: 0
+        why: "`using namespace std;` makes plain `cout` work, and the full name `std::cout` still works too."
+    cards:
+      - front: What is a **namespace**?
+        back: A named group of names, used to avoid clashes. The standard library's names are in the namespace `std`.
+      - front: What does `::` mean in `std::cout`?
+        back: "*Inside*: `cout` from inside the namespace `std`."
+      - front: What does `using namespace std;` do, and what's the risk?
+        back: It makes all standard names usable without `std::`. The risk is clashes between hundreds of standard names and your own names.
+
+  - type: quiz
+    id: c1-quiz
+    title: "Quiz: output and errors"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Total: " << 4 * 25 << '\n';
+              return 0;
+          }
+        answer: |
+          Total: 100
+        why: "`4 * 25` is calculated first (100) and printed after the text `Total: ` — including its space."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "\"Quotes\" and \\slashes\\\n";
+              return 0;
+          }
+        answer: |
+          "Quotes" and \slashes\
+        why: "`\\\"` prints a quote and `\\\\` prints one backslash. The last `\\n` ends the line."
+      - type: mcq
+        prompt: "Which line prints `It's 5 o'clock` correctly?"
+        options:
+          - "`std::cout << It's 5 o'clock;`"
+          - "`std::cout << \"It's 5 o'clock\\n\";`"
+          - "`std::cout << 'It's 5 o'clock\\n';`"
+          - "`std::cout >> \"It's 5 o'clock\\n\";`"
+        answer: 1
+        why: A single quote `'` needs no escaping inside double-quoted text. Single quotes are for one character only, and output uses `<<`.
+      - type: mcq
+        prompt: "A program crashes while running, after printing half its output. What kind of error is that?"
+        options:
+          - Compile error
+          - Run-time error
+          - Logic error
+          - It's not an error
+        answer: 1
+        why: It compiled and started running, then failed during execution — a run-time error.
+      - type: spot
+        prompt: Which line has the compile error?
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Line one\n";
+              std::cout << "Line two\n;
+              std::cout << "Line three\n";
+              return 0;
+          }
+        answer: 5
+        why: "The text on line 5 is never closed: `\\n;` is inside the quotes, and the closing `\"` is missing."
+      - type: tf
+        prompt: The compiler reads comments to understand what your code is supposed to do.
+        answer: false
+        why: The compiler ignores comments completely. They are only for people.
+      - type: fill
+        prompt: Complete the program so it prints `Tab<TAB>separated` (with a tab in the middle).
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Tab___separated\n";
+              return 0;
+          }
+        blanks:
+          - ['\t']
+        output: "Tab\tseparated"
+        why: "`\\t` is the escape sequence for a tab."
+      - type: mcq
+        prompt: Why does this course write `std::cout` rather than using `using namespace std;`?
+        options:
+          - Because `using namespace std;` is not valid C++
+          - To make it clear where names come from and avoid clashes with your own names
+          - Because `std::` makes programs faster
+          - Because `cout` only works with `std::`
+        answer: 1
+        why: Both styles work. Writing `std::` avoids name clashes and makes code clearer — the recommended professional style.
+
+  - type: challenge
+    id: c1-ch-receipt
+    title: Shop receipt
+    difficulty: 1
+    tags: [output, arithmetic]
+    prompt: |
+      Print this receipt. The totals must be **calculated** by C++ from the
+      quantities and prices (write `3 * 2` in your code, not `6`).
+
+      ```text
+      ===== RECEIPT =====
+      Apples  3 x 2 = 6
+      Bread   1 x 4 = 4
+      Milk    2 x 3 = 6
+      -------------------
+      Total: 16
+      ```
+
+      The spaces after each item name are part of the output.
+    starter: |
+      #include <iostream>
+
+      int main() {
+          std::cout << "===== RECEIPT =====\n";
+
+          return 0;
+      }
+    tests:
+      - in: ""
+        out: |
+          ===== RECEIPT =====
+          Apples  3 x 2 = 6
+          Bread   1 x 4 = 4
+          Milk    2 x 3 = 6
+          -------------------
+          Total: 16
+    hints:
+      - "Mix text and calculations: `std::cout << \"Apples  3 x 2 = \" << 3 * 2 << '\\n';`"
+      - "The total can be one calculation too: `3 * 2 + 1 * 4 + 2 * 3`."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          std::cout << "===== RECEIPT =====\n";
+          std::cout << "Apples  3 x 2 = " << 3 * 2 << '\n';
+          std::cout << "Bread   1 x 4 = " << 1 * 4 << '\n';
+          std::cout << "Milk    2 x 3 = " << 2 * 3 << '\n';
+          std::cout << "-------------------\n";
+          std::cout << "Total: " << 3 * 2 + 1 * 4 + 2 * 3 << '\n';
+          return 0;
+      }
+    explain: |
+      Multiplication happens before addition, just like in maths, so
+      `3 * 2 + 1 * 4 + 2 * 3` is `6 + 4 + 6`. Chapter 3 covers the order of
+      operations in detail.
+
+  - type: challenge
+    id: c1-ch-rocket
+    title: ASCII rocket
+    difficulty: 2
+    tags: [output, escapes]
+    prompt: |
+      Print this rocket exactly. Several characters need escaping — work out
+      which!
+
+      ```text
+         /\
+        /  \
+       | C++|
+       |    |
+      /|/\/\|\
+         ||
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: ""
+        out: "   /\\\n  /  \\\n | C++|\n |    |\n/|/\\/\\|\\\n   ||\n"
+    hints:
+      - Every backslash `\` you want to print must be written `\\` in your code.
+      - "The first line is three spaces, a slash and a backslash: `\"   /\\\\\\n\"`."
+      - "The fifth line has four backslashes to print, so eight in your code."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          std::cout << "   /\\\n";
+          std::cout << "  /  \\\n";
+          std::cout << " | C++|\n";
+          std::cout << " |    |\n";
+          std::cout << "/|/\\/\\|\\\n";
+          std::cout << "   ||\n";
+          return 0;
+      }
+    explain: |
+      Line 5 in the code, `"/|/\\/\\|\\\n"`, reads as: `/`, `|`, `/`, `\\` (one
+      backslash), `/`, `\\`, `|`, `\\`, then `\n`. When text gets this dense,
+      a raw string `R"(...)"` is a nice alternative.
+
+  - type: challenge
+    id: c1-ch-fix
+    title: Debug the welcome screen
+    difficulty: 2
+    tags: [errors, debugging]
+    prompt: |
+      Someone wrote this welcome screen in a hurry. It has **four** mistakes
+      that stop it compiling, and **one logic error** (it compiles but prints
+      a wrong number). Fix all five so it prints:
+
+      ```text
+      Welcome to "C++ Academy"
+      Lessons: 20
+      Minutes per lesson: 15
+      Total minutes: 300
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+          std::cout << "Welcome to "C++ Academy"\n";
+          std::cout << "Lessons: " << 20 << '\n'
+          std::cout << "Minutes per lesson: " << 15 << '\n';
+          std:cout << "Total minutes: " << 20 + 15 << '\n';
+          return 0;
+      }}
+    starter_broken: true
+    tests:
+      - in: ""
+        out: |
+          Welcome to "C++ Academy"
+          Lessons: 20
+          Minutes per lesson: 15
+          Total minutes: 300
+    hints:
+      - Compile, fix only the first error, compile again. Repeat.
+      - The quotes around `C++ Academy` need escaping; one line is missing its `;`; one `std::` is missing a colon; there is one brace too many.
+      - "The logic error: 20 lessons of 15 minutes is `20 * 15`, not `20 + 15`."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          std::cout << "Welcome to \"C++ Academy\"\n";
+          std::cout << "Lessons: " << 20 << '\n';
+          std::cout << "Minutes per lesson: " << 15 << '\n';
+          std::cout << "Total minutes: " << 20 * 15 << '\n';
+          return 0;
+      }
+    explain: |
+      The four compile errors: unescaped quotes, a missing `;`, `std:` with
+      one colon, and an extra `}`. The logic error — `+` instead of `*` —
+      compiles perfectly and is only caught by checking the output. That's
+      the difference between the two kinds of mistake.
+
+  - type: challenge
+    id: c1-ch-table
+    title: Multiplication facts
+    difficulty: 1
+    tags: [output, arithmetic]
+    prompt: |
+      Print the 7 times table from 1 to 5, with C++ doing the multiplying:
+
+      ```text
+      7 x 1 = 7
+      7 x 2 = 14
+      7 x 3 = 21
+      7 x 4 = 28
+      7 x 5 = 35
+      ```
+
+      (In Chapter 5 you'll learn *loops*, which will let you print a table of
+      any size in three lines. For now, one statement per line.)
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: ""
+        out: |
+          7 x 1 = 7
+          7 x 2 = 14
+          7 x 3 = 21
+          7 x 4 = 28
+          7 x 5 = 35
+    hints:
+      - "`std::cout << \"7 x 1 = \" << 7 * 1 << '\\n';` — then four more like it."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          std::cout << "7 x 1 = " << 7 * 1 << '\n';
+          std::cout << "7 x 2 = " << 7 * 2 << '\n';
+          std::cout << "7 x 3 = " << 7 * 3 << '\n';
+          std::cout << "7 x 4 = " << 7 * 4 << '\n';
+          std::cout << "7 x 5 = " << 7 * 5 << '\n';
+          return 0;
+      }
+
+  - type: review
+    id: c1-review
+    title: "Chapter 1 review"
+    body: |
+      ## Cheat sheet
+
+      | You want to | Write |
+      |---|---|
+      | Print text | `std::cout << "text";` |
+      | Print several things | `std::cout << "a" << 5 << "b";` |
+      | Print a calculation | `std::cout << 6 * 7;` (no quotes) |
+      | End a line | `'\n'` (preferred) or `std::endl` (also flushes) |
+      | Print `"` / `\` / a tab | `\"` / `\\` / `\t` |
+      | Comment to end of line | `// ...` |
+      | Comment a block | `/* ... */` |
+
+      ## Key ideas
+
+      - `std::cout << a << b` prints `a` then `b`, with **nothing** in between — spaces go inside the quotes.
+      - Without quotes, `2 + 3` is **calculated**; with quotes, `"2 + 3"` is printed as text.
+      - A backslash inside text starts an **escape sequence**.
+      - Comments are for people. Good comments explain **why**.
+      - Lay code out for readers: one statement per line, indent inside `{ }`, spaces around operators.
+      - **Compile errors** stop the build; **run-time errors** crash while running; **logic errors** give wrong answers and are found only by testing.
+      - Read errors as `file:line:column: error: message`. Fix the **first** one first, and check the line before it.
+      - `std::` means "from the standard library"; `using namespace std;` is a shortcut with a cost.
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << 1 + 1 << "1 + 1" << '\n';
+              // std::cout << "hidden\n";
+              std::cout << "end\n";
+              return 0;
+          }
+        answer: |
+          21 + 1
+          end
+        why: "`1 + 1` prints `2`, immediately followed by the text `1 + 1`. The commented line is ignored."
+      - type: mcq
+        prompt: Which of these is the first thing in every C++ program you have written so far?
+        options:
+          - "`int main() {`"
+          - "`#include <iostream>`"
+          - "`std::cout`"
+          - "`return 0;`"
+        answer: 1
+        why: The `#include` comes first, so that the names it provides (like `std::cout`) are known before they're used.
+      - type: spot
+        prompt: This compiles but has a logic error — it should print the number of seconds in 2 minutes. Which line is wrong?
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "2 minutes = ";
+              std::cout << 2 * 100 << " seconds\n";
+              return 0;
+          }
+        answer: 5
+        why: A minute has 60 seconds, so it should be `2 * 60`. The compiler can't know that — only testing catches it.
+
+  - type: exam
+    id: c1-exam
+    title: "Chapter 1 exam"
+    minutes: 20
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Sum: " << 12 + 30 << "\n";
+              std::cout << "Text: " << "12 + 30" << "\n";
+              return 0;
+          }
+        answer: |
+          Sum: 42
+          Text: 12 + 30
+        why: The first is calculated; the second is text in quotes, printed as written.
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "a";
+              std::cout << "b" << '\n';
+              std::cout << "c" << std::endl;
+              return 0;
+          }
+        answer: |
+          ab
+          c
+        why: "`a` has no newline, so `b` follows on the same line, then `'\\n'`. `c` is ended by `std::endl`."
+      - type: mcq
+        prompt: "How do you print `Path: C:\\temp`?"
+        options:
+          - "`std::cout << \"Path: C:\\temp\";`"
+          - "`std::cout << \"Path: C:\\\\temp\";`"
+          - "`std::cout << \"Path: C:/temp\";`"
+          - "`std::cout << 'Path: C:\\temp';`"
+        answer: 1
+        why: "A backslash must be written `\\\\`. (`\\t` would be a tab!)"
+      - type: mcq
+        prompt: Which is a **compile** error?
+        options:
+          - A program that prints 10 when it should print 12
+          - A program that crashes halfway through
+          - A missing semicolon at the end of a statement
+          - A program that runs slowly
+        answer: 2
+        why: A missing semicolon breaks C++'s rules, so the compiler refuses to build the program.
+      - type: mcq
+        prompt: "In the message `main.cpp:7:15: error: expected ';' before '}' token`, which line should you look at first?"
+        options:
+          - Line 15
+          - Line 7, and the line just before it
+          - Line 1
+          - The last line of the file
+        answer: 1
+        why: The error is reported at line 7, column 15. A missing `;` is usually at the end of the statement right where (or just before where) the compiler noticed.
+      - type: tf
+        prompt: "`/* ... */` comments can span several lines."
+        answer: true
+        why: Everything between `/*` and `*/` is a comment, however many lines it covers.
+      - type: spot
+        prompt: Which line won't compile?
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Name:\tAda\n";
+              std::cout << "Quote: \"Hi\"\n";
+              std::cout << "Said "Bye"\n";
+              return 0;
+          }
+        answer: 6
+        why: "The quotes around `Bye` are not escaped, so the text ends early. It should be `\\\"Bye\\\"`."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Start\n";
+              /* std::cout << "Middle\n"; */
+              std::cout << "End\n"; // std::cout << "Extra\n";
+              return 0;
+          }
+        answer: |
+          Start
+          End
+        why: Both the block comment and the end-of-line comment are ignored.
+      - type: mcq
+        prompt: What does `using namespace std;` do?
+        options:
+          - It includes the standard library
+          - It lets you use standard names like `cout` without writing `std::`
+          - It makes the program run faster
+          - It is required in every program
+        answer: 1
+        why: It only saves typing `std::`. You still need `#include <iostream>` for `cout` to exist at all.
+      - type: fill
+        prompt: Complete the line so the output is `Result = 56` (calculated from 7 and 8).
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Result = " << 7 ___ 8 << '\n';
+              return 0;
+          }
+        blanks:
+          - ['*']
+        output: |
+          Result = 56
+        why: "`*` is multiplication in C++."
+      - type: code
+        prompt: |
+          Write a program that prints exactly:
+
+          ```text
+          Item	Price
+          "Pen"	2
+          Total: 6
+          ```
+
+          Between the columns is a **tab** (`\t`). The `2` must be printed as a
+          number, and the total must be **calculated** as `3 * 2`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: ""
+            out: "Item\tPrice\n\"Pen\"\t2\nTotal: 6\n"
+        solution: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "Item\tPrice\n";
+              std::cout << "\"Pen\"\t" << 2 << '\n';
+              std::cout << "Total: " << 3 * 2 << '\n';
+              return 0;
+          }

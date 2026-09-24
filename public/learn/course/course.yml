@@ -1,0 +1,128 @@
+title: Learn C++ from Zero
+subtitle: From never having written a line of code to writing real C++ fluently.
+
+intro: |
+  A complete course in C++: nineteen chapters, each with lessons you can run,
+  checks, exercises, challenges and an exam. It assumes you know nothing about
+  programming — and ends with you building real programs on your own.
+
+parts:
+  - id: p1
+    title: Part I — First Steps
+    blurb: What a program is, and the core of every language — values, variables, decisions, loops and functions. After this part you can write small programs that do real work.
+  - id: p2
+    title: Part II — Working with Data
+    blurb: Collections of values, text, your own types, and how memory really works. After this part you can model real problems as data.
+  - id: p3
+    title: Part III — Object-Oriented C++
+    blurb: Classes, encapsulation, inheritance and polymorphism — how C++ programs are organised into objects that keep their promises.
+  - id: p4
+    title: Part IV — The Standard Library and Modern C++
+    blurb: The containers and algorithms every C++ programmer uses daily, lambdas, smart pointers, move semantics, error handling and templates.
+  - id: p5
+    title: Part V — Becoming Fluent
+    blurb: Professional habits, problem-solving strategies and classic algorithms — and a capstone project and final exam that prove you can do it on your own.
+
+chapters:
+  - ch00
+  - ch01
+  - ch02
+  - ch03
+  - ch04
+  - ch05
+  - ch06
+  - ch07
+  - ch08
+  - ch09
+  - ch10
+  - ch11
+  - ch12
+  - ch13
+  - ch14
+  - ch15
+  - ch16
+  - ch17
+  - ch18
+  - ch19
+
+method: |
+  This course is built on what research says actually works for learning a
+  skill — not just on what *feels* productive. Here is how it works, and how to
+  get the most out of it.
+
+  ## The path
+
+  There are **five parts** and **twenty chapters**, from "what is a program?"
+  to templates, algorithms and a capstone project. Chapters are in order on
+  purpose: each one uses everything before it. Inside a chapter you will find:
+
+  | | What it is | Why it is there |
+  |---|---|---|
+  | 📖 **Lessons** | Short explanations with code you can run and edit, checks and small exercises | New ideas in small steps, each one used straight away |
+  | ❓ **Quizzes** | A handful of questions with instant feedback | Recalling something makes it stick far better than re-reading it |
+  | 🧩 **Challenges** | Problems marked ★ to ★★★, checked automatically | Fluency comes from solving problems, not from reading about them |
+  | 🔁 **Reviews** | A one-page summary of the chapter plus mixed practice | Seeing the whole chapter at once, and mixing it with earlier ones |
+  | 🎓 **Exams** | A timed test of the whole chapter; pass with 80% | Proves you are ready, and unlocks the next chapter |
+  | 🏗️ **Projects** | A real program built in milestones | Putting everything together is a skill of its own |
+
+  ## Inside every lesson: Predict → Run → Investigate → Modify → Make
+
+  Every example has a **▶ Run** button, and every one can be edited. Get into
+  this habit — it is the core of how programmers learn:
+
+  1. **Predict.** Before you press Run, say (or write) what you think the program will print.
+  2. **Run.** Were you right? If not, *that* is the interesting part.
+  3. **Investigate.** Why did it do that? Read it line by line.
+  4. **Modify.** Press **Edit**, change something, run it again. What if the number were negative? What if you removed that line?
+  5. **Make.** Write your own version from scratch in the exercises.
+
+  ## The science behind it
+
+  - **Retrieval practice.** Pulling an idea *out* of your memory — in a check, a quiz, a flashcard — strengthens it far more than reading it again. That is why there are so many questions.
+  - **Spaced repetition.** Every lesson adds flashcards to your **Review** deck. Each card comes back just as you are about to forget it: after a day, then three, then a week, then a month. Five minutes a day keeps the whole course in your head.
+  - **Mastery learning.** A chapter opens when you pass the previous chapter's exam. Moving on with gaps is the main reason people get lost in programming; this keeps the foundation solid.
+  - **Interleaving.** Reviews and *Mixed practice* shuffle topics together. It feels harder than practising one thing at a time — and that difficulty is exactly what makes it work.
+  - **Learning from mistakes.** Every question you get wrong goes to your **mistake bank** and comes back until you have got it right twice.
+  - **Deliberate practice.** Challenges are chosen to stretch you just past what is comfortable. Use the hints one at a time; look at the solution only after a real attempt.
+  - **Explaining.** Each lesson has a notes box. Explaining an idea in your own words is the fastest way to find out whether you really understand it.
+
+  ## Errors are part of the course
+
+  You will see a lot of compiler errors. Everyone does, every day, including
+  people who have programmed for thirty years. This course shows the
+  compiler's real message *and* explains it in plain words, and Chapter 1
+  teaches you how to read them. An error is not a failure — it is the compiler
+  telling you exactly where to look.
+
+  ## A good routine
+
+  About **45–60 minutes a day** works better than a long session once a week:
+
+  1. **5–10 min** — clear your due flashcards and a few mistakes (the **Review** tab).
+  2. **20–30 min** — one lesson: predict, run, modify, answer the checks, do the exercise.
+  3. **15–20 min** — a challenge, or the chapter's quiz or exam when you are ready.
+
+  Finishing the whole course takes most people **120–180 hours**. That is a
+  few months at a steady pace — and at the end you can genuinely program.
+
+  ## Five habits that make the difference
+
+  1. **Type the code yourself.** Don't copy and paste. Your fingers learn the syntax.
+  2. **Run things constantly.** Small steps, run after every change. Never write fifty lines and then run.
+  3. **When stuck, read the error slowly.** Then explain your code out loud, line by line (programmers call this *rubber-duck debugging*). Then take a hint.
+  4. **Change the examples.** Break them on purpose. Curiosity is the engine.
+  5. **Take breaks.** Your brain keeps working on a problem after you walk away.
+
+  ## Where the ideas come from
+
+  The order of topics follows the best-regarded ways C++ is taught today —
+  modern C++ from the start (`std::string` and `std::vector` before raw arrays
+  and pointers), in the spirit of Bjarne Stroustrup's *Programming: Principles
+  and Practice Using C++* and the sequence of learncpp.com. The problem sets
+  borrow from university intro courses like Harvard's CS50. The learning
+  techniques come from cognitive science: *Make It Stick* (Brown, Roediger
+  and McDaniel), Bloom's mastery learning, the PRIMM approach to teaching
+  programming, Parsons problems, and the spaced-repetition method behind Anki.
+
+  The programs here run on a real C++ compiler (GCC), in modern C++ (C++17
+  and C++20). Everything you learn works the same on your own computer.

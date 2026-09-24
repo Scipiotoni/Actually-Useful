@@ -204,9 +204,12 @@ class GitHubStore {
     return true;
   }
 
-  /** Writes several files as a single commit. */
-  async commit(message, changes, attempt = 0) {
-    const branch = await this.resolveBranch();
+  /**
+   * Writes several files as a single commit — to the pages branch unless
+   * `options.branch` names another (Learn mode keeps progress on its own).
+   */
+  async commit(message, changes, options = {}, attempt = 0) {
+    const branch = options.branch || await this.resolveBranch();
     const ref = await this.request('GET', `/git/ref/heads/${branch}`);
     if (!ref) throw new GitHubError(`Branch "${branch}" not found`, 404);
 
@@ -238,7 +241,7 @@ class GitHubStore {
       await this.request('PATCH', `/git/refs/heads/${branch}`, { sha: commit.sha });
     } catch (err) {
       // Someone else pushed between our read and write; rebuild on the new head.
-      if (err.status === 422 && attempt === 0) return this.commit(message, changes, 1);
+      if (err.status === 422 && attempt === 0) return this.commit(message, changes, options, 1);
       throw err;
     }
     return commit.sha;

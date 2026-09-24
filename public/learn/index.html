@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn C++ · Actually Useful</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>C++</text></svg>">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="learn.css">
+</head>
+<body class="learn">
+
+<header class="lt-top">
+  <button class="lt-menu" id="btn-menu" aria-label="Course outline" aria-expanded="false">☰</button>
+  <a class="lt-brand" href="#/">
+    <span class="brand-mark">AU</span>
+    <span class="lt-brand-name">Learn <b>C++</b></span>
+  </a>
+  <nav class="lt-nav" aria-label="Learn mode">
+    <a href="#/" data-nav="home">Home</a>
+    <a href="#/review" data-nav="review">Review <span class="pill pill-quiet" id="due-count">0</span></a>
+    <a href="#/playground" data-nav="playground">Playground</a>
+    <a href="#/glossary" data-nav="glossary">Glossary</a>
+    <a href="#/progress" data-nav="progress">Progress</a>
+  </nav>
+  <div class="lt-stats">
+    <span class="lt-streak" id="streak" title="Days in a row you have learned something">🔥 0</span>
+    <a class="lt-level" id="level" href="#/progress" title="Your level and XP">Lv 1</a>
+  </div>
+  <a class="btn btn-ghost lt-exit" href="../" title="Back to the HTML editor">Editor</a>
+</header>
+
+<div class="lt-shell">
+  <aside class="lt-side" id="side" aria-label="Course outline">
+    <div class="lt-side-head">
+      <input class="lt-search" id="outline-search" type="search" placeholder="Search lessons…" aria-label="Search lessons">
+    </div>
+    <nav class="lt-outline" id="outline"></nav>
+    <div class="lt-side-foot" id="sync-state">Loading…</div>
+  </aside>
+  <div class="lt-scrim" id="scrim" hidden></div>
+  <main class="lt-main" id="main" tabindex="-1">
+    <div class="lt-loading">Loading the course…</div>
+  </main>
+</div>
+
+<div class="toast-stack" id="toasts" aria-live="polite"></div>
+
+<script src="../editor.js"></script>
+<script src="engine.js"></script>
+<script src="course.js"></script>
+<script src="markdown.js"></script>
+<script src="explain.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

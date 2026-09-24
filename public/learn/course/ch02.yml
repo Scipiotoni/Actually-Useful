@@ -1,0 +1,1974 @@
+id: ch02
+number: 2
+part: p1
+title: Variables, Types and Input
+blurb: Store values, give them names, change them — and read what the user types.
+hours: 4.5
+goals:
+  - Declare, initialise and change variables, and trace their values line by line
+  - Choose between `int`, `double`, `char`, `bool` and `std::string`
+  - Always initialise variables, and explain what goes wrong if you don't
+  - Use `const` and `constexpr` to name fixed values
+  - Read numbers and words typed by the user with `std::cin`
+
+items:
+  - type: lesson
+    id: c2-vars
+    title: "Variables: named boxes for values"
+    minutes: 18
+    objectives:
+      - Create a variable with a type, a name and a starting value
+      - Change a variable's value with `=`
+      - Trace a short program and say what each variable holds after each line
+      - Choose valid, meaningful variable names
+    body: |
+      So far your programs have printed fixed text. Real programs **remember**
+      things: a score, a name, a total. For that you need **variables**.
+
+      ## What a variable is
+
+      A **variable** is a named piece of memory that holds a value. Picture a
+      labelled box: the label is the variable's **name**, the contents are its
+      **value**, and the box has a **type** — the kind of value that fits in it.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int score{0};
+          std::cout << "Score: " << score << '\n';
+
+          score = 10;
+          std::cout << "Score: " << score << '\n';
+
+          score = score + 5;
+          std::cout << "Score: " << score << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Score: 0
+      Score: 10
+      Score: 15
+      ```
+
+      Line by line:
+
+      - `int score{0};` **declares** a variable: its type is `int` (a whole number), its name is `score`, and it starts with the value `0`.
+      - `std::cout << score` prints the **current value** — note: no quotes. `"score"` would print the word *score*.
+      - `score = 10;` **assigns** a new value. The old value is gone.
+      - `score = score + 5;` reads the current value (10), adds 5, and stores the result (15) back in `score`.
+
+      > [!mistake] `=` is not "equals"
+      > In C++, `=` means **"store the value on the right into the variable on
+      > the left"**. That's why `score = score + 5;` makes sense: it is not an
+      > equation, it is an instruction. (Testing whether two values are equal
+      > uses `==`, in Chapter 4.)
+
+      {{check trace}}
+
+      ## Declare before use
+
+      A variable must be declared before any line that uses it — the compiler
+      reads top to bottom:
+
+      ```cpp error
+      #include <iostream>
+
+      int main() {
+          std::cout << lives << '\n';
+          int lives{3};
+          return 0;
+      }
+      ```
+
+      And you declare it **once**. After that, you just use its name — writing
+      the type again would try to create a second variable with the same name.
+
+      ## Naming rules
+
+      A name may contain letters, digits and underscores `_`, must not start
+      with a digit, and can't be a word C++ reserves for itself (like `int`,
+      `return` or `if`). Names are case-sensitive: `total` and `Total` are two
+      different variables.
+
+      | Name | Valid? |
+      |---|---|
+      | `score`, `playerName`, `max_speed`, `level2` | ✓ |
+      | `2ndPlace` | ✗ starts with a digit |
+      | `my score` | ✗ contains a space |
+      | `int` | ✗ reserved word |
+      | `total-price` | ✗ `-` means minus |
+
+      Beyond the rules, choose names that say what the value **means**:
+      `secondsLeft` beats `s`, `x` or `number`. Most C++ code uses either
+      `camelCase` (this course) or `snake_case`; pick one and stick to it.
+
+      {{check valid-name}}
+
+      {{task wallet}}
+    checks:
+      - id: trace
+        type: output
+        prompt: Trace the program line by line. What does it print?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{4};
+              int b{a + 1};
+              a = 10;
+              b = b + a;
+              std::cout << a << ' ' << b << '\n';
+              return 0;
+          }
+        answer: |
+          10 15
+        why: |
+          `a` starts at 4, so `b` starts at 5. Then `a` becomes 10. Then
+          `b = b + a` is `5 + 10 = 15`. Changing `a` later does **not** change
+          `b` retroactively — `b` got a copy of the value at the time.
+      - id: valid-name
+        type: mcq
+        prompt: Which of these is a valid variable name?
+        options:
+          - "`high score`"
+          - "`3lives`"
+          - "`high_score2`"
+          - "`return`"
+        answer: 2
+        why: "`high_score2` uses only letters, digits and underscores and doesn't start with a digit. Spaces aren't allowed, names can't start with a digit, and `return` is reserved."
+      - id: quote-var
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int age{15};
+              std::cout << "age" << '\n';
+              std::cout << age << '\n';
+              return 0;
+          }
+        answer: |
+          age
+          15
+        why: With quotes, `"age"` is just text. Without quotes, `age` is the variable and its value is printed.
+    tasks:
+      - id: wallet
+        title: Pocket money
+        prompt: |
+          The starter creates a variable `money` holding 20. Without changing
+          that first line, add lines that:
+
+          1. add 15 to `money` (pocket money arrives),
+          2. subtract 8 from `money` (a cinema ticket),
+          3. print `Money left: ` followed by the value.
+
+          Expected output:
+
+          ```text
+          Money left: 27
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int money{20};
+
+              return 0;
+          }
+        tests:
+          - in: ""
+            out: |
+              Money left: 27
+        hints:
+          - "Update the variable with `money = money + 15;`"
+          - "Print with `std::cout << \"Money left: \" << money << '\\n';`"
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int money{20};
+              money = money + 15;
+              money = money - 8;
+              std::cout << "Money left: " << money << '\n';
+              return 0;
+          }
+    cards:
+      - front: What three things does every variable have?
+        back: A **type** (what kind of value it holds), a **name**, and a **value**.
+      - front: What does `x = x + 1;` do?
+        back: Reads the current value of `x`, adds 1, and stores the result back in `x`. `=` means "store into", not "is equal to".
+      - front: What are the rules for variable names?
+        back: Letters, digits and `_` only; no leading digit; not a reserved word; case-sensitive.
+      - front: If `b` was set from `a`, and then `a` changes, does `b` change?
+        back: No. `b` received a copy of `a`'s value at that moment. They are separate boxes.
+
+  - type: lesson
+    id: c2-init
+    title: Always initialise
+    minutes: 14
+    objectives:
+      - Initialise variables with `{}` (and recognise `=` and `()` forms)
+      - Explain what an uninitialised variable is and why it's dangerous
+      - Use `{}` to get zero, and to catch accidental loss of data
+    body: |
+      Giving a variable its first value when you create it is called
+      **initialisation**. C++ has several ways to write it, for historical
+      reasons:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int a = 5;   // copy initialisation: the oldest style, very common
+          int b(6);    // direct initialisation
+          int c{7};    // brace initialisation: the modern style
+          int d{};     // empty braces: zero
+
+          std::cout << a << ' ' << b << ' ' << c << ' ' << d << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      5 6 7 0
+      ```
+
+      All four create an `int` with a value. This course uses **braces** `{}`,
+      the modern style recommended by the C++ Core Guidelines, because of a
+      safety feature you'll see in a moment. You'll read `int a = 5;`
+      everywhere too — it's fine and means the same here.
+
+      ## The danger: uninitialised variables
+
+      You *can* create a variable without giving it a value:
+
+      ```cpp static
+      int count;   // no initialiser!
+      ```
+
+      What's in `count` now? **Nobody knows.** C++ doesn't clean the memory
+      for you — `count` holds whatever bits happened to be there before:
+      maybe 0, maybe 32767, maybe something different every run. Using that
+      value is **undefined behaviour**: the C++ rules say *anything* may happen.
+
+      ```cpp ub
+      #include <iostream>
+
+      int main() {
+          int count;   // uninitialised
+          std::cout << count << '\n';   // undefined behaviour!
+          return 0;
+      }
+      ```
+
+      Run it: the compiler even warns you. The number you see is garbage, and
+      may change between compilers, settings or runs.
+
+      > [!remember]
+      > **Always initialise your variables.** If you don't have a meaningful
+      > value yet, use `{}` to start at zero: `int total{};`
+
+      > [!deep] Undefined behaviour
+      > *Undefined behaviour* (UB) is C++'s term for code whose result the
+      > language doesn't define. A program with UB might seem to work, then
+      > break when compiled differently. It's one of the reasons C++ is fast
+      > (the compiler assumes UB never happens) and one of the reasons it's
+      > strict. You'll learn to recognise the common cases as you go.
+
+      {{check uninit}}
+
+      ## Braces catch mistakes
+
+      An `int` holds whole numbers only. If you put a decimal number in one
+      with `=`, C++ silently chops off the fraction. With braces, the
+      compiler refuses:
+
+      ```cpp error
+      #include <iostream>
+
+      int main() {
+          int people{2.5};
+          std::cout << people << '\n';
+          return 0;
+      }
+      ```
+
+      This is called a **narrowing conversion** — squeezing a value into a
+      type where it doesn't fit. Braces make it an error, so the mistake is
+      caught before the program runs.
+
+      {{check brace-zero}}
+    checks:
+      - id: uninit
+        type: mcq
+        prompt: "What value does `x` have after `int x;` inside `main`?"
+        options:
+          - "0"
+          - "1"
+          - Nothing — a variable can't exist without a value
+          - Unpredictable garbage; reading it is undefined behaviour
+        answer: 3
+        why: |
+          A local variable without an initialiser holds whatever was in that
+          memory before. Reading it is undefined behaviour. Always initialise.
+      - id: brace-zero
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int apples{};
+              int pears{3};
+              apples = pears + 2;
+              std::cout << apples << '\n';
+              return 0;
+          }
+        answer: |
+          5
+        why: "`apples{}` starts at 0, then is assigned `pears + 2`, which is 5."
+      - id: narrowing
+        type: mcq
+        prompt: "What happens with `int n{9.99};`?"
+        options:
+          - "`n` becomes 9"
+          - "`n` becomes 10"
+          - The compiler reports an error (narrowing conversion)
+          - "`n` becomes 9.99"
+        answer: 2
+        why: "Brace initialisation refuses to silently drop the fraction. (With `int n = 9.99;` it would compile and `n` would be 9.)"
+    cards:
+      - front: What is **initialisation**?
+        back: Giving a variable its first value at the moment it is created, e.g. `int lives{3};`.
+      - front: What does `int total{};` give you?
+        back: An `int` initialised to zero.
+      - front: Why is reading an uninitialised variable bad?
+        back: It holds leftover garbage, and reading it is **undefined behaviour** — the program may do anything.
+      - front: What is a **narrowing conversion**, and how do braces help?
+        back: Putting a value into a type that can't hold it exactly (e.g. `2.5` into an `int`). With `{}` initialisation the compiler reports it as an error.
+
+  - type: lesson
+    id: c2-numbers
+    title: "Numbers: int and double"
+    minutes: 18
+    objectives:
+      - Use `int` for whole numbers and `double` for numbers with decimals
+      - Predict how `std::cout` prints a `double`
+      - Explain why `int` has limits, and name `long long` for bigger values
+    body: |
+      C++ has several kinds of number. Two cover almost everything:
+
+      | Type | Holds | Examples |
+      |---|---|---|
+      | `int` | whole numbers (integers) | `0`, `42`, `-7`, `2024` |
+      | `double` | numbers with a fractional part (*floating-point*) | `3.14`, `-0.5`, `2.0`, `1e6` |
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int students{28};
+          double averageHeight{1.62};
+          double price{19.99};
+
+          std::cout << students << " students, average height " << averageHeight << " m\n";
+          std::cout << "Price: " << price << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      28 students, average height 1.62 m
+      Price: 19.99
+      ```
+
+      Use `int` when a value can only ever be whole — a count of people, a
+      score, a year. Use `double` when fractions make sense — money (for
+      now), measurements, averages.
+
+      ## How doubles are printed
+
+      `std::cout` prints a `double` in the shortest sensible way, with at most
+      **6 significant digits** by default:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          double a{2.50};
+          double b{100.0};
+          double c{3.14159265};
+          double d{1234567.0};
+          std::cout << a << '\n' << b << '\n' << c << '\n' << d << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      2.5
+      100
+      3.14159
+      1.23457e+06
+      ```
+
+      Trailing zeros disappear (`2.5`, `100`), long numbers are rounded to 6
+      digits, and big ones switch to scientific notation — `1.23457e+06` means
+      1.23457 × 10⁶. Chapter 3 shows how to control this (e.g. always two
+      decimals for money).
+
+      {{check print-double}}
+
+      ## Limits
+
+      Every type uses a fixed amount of memory, so every type has limits. An
+      `int` is usually 4 bytes and holds values from about **−2.1 billion to
+      +2.1 billion**. Going past the limit is called **overflow**, and for
+      `int` it is undefined behaviour — you'll see it in Chapter 3.
+
+      For bigger whole numbers, use `long long` (8 bytes, up to about 9.2
+      quintillion):
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          long long worldPopulation{8'100'000'000};
+          std::cout << worldPopulation << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      8100000000
+      ```
+
+      The `'` marks are **digit separators** — they make long numbers readable
+      and are ignored by the compiler.
+
+      > [!deep] `sizeof`
+      > `sizeof(int)` tells you how many bytes a type uses on your machine:
+      > try `std::cout << sizeof(int) << ' ' << sizeof(double) << ' ' << sizeof(long long);`
+      > in the Playground. On this server it prints `4 8 8`.
+
+      {{check which-type}}
+
+      {{task area}}
+    checks:
+      - id: print-double
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              double x{7.50};
+              double y{4.0};
+              std::cout << x << ' ' << y << '\n';
+              return 0;
+          }
+        answer: |
+          7.5 4
+        why: By default, `std::cout` drops trailing zeros from a `double`, so `7.50` prints as `7.5` and `4.0` as `4`.
+      - id: which-type
+        type: mcq
+        prompt: Which type fits best for *the number of goals a team scored*?
+        options:
+          - "`double`"
+          - "`int`"
+          - "`bool`"
+          - "`std::string`"
+        answer: 1
+        why: Goals are always a whole number, so `int` is the natural type.
+      - id: which-type-2
+        type: mcq
+        prompt: Which type fits best for *a runner's time in seconds, like 9.58*?
+        options:
+          - "`int`"
+          - "`double`"
+          - "`char`"
+          - "`long long`"
+        answer: 1
+        why: The value has a fractional part, so it needs a floating-point type — `double`.
+    tasks:
+      - id: area
+        title: Rectangle
+        prompt: |
+          Create two `double` variables, `width` = 4.5 and `height` = 2.0, and
+          print the area (width × height) like this:
+
+          ```text
+          Area: 9
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: ""
+            out: |
+              Area: 9
+        hints:
+          - "`double width{4.5};` — and the same for height."
+          - "Print `width * height`. `std::cout` shows `9.0` as `9`."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              double width{4.5};
+              double height{2.0};
+              std::cout << "Area: " << width * height << '\n';
+              return 0;
+          }
+    cards:
+      - front: When do you use `int`, and when `double`?
+        back: "`int` for whole numbers (counts, scores, years); `double` for numbers with a fractional part (measurements, averages)."
+      - front: How does `std::cout` print the double `100.0` by default?
+        back: As `100` — trailing zeros are dropped, and at most 6 significant digits are shown.
+      - front: Roughly what range does an `int` hold?
+        back: About −2.1 billion to +2.1 billion (it's usually 4 bytes). Use `long long` for bigger whole numbers.
+      - front: What is `8'000'000` in C++?
+        back: The number 8000000. The `'` are digit separators, ignored by the compiler, for readability.
+
+  - type: lesson
+    id: c2-char-bool
+    title: "Characters and truth: char and bool"
+    minutes: 15
+    objectives:
+      - Store single characters in a `char` using single quotes
+      - Explain that a `char` is really a small number (its character code)
+      - Store `true`/`false` in a `bool` and print it as words with `std::boolalpha`
+    body: |
+      ## `char`: one character
+
+      A `char` holds **one** character, written in **single** quotes:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          char grade{'A'};
+          char symbol{'#'};
+          char digit{'7'};
+          std::cout << grade << symbol << digit << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      A#7
+      ```
+
+      Remember the difference: `'A'` (single quotes) is one `char`; `"A"`
+      (double quotes) is a piece of *text* that happens to be one character
+      long. They are different types.
+
+      ## Characters are numbers underneath
+
+      Computers only store numbers, so each character has a **code**. In the
+      standard **ASCII** table, `'A'` is 65, `'B'` is 66, … `'a'` is 97, and the
+      digit `'0'` is 48. You can see a character's code by converting it to
+      `int`:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          char letter{'A'};
+          std::cout << static_cast<int>(letter) << '\n';
+
+          char next = letter + 1;  // 66, which is 'B'
+          std::cout << next << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      65
+      B
+      ```
+
+      `static_cast<int>(letter)` means *"treat this value as an `int`"* —
+      you'll learn it properly in Chapter 3. And because a `char` is a number,
+      `letter + 1` gives the next character's code.
+
+      > [!note]
+      > `'7'` (the character) is not the number 7 — its code is 55. To turn a
+      > digit character into its value, subtract `'0'`: `'7' - '0'` is `7`.
+
+      {{check char-math}}
+
+      ## `bool`: true or false
+
+      A `bool` holds one of two values: `true` or `false`. It's the type of
+      every yes/no question a program asks — and the heart of decisions in
+      Chapter 4.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          bool isRaining{true};
+          bool hasUmbrella{false};
+          std::cout << isRaining << ' ' << hasUmbrella << '\n';
+
+          std::cout << std::boolalpha;
+          std::cout << isRaining << ' ' << hasUmbrella << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1 0
+      true false
+      ```
+
+      By default `std::cout` prints `true` as `1` and `false` as `0`. After
+      `std::cout << std::boolalpha;` it prints the words instead — and keeps
+      doing so for the rest of the program.
+
+      Good `bool` names read like yes/no questions: `isReady`, `hasKey`,
+      `gameOver`.
+
+      {{check bool-print}}
+    checks:
+      - id: char-math
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              char c{'a'};
+              char d = c + 2;
+              std::cout << c << d << '\n';
+              std::cout << '9' - '0' << '\n';
+              return 0;
+          }
+        answer: |
+          ac
+          9
+        why: |
+          `c + 2` is the code two after `'a'`, which is `'c'`. And `'9' - '0'`
+          subtracts the codes (57 − 48), giving the number 9.
+      - id: bool-print
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              bool done{false};
+              std::cout << done << '\n';
+              std::cout << std::boolalpha << done << '\n';
+              return 0;
+          }
+        answer: |
+          0
+          false
+        why: Without `std::boolalpha` a bool prints as `0`/`1`; with it, as `false`/`true`.
+      - id: char-vs-string
+        type: mcq
+        prompt: "What's the difference between `'x'` and `\"x\"`?"
+        options:
+          - None, they're the same
+          - "`'x'` is a single `char`; `\"x\"` is text (a string literal)"
+          - "`'x'` is text; `\"x\"` is a char"
+          - "`'x'` is invalid"
+        answer: 1
+        why: Single quotes hold exactly one character, of type `char`. Double quotes make a string literal — text.
+    cards:
+      - front: How do you write a `char` value?
+        back: "In single quotes, exactly one character: `char c{'A'};`"
+      - front: What is a `char` really, underneath?
+        back: A small number — the character's code (in ASCII, `'A'` is 65, `'a'` is 97, `'0'` is 48).
+      - front: How do you get the numeric value of a digit character like `'7'`?
+        back: "Subtract `'0'`: `'7' - '0'` is `7`."
+      - front: How do you make `std::cout` print `true`/`false` instead of `1`/`0`?
+        back: "`std::cout << std::boolalpha;` (it stays on afterwards)."
+
+  - type: quiz
+    id: c2-quiz1
+    title: "Quiz: variables and types"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{2};
+              x = x * 3;
+              x = x + x;
+              std::cout << x << '\n';
+              return 0;
+          }
+        answer: |
+          12
+        why: "x is 2, then 6, then 6 + 6 = 12."
+      - type: mcq
+        prompt: Which declaration is **not** valid C++?
+        options:
+          - "`int total{};`"
+          - "`double price = 2.5;`"
+          - "`int 2players{2};`"
+          - "`char initial{'Q'};`"
+        answer: 2
+        why: A name can't start with a digit.
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              double half{0.50};
+              double big{2000000.0};
+              std::cout << half << ' ' << big << '\n';
+              return 0;
+          }
+        answer: |
+          0.5 2e+06
+        why: Trailing zeros are dropped, and 2000000 has 7 digits, more than the default 6, so it switches to scientific notation.
+      - type: tf
+        prompt: "`int n{3.5};` compiles, and `n` becomes 3."
+        answer: false
+        why: Brace initialisation forbids narrowing, so this is a compile error. (`int n = 3.5;` would compile and give 3.)
+      - type: fill
+        prompt: Complete the program so it prints the character that comes after `'m'`.
+        code: |
+          #include <iostream>
+
+          int main() {
+              char letter{'m'};
+              char after = letter ___ 1;
+              std::cout << after << '\n';
+              return 0;
+          }
+        blanks:
+          - ['+']
+        output: |
+          n
+        why: Characters are numbers, so adding 1 gives the next code — `'n'`.
+      - type: mcq
+        prompt: What's the best type for *whether the player has finished the level*?
+        options:
+          - "`int`"
+          - "`bool`"
+          - "`char`"
+          - "`double`"
+        answer: 1
+        why: It's a yes/no fact, so `bool`.
+
+  - type: lesson
+    id: c2-string
+    title: "Text: std::string"
+    minutes: 18
+    objectives:
+      - Store text in a `std::string` variable
+      - Join strings with `+` and `+=`
+      - Get the length of a string with `.length()`
+    body: |
+      A `char` holds one character. For words and sentences, use
+      **`std::string`**, from the standard library. It needs its own include:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string name{"Ada"};
+          std::string city{"London"};
+          std::cout << name << " lives in " << city << ".\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      Ada lives in London.
+      ```
+
+      ## Joining strings
+
+      `+` joins (**concatenates**) strings, and `+=` adds to the end of one:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string first{"Grace"};
+          std::string last{"Hopper"};
+          std::string full = first + " " + last;
+          std::cout << full << '\n';
+
+          std::string message{"Hello"};
+          message += ", ";
+          message += full;
+          message += '!';
+          std::cout << message << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Grace Hopper
+      Hello, Grace Hopper!
+      ```
+
+      You can add a `char` too (`'!'` above). But there's one trap: you can't
+      `+` two **literals** together, because a literal like `"Hello"` isn't a
+      `std::string` — it's older, simpler C-style text:
+
+      ```cpp error
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string greeting = "Hello, " + "world";
+          std::cout << greeting << '\n';
+          return 0;
+      }
+      ```
+
+      As long as at least one side of each `+` is a `std::string`, it works.
+
+      ## Length
+
+      A string knows how many characters it has. Ask it with `.length()` (or
+      `.size()` — they're identical):
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string word{"banana"};
+          std::cout << word << " has " << word.length() << " letters\n";
+
+          std::string empty{};
+          std::cout << "Empty: " << empty.length() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      banana has 6 letters
+      Empty: 0
+      ```
+
+      The dot in `word.length()` means *"ask `word` for its length"*. Things
+      you call with a dot are **member functions** — tools that belong to the
+      value. `std::string` has many; Chapter 8 is all about them.
+
+      {{check concat}}
+
+      {{check length}}
+
+      {{task initials}}
+    checks:
+      - id: concat
+        type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string a{"ice"};
+              std::string b{"cream"};
+              std::string c = a + b;
+              c += 's';
+              std::cout << c << '\n';
+              return 0;
+          }
+        answer: |
+          icecreams
+        why: "`+` joins with nothing in between (`icecream`), then `+=` adds the char `'s'` to the end."
+      - id: length
+        type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"C++ rocks"};
+              std::cout << s.length() << '\n';
+              return 0;
+          }
+        answer: |
+          9
+        why: The length counts every character, including `+` signs and the space.
+      - id: literal-plus
+        type: mcq
+        prompt: Which line does **not** compile? (Assume `std::string name{"Bo"};`)
+        options:
+          - "`std::string s = name + \"!\";`"
+          - "`std::string s = \"Hi \" + name;`"
+          - "`std::string s = \"Hi \" + \"there\";`"
+          - "`std::string s = name + ' ' + name;`"
+        answer: 2
+        why: Two string literals can't be added — neither is a `std::string`. In every other line, one side of each `+` is a `std::string`.
+    tasks:
+      - id: initials
+        title: Name badge
+        prompt: |
+          The starter has two strings. Build and print a badge line that joins
+          them with a space and adds the total number of characters of the
+          full name (space included) in brackets:
+
+          ```text
+          Katherine Johnson (17)
+          ```
+        starter: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string first{"Katherine"};
+              std::string last{"Johnson"};
+
+              return 0;
+          }
+        tests:
+          - in: ""
+            out: |
+              Katherine Johnson (17)
+        hints:
+          - "First build `std::string full = first + \" \" + last;`"
+          - "Then print `full`, `\" (\"`, `full.length()` and `\")\"`."
+        solution: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string first{"Katherine"};
+              std::string last{"Johnson"};
+              std::string full = first + " " + last;
+              std::cout << full << " (" << full.length() << ")\n";
+              return 0;
+          }
+    cards:
+      - front: Which header do you need for `std::string`?
+        back: "`#include <string>`"
+      - front: How do you join two strings?
+        back: "With `+` (`a + b`), or add to the end of one with `+=`."
+      - front: "Why doesn't `\"Hi \" + \"there\"` compile?"
+        back: Both are string *literals*, not `std::string`s, and literals can't be added. At least one side of `+` must be a `std::string`.
+      - front: How do you get the number of characters in a string `s`?
+        back: "`s.length()` or `s.size()`."
+
+  - type: lesson
+    id: c2-const
+    title: Constants
+    minutes: 12
+    objectives:
+      - Make a value unchangeable with `const`
+      - Use `constexpr` for values known when compiling
+      - Replace "magic numbers" with named constants
+    body: |
+      Some values should never change while the program runs: the number of
+      days in a week, the speed of light, the price of a ticket today. Mark
+      them **`const`**:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          const int daysPerWeek{7};
+          const double ticketPrice{8.50};
+          std::cout << 3 * daysPerWeek << " days\n";
+          std::cout << 4 * ticketPrice << " euros\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      21 days
+      34 euros
+      ```
+
+      A `const` variable must be initialised, and any attempt to change it
+      afterwards is a compile error:
+
+      ```cpp error
+      int main() {
+          const int maxLives{3};
+          maxLives = 4;
+          return 0;
+      }
+      ```
+
+      That's the point: the compiler guarantees the value stays the same, and
+      a reader knows it at a glance.
+
+      ## Magic numbers
+
+      What does this line calculate?
+
+      ```cpp static
+      std::cout << total * 0.21 << '\n';
+      ```
+
+      You can't tell — `0.21` is a **magic number**: a value whose meaning
+      lives only in the author's head. Compare:
+
+      ```cpp static
+      const double vatRate{0.21};
+      std::cout << total * vatRate << '\n';
+      ```
+
+      Now the code explains itself, and if the rate changes you change it in
+      **one** place. Replace magic numbers with named constants. (Obvious
+      values like 0, 1, or the 2 in "double it" are fine as they are.)
+
+      ## `constexpr`
+
+      `constexpr` (*constant expression*) is a stronger `const`: the value must
+      be known **when compiling**, not just fixed once the program runs. For
+      simple constants like these, prefer `constexpr`:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          constexpr double pi{3.14159};
+          constexpr int secondsPerHour{60 * 60};
+          double radius{2.0};
+          std::cout << "Area: " << pi * radius * radius << '\n';
+          std::cout << secondsPerHour << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Area: 12.5664
+      3600
+      ```
+
+      Rule of thumb: `constexpr` for values you could write down before the
+      program runs; `const` for values that are computed while running but
+      must not change afterwards (you'll see these once you read input).
+
+      {{check const-change}}
+    checks:
+      - id: const-change
+        type: mcq
+        prompt: "What happens here?"
+        code: |
+          int main() {
+              const int speed{50};
+              speed = speed + 10;
+              return 0;
+          }
+        compiles: error
+        options:
+          - "`speed` becomes 60"
+          - "`speed` stays 50 and the line is ignored"
+          - A compile error — a `const` can't be changed
+          - The program crashes when it runs
+        answer: 2
+        why: Assigning to a `const` variable is a compile error. That's its whole purpose.
+      - id: magic
+        type: mcq
+        prompt: "Why replace `price * 0.15` with `price * discountRate`?"
+        options:
+          - It runs faster
+          - The name explains what 0.15 means, and the value can be changed in one place
+          - The compiler requires it
+          - Decimal numbers can't be written directly in C++
+        answer: 1
+        why: Named constants make code self-explanatory and easy to update — that's why magic numbers are considered bad style.
+    cards:
+      - front: What does `const` do to a variable?
+        back: Makes it unchangeable after initialisation; trying to assign to it is a compile error.
+      - front: What is a **magic number**?
+        back: An unexplained literal value in code (like `0.21`) whose meaning isn't obvious. Replace it with a named constant.
+      - front: "`const` vs `constexpr`?"
+        back: "`constexpr` values must be known at compile time; `const` values can be computed at run time but can't change afterwards."
+
+  - type: lesson
+    id: c2-cin
+    title: Reading input with std::cin
+    minutes: 22
+    objectives:
+      - Read numbers and single words typed by the user with `std::cin >>`
+      - Read several values in one statement
+      - Write programs whose output depends on their input
+    body: |
+      Programs become interesting when they react to **input**. The partner
+      of `std::cout` is **`std::cin`** (*see-in*, console input):
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int age{};
+          std::cout << "How old are you? ";
+          std::cin >> age;
+          std::cout << "Next year you'll be " << age + 1 << ".\n";
+          return 0;
+      }
+      ```
+
+      ```stdin
+      15
+      ```
+
+      ```output
+      How old are you? Next year you'll be 16.
+      ```
+
+      `std::cin >> age;` waits for the user to type something, reads a whole
+      number from it, and stores it in `age`. The arrows point **into** the
+      variable: data flows from `cin` into `age`.
+
+      > [!note] How input works in this course
+      > On your own computer, the program stops and waits while you type. Here,
+      > code runs on a server, so you type the input **in advance** in the
+      > **Input** box — the program reads it from there when it gets to
+      > `std::cin`. That's why the question and the answer appear on one line
+      > in the output above: the typed `15` isn't shown, because it came from
+      > the Input box, not the keyboard.
+
+      ## Reading several values
+
+      `>>` skips spaces and new lines, and each `>>` reads the next value. So
+      you can read several in one statement, and the user can type them on
+      one line or several:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int a{};
+          int b{};
+          std::cin >> a >> b;
+          std::cout << a << " + " << b << " = " << a + b << '\n';
+          std::cout << a << " * " << b << " = " << a * b << '\n';
+          return 0;
+      }
+      ```
+
+      ```stdin
+      6 7
+      ```
+
+      ```output
+      6 + 7 = 13
+      6 * 7 = 42
+      ```
+
+      Press **Edit** and change the numbers in the Input box to try others.
+
+      ## Reading words and decimals
+
+      `>>` works for every type you've met. The type of the variable decides
+      what is read:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string name{};
+          double height{};
+          std::cin >> name >> height;
+          std::cout << name << " is " << height * 100 << " cm tall.\n";
+          return 0;
+      }
+      ```
+
+      ```stdin
+      Ada 1.65
+      ```
+
+      ```output
+      Ada is 165 cm tall.
+      ```
+
+      > [!warning] `>>` reads one *word*
+      > Reading a `std::string` with `>>` stops at the first space. If the user
+      > types `Ada Lovelace`, `name` gets only `Ada`. Reading a whole line
+      > needs `std::getline` — coming in Chapter 8.
+
+      ## When the input is wrong
+
+      What if the program expects a number and the user types `hello`? The
+      read **fails**: the variable is set to `0` and `std::cin` stops reading
+      anything else. Handling bad input properly needs decisions and loops
+      (Chapters 4 and 5); for now, the exercises always give valid input.
+
+      {{check two-values}}
+
+      {{check word}}
+
+      {{task rectangle-in}}
+
+      {{task greet-in}}
+    checks:
+      - id: two-values
+        type: output
+        prompt: The Input box contains `10 4`. What is printed?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{};
+              int y{};
+              std::cin >> x >> y;
+              std::cout << x - y << ' ' << y - x << '\n';
+              return 0;
+          }
+        stdin: "10 4"
+        answer: |
+          6 -6
+        why: "`x` gets 10 and `y` gets 4 (the first and second numbers typed). `10 - 4 = 6` and `4 - 10 = -6`."
+      - id: word
+        type: output
+        prompt: The Input box contains `Alan Turing`. What is printed?
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string name{};
+              std::cin >> name;
+              std::cout << "Hi, " << name << "!\n";
+              return 0;
+          }
+        stdin: "Alan Turing"
+        answer: |
+          Hi, Alan!
+        why: "`>>` into a string reads one word — it stops at the space, so `name` is just `Alan`."
+      - id: arrows
+        type: mcq
+        prompt: Which statement reads a number into `n`?
+        options:
+          - "`std::cin << n;`"
+          - "`std::cin >> n;`"
+          - "`std::cout >> n;`"
+          - "`n >> std::cin;`"
+        answer: 1
+        why: Input flows **from** `std::cin` **into** `n`, so the arrows point at `n`: `std::cin >> n;`.
+    tasks:
+      - id: rectangle-in
+        title: Any rectangle
+        prompt: |
+          Read two whole numbers, the width and the height of a rectangle, and
+          print its area and perimeter exactly like this (for input `3 5`):
+
+          ```text
+          Area: 15
+          Perimeter: 16
+          ```
+
+          Your program will be tested with several different inputs.
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int width{};
+              int height{};
+
+              return 0;
+          }
+        tests:
+          - in: "3 5"
+            out: |
+              Area: 15
+              Perimeter: 16
+          - in: "10 10"
+            out: |
+              Area: 100
+              Perimeter: 40
+          - in: "1 7"
+            out: |
+              Area: 7
+              Perimeter: 16
+            hidden: true
+        hints:
+          - "Read both with `std::cin >> width >> height;`"
+          - "The perimeter is `2 * (width + height)` — all four sides."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int width{};
+              int height{};
+              std::cin >> width >> height;
+              std::cout << "Area: " << width * height << '\n';
+              std::cout << "Perimeter: " << 2 * (width + height) << '\n';
+              return 0;
+          }
+      - id: greet-in
+        title: Personal greeting
+        prompt: |
+          Read a first name and an age, then print a greeting like this (for
+          input `Mia 12`):
+
+          ```text
+          Hello, Mia! In 10 years you will be 22.
+          ```
+        starter: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "Mia 12"
+            out: |
+              Hello, Mia! In 10 years you will be 22.
+          - in: "Oscar 70"
+            out: |
+              Hello, Oscar! In 10 years you will be 80.
+        hints:
+          - "You need a `std::string` for the name and an `int` for the age."
+          - "`std::cin >> name >> age;` reads both."
+        solution: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string name{};
+              int age{};
+              std::cin >> name >> age;
+              std::cout << "Hello, " << name << "! In 10 years you will be " << age + 10 << ".\n";
+              return 0;
+          }
+    cards:
+      - front: How do you read a number typed by the user into `n`?
+        back: "`std::cin >> n;` — the arrows point into the variable."
+      - front: What does `std::cin >> a >> b;` do?
+        back: Reads two values, in order, into `a` and then `b`. Spaces and new lines between them are skipped.
+      - front: What does `std::cin >> name;` read if the user types `Ada Lovelace`?
+        back: Only `Ada`. `>>` reads a single word; use `std::getline` for a whole line.
+      - front: What decides what `std::cin >> x` reads?
+        back: The type of `x`. An `int` reads a whole number, a `double` a decimal, a `std::string` a word.
+
+  - type: quiz
+    id: c2-quiz2
+    title: "Quiz: strings, constants and input"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"ab"};
+              s += s;
+              std::cout << s << ' ' << s.length() << '\n';
+              return 0;
+          }
+        answer: |
+          abab 4
+        why: "`s += s` appends a copy of `s` to itself: `abab`, 4 characters."
+      - type: output
+        prompt: "The Input box contains `7 2.5`. What is printed?"
+        code: |
+          #include <iostream>
+
+          int main() {
+              int count{};
+              double price{};
+              std::cin >> count >> price;
+              std::cout << count * price << '\n';
+              return 0;
+          }
+        stdin: "7 2.5"
+        answer: |
+          17.5
+        why: "`count` is 7 and `price` is 2.5; 7 × 2.5 = 17.5."
+      - type: mcq
+        prompt: Which is the best replacement for the magic number in `seconds / 3600`?
+        options:
+          - "`seconds / three_six_zero_zero`"
+          - "`constexpr int secondsPerHour{3600};` then `seconds / secondsPerHour`"
+          - "`int x{3600};` then `seconds / x`"
+          - Leave it — numbers are clearer than names
+        answer: 1
+        why: A constant with a meaningful name explains the value and can't be changed by accident.
+      - type: spot
+        prompt: Which line won't compile?
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              const int limit{10};
+              std::string label{"Limit: "};
+              limit = 20;
+              std::cout << label << limit << '\n';
+              return 0;
+          }
+        answer: 7
+        why: "`limit` is `const`, so assigning to it is a compile error."
+      - type: tf
+        prompt: "If you forget `#include <string>`, `std::string` might not be available."
+        answer: true
+        why: "`std::string` is declared in `<string>`. (Sometimes another header includes it by accident, but you should never rely on that.)"
+      - type: mcq
+        prompt: "The program reads `std::cin >> n;` into an `int n`, and the user types `seven`. What happens?"
+        options:
+          - "`n` becomes 7"
+          - The read fails and `n` becomes 0
+          - The program understands and asks again
+          - A compile error
+        answer: 1
+        why: The text `seven` isn't a number, so the read fails, `n` is set to 0, and `std::cin` stops reading until the error is cleared.
+
+  - type: challenge
+    id: c2-ch-bill
+    title: Split the bill
+    difficulty: 1
+    tags: [input, double]
+    prompt: |
+      A group of friends eats out. Read the **total bill** (a decimal number)
+      and the **number of people** (a whole number). A 10% tip is added to the
+      bill. Print the total with tip and what each person pays:
+
+      For input `80 4`:
+
+      ```text
+      Total with tip: 88
+      Each person pays: 22
+      ```
+
+      Use a named constant for the tip rate.
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "80 4"
+        out: |
+          Total with tip: 88
+          Each person pays: 22
+      - in: "50 2"
+        out: |
+          Total with tip: 55
+          Each person pays: 27.5
+      - in: "12.5 5"
+        out: |
+          Total with tip: 13.75
+          Each person pays: 2.75
+        hidden: true
+    hints:
+      - "`constexpr double tipRate{0.10};` — then the total is `bill + bill * tipRate`."
+      - "Read the bill into a `double` and the people into an `int`. Dividing a `double` by an `int` gives a `double`."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          constexpr double tipRate{0.10};
+          double bill{};
+          int people{};
+          std::cin >> bill >> people;
+          double total = bill + bill * tipRate;
+          std::cout << "Total with tip: " << total << '\n';
+          std::cout << "Each person pays: " << total / people << '\n';
+          return 0;
+      }
+
+  - type: challenge
+    id: c2-ch-swap
+    title: Swap two numbers
+    difficulty: 2
+    tags: [variables]
+    prompt: |
+      Read two whole numbers into `a` and `b`. Then **swap** their values, so
+      that `a` holds what `b` had and the other way round — and print them.
+
+      For input `3 8`:
+
+      ```text
+      Before: a=3 b=8
+      After: a=8 b=3
+      ```
+
+      The trick: you must print `a` and `b` themselves in the last line — not
+      just print them in the other order!
+    starter: |
+      #include <iostream>
+
+      int main() {
+          int a{};
+          int b{};
+          std::cin >> a >> b;
+          std::cout << "Before: a=" << a << " b=" << b << '\n';
+
+          // Swap the values of a and b here
+
+          std::cout << "After: a=" << a << " b=" << b << '\n';
+          return 0;
+      }
+    tests:
+      - in: "3 8"
+        out: |
+          Before: a=3 b=8
+          After: a=8 b=3
+      - in: "-1 100"
+        out: |
+          Before: a=-1 b=100
+          After: a=100 b=-1
+      - in: "5 5"
+        out: |
+          Before: a=5 b=5
+          After: a=5 b=5
+        hidden: true
+    hints:
+      - "Try `a = b; b = a;` on paper with 3 and 8. What goes wrong?"
+      - After `a = b;` the old value of `a` is gone forever. Save it somewhere first.
+      - "Use a third variable: `int temp{a};` then `a = b;` then `b = temp;`."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          int a{};
+          int b{};
+          std::cin >> a >> b;
+          std::cout << "Before: a=" << a << " b=" << b << '\n';
+
+          int temp{a};
+          a = b;
+          b = temp;
+
+          std::cout << "After: a=" << a << " b=" << b << '\n';
+          return 0;
+      }
+    explain: |
+      Swapping is a classic because it shows that assignment **overwrites**:
+      `a = b` destroys `a`'s old value. Keeping a copy in `temp` first is like
+      swapping two cups of liquid using a third cup. (The standard library
+      has `std::swap(a, b)` that does exactly this — but now you know what it
+      does inside.)
+
+  - type: challenge
+    id: c2-ch-letters
+    title: Letter codes
+    difficulty: 2
+    tags: [char, input]
+    prompt: |
+      Read one lowercase letter. Print its ASCII code, the letter after it,
+      and its position in the alphabet (`a` is 1, `z` is 26).
+
+      For input `c`:
+
+      ```text
+      Code: 99
+      Next: d
+      Position: 3
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+          char letter{};
+          std::cin >> letter;
+
+          return 0;
+      }
+    tests:
+      - in: "c"
+        out: |
+          Code: 99
+          Next: d
+          Position: 3
+      - in: "a"
+        out: |
+          Code: 97
+          Next: b
+          Position: 1
+      - in: "x"
+        out: |
+          Code: 120
+          Next: y
+          Position: 24
+        hidden: true
+    hints:
+      - "`static_cast<int>(letter)` gives the code."
+      - "`char next = letter + 1;` is the next letter. Print `next`, not `letter + 1` (which would print a number)."
+      - "The position is how far past `'a'` it is, plus one: `letter - 'a' + 1`."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          char letter{};
+          std::cin >> letter;
+          char next = letter + 1;
+          std::cout << "Code: " << static_cast<int>(letter) << '\n';
+          std::cout << "Next: " << next << '\n';
+          std::cout << "Position: " << letter - 'a' + 1 << '\n';
+          return 0;
+      }
+    explain: |
+      Why does `std::cout << letter + 1` print a number? Because `letter + 1`
+      is an arithmetic result, and arithmetic on a `char` produces an `int`.
+      Storing it back into a `char` variable makes `std::cout` print it as a
+      character again.
+
+  - type: challenge
+    id: c2-ch-story
+    title: Mad Libs
+    difficulty: 1
+    tags: [strings, input]
+    prompt: |
+      Read four words: a name, an animal, a colour and a number (as a whole
+      number). Print a short story using them. For input
+      `Leo dragon purple 3`:
+
+      ```text
+      Leo found a purple dragon.
+      It had 3 wings and 6 eyes.
+      "Leo and the purple dragon" was a bestseller.
+      ```
+
+      The number of eyes is always twice the number of wings.
+    starter: |
+      #include <iostream>
+      #include <string>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "Leo dragon purple 3"
+        out: |
+          Leo found a purple dragon.
+          It had 3 wings and 6 eyes.
+          "Leo and the purple dragon" was a bestseller.
+      - in: "Zoe cat green 10"
+        out: |
+          Zoe found a green cat.
+          It had 10 wings and 20 eyes.
+          "Zoe and the green cat" was a bestseller.
+    hints:
+      - Three `std::string` variables and one `int`, read in order with `std::cin >>`.
+      - "The quotes on the last line need escaping: `\\\"`."
+    solution: |
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string name{};
+          std::string animal{};
+          std::string colour{};
+          int wings{};
+          std::cin >> name >> animal >> colour >> wings;
+          std::cout << name << " found a " << colour << ' ' << animal << ".\n";
+          std::cout << "It had " << wings << " wings and " << 2 * wings << " eyes.\n";
+          std::cout << '"' << name << " and the " << colour << ' ' << animal << "\" was a bestseller.\n";
+          return 0;
+      }
+
+  - type: review
+    id: c2-review
+    title: "Chapter 2 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      int count{0};                 // whole number
+      double price{9.99};           // decimal number
+      char grade{'A'};              // one character, single quotes
+      bool done{false};             // true or false
+      std::string name{"Ada"};      // text, needs #include <string>
+      long long big{8'000'000'000}; // very big whole number
+
+      count = count + 1;            // change a value
+      constexpr double pi{3.14159}; // a constant known when compiling
+      const int limit{10};          // a constant
+
+      std::cin >> count;            // read a value
+      std::cin >> name >> price;    // read several
+      ```
+
+      ## Key ideas
+
+      - A variable has a **type**, a **name** and a **value**. `=` means "store into".
+      - **Always initialise.** `int x{};` is zero; an uninitialised `int x;` holds garbage (undefined behaviour).
+      - Brace initialisation `{}` refuses **narrowing** — e.g. `int n{2.5}` is an error.
+      - `std::cout` prints doubles with up to 6 significant digits and drops trailing zeros.
+      - A `char` is a small number (its code): `'A' + 1` is `'B'`, `'7' - '0'` is `7`.
+      - `bool` prints as `1`/`0` unless you use `std::boolalpha`.
+      - Strings join with `+` — but not two literals. `.length()` counts characters.
+      - Name your constants: no **magic numbers**.
+      - `std::cin >> x` reads one value of `x`'s type; for strings, one word.
+    questions:
+      - type: output
+        prompt: The Input box contains `4 hi`. What is printed?
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              int n{};
+              std::string w{};
+              std::cin >> n >> w;
+              std::string out = w + w;
+              std::cout << out << ' ' << out.length() * n << '\n';
+              return 0;
+          }
+        stdin: "4 hi"
+        answer: |
+          hihi 16
+        why: "`out` is `hihi` (length 4), times `n` (4) gives 16."
+      - type: output
+        prompt: This mixes Chapter 1 and 2. What is printed?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{5};
+              std::cout << "x" << x << "\t|" << x * 2 << '\n';
+              return 0;
+          }
+        answer: "x5\t|10"
+        why: "The text `x`, then the value 5, a tab, `|` and 10 — all with nothing added in between."
+      - type: mcq
+        prompt: "Which is the modern, recommended way to create an `int` called `lives` that starts at 3?"
+        options:
+          - "`int lives;` then `lives = 3;`"
+          - "`int lives{3};`"
+          - "`lives = 3;`"
+          - "`int = lives 3;`"
+        answer: 1
+        why: Initialise at creation, with braces. Declaring first and assigning later leaves a moment where it's uninitialised.
+
+  - type: exam
+    id: c2-exam
+    title: "Chapter 2 exam"
+    minutes: 25
+    pick: 12
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{3};
+              int b{a * 2};
+              a = b + a;
+              b = a - b;
+              std::cout << a << ' ' << b << '\n';
+              return 0;
+          }
+        answer: |
+          9 3
+        why: "a=3, b=6; then a = 6 + 3 = 9; then b = 9 − 6 = 3."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              double d{12.50};
+              double e{0.1 + 0.2};
+              std::cout << d << ' ' << e << '\n';
+              return 0;
+          }
+        answer: |
+          12.5 0.3
+        why: "12.50 prints as 12.5. 0.1 + 0.2 is not *exactly* 0.3 in binary (Chapter 3), but with 6 significant digits it prints as 0.3."
+      - type: mcq
+        prompt: What does reading an uninitialised local `int` give you?
+        options:
+          - Always 0
+          - Always the largest int
+          - Undefined behaviour — an unpredictable value
+          - A compile error, always
+        answer: 2
+        why: The value is whatever garbage was in memory. The compiler may warn, but it isn't an error.
+      - type: mcq
+        prompt: Which line does **not** compile?
+        options:
+          - "`int a{};`"
+          - "`double b{3};`"
+          - "`int c{4.2};`"
+          - "`char d{'z'};`"
+        answer: 2
+        why: "Putting 4.2 into an `int` with braces is a narrowing conversion. (`double b{3}` is fine — no information is lost.)"
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              char c{'A'};
+              c = c + 3;
+              std::cout << c << ' ' << c - 'A' << '\n';
+              return 0;
+          }
+        answer: |
+          D 3
+        why: "'A' + 3 is 'D'. Then `c - 'A'` is arithmetic on two chars, which gives the int 3."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              bool on{true};
+              std::cout << on << ' ';
+              std::cout << std::boolalpha << on << ' ' << !on << '\n';
+              return 0;
+          }
+        answer: |
+          1 true false
+        why: "Without `boolalpha`, `true` prints as `1`. After it, as `true`. `!on` means *not* on — `false`."
+      - type: fill
+        prompt: Complete the program so it prints `Hello, Ada!`.
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string name{"Ada"};
+              std::string msg = "Hello, " ___ name ___ "!";
+              std::cout << msg << '\n';
+              return 0;
+          }
+        blanks:
+          - ['+']
+          - ['+']
+        output: |
+          Hello, Ada!
+        why: "`+` joins strings. Each `+` has a `std::string` on at least one side, so it compiles."
+      - type: spot
+        prompt: Which line is the compile error?
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string first{"Tim"};
+              std::string last{"Berners-Lee"};
+              std::string both = "Sir " + "Tim";
+              std::cout << first << last << both << '\n';
+              return 0;
+          }
+        answer: 7
+        why: Two string literals can't be added with `+`.
+      - type: output
+        prompt: "The Input box contains `3 4 5`. What is printed?"
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{};
+              int b{};
+              std::cin >> a >> b;
+              std::cout << a + b << '\n';
+              return 0;
+          }
+        stdin: "3 4 5"
+        answer: |
+          7
+        why: "Only two values are read (3 and 4). The 5 is simply never read."
+      - type: tf
+        prompt: "`constexpr int hoursPerDay{24};` can later be changed with `hoursPerDay = 25;`."
+        answer: false
+        why: "`constexpr` (like `const`) makes the variable unchangeable."
+      - type: mcq
+        prompt: What's the length of the string `"Hi there!"`?
+        options:
+          - "7"
+          - "8"
+          - "9"
+          - "11"
+        answer: 2
+        why: "H, i, space, t, h, e, r, e, ! — 9 characters. The quotes aren't part of the string."
+      - type: mcq
+        prompt: "What is `'5' - '0'`?"
+        options:
+          - "The character '5'"
+          - "The number 5"
+          - "The number 53"
+          - A compile error
+        answer: 1
+        why: Digit characters have consecutive codes, so subtracting the code of `'0'` gives the digit's value.
+      - type: code
+        prompt: |
+          Read a whole number of **minutes** and print how many hours and how
+          many seconds that is, as decimals where needed. For input `90`:
+
+          ```text
+          90 minutes = 1.5 hours = 5400 seconds
+          ```
+
+          (Hint: divide by `60.0`, not `60`, to get decimals — Chapter 3
+          explains why.)
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "90"
+            out: |
+              90 minutes = 1.5 hours = 5400 seconds
+          - in: "30"
+            out: |
+              30 minutes = 0.5 hours = 1800 seconds
+          - in: "120"
+            out: |
+              120 minutes = 2 hours = 7200 seconds
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int minutes{};
+              std::cin >> minutes;
+              std::cout << minutes << " minutes = " << minutes / 60.0 << " hours = " << minutes * 60 << " seconds\n";
+              return 0;
+          }
+      - type: code
+        prompt: |
+          Read a word and print it surrounded by a frame of `*`, whose width
+          depends on the word's length. For input `code`:
+
+          ```text
+          ********
+          * code *
+          ********
+          ```
+
+          The frame is the word's length plus 4 stars wide. (Hint: a string
+          can be made of repeated characters: `std::string(5, '*')` is
+          `*****`.)
+        starter: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "code"
+            out: |
+              ********
+              * code *
+              ********
+          - in: "C++"
+            out: |
+              *******
+              * C++ *
+              *******
+        solution: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string word{};
+              std::cin >> word;
+              std::string border(word.length() + 4, '*');
+              std::cout << border << '\n';
+              std::cout << "* " << word << " *\n";
+              std::cout << border << '\n';
+              return 0;
+          }

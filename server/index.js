@@ -8,6 +8,8 @@ const { DeployStore } = require('./store.js');
 const auth = require('./auth.js');
 const { GitHubStore } = require('./github-store.js');
 const { contentType, ASSET_NAME_RE } = require('./assets.js');
+const { createRunner } = require('./cpp.js');
+const { createProgressStore, validate: validateProgress } = require('./learn-store.js');
 const Compose = require('../public/compose.js');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -28,7 +30,10 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2'
+  '.woff2': 'font/woff2',
+  '.yml': 'text/yaml; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8'
 };
 
 function sendJson(res, status, payload) {
@@ -104,7 +109,8 @@ function readForm(req) {
 function serveStatic(res, urlPath) {
   if (urlPath.includes('\0')) return sendText(res, 400, 'Bad request');
 
-  const rel = urlPath === '/' ? 'index.html' : urlPath.replace(/^\/+/, '');
+  let rel = urlPath === '/' ? 'index.html' : urlPath.replace(/^\/+/, '');
+  if (rel.endsWith('/')) rel += 'index.html';
   const file = path.resolve(PUBLIC_DIR, rel);
   // resolve() has already collapsed any "..", so containment is the only
   // check that means anything here — comparing against path.join of the same
@@ -140,6 +146,11 @@ function createStore(options) {
 
 function createApp(options = {}) {
   const store = createStore(options);
+  const runner = options.runner || createRunner(options.cpp || {});
+  const progress = createProgressStore(store, {
+    file: options.learnFile || path.join(options.dataDir || DATA_DIR, '.learn', 'progress.json'),
+    branch: options.learnBranch
+  });
   // No password configured means no login — the local-tool default.
   const password = options.password !== undefined ? options.password : process.env.AU_PASSWORD;
   const authOn = Boolean(password);
@@ -321,8 +332,35 @@ function createApp(options = {}) {
         return sendJson(res, 405, { error: 'Method not allowed' });
       }
 
+      // --- Learn mode ---------------------------------------------------
+      if (pathname === '/api/cpp/status' && req.method === 'GET') {
+        return sendJson(res, 200, await runner.status());
+      }
+
+      if (pathname === '/api/cpp/run' && req.method === 'POST') {
+        const body = await readBody(req);
+        return sendJson(res, 200, await runner.run(body));
+      }
+
+      if (pathname === '/api/learn/progress' && req.method === 'GET') {
+        return sendJson(res, 200, { progress: await progress.read(), storage: progress.kind });
+      }
+
+      if (pathname === '/api/learn/progress' && (req.method === 'PUT' || req.method === 'POST')) {
+        const body = await readBody(req);
+        const problem = validateProgress(body.progress);
+        if (problem) return sendJson(res, 400, { error: problem });
+        return sendJson(res, 200, { progress: await progress.save(body.progress), storage: progress.kind });
+      }
+
       if (pathname.startsWith('/api/')) {
         return sendJson(res, 404, { error: 'Unknown endpoint' });
+      }
+
+      // Learn mode lives in a folder; its relative links need the slash.
+      if (pathname === '/learn') {
+        res.writeHead(301, { location: '/learn/' + url.search });
+        return res.end();
       }
 
       // --- Editor app -----------------------------------------------------
@@ -338,6 +376,8 @@ function createApp(options = {}) {
   });
 
   server.store = store;
+  server.runner = runner;
+  server.progress = progress;
   return server;
 }
 
