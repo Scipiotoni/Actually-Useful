@@ -89,6 +89,9 @@ button { font-family: inherit; }
 .btn-primary { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; font-weight: 600; }
 .btn-primary:hover { background: #5590ff; border-color: #5590ff; }
 .btn-ghost { background: transparent; }
+a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+.btn-learn { border-color: #5b4a9e; background: rgba(123, 97, 255, .12); }
+.btn-learn:hover { background: rgba(123, 97, 255, .22); border-color: #7b61ff; }
 
 .toggle {
   display: flex;

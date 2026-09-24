@@ -1,0 +1,33 @@
+name: Course
+
+# Compiles and runs every example, question and exercise in Learn C++.
+# It takes a few minutes, so it only runs when the course or the runner changes.
+on:
+  push:
+    branches-ignore: [au-learn]
+    paths:
+      - 'public/learn/**'
+      - 'server/cpp.js'
+      - 'test/course-lib.js'
+      - 'test/course.test.js'
+      - '.github/workflows/course.yml'
+  pull_request:
+    paths:
+      - 'public/learn/**'
+      - 'server/cpp.js'
+      - 'test/course-lib.js'
+      - 'test/course.test.js'
+      - '.github/workflows/course.yml'
+
+jobs:
+  course:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - run: g++ --version
+      - name: Check every lesson, exercise and exam
+        run: AU_COURSE_CHECK=1 node --test test/course.test.js

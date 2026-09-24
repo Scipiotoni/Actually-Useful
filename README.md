@@ -193,6 +193,10 @@ The UI is just a client of this API.
 | `POST` | `/api/assets` | Upload. Body: `{name, data}` where data is a data: URL |
 | `DELETE` | `/api/assets/:name` | Remove an image |
 | `GET` | `/assets/:name` | The image itself (public) |
+| `GET` | `/api/cpp/status` | Whether C++ can run here, and with which compiler |
+| `POST` | `/api/cpp/run` | Compile and run. Body: `{source}` or `{files}`, plus `stdin` or `inputs: []` |
+| `GET` | `/api/learn/progress` | Learning progress |
+| `PUT` | `/api/learn/progress` | Save progress (merged with what's stored). Body: `{progress}` |
 
 Omit `slug` on `POST` to create a new page — the slug is derived from the name
 and de-duplicated (`my-page`, `my-page-2`, …). Pass `slug` to overwrite that
@@ -214,9 +218,10 @@ A project holds up to 40 files, each up to 2 MB. Names must end in `.html`,
 ## C and C++
 
 C++ sources are edited and highlighted like any other file, and published as
-readable text.
+readable text. To *run* C++ while learning, use [Learn C++](#learn-c) — its
+lessons and Playground compile on the server.
 
-They do not *run*, though — no browser executes C++. The way C++ reaches a web
+A published page can't run C++ by itself — no browser executes C++. The way C++ reaches a web
 page is WebAssembly: you compile it somewhere with a toolchain, most commonly
 [Emscripten](https://emscripten.org), and publish what comes out.
 
@@ -236,6 +241,68 @@ WebAssembly.instantiateStreaming(fetch('add.wasm'))
 `WebAssembly.instantiateStreaming` accepts. The preview answers a `fetch` for
 any of the project's own files from the copy it carries, so a module runs while
 you are still drafting, not only once deployed.
+
+## Learn C++
+
+The **Learn C++** button (or `/learn/`) opens a complete course that starts
+from knowing nothing about programming and ends with writing real C++
+fluently:
+
+- **20 chapters in 5 parts** — first steps, working with data, object-oriented
+  C++, the standard library and modern C++, and becoming fluent (multi-file
+  programs, debugging, testing, algorithms) — ending with a capstone project
+  and a final exam.
+- **118 lessons**, each with stated objectives, examples you can edit and run,
+  and quick checks as you read.
+- **Practice at every level**: 91 exercises inside lessons, 98 challenges
+  (★ to ★★★), 5 projects built in 19 milestones, 36 quizzes, a review page and
+  an exam per chapter (760 questions in all: multiple choice, predict the
+  output, fill in the blank, order the lines, spot the bug, and code).
+- **Mastery learning**: a chapter's exam (80% to pass) unlocks the next one —
+  or unlock it anyway if you already know the material.
+- **Remembering it**: 396 spaced-repetition flashcards, a mistake bank that
+  brings back what you got wrong, and mixed practice across chapters.
+- **Help when stuck**: progressive hints, compiler errors and crashes
+  explained in plain words, and solutions after a real attempt.
+- XP, levels, streaks, badges, notes per lesson, a searchable 198-term
+  glossary and a Playground with templates.
+
+Progress is kept in the browser and synced to the server, merged so two
+devices never overwrite each other. With GitHub storage on, it is committed to
+its own branch (`au-learn`), so saving progress never triggers a Pages build or
+a redeploy. **Progress → Export** downloads a copy at any time.
+
+### How the C++ runs
+
+Code is compiled and run on the server, in this order of preference:
+
+1. **The local compiler** — `g++` (or `AU_CXX`), with `-std=c++20` on GCC 10+
+   and `-Wall -Wextra -pedantic`. Each run gets a time limit, 1 GB of memory,
+   a cap on output and on file sizes, and its own temporary directory.
+   Identical programs come from a cache, and common headers are precompiled,
+   so a typical exercise compiles in a fraction of a second.
+2. **Compiler Explorer** (godbolt.org), then **Wandbox**, over the internet,
+   when no compiler is installed. These are implemented against their public
+   APIs and tested with simulated replies; they haven't been exercised against
+   the live services.
+
+`AU_CPP_BACKEND=local|godbolt|wandbox|off` forces one. The limits are there to
+stop honest mistakes — an endless loop, a runaway print — not to contain
+hostile code: with `AU_PASSWORD` set, only signed-in users can run anything.
+
+### Writing course content
+
+Chapters are YAML files in `public/learn/course/` (`course.yml` lists them).
+Lessons are Markdown with callouts (`> [!tip]`, `> [!mistake]`, …), runnable
+` ```cpp ` blocks followed by optional ` ```stdin ` and ` ```output ` blocks,
+and `{{check id}}` / `{{task id}}` placeholders for questions and exercises.
+Exercises are either whole programs checked against input/output tests, or
+functions checked by a `harness` of `CHECK(expression, expected);` lines.
+
+`node test/course-lib.js [ch05 ...]` compiles and runs everything in the
+chosen chapters (all of them by default): examples must print what they
+claim, solutions must pass without warnings, and starters must not already
+pass.
 
 ## Progressive web apps
 
@@ -312,6 +379,9 @@ with `AU_ALLOW_PUBLIC_WRITES=1` if you really mean it.
 | `AU_GITHUB_REPO` | *(unset)* | `owner/repo` to store published pages in |
 | `AU_GITHUB_BRANCH` | *(repo default)* | Branch to commit pages to |
 | `AU_ALLOW_PUBLIC_WRITES` | *(unset)* | Permit a public bind with no password |
+| `AU_CPP_BACKEND` | `auto` | How Learn C++ runs code: `auto`, `local`, `godbolt`, `wandbox` or `off` |
+| `AU_CXX` | `g++` | The local C++ compiler to use |
+| `AU_LEARN_BRANCH` | `au-learn` | Branch that stores learning progress when GitHub storage is on |
 
 ## Open it on your phone
 
@@ -406,6 +476,17 @@ delete and find — as pure functions over text and a selection, so their edge
 cases (blank lines, the last line, no trailing newline) are pinned down without
 needing a browser.
 
+Learn C++ has its own suites: the learning engine (answer marking, spaced
+repetition, merging progress from two devices), the course format and
+Markdown renderer (including link and HTML escaping), the error explainer, the
+C++ and progress APIs, and the compiler runner itself (skipped when no `g++` is
+installed). The whole course — over a thousand examples, questions and
+exercises — is compiled and checked with:
+
+```bash
+AU_COURSE_CHECK=1 npm test
+```
+
 ## Security notes
 
 The default bind address is loopback, and this is built as a local tool for
@@ -437,6 +518,10 @@ public/styles.css  Everything visual
 test/api.test.js   node:test suite over the API, auth and compose rules
 test/editor.test.js        The editor's text operations, as pure functions
 test/github-store.test.js  GitHub storage, against a stand-in GitHub API
+server/cpp.js      Compiles and runs C++ for Learn mode (local g++ or a remote service)
+server/learn-store.js  Learning progress on disk or on its own GitHub branch
+public/learn/      Learn C++: the app, its engine, and the course in course/*.yml
+test/learn-*.test.js, test/cpp-runner.test.js, test/course.test.js  Learn mode tests
 ```
 
 ## License

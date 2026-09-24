@@ -344,7 +344,7 @@
   function runtime(run) {
     if (!run) return '';
     if (run.timedOut) {
-      return 'The program ran too long and was stopped. The usual cause is a loop whose condition never becomes false — check that the loop variable really changes. (Or the program waits for input that isn\'t in the Input box.)';
+      return 'The program ran too long and was stopped. The usual cause is a loop whose condition never becomes false — check that the loop variable really changes. If the tests use large inputs, the code may simply be too slow: look for a faster algorithm. (Or the program waits for input that isn\'t in the Input box.)';
     }
     if (run.truncated) {
       return 'The program printed far too much and was stopped — most likely a loop that never ends.';

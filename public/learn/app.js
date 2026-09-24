@@ -1070,8 +1070,9 @@
     const list = result.checks || result.tests || [];
     const passed = list.filter((x) => x.ok).length;
     wrap.append(h('div', { class: 'summary-bar ' + (result.ok ? 'is-ok' : 'is-bad') },
-      result.ok ? '✓ All ' + list.length + ' tests pass' : '✗ ' + passed + ' of ' + list.length + ' tests pass' +
-        (result.crashed ? ' — the program stopped before finishing' : '')));
+      result.ok ? '✓ All ' + list.length + ' tests pass'
+        : result.crashed ? '✗ The program stopped before finishing — ' + passed + ' of the ' + plural(list.length, 'check') + ' that ran passed'
+          : '✗ ' + passed + ' of ' + list.length + ' tests pass'));
     const ul = h('ul', { class: 'results' });
     let openedOne = false;
     if (result.checks) {
@@ -2001,11 +2002,15 @@
     const p = page('page-wide');
     p.append(itemCrumbs(item));
     p.append(h('h1', null, item.title));
-    const doneCount = item.milestones.filter((m) => isDone(m.id)).length;
+    const countTag = h('span', { class: 'tag' });
+    const completeTag = h('span', { class: 'tag tag-ok' }, '✓ Complete');
+    const drawCount = () => {
+      countTag.textContent = item.milestones.filter((m) => isDone(m.id)).length + '/' + item.milestones.length + ' milestones';
+      completeTag.hidden = !isDone(item.id);
+    };
+    drawCount();
     p.append(h('div', { class: 'meta-row' },
-      h('span', { class: 'tag', style: { color: 'var(--violet)' } }, '🏗️ Project'),
-      h('span', { class: 'tag' }, doneCount + '/' + item.milestones.length + ' milestones'),
-      isDone(item.id) ? h('span', { class: 'tag tag-ok' }, '✓ Complete') : null));
+      h('span', { class: 'tag', style: { color: 'var(--violet)' } }, '🏗️ Project'), countTag, completeTag));
     const banner = compilerBanner();
     if (banner) p.append(banner);
     if (item.body) p.append(md(item.body));
@@ -2016,7 +2021,8 @@
     const stage = h('div');
     p.append(steps, stage);
 
-    const draw = () => {
+    const drawSteps = () => {
+      drawCount();
       steps.replaceChildren();
       item.milestones.forEach((m, i) => {
         const done = isDone(m.id);
@@ -2032,6 +2038,10 @@
         if (reachable) row.addEventListener('click', () => { current = i; draw(); });
         steps.append(h('li', null, row));
       });
+    };
+
+    const draw = () => {
+      drawSteps();
       const m = item.milestones[current];
       stage.replaceChildren(
         h('h2', null, 'Milestone ' + (current + 1) + ': ' + (m.title || '')),
@@ -2052,7 +2062,16 @@
             celebrate('🏗️', 'Project complete!', (gained ? '**+' + gained + ' XP.** ' : '') + 'You built a real program, one step at a time. That is how all software gets written.');
           } else if (!wasDone) {
             toast('<b>Milestone ' + (current + 1) + ' done!</b> On to the next one.', 'ok');
-            if (current < item.milestones.length - 1) { current += 1; draw(); main.scrollTop = 0; }
+          }
+          // Keep the passing results on screen; the next milestone is one click away.
+          drawSteps();
+          if (current < item.milestones.length - 1 && !stage.querySelector('.next-milestone')) {
+            const next = current + 1;
+            stage.append(h('div', { class: 'row-actions next-milestone', style: { marginTop: '16px' } },
+              h('button', {
+                class: 'btn btn-primary',
+                onclick: () => { current = next; draw(); main.scrollTop = 0; }
+              }, 'Continue to milestone ' + (next + 1) + ' →')));
           }
         }
       });

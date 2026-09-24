@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    # au-learn only holds learning progress (see AU_LEARN_BRANCH); nothing to test there.
+    branches-ignore: [au-learn]
   pull_request:
 
 jobs:
@@ -18,6 +19,6 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Check syntax of browser scripts
         run: |
-          for file in public/*.js; do node --check "$file"; done
+          for file in public/*.js public/learn/*.js; do node --check "$file"; done
       - name: Run tests
         run: npm test

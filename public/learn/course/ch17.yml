@@ -239,9 +239,10 @@ items:
       ```
 
       > [!tip]
-      > The main editor of this site supports several files for C++ projects:
-      > create `geometry.h`, `geometry.cpp` and `main.cpp` there and they're
-      > compiled together, exactly like the command above.
+      > The Playground here compiles one file at a time. To try a multi-file
+      > design before you set up C++ on your own computer (lesson 17.8), paste
+      > each header's contents where it's included — which is exactly what the
+      > preprocessor does anyway.
 
       {{check header}}
     checks:
