@@ -678,3 +678,39 @@ test('renaming the entry page keeps the folder URL working', async () => {
   assert.match(await after.text(), /<h1>second<\/h1>/);
   assert.match(fs.readFileSync(path.join(dataDir, 'renamed-entry', 'index.html'), 'utf8'), /<h1>second<\/h1>/);
 });
+
+test('C++ sources and a compiled .wasm publish alongside the page', async () => {
+  // A minimal valid WebAssembly module: the magic number and version.
+  const WASM = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+
+  const site = await (await post({
+    name: 'Cpp Demo',
+    files: [
+      { name: 'index.html', content: '<h1>C++</h1><script src="glue.js"></script>' },
+      { name: 'main.cpp', content: '#include <iostream>\nint main() { return 0; }' },
+      { name: 'engine.h', content: '#pragma once\nint add(int, int);' },
+      { name: 'glue.js', content: 'WebAssembly.instantiateStreaming(fetch("main.wasm"));' },
+      { name: 'main.wasm', content: WASM.toString('base64') }
+    ]
+  })).json();
+  assert.strictEqual(site.files.length, 5);
+
+  // Source is served as readable text, not offered as a download.
+  const source = await fetch(`${base}/p/cpp-demo/main.cpp`);
+  assert.strictEqual(source.status, 200);
+  assert.match(source.headers.get('content-type'), /text\/plain/);
+  assert.match(await source.text(), /int main/);
+
+  const header = await fetch(`${base}/p/cpp-demo/engine.h`);
+  assert.match(header.headers.get('content-type'), /text\/plain/);
+
+  // instantiateStreaming refuses anything but this exact type.
+  const wasm = await fetch(`${base}/p/cpp-demo/main.wasm`);
+  assert.strictEqual(wasm.headers.get('content-type'), 'application/wasm');
+  const bytes = Buffer.from(await wasm.arrayBuffer());
+  assert.ok(bytes.equals(WASM), 'the module must arrive byte for byte');
+
+  // A .cpp is not auto-linked into the page the way a .js is.
+  const page = await (await fetch(`${base}/p/cpp-demo/`)).text();
+  assert.ok(!page.includes('main.cpp'), 'C++ source is not a script tag');
+});

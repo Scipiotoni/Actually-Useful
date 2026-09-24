@@ -36,9 +36,14 @@ scripts are linked into every page for you, so you rarely write those tags.
 
 | Kind | Extensions | In the editor |
 | --- | --- | --- |
-| Markup and code | `.html` `.css` `.js` `.json` `.svg` | Edited, with highlighting |
+| Markup and web code | `.html` `.css` `.js` `.json` `.svg` | Edited, with highlighting |
+| C and C++ | `.cpp` `.cc` `.cxx` `.c` `.h` `.hpp` | Edited, with highlighting |
 | Plain text | `.txt` `.md` | Edited, no highlighting |
 | Images, icons, fonts | `.png` `.jpg` `.gif` `.webp` `.avif` `.ico` `.woff2` `.woff` | Read-only card with size and a thumbnail |
+| WebAssembly | `.wasm` | Read-only, served as `application/wasm` |
+
+Typing an extension in the New file box wins over the type picker, so
+`notes.md` or `icons/logo.png` arrive exactly as written.
 
 Binaries are held as base64 and published byte for byte. A project can hold 60
 files: 2 MB each for text, 5 MB for binaries.
@@ -205,6 +210,32 @@ curl -X POST localhost:3000/api/deploys \
 
 A project holds up to 40 files, each up to 2 MB. Names must end in `.html`,
 `.css` or `.js`, and at least one `.html` file is required.
+
+## C and C++
+
+C++ sources are edited and highlighted like any other file, and published as
+readable text.
+
+They do not *run*, though — no browser executes C++. The way C++ reaches a web
+page is WebAssembly: you compile it somewhere with a toolchain, most commonly
+[Emscripten](https://emscripten.org), and publish what comes out.
+
+```bash
+emcc main.cpp -o main.js -s EXPORTED_FUNCTIONS=_add -s MODULARIZE=1
+```
+
+That gives you a `.js` loader and a `.wasm` module. Drop both into the project
+and call them from a page:
+
+```js
+WebAssembly.instantiateStreaming(fetch('add.wasm'))
+  .then((r) => { document.body.textContent = r.instance.exports.add(20, 22); });
+```
+
+`.wasm` is served as `application/wasm`, which is the one type
+`WebAssembly.instantiateStreaming` accepts. The preview answers a `fetch` for
+any of the project's own files from the copy it carries, so a module runs while
+you are still drafting, not only once deployed.
 
 ## Progressive web apps
 

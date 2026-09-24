@@ -341,27 +341,43 @@
 
   var HINTS = {
     html: function (name) {
-      return 'Saved as <code>' + Compose.escapeHtml(name) + '</code>. Link to it from another page with ' +
-        '<code>&lt;a href="' + Compose.escapeHtml(name) + '"&gt;</code>';
+      return 'Saved as <code>' + name + '</code>. Link to it from another page with ' +
+        '<code>&lt;a href="' + name + '"&gt;</code>';
     },
     css: function (name) {
-      return 'Saved as <code>' + Compose.escapeHtml(name) + '</code> and linked into your pages automatically. ' +
+      return 'Saved as <code>' + name + '</code> and linked into your pages automatically. ' +
         'In a full HTML document, add it yourself with <code>&lt;link rel="stylesheet" href="' +
-        Compose.escapeHtml(name) + '"&gt;</code>';
+        name + '"&gt;</code>';
     },
     js: function (name) {
-      return 'Saved as <code>' + Compose.escapeHtml(name) + '</code> and linked into your pages automatically. ' +
-        'In a full HTML document, add it yourself with <code>&lt;script src="' +
-        Compose.escapeHtml(name) + '"&gt;&lt;/script&gt;</code>';
+      return 'Saved as <code>' + name + '</code> and linked into your pages automatically. ' +
+        'In a full HTML document, add it yourself with <code>&lt;script src="' + name +
+        '"&gt;&lt;/script&gt;</code>';
+    },
+    cpp: function (name) {
+      return 'Saved as <code>' + name + '</code> and published as readable source. ' +
+        'A browser cannot run C++ directly — compile it to <code>.wasm</code> and load ' +
+        'that from a script to run it on the page.';
+    },
+    other: function (name) {
+      return 'Saved as <code>' + name + '</code> and published at that path.';
     }
   };
 
+  /**
+   * The name the file will get. An extension you type yourself wins over the
+   * picker, so "notes.md" or "icons/logo.png" arrive as written.
+   */
   function plannedName() {
-    return Compose.fileNameFor(els.fileName.value || 'untitled', modal.type);
+    var typed = String(els.fileName.value || '').trim();
+    if (Compose.fileType(typed) && Compose.isValidName(typed)) return typed;
+    return Compose.fileNameFor(typed || 'untitled', modal.type);
   }
 
   function updateHint() {
-    els.fileHint.innerHTML = HINTS[modal.type](plannedName());
+    var name = plannedName();
+    var hint = HINTS[Compose.fileType(name)] || HINTS.other;
+    els.fileHint.innerHTML = hint(Compose.escapeHtml(name));
   }
 
   function pickType(type) {
@@ -378,7 +394,8 @@
     els.fileModalTitle.textContent = renaming ? 'Rename ' + renaming : 'New file';
     els.fileSave.textContent = renaming ? 'Rename' : 'Create';
     els.fileName.value = renaming ? renaming.replace(/\.(html|css|js)$/, '') : '';
-    pickType(renaming ? Compose.fileType(renaming) : 'html');
+    var kind = renaming ? Compose.fileType(renaming) : 'html';
+    pickType(HINTS[kind] && kind !== 'other' ? kind : 'html');
     els.fileModal.hidden = false;
     els.fileName.focus();
     els.fileName.select();
@@ -422,7 +439,8 @@
       if (state.previewFile === modal.renaming) state.previewFile = name;
       toast('Renamed to ' + name + '. Links pointing at the old name need updating.', 'ok', 7000);
     } else {
-      state.files.push({ name: name, content: NEW_FILE[modal.type](name) });
+      var starter = NEW_FILE[Compose.fileType(name)];
+      state.files.push({ name: name, content: starter ? starter(name) : '' });
       state.active = name;
     }
 
@@ -436,7 +454,25 @@
       return '<h1>' + name.replace(/\.html$/, '') + '</h1>\n<p><a href="index.html">← Back</a></p>';
     },
     css: function () { return '/* Styles for every page in this project */\n'; },
-    js: function () { return "// Runs on every page in this project\n"; }
+    js: function () { return '// Runs on every page in this project\n'; },
+    cpp: function () {
+      return [
+        '#include <iostream>',
+        '',
+        '// Compile with Emscripten to run this on the page:',
+        '//   emcc main.cpp -o main.js -s EXPORTED_FUNCTIONS=_main',
+        '// then import the .js and .wasm it produces.',
+        'int main() {',
+        '    std::cout << "Hello from C++" << std::endl;',
+        '    return 0;',
+        '}',
+        ''
+      ].join('\n');
+    },
+    json: function () { return '{\n  \n}\n'; },
+    md: function (name) { return '# ' + name.replace(/\.md$/, '') + '\n'; },
+    txt: function () { return ''; },
+    svg: function () { return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>\n'; }
   };
 
   // ---------------------------------------------------------------- preview
@@ -531,13 +567,15 @@
       return;
     }
 
+    var urls = previewAssets(parts.files);
     var doc = Compose.composeFile(parts.files, page, {
-      head: PREVIEW_BASE + '\n' + CONSOLE_BRIDGE + '\n' + WORKER_BRIDGE + '\n' + NAV_BRIDGE,
+      head: PREVIEW_BASE + '\n' + fetchBridge(urls) + '\n' + CONSOLE_BRIDGE +
+        '\n' + WORKER_BRIDGE + '\n' + NAV_BRIDGE,
       title: parts.name
     });
     // Nothing is served yet while drafting, so the project's own stylesheets
     // and scripts are folded in, and its assets are pointed at blob URLs.
-    els.preview.srcdoc = withPreviewAssets(Compose.inlineLocal(doc, parts.files), parts.files);
+    els.preview.srcdoc = withPreviewAssets(Compose.inlineLocal(doc, parts.files), urls);
 
     state.previewFile = page;
     els.previewUrl.textContent = previewLabel(parts, page);
@@ -554,7 +592,7 @@
    * writing from reaching into the editor; an opaque origin like that cannot
    * read a blob URL minted out here, but a data: URL carries its own bytes.
    */
-  function withPreviewAssets(doc, files) {
+  function previewAssets(files) {
     var urls = {};
     files.forEach(function (file) {
       if (Compose.fileType(file.name) === 'html') return;
@@ -563,6 +601,10 @@
         ? 'data:' + type + ';base64,' + (file.content || '').replace(/\s+/g, '')
         : 'data:' + type + ';base64,' + b64(file.content || '');
     });
+    return urls;
+  }
+
+  function withPreviewAssets(doc, urls) {
 
     var replaceRef = function (text) {
       return text.replace(/(src|href)=("|')([^"']+)\2/gi, function (whole, attr, quote, ref) {
@@ -583,6 +625,34 @@
     return out.replace(/<(?!a\b)([a-z][\w-]*)\b([^>]*)>/gi, function (whole, tag, attrs) {
       return '<' + tag + replaceRef(attrs) + '>';
     });
+  }
+
+  /**
+   * Nothing is served while drafting, so a fetch for one of the project's own
+   * files is answered from the copy carried in the page. It is what makes
+   * fetch("data.json") — or WebAssembly.instantiateStreaming(fetch("app.wasm"))
+   * — behave in the preview the way it will once deployed.
+   */
+  function fetchBridge(urls) {
+    return [
+      '<script>',
+      '(function () {',
+      '  var files = ' + JSON.stringify(urls) + ';',
+      '  var original = window.fetch ? window.fetch.bind(window) : null;',
+      '  if (!original) return;',
+      '  window.fetch = function (input, init) {',
+      '    try {',
+      '      var url = String((input && input.url) || input || "");',
+      '      var key = url.replace(/^\\.\\//, "").split(/[?#]/)[0];',
+      '      if (Object.prototype.hasOwnProperty.call(files, key)) {',
+      '        return original(files[key], init);',
+      '      }',
+      '    } catch (e) {}',
+      '    return original(input, init);',
+      '  };',
+      '}());',
+      '<\/script>'
+    ].join('\n');
   }
 
   /** UTF-8 safe base64, since btoa alone rejects anything outside Latin-1. */

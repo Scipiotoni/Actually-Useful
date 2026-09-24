@@ -15,19 +15,26 @@
   // Editable as text, in the editor.
   var TEXT_TYPES = {
     html: 'html', css: 'css', js: 'js',
-    json: 'json', svg: 'svg', txt: 'txt', md: 'md'
+    json: 'json', svg: 'svg', txt: 'txt', md: 'md',
+    // C and C++ sources all share one highlighter.
+    cpp: 'cpp', cc: 'cpp', cxx: 'cpp', c: 'cpp', h: 'cpp', hpp: 'cpp'
   };
   // Kept as base64 and shown read-only.
   var BINARY_TYPES = {
     png: 'png', jpg: 'jpg', jpeg: 'jpg', gif: 'gif', webp: 'webp',
-    avif: 'avif', ico: 'ico', woff2: 'woff2', woff: 'woff'
+    avif: 'avif', ico: 'ico', woff2: 'woff2', woff: 'woff',
+    // Compiled WebAssembly: how C++ actually runs on a page.
+    wasm: 'wasm'
   };
   var TYPES = {};
   Object.keys(TEXT_TYPES).forEach(function (k) { TYPES[k] = TEXT_TYPES[k]; });
   Object.keys(BINARY_TYPES).forEach(function (k) { TYPES[k] = BINARY_TYPES[k]; });
 
   // Which highlighter a file opens with.
-  var MODE_FOR = { html: 'html', svg: 'html', css: 'css', js: 'js', json: 'js', txt: 'text', md: 'text' };
+  var MODE_FOR = {
+    html: 'html', svg: 'html', css: 'css', js: 'js', json: 'js',
+    cpp: 'cpp', txt: 'text', md: 'text'
+  };
 
   var MIME = {
     html: 'text/html; charset=utf-8',
@@ -37,6 +44,10 @@
     svg: 'image/svg+xml',
     txt: 'text/plain; charset=utf-8',
     md: 'text/markdown; charset=utf-8',
+    // Served as plain text so a browser shows the source instead of saving it.
+    cpp: 'text/plain; charset=utf-8',
+    // The exact type WebAssembly.instantiateStreaming insists on.
+    wasm: 'application/wasm',
     png: 'image/png', jpg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp',
     avif: 'image/avif', ico: 'image/x-icon',
     woff2: 'font/woff2', woff: 'font/woff'

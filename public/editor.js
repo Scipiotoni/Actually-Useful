@@ -85,6 +85,22 @@
     { cls: 'fn', re: '\\b[a-zA-Z-]+(?=\\()' }
   ];
 
+  // C and C++. Ordered so a quote opening before a // wins, and so a digit
+  // separator like 1'000'000 is eaten by the number rule rather than opening
+  // a character literal.
+  var CPP_RULES = [
+    { cls: 'comment', re: '//[^\\n]*|/\\*[\\s\\S]*?\\*/' },
+    { cls: 'meta', re: '#\\s*include\\s*(?:<[^>\\n]*>|"[^"\\n]*")' },
+    { cls: 'keyword', re: '#\\s*[a-zA-Z_]+' },
+    { cls: 'string', re: 'R"\\([\\s\\S]*?\\)"|' + STRING },
+    { cls: 'number', re: '\\b(?:0[xX][0-9a-fA-F\']+|0[bB][01\']+|\\d[\\d\']*(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)(?:[uUlLfF]+)?' },
+    { cls: 'string', re: '\'(?:\\\\.|[^\'\\\\\\n])\'' },
+    { cls: 'keyword', re: '\\b(?:alignas|alignof|and|asm|break|case|catch|class|concept|const|consteval|constexpr|constinit|const_cast|continue|co_await|co_return|co_yield|decltype|default|delete|do|dynamic_cast|else|enum|explicit|export|extern|for|friend|goto|if|inline|mutable|namespace|new|noexcept|not|operator|or|private|protected|public|register|reinterpret_cast|requires|return|sizeof|static|static_assert|static_cast|struct|switch|template|this|thread_local|throw|try|typedef|typeid|typename|union|using|virtual|volatile|while|xor)\\b' },
+    { cls: 'type', re: '\\b(?:auto|bool|char|char8_t|char16_t|char32_t|double|float|int|long|short|signed|unsigned|void|wchar_t|size_t|ptrdiff_t|u?int(?:8|16|32|64)_t|std|string|string_view|vector|array|map|unordered_map|set|pair|tuple|optional|unique_ptr|shared_ptr|span)\\b' },
+    { cls: 'atom', re: '\\b(?:true|false|nullptr|NULL|this_thread)\\b' },
+    { cls: 'fn', re: '\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()' }
+  ];
+
   /** Colourises one `<tag ...>` token, attributes and all. */
   function renderTag(raw) {
     var rules = [
@@ -123,6 +139,7 @@
   var MODES = {
     // .txt and .md carry no syntax to colour.
     text: function (src) { return esc(src); },
+    cpp: function (src) { return scan(src, CPP_RULES); },
     html: highlightHtml,
     css: function (src) { return scan(src, CSS_RULES); },
     js: function (src) { return scan(src, JS_RULES); }
@@ -132,7 +149,8 @@
   var COMMENTS = {
     html: { block: ['<!--', '-->'] },
     css: { block: ['/*', '*/'] },
-    js: { line: '//' }
+    js: { line: '//' },
+    cpp: { line: '//' }
   };
 
   // Colouring costs time proportional to the whole document, on every

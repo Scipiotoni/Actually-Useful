@@ -333,3 +333,67 @@ test('opening characters are never stepped over', () => {
     assert.strictEqual(edits.skipsOver(key + key, 0, key), false, `${key} should be typed, not skipped`);
   }
 });
+
+// --------------------------------------------------------------------------
+// C and C++
+// --------------------------------------------------------------------------
+
+const CPP = [
+  '#include <iostream>',
+  '#include "mylib.h"',
+  '',
+  '// Adds two numbers',
+  'constexpr int add(int a, int b) { return a + b; }',
+  '',
+  'int main() {',
+  '    const long total = 1000000;',
+  '    char c = \'x\';',
+  '    std::string greeting = "hello";',
+  '    std::cout << greeting << add(2, 3) << std::endl;',
+  '    return 0;',
+  '}'
+].join('\n');
+
+/** The class the highlighter gave a token, or null. */
+function classOf(html, token) {
+  const at = html.indexOf(token);
+  if (at === -1) return null;
+  const before = html.slice(Math.max(0, at - 60), at);
+  const match = before.match(/class="t-([a-z]+)"[^<]*$/);
+  return match ? match[1] : null;
+}
+
+test('C++ is highlighted by its own rules', () => {
+  const out = MiniEditor.highlight('cpp', CPP);
+  assert.strictEqual(classOf(out, 'iostream'), 'meta', '#include is a directive');
+  assert.strictEqual(classOf(out, 'Adds two numbers'), 'comment');
+  assert.strictEqual(classOf(out, 'constexpr'), 'keyword');
+  assert.strictEqual(classOf(out, 'int'), 'type');
+  assert.strictEqual(classOf(out, 'add'), 'fn');
+  assert.strictEqual(classOf(out, '"hello"'), 'string');
+  assert.strictEqual(classOf(out, "'x'"), 'string', 'a character literal is a string');
+  assert.strictEqual(classOf(out, '1000000'), 'number');
+});
+
+test('a digit separator does not open a character literal', () => {
+  // 1'000'000 is one number in C++, not a stray quote.
+  const out = MiniEditor.highlight('cpp', "int big = 1'000'000; int after = 7;");
+  assert.strictEqual(classOf(out, "1'000'000"), 'number');
+  assert.strictEqual(classOf(out, '7'), 'number', 'the rest of the line still parses');
+});
+
+test('markup inside C++ source is escaped, not rendered', () => {
+  const out = MiniEditor.highlight('cpp', '#include <iostream>\nauto s = "<img onerror=alert(1)>";');
+  assert.ok(!out.includes('<img'), 'the tag must be escaped');
+  assert.match(out, /&lt;iostream&gt;/);
+});
+
+test('Ctrl+/ comments C++ with //', () => {
+  const text = '  int a = 1;\n  int b = 2;';
+  const edit = edits.toggleComment(text, 0, text.length, 'cpp');
+  const commented = text.slice(0, edit.from) + edit.insert + text.slice(edit.to);
+  assert.strictEqual(commented, '  // int a = 1;\n  // int b = 2;');
+
+  const back = edits.toggleComment(commented, 0, commented.length, 'cpp');
+  assert.strictEqual(commented.slice(0, back.from) + back.insert + commented.slice(back.to), text);
+});

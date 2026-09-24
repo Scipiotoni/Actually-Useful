@@ -188,6 +188,7 @@ button { font-family: inherit; }
 .tab-dot.is-css { background: #7fdbca; }
 .tab-dot.is-js { background: #ffcb6b; }
 .tab-dot.is-json { background: #c792ea; }
+.tab-dot.is-cpp { background: #f78c6c; }
 .tab-dot.is-svg { background: #82aaff; }
 .tab-dot.is-txt,
 .tab-dot.is-md { background: #97a1b2; }
@@ -335,7 +336,7 @@ button { font-family: inherit; }
 }
 .field-error[hidden] { display: none !important; }
 
-.type-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.type-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); gap: 6px; }
 .type-picker button {
   display: grid;
   gap: 2px;
@@ -503,6 +504,7 @@ button { font-family: inherit; }
 .t-number  { color: #f78c6c; }
 .t-fn      { color: #82aaff; }
 .t-prop    { color: #7fdbca; }
+.t-type    { color: #7fdbca; }
 .t-tag     { color: #f07178; }
 .t-attr    { color: #ffcb6b; }
 .t-punct   { color: var(--text-dim); }
