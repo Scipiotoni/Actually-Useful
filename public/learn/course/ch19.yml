@@ -1,0 +1,3051 @@
+id: ch19
+number: 19
+part: p5
+title: "Capstone: Putting It All Together"
+blurb: Design and build a complete program from scratch, take on the final challenges, pass the final exam — and plan what comes next.
+hours: 10
+goals:
+  - Turn a written specification into a working program, one feature at a time
+  - Combine classes, containers, strings, exceptions, algorithms and files in one program
+  - Solve larger problems — a parser, a cache, a puzzle solver — on your own
+  - Pass a cumulative exam covering the whole course
+  - Know how to keep improving after the course
+
+items:
+  - type: lesson
+    id: c19-design
+    title: Designing a program from scratch
+    minutes: 25
+    objectives:
+      - Go from a specification to a design — data, operations and errors
+      - Build incrementally from a walking skeleton
+      - Represent money safely, and handle errors in a command loop
+    body: |
+      Every exercise so far gave you a function signature or a starter. The
+      capstone gives you only a **specification** — what the program must do —
+      and you make every design decision. That's what real programming is.
+      This lesson shows how professionals approach it.
+
+      ## 1. Understand the specification
+
+      Read it twice. Then write down a **transcript**: an example session,
+      input and expected output, including the error cases. If you can't
+      write the transcript, you don't understand the problem yet — and every
+      question you have now is a bug you avoid later.
+
+      ## 2. Find the data and the operations
+
+      Nouns in the specification tend to become **types**; verbs become
+      **functions** or **member functions**. For a bank: *accounts* have a
+      *name*, a *balance* and a *history*; you can *open*, *deposit*,
+      *withdraw*, *transfer*, *undo*. Ask for each piece of data: which
+      container? (Look up by name → `std::map`. Undo the most recent first →
+      a stack, e.g. a `std::vector` used with `push_back`/`back`/`pop_back`.)
+
+      ## 3. Choose representations carefully
+
+      Some choices are traps. The classic one: **never store money in a
+      `double`**.
+
+      ```cpp
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          double a{0.1 + 0.2};
+          std::cout << std::boolalpha << (a == 0.3) << '\n';
+          std::cout << std::setprecision(17) << a << '\n';
+          long long cents{10 + 20};
+          std::cout << (cents == 30) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      false
+      0.30000000000000004
+      true
+      ```
+
+      Binary floating point can't represent 0.1 exactly, so errors creep in.
+      Banks count **integer cents**: `12.50` is stored as `1250`, and only
+      formatted with a decimal point when printed.
+
+      ## 4. Plan for errors
+
+      Programs that read commands must survive bad input. A clean design:
+      every function **throws** an exception with a clear message when
+      something is wrong, and the command loop catches it, prints it, and
+      carries on with the next line.
+
+      ```cpp
+      #include <iostream>
+      #include <sstream>
+      #include <stdexcept>
+      #include <string>
+
+      int main() {
+          int total{0};
+          std::string line{};
+          while (std::getline(std::cin, line)) {
+              std::istringstream words{line};
+              std::string command{};
+              words >> command;
+              try {
+                  if (command == "add" || command == "sub") {
+                      int amount{};
+                      if (!(words >> amount)) {
+                          throw std::runtime_error{"usage: " + command + " NUMBER"};
+                      }
+                      total += command == "add" ? amount : -amount;
+                  } else if (command == "show") {
+                      std::cout << "total = " << total << '\n';
+                  } else {
+                      throw std::runtime_error{"unknown command " + command};
+                  }
+              } catch (const std::runtime_error& e) {
+                  std::cout << "Error: " << e.what() << '\n';
+              }
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      add 5
+      add 10
+      sub 3
+      show
+      add
+      jump 3
+      show
+      ```
+
+      ```output
+      total = 12
+      Error: usage: add NUMBER
+      Error: unknown command jump
+      total = 12
+      ```
+
+      The error-handling code lives in **one place**; every other function
+      just throws. Adding a new command never means adding new error
+      plumbing.
+
+      ## 5. Build incrementally
+
+      Don't write 300 lines and then press Run. Start with a **walking
+      skeleton** — the command loop that reads lines and reports "unknown
+      command" for everything. It runs from minute one. Then add **one
+      command at a time**, running the examples after each. When something
+      breaks, you know it was the last few lines you wrote.
+
+      When the code works, **look back**: are names clear? Is anything
+      repeated that should be a function? Then move to the next feature. The
+      capstone's milestones follow exactly this rhythm.
+
+      {{check money}}
+
+      {{check steps}}
+    checks:
+      - id: money
+        type: mcq
+        prompt: "Why do financial programs store amounts as integer cents rather than `double`?"
+        options:
+          - Integers use less memory
+          - "`double` can't represent most decimal fractions exactly, so rounding errors accumulate"
+          - "`double` can't hold large numbers"
+          - It's required by C++
+        answer: 1
+        why: "0.1 + 0.2 != 0.3 in binary floating point. Integer cents are exact."
+      - id: steps
+        type: order
+        prompt: "Order the steps of building a program from a specification."
+        lines:
+          - "Write an example transcript, including errors"
+          - "Identify the data (types, containers) and the operations"
+          - "Build a walking skeleton that runs"
+          - "Add one feature at a time, testing each"
+          - "Look back: tidy names, remove duplication"
+        why: "Understand → design → skeleton → increments → refactor."
+    cards:
+      - front: How should programs store money?
+        back: As integer cents (e.g. `long long`), formatting with a decimal point only for display. Never `double`.
+      - front: What is a **walking skeleton**?
+        back: The thinnest end-to-end version of a program that runs (e.g. the command loop handling nothing yet), which you then grow one feature at a time.
+      - front: A good error-handling structure for a command-driven program?
+        back: Functions throw exceptions with clear messages; the command loop has one try/catch that prints the error and continues with the next command.
+
+  - type: project
+    id: c19-project
+    title: "Capstone: Mini Bank"
+    body: |
+      Build a small **banking system** driven by text commands — one command
+      per line on standard input, until the input ends. It uses nearly
+      everything in the course: classes, maps and vectors, strings and
+      parsing, exceptions, `std::optional`, sorting with lambdas, integer
+      arithmetic done right, and files.
+
+      A session at the end of the project looks like this:
+
+      ```text
+      > open alice 100              Opened alice with 100.00
+      > open bob 20.5               Opened bob with 20.50
+      > transfer alice bob 30       Transferred 30.00 from alice to bob
+      > withdraw bob 100            Error: insufficient funds in bob
+      > undo                        Undid transfer of 30.00 from alice to bob
+      > report                      1. alice 100.00
+                                    2. bob 20.50
+                                    Total: 120.50
+      ```
+
+      (The `>` and the columns are only for this illustration: the real
+      program reads plain lines and prints plain lines.)
+
+      **Rules that hold in every milestone:**
+
+      - Blank lines are ignored.
+      - Any problem prints one line starting with `Error: ` and the program continues with the next command.
+      - A wrong number of words prints `Error: usage: ...` with the command's form, e.g. `Error: usage: open NAME AMOUNT`.
+      - An unrecognised command prints `Error: unknown command WORD`.
+      - **Amounts** are written as digits, optionally followed by a dot and one or two digits: `7`, `7.5`, `7.50`. Anything else (`-5`, `abc`, `3.456`, `.5`) prints `Error: invalid amount TEXT`. Money is always printed with two decimals.
+      - Store money as **integer cents** (`long long`).
+
+      **Suggested design** (you may choose your own): a `BankError`
+      exception class derived from `std::runtime_error`; `parseMoney`
+      (text → `std::optional<long long>` cents) and `formatMoney` (cents →
+      text); a `Bank` class holding a `std::map<std::string, Account>`; and an
+      `execute(bank, words)` function that runs one command, called from a
+      `main` loop with a single `try`/`catch`.
+
+      Each milestone's tests run your whole program, so earlier features must
+      keep working as you add new ones.
+    milestones:
+      - title: Accounts
+        prompt: |
+          Support three commands:
+
+          | Command | Output |
+          |---|---|
+          | `open NAME AMOUNT` | `Opened NAME with AMOUNT` |
+          | `balance NAME` | `NAME: AMOUNT` |
+          | `list` | one line `NAME AMOUNT` per account, **sorted by name**; `No accounts` if there are none |
+
+          Opening with `0` is allowed. Errors: `Error: NAME already exists`,
+          `Error: no account NAME`, plus the general rules (usage, unknown
+          command, invalid amount).
+
+          Example — for this input:
+
+          ```text
+          open alice 100
+          open bob 25.5
+          balance bob
+          open alice 10
+          balance carol
+          list
+          ```
+
+          the output is:
+
+          ```text
+          Opened alice with 100.00
+          Opened bob with 25.50
+          bob: 25.50
+          Error: alice already exists
+          Error: no account carol
+          alice 100.00
+          bob 25.50
+          ```
+        starter: |
+          #include <iostream>
+          #include <sstream>
+          #include <string>
+          #include <vector>
+
+          // Suggested design (see the project description):
+          //   class BankError : public std::runtime_error  -- thrown for every error
+          //   parseMoney / formatMoney                     -- text <-> integer cents
+          //   class Bank                                   -- the accounts and their operations
+          //   execute(bank, words)                         -- runs one command
+
+          std::vector<std::string> splitWords(const std::string& line) {
+              std::istringstream in{line};
+              std::vector<std::string> words{};
+              std::string word{};
+              while (in >> word) {
+                  words.push_back(word);
+              }
+              return words;
+          }
+
+          int main() {
+              std::string line{};
+              while (std::getline(std::cin, line)) {
+                  std::vector<std::string> words{splitWords(line)};
+                  if (words.empty()) {
+                      continue;
+                  }
+                  // TODO: run the command in words[0]
+              }
+              return 0;
+          }
+        tests:
+          - in: |
+              open alice 100
+              open bob 25.5
+              balance alice
+              balance bob
+              open alice 10
+              balance carol
+              list
+            out: |
+              Opened alice with 100.00
+              Opened bob with 25.50
+              alice: 100.00
+              bob: 25.50
+              Error: alice already exists
+              Error: no account carol
+              alice 100.00
+              bob 25.50
+          - in: |
+              list
+              open zoe 0
+              open adam 12.05
+
+              open eve 3.456
+              open eve abc
+              open eve
+              fly away
+              list
+            out: |
+              No accounts
+              Opened zoe with 0.00
+              Opened adam with 12.05
+              Error: invalid amount 3.456
+              Error: invalid amount abc
+              Error: usage: open NAME AMOUNT
+              Error: unknown command fly
+              adam 12.05
+              zoe 0.00
+            hidden: true
+        hints:
+          - "Start with the skeleton: split each line into words; if `words[0]` is none of your commands, print the unknown-command error. Get that working first."
+          - "`parseMoney`: split at the `.` with `find` and `substr`. Check the whole part is 1+ digits and the fraction 1–2 digits (pad `\"5\"` to `\"50\"`). Then `std::stoll(whole) * 100 + std::stoll(fraction)`."
+          - "`formatMoney(1205)`: `1205 / 100` = 12 and `1205 % 100` = 5, padded to `\"05\"` → `\"12.05\"`."
+          - "Errors: `class BankError : public std::runtime_error { public: using std::runtime_error::runtime_error; };` Throw it anywhere; catch it once in `main` and print `\"Error: \" << e.what()`."
+          - "Careful in `balance`: look the account up *before* printing anything — otherwise `std::cout << name << \": \" << find(name)...` prints the name before the lookup throws."
+        solution: |
+          #include <iostream>
+          #include <map>
+          #include <optional>
+          #include <sstream>
+          #include <stdexcept>
+          #include <string>
+          #include <vector>
+
+          class BankError : public std::runtime_error {
+          public:
+              using std::runtime_error::runtime_error;
+          };
+
+          // "12", "12.5" or "12.50" -> 1250 cents. Anything else -> nullopt.
+          std::optional<long long> parseMoney(const std::string& text) {
+              std::size_t dot{text.find('.')};
+              std::string whole{text.substr(0, dot)};
+              std::string cents{dot == std::string::npos ? "" : text.substr(dot + 1)};
+              if (whole.empty() || whole.size() > 12 || cents.size() > 2 ||
+                  (dot != std::string::npos && cents.empty())) {
+                  return std::nullopt;
+              }
+              for (char c : whole + cents) {
+                  if (c < '0' || c > '9') {
+                      return std::nullopt;
+                  }
+              }
+              while (cents.size() < 2) {
+                  cents += '0';
+              }
+              return std::stoll(whole) * 100 + std::stoll(cents);
+          }
+
+          std::string formatMoney(long long cents) {
+              std::string rest{std::to_string(cents % 100)};
+              if (rest.size() < 2) {
+                  rest = "0" + rest;
+              }
+              return std::to_string(cents / 100) + "." + rest;
+          }
+
+          struct Account {
+              long long balance{0};
+          };
+
+          class Bank {
+          public:
+              void open(const std::string& name, long long cents) {
+                  if (accounts_.count(name) > 0) {
+                      throw BankError{name + " already exists"};
+                  }
+                  accounts_[name] = Account{cents};
+                  std::cout << "Opened " << name << " with " << formatMoney(cents) << '\n';
+              }
+
+              void balance(const std::string& name) {
+                  const Account& account = get(name);     // look up first: it may throw
+                  std::cout << name << ": " << formatMoney(account.balance) << '\n';
+              }
+
+              void list() const {
+                  if (accounts_.empty()) {
+                      std::cout << "No accounts\n";
+                      return;
+                  }
+                  for (const auto& [name, account] : accounts_) {
+                      std::cout << name << ' ' << formatMoney(account.balance) << '\n';
+                  }
+              }
+
+          private:
+              Account& get(const std::string& name) {
+                  auto it = accounts_.find(name);
+                  if (it == accounts_.end()) {
+                      throw BankError{"no account " + name};
+                  }
+                  return it->second;
+              }
+
+              std::map<std::string, Account> accounts_{};
+          };
+
+          std::vector<std::string> splitWords(const std::string& line) {
+              std::istringstream in{line};
+              std::vector<std::string> words{};
+              std::string word{};
+              while (in >> word) {
+                  words.push_back(word);
+              }
+              return words;
+          }
+
+          void expectArgs(const std::vector<std::string>& words, std::size_t count, const std::string& usage) {
+              if (words.size() != count) {
+                  throw BankError{"usage: " + usage};
+              }
+          }
+
+          long long amountArg(const std::string& text, bool allowZero) {
+              std::optional<long long> cents{parseMoney(text)};
+              if (!cents || (!allowZero && *cents == 0)) {
+                  throw BankError{"invalid amount " + text};
+              }
+              return *cents;
+          }
+
+          void execute(Bank& bank, const std::vector<std::string>& words) {
+              const std::string& command{words[0]};
+              if (command == "open") {
+                  expectArgs(words, 3, "open NAME AMOUNT");
+                  bank.open(words[1], amountArg(words[2], true));
+              } else if (command == "balance") {
+                  expectArgs(words, 2, "balance NAME");
+                  bank.balance(words[1]);
+              } else if (command == "list") {
+                  expectArgs(words, 1, "list");
+                  bank.list();
+              } else {
+                  throw BankError{"unknown command " + command};
+              }
+          }
+
+          int main() {
+              Bank bank{};
+              std::string line{};
+              while (std::getline(std::cin, line)) {
+                  std::vector<std::string> words{splitWords(line)};
+                  if (words.empty()) {
+                      continue;
+                  }
+                  try {
+                      execute(bank, words);
+                  } catch (const BankError& e) {
+                      std::cout << "Error: " << e.what() << '\n';
+                  }
+              }
+              return 0;
+          }
+        explain: |
+          A `std::map` gives the sorted `list` for free. Notice the tiny bug the
+          last hint warns about: in `std::cout << a << f()`, `a` is printed
+          before `f()` runs (C++17 guarantees left-to-right), so if `f` throws,
+          half a line has already been printed. Do the work that can fail
+          first, then print.
+      - title: Moving money
+        prompt: |
+          Add three commands. Amounts must be **greater than zero** (`0` is an
+          invalid amount).
+
+          | Command | Output |
+          |---|---|
+          | `deposit NAME AMOUNT` | `Deposited AMOUNT to NAME (balance NEW)` |
+          | `withdraw NAME AMOUNT` | `Withdrew AMOUNT from NAME (balance NEW)` |
+          | `transfer FROM TO AMOUNT` | `Transferred AMOUNT from FROM to TO` |
+
+          New errors: `Error: insufficient funds in NAME` (a balance can never
+          go below zero) and `Error: cannot transfer to the same account`.
+
+          Check in this order: the amount is valid → the account(s) exist →
+          (transfer) not the same account → enough funds.
+        tests:
+          - in: |
+              open alice 100
+              open bob 20
+              deposit alice 50
+              withdraw alice 20.25
+              withdraw bob 25
+              transfer alice bob 30
+              transfer bob bob 5
+              transfer alice carol 5
+              deposit alice 0
+              list
+            out: |
+              Opened alice with 100.00
+              Opened bob with 20.00
+              Deposited 50.00 to alice (balance 150.00)
+              Withdrew 20.25 from alice (balance 129.75)
+              Error: insufficient funds in bob
+              Transferred 30.00 from alice to bob
+              Error: cannot transfer to the same account
+              Error: no account carol
+              Error: invalid amount 0
+              alice 99.75
+              bob 50.00
+          - in: |
+              open ann 10
+              withdraw ann 10
+              balance ann
+              deposit ann 0.99
+              transfer ann ann 1
+              withdraw ann -5
+            out: |
+              Opened ann with 10.00
+              Withdrew 10.00 from ann (balance 0.00)
+              ann: 0.00
+              Deposited 0.99 to ann (balance 0.99)
+              Error: cannot transfer to the same account
+              Error: invalid amount -5
+            hidden: true
+        hints:
+          - "Give `Bank` a private helper `Account& get(const std::string& name)` that throws `no account NAME` — every command can use it."
+          - "For `transfer`, get both accounts (so a missing one is reported) before checking `from == to`."
+        solution: |
+          #include <iostream>
+          #include <map>
+          #include <optional>
+          #include <sstream>
+          #include <stdexcept>
+          #include <string>
+          #include <vector>
+
+          class BankError : public std::runtime_error {
+          public:
+              using std::runtime_error::runtime_error;
+          };
+
+          // "12", "12.5" or "12.50" -> 1250 cents. Anything else -> nullopt.
+          std::optional<long long> parseMoney(const std::string& text) {
+              std::size_t dot{text.find('.')};
+              std::string whole{text.substr(0, dot)};
+              std::string cents{dot == std::string::npos ? "" : text.substr(dot + 1)};
+              if (whole.empty() || whole.size() > 12 || cents.size() > 2 ||
+                  (dot != std::string::npos && cents.empty())) {
+                  return std::nullopt;
+              }
+              for (char c : whole + cents) {
+                  if (c < '0' || c > '9') {
+                      return std::nullopt;
+                  }
+              }
+              while (cents.size() < 2) {
+                  cents += '0';
+              }
+              return std::stoll(whole) * 100 + std::stoll(cents);
+          }
+
+          std::string formatMoney(long long cents) {
+              std::string rest{std::to_string(cents % 100)};
+              if (rest.size() < 2) {
+                  rest = "0" + rest;
+              }
+              return std::to_string(cents / 100) + "." + rest;
+          }
+
+          struct Account {
+              long long balance{0};
+          };
+
+          class Bank {
+          public:
+              void open(const std::string& name, long long cents) {
+                  if (accounts_.count(name) > 0) {
+                      throw BankError{name + " already exists"};
+                  }
+                  accounts_[name] = Account{cents};
+                  std::cout << "Opened " << name << " with " << formatMoney(cents) << '\n';
+              }
+
+              void balance(const std::string& name) {
+                  const Account& account = get(name);     // look up first: it may throw
+                  std::cout << name << ": " << formatMoney(account.balance) << '\n';
+              }
+
+              void list() const {
+                  if (accounts_.empty()) {
+                      std::cout << "No accounts\n";
+                      return;
+                  }
+                  for (const auto& [name, account] : accounts_) {
+                      std::cout << name << ' ' << formatMoney(account.balance) << '\n';
+                  }
+              }
+
+              void deposit(const std::string& name, long long cents) {
+                  Account& account = get(name);
+                  account.balance += cents;
+                  std::cout << "Deposited " << formatMoney(cents) << " to " << name
+                            << " (balance " << formatMoney(account.balance) << ")\n";
+              }
+
+              void withdraw(const std::string& name, long long cents) {
+                  Account& account = get(name);
+                  if (account.balance < cents) {
+                      throw BankError{"insufficient funds in " + name};
+                  }
+                  account.balance -= cents;
+                  std::cout << "Withdrew " << formatMoney(cents) << " from " << name
+                            << " (balance " << formatMoney(account.balance) << ")\n";
+              }
+
+              void transfer(const std::string& from, const std::string& to, long long cents) {
+                  Account& source = get(from);
+                  Account& target = get(to);
+                  if (from == to) {
+                      throw BankError{"cannot transfer to the same account"};
+                  }
+                  if (source.balance < cents) {
+                      throw BankError{"insufficient funds in " + from};
+                  }
+                  source.balance -= cents;
+                  target.balance += cents;
+                  std::cout << "Transferred " << formatMoney(cents) << " from " << from << " to " << to << '\n';
+              }
+
+          private:
+              Account& get(const std::string& name) {
+                  auto it = accounts_.find(name);
+                  if (it == accounts_.end()) {
+                      throw BankError{"no account " + name};
+                  }
+                  return it->second;
+              }
+
+              std::map<std::string, Account> accounts_{};
+          };
+
+          std::vector<std::string> splitWords(const std::string& line) {
+              std::istringstream in{line};
+              std::vector<std::string> words{};
+              std::string word{};
+              while (in >> word) {
+                  words.push_back(word);
+              }
+              return words;
+          }
+
+          void expectArgs(const std::vector<std::string>& words, std::size_t count, const std::string& usage) {
+              if (words.size() != count) {
+                  throw BankError{"usage: " + usage};
+              }
+          }
+
+          long long amountArg(const std::string& text, bool allowZero) {
+              std::optional<long long> cents{parseMoney(text)};
+              if (!cents || (!allowZero && *cents == 0)) {
+                  throw BankError{"invalid amount " + text};
+              }
+              return *cents;
+          }
+
+          void execute(Bank& bank, const std::vector<std::string>& words) {
+              const std::string& command{words[0]};
+              if (command == "open") {
+                  expectArgs(words, 3, "open NAME AMOUNT");
+                  bank.open(words[1], amountArg(words[2], true));
+              } else if (command == "balance") {
+                  expectArgs(words, 2, "balance NAME");
+                  bank.balance(words[1]);
+              } else if (command == "list") {
+                  expectArgs(words, 1, "list");
+                  bank.list();
+              } else if (command == "deposit") {
+                  expectArgs(words, 3, "deposit NAME AMOUNT");
+                  bank.deposit(words[1], amountArg(words[2], false));
+              } else if (command == "withdraw") {
+                  expectArgs(words, 3, "withdraw NAME AMOUNT");
+                  bank.withdraw(words[1], amountArg(words[2], false));
+              } else if (command == "transfer") {
+                  expectArgs(words, 4, "transfer FROM TO AMOUNT");
+                  bank.transfer(words[1], words[2], amountArg(words[3], false));
+              } else {
+                  throw BankError{"unknown command " + command};
+              }
+          }
+
+          int main() {
+              Bank bank{};
+              std::string line{};
+              while (std::getline(std::cin, line)) {
+                  std::vector<std::string> words{splitWords(line)};
+                  if (words.empty()) {
+                      continue;
+                  }
+                  try {
+                      execute(bank, words);
+                  } catch (const BankError& e) {
+                      std::cout << "Error: " << e.what() << '\n';
+                  }
+              }
+              return 0;
+          }
+      - title: History and undo
+        prompt: |
+          Every account keeps a **history**, and the bank can **undo** the most
+          recent money movement.
+
+          `history NAME` prints the account's entries, oldest first, one per
+          line:
+
+          | Event | Entry |
+          |---|---|
+          | open | `open +AMOUNT` |
+          | deposit | `deposit +AMOUNT` |
+          | withdraw | `withdraw -AMOUNT` |
+          | transfer | `transfer to OTHER -AMOUNT` in the sender's history, `transfer from OTHER +AMOUNT` in the receiver's |
+
+          `undo` reverses the most recent deposit, withdraw or transfer that
+          hasn't been undone yet, **removing its history entries**, and prints
+          `Undid deposit of AMOUNT to NAME`, `Undid withdraw of AMOUNT from NAME`
+          or `Undid transfer of AMOUNT from FROM to TO`. Repeated `undo`s go
+          further back. Opening an account can't be undone. With nothing left:
+          `Error: nothing to undo`.
+        tests:
+          - in: |
+              open alice 100
+              open bob 20
+              deposit alice 50
+              transfer alice bob 30
+              withdraw bob 10
+              history alice
+              history bob
+              undo
+              undo
+              history bob
+              list
+              undo
+              undo
+            out: |
+              Opened alice with 100.00
+              Opened bob with 20.00
+              Deposited 50.00 to alice (balance 150.00)
+              Transferred 30.00 from alice to bob
+              Withdrew 10.00 from bob (balance 40.00)
+              open +100.00
+              deposit +50.00
+              transfer to bob -30.00
+              open +20.00
+              transfer from alice +30.00
+              withdraw -10.00
+              Undid withdraw of 10.00 from bob
+              Undid transfer of 30.00 from alice to bob
+              open +20.00
+              alice 150.00
+              bob 20.00
+              Undid deposit of 50.00 to alice
+              Error: nothing to undo
+          - in: |
+              undo
+              open kim 5
+              undo
+              deposit kim 1.5
+              withdraw kim 6.5
+              undo
+              undo
+              history kim
+            out: |
+              Error: nothing to undo
+              Opened kim with 5.00
+              Error: nothing to undo
+              Deposited 1.50 to kim (balance 6.50)
+              Withdrew 6.50 from kim (balance 0.00)
+              Undid withdraw of 6.50 from kim
+              Undid deposit of 1.50 to kim
+              open +5.00
+            hidden: true
+        hints:
+          - "Store the history as `std::vector<std::string>` inside each `Account`."
+          - "For undo, keep a stack of transactions: `struct Transaction { std::string kind, from, to; long long cents; };` in a `std::vector`. Push on every successful deposit/withdraw/transfer; `undo` pops the last one and applies the opposite."
+          - "Why can `undo` simply `pop_back()` the account's last history entry? Because everything done to that account *after* this transaction has already been undone — that's the beauty of a stack."
+        solution: |
+          #include <iostream>
+          #include <map>
+          #include <optional>
+          #include <sstream>
+          #include <stdexcept>
+          #include <string>
+          #include <vector>
+
+          class BankError : public std::runtime_error {
+          public:
+              using std::runtime_error::runtime_error;
+          };
+
+          // "12", "12.5" or "12.50" -> 1250 cents. Anything else -> nullopt.
+          std::optional<long long> parseMoney(const std::string& text) {
+              std::size_t dot{text.find('.')};
+              std::string whole{text.substr(0, dot)};
+              std::string cents{dot == std::string::npos ? "" : text.substr(dot + 1)};
+              if (whole.empty() || whole.size() > 12 || cents.size() > 2 ||
+                  (dot != std::string::npos && cents.empty())) {
+                  return std::nullopt;
+              }
+              for (char c : whole + cents) {
+                  if (c < '0' || c > '9') {
+                      return std::nullopt;
+                  }
+              }
+              while (cents.size() < 2) {
+                  cents += '0';
+              }
+              return std::stoll(whole) * 100 + std::stoll(cents);
+          }
+
+          std::string formatMoney(long long cents) {
+              std::string rest{std::to_string(cents % 100)};
+              if (rest.size() < 2) {
+                  rest = "0" + rest;
+              }
+              return std::to_string(cents / 100) + "." + rest;
+          }
+
+          struct Account {
+              long long balance{0};
+              std::vector<std::string> history{};
+          };
+
+          struct Transaction {
+              std::string kind{};     // "deposit", "withdraw" or "transfer"
+              std::string from{};
+              std::string to{};
+              long long cents{0};
+          };
+
+          class Bank {
+          public:
+              void open(const std::string& name, long long cents) {
+                  if (accounts_.count(name) > 0) {
+                      throw BankError{name + " already exists"};
+                  }
+                  accounts_[name] = Account{cents, {"open +" + formatMoney(cents)}};
+                  std::cout << "Opened " << name << " with " << formatMoney(cents) << '\n';
+              }
+
+              void balance(const std::string& name) {
+                  const Account& account = get(name);     // look up first: it may throw
+                  std::cout << name << ": " << formatMoney(account.balance) << '\n';
+              }
+
+              void list() const {
+                  if (accounts_.empty()) {
+                      std::cout << "No accounts\n";
+                      return;
+                  }
+                  for (const auto& [name, account] : accounts_) {
+                      std::cout << name << ' ' << formatMoney(account.balance) << '\n';
+                  }
+              }
+
+              void deposit(const std::string& name, long long cents) {
+                  Account& account = get(name);
+                  account.balance += cents;
+                  account.history.push_back("deposit +" + formatMoney(cents));
+                  undo_.push_back({"deposit", "", name, cents});
+                  std::cout << "Deposited " << formatMoney(cents) << " to " << name
+                            << " (balance " << formatMoney(account.balance) << ")\n";
+              }
+
+              void withdraw(const std::string& name, long long cents) {
+                  Account& account = get(name);
+                  if (account.balance < cents) {
+                      throw BankError{"insufficient funds in " + name};
+                  }
+                  account.balance -= cents;
+                  account.history.push_back("withdraw -" + formatMoney(cents));
+                  undo_.push_back({"withdraw", name, "", cents});
+                  std::cout << "Withdrew " << formatMoney(cents) << " from " << name
+                            << " (balance " << formatMoney(account.balance) << ")\n";
+              }
+
+              void transfer(const std::string& from, const std::string& to, long long cents) {
+                  Account& source = get(from);
+                  Account& target = get(to);
+                  if (from == to) {
+                      throw BankError{"cannot transfer to the same account"};
+                  }
+                  if (source.balance < cents) {
+                      throw BankError{"insufficient funds in " + from};
+                  }
+                  source.balance -= cents;
+                  target.balance += cents;
+                  source.history.push_back("transfer to " + to + " -" + formatMoney(cents));
+                  target.history.push_back("transfer from " + from + " +" + formatMoney(cents));
+                  undo_.push_back({"transfer", from, to, cents});
+                  std::cout << "Transferred " << formatMoney(cents) << " from " << from << " to " << to << '\n';
+              }
+
+              void history(const std::string& name) {
+                  for (const auto& entry : get(name).history) {
+                      std::cout << entry << '\n';
+                  }
+              }
+
+              void undo() {
+                  if (undo_.empty()) {
+                      throw BankError{"nothing to undo"};
+                  }
+                  Transaction t{undo_.back()};
+                  undo_.pop_back();
+                  if (t.kind == "deposit") {
+                      Account& account = get(t.to);
+                      account.balance -= t.cents;
+                      account.history.pop_back();
+                      std::cout << "Undid deposit of " << formatMoney(t.cents) << " to " << t.to << '\n';
+                  } else if (t.kind == "withdraw") {
+                      Account& account = get(t.from);
+                      account.balance += t.cents;
+                      account.history.pop_back();
+                      std::cout << "Undid withdraw of " << formatMoney(t.cents) << " from " << t.from << '\n';
+                  } else {
+                      Account& source = get(t.from);
+                      Account& target = get(t.to);
+                      source.balance += t.cents;
+                      target.balance -= t.cents;
+                      source.history.pop_back();
+                      target.history.pop_back();
+                      std::cout << "Undid transfer of " << formatMoney(t.cents) << " from " << t.from << " to " << t.to << '\n';
+                  }
+              }
+
+          private:
+              Account& get(const std::string& name) {
+                  auto it = accounts_.find(name);
+                  if (it == accounts_.end()) {
+                      throw BankError{"no account " + name};
+                  }
+                  return it->second;
+              }
+
+              std::map<std::string, Account> accounts_{};
+              std::vector<Transaction> undo_{};
+          };
+
+          std::vector<std::string> splitWords(const std::string& line) {
+              std::istringstream in{line};
+              std::vector<std::string> words{};
+              std::string word{};
+              while (in >> word) {
+                  words.push_back(word);
+              }
+              return words;
+          }
+
+          void expectArgs(const std::vector<std::string>& words, std::size_t count, const std::string& usage) {
+              if (words.size() != count) {
+                  throw BankError{"usage: " + usage};
+              }
+          }
+
+          long long amountArg(const std::string& text, bool allowZero) {
+              std::optional<long long> cents{parseMoney(text)};
+              if (!cents || (!allowZero && *cents == 0)) {
+                  throw BankError{"invalid amount " + text};
+              }
+              return *cents;
+          }
+
+          void execute(Bank& bank, const std::vector<std::string>& words) {
+              const std::string& command{words[0]};
+              if (command == "open") {
+                  expectArgs(words, 3, "open NAME AMOUNT");
+                  bank.open(words[1], amountArg(words[2], true));
+              } else if (command == "balance") {
+                  expectArgs(words, 2, "balance NAME");
+                  bank.balance(words[1]);
+              } else if (command == "list") {
+                  expectArgs(words, 1, "list");
+                  bank.list();
+              } else if (command == "deposit") {
+                  expectArgs(words, 3, "deposit NAME AMOUNT");
+                  bank.deposit(words[1], amountArg(words[2], false));
+              } else if (command == "withdraw") {
+                  expectArgs(words, 3, "withdraw NAME AMOUNT");
+                  bank.withdraw(words[1], amountArg(words[2], false));
+              } else if (command == "transfer") {
+                  expectArgs(words, 4, "transfer FROM TO AMOUNT");
+                  bank.transfer(words[1], words[2], amountArg(words[3], false));
+              } else if (command == "history") {
+                  expectArgs(words, 2, "history NAME");
+                  bank.history(words[1]);
+              } else if (command == "undo") {
+                  expectArgs(words, 1, "undo");
+                  bank.undo();
+              } else {
+                  throw BankError{"unknown command " + command};
+              }
+          }
+
+          int main() {
+              Bank bank{};
+              std::string line{};
+              while (std::getline(std::cin, line)) {
+                  std::vector<std::string> words{splitWords(line)};
+                  if (words.empty()) {
+                      continue;
+                  }
+                  try {
+                      execute(bank, words);
+                  } catch (const BankError& e) {
+                      std::cout << "Error: " << e.what() << '\n';
+                  }
+              }
+              return 0;
+          }
+      - title: Reports and interest
+        prompt: |
+          `report` prints every account ranked by balance, **highest first**
+          (equal balances in alphabetical order), then the total:
+
+          ```text
+          1. carol 500.00
+          2. alice 130.00
+          3. bob 30.00
+          4. dave 30.00
+          Total: 690.00
+          ```
+
+          (`No accounts` if there are none.)
+
+          `interest PERCENT` pays whole-number interest from 1 to 100 percent
+          to every account: `paid = (balance × percent + 50) / 100` in integer
+          cents (that rounds to the nearest cent). Each account gets a history
+          entry `interest +PAID`. Print `Paid PERCENT% interest to N accounts`
+          (`1 account` for one). Interest can't be undone, and it **clears the
+          undo history**. Anything else as the percent: `Error: invalid percent TEXT`.
+        tests:
+          - in: |
+              open alice 130
+              open bob 30
+              open carol 500
+              open dave 30
+              report
+              interest 2
+              report
+              history bob
+              undo
+              interest 0
+              interest two
+            out: |
+              Opened alice with 130.00
+              Opened bob with 30.00
+              Opened carol with 500.00
+              Opened dave with 30.00
+              1. carol 500.00
+              2. alice 130.00
+              3. bob 30.00
+              4. dave 30.00
+              Total: 690.00
+              Paid 2% interest to 4 accounts
+              1. carol 510.00
+              2. alice 132.60
+              3. bob 30.60
+              4. dave 30.60
+              Total: 703.80
+              open +30.00
+              interest +0.60
+              Error: nothing to undo
+              Error: invalid percent 0
+              Error: invalid percent two
+          - in: |
+              report
+              open solo 0.33
+              interest 50
+              balance solo
+              interest 100
+              report
+            out: |
+              No accounts
+              Opened solo with 0.33
+              Paid 50% interest to 1 account
+              solo: 0.50
+              Paid 100% interest to 1 account
+              1. solo 1.00
+              Total: 1.00
+            hidden: true
+        hints:
+          - "Copy the accounts into a `std::vector<std::pair<std::string, long long>>`. Since the map is already sorted by name, `std::stable_sort` by balance (descending) keeps ties alphabetical."
+          - "Validate the percent yourself (1–3 digits, value 1–100) before calling `std::stoi`, so bad input can't throw a different exception."
+        solution: |
+          #include <algorithm>
+          #include <iostream>
+          #include <map>
+          #include <optional>
+          #include <sstream>
+          #include <stdexcept>
+          #include <string>
+          #include <utility>
+          #include <vector>
+
+          class BankError : public std::runtime_error {
+          public:
+              using std::runtime_error::runtime_error;
+          };
+
+          // "12", "12.5" or "12.50" -> 1250 cents. Anything else -> nullopt.
+          std::optional<long long> parseMoney(const std::string& text) {
+              std::size_t dot{text.find('.')};
+              std::string whole{text.substr(0, dot)};
+              std::string cents{dot == std::string::npos ? "" : text.substr(dot + 1)};
+              if (whole.empty() || whole.size() > 12 || cents.size() > 2 ||
+                  (dot != std::string::npos && cents.empty())) {
+                  return std::nullopt;
+              }
+              for (char c : whole + cents) {
+                  if (c < '0' || c > '9') {
+                      return std::nullopt;
+                  }
+              }
+              while (cents.size() < 2) {
+                  cents += '0';
+              }
+              return std::stoll(whole) * 100 + std::stoll(cents);
+          }
+
+          std::string formatMoney(long long cents) {
+              std::string rest{std::to_string(cents % 100)};
+              if (rest.size() < 2) {
+                  rest = "0" + rest;
+              }
+              return std::to_string(cents / 100) + "." + rest;
+          }
+
+          std::string plural(std::size_t n, const std::string& word) {
+              return std::to_string(n) + " " + word + (n == 1 ? "" : "s");
+          }
+
+          struct Account {
+              long long balance{0};
+              std::vector<std::string> history{};
+          };
+
+          struct Transaction {
+              std::string kind{};     // "deposit", "withdraw" or "transfer"
+              std::string from{};
+              std::string to{};
+              long long cents{0};
+          };
+
+          class Bank {
+          public:
+              void open(const std::string& name, long long cents) {
+                  if (accounts_.count(name) > 0) {
+                      throw BankError{name + " already exists"};
+                  }
+                  accounts_[name] = Account{cents, {"open +" + formatMoney(cents)}};
+                  std::cout << "Opened " << name << " with " << formatMoney(cents) << '\n';
+              }
+
+              void balance(const std::string& name) {
+                  const Account& account = get(name);     // look up first: it may throw
+                  std::cout << name << ": " << formatMoney(account.balance) << '\n';
+              }
+
+              void list() const {
+                  if (accounts_.empty()) {
+                      std::cout << "No accounts\n";
+                      return;
+                  }
+                  for (const auto& [name, account] : accounts_) {
+                      std::cout << name << ' ' << formatMoney(account.balance) << '\n';
+                  }
+              }
+
+              void deposit(const std::string& name, long long cents) {
+                  Account& account = get(name);
+                  account.balance += cents;
+                  account.history.push_back("deposit +" + formatMoney(cents));
+                  undo_.push_back({"deposit", "", name, cents});
+                  std::cout << "Deposited " << formatMoney(cents) << " to " << name
+                            << " (balance " << formatMoney(account.balance) << ")\n";
+              }
+
+              void withdraw(const std::string& name, long long cents) {
+                  Account& account = get(name);
+                  if (account.balance < cents) {
+                      throw BankError{"insufficient funds in " + name};
+                  }
+                  account.balance -= cents;
+                  account.history.push_back("withdraw -" + formatMoney(cents));
+                  undo_.push_back({"withdraw", name, "", cents});
+                  std::cout << "Withdrew " << formatMoney(cents) << " from " << name
+                            << " (balance " << formatMoney(account.balance) << ")\n";
+              }
+
+              void transfer(const std::string& from, const std::string& to, long long cents) {
+                  Account& source = get(from);
+                  Account& target = get(to);
+                  if (from == to) {
+                      throw BankError{"cannot transfer to the same account"};
+                  }
+                  if (source.balance < cents) {
+                      throw BankError{"insufficient funds in " + from};
+                  }
+                  source.balance -= cents;
+                  target.balance += cents;
+                  source.history.push_back("transfer to " + to + " -" + formatMoney(cents));
+                  target.history.push_back("transfer from " + from + " +" + formatMoney(cents));
+                  undo_.push_back({"transfer", from, to, cents});
+                  std::cout << "Transferred " << formatMoney(cents) << " from " << from << " to " << to << '\n';
+              }
+
+              void history(const std::string& name) {
+                  for (const auto& entry : get(name).history) {
+                      std::cout << entry << '\n';
+                  }
+              }
+
+              void undo() {
+                  if (undo_.empty()) {
+                      throw BankError{"nothing to undo"};
+                  }
+                  Transaction t{undo_.back()};
+                  undo_.pop_back();
+                  if (t.kind == "deposit") {
+                      Account& account = get(t.to);
+                      account.balance -= t.cents;
+                      account.history.pop_back();
+                      std::cout << "Undid deposit of " << formatMoney(t.cents) << " to " << t.to << '\n';
+                  } else if (t.kind == "withdraw") {
+                      Account& account = get(t.from);
+                      account.balance += t.cents;
+                      account.history.pop_back();
+                      std::cout << "Undid withdraw of " << formatMoney(t.cents) << " from " << t.from << '\n';
+                  } else {
+                      Account& source = get(t.from);
+                      Account& target = get(t.to);
+                      source.balance += t.cents;
+                      target.balance -= t.cents;
+                      source.history.pop_back();
+                      target.history.pop_back();
+                      std::cout << "Undid transfer of " << formatMoney(t.cents) << " from " << t.from << " to " << t.to << '\n';
+                  }
+              }
+
+              void report() const {
+                  if (accounts_.empty()) {
+                      std::cout << "No accounts\n";
+                      return;
+                  }
+                  std::vector<std::pair<std::string, long long>> rows{};
+                  long long total{0};
+                  for (const auto& [name, account] : accounts_) {
+                      rows.push_back({name, account.balance});
+                      total += account.balance;
+                  }
+                  // The map is already sorted by name, so a stable sort by balance keeps ties alphabetical.
+                  std::stable_sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+                  for (std::size_t i{0}; i < rows.size(); ++i) {
+                      std::cout << i + 1 << ". " << rows[i].first << ' ' << formatMoney(rows[i].second) << '\n';
+                  }
+                  std::cout << "Total: " << formatMoney(total) << '\n';
+              }
+
+              void interest(int percent) {
+                  for (auto& [name, account] : accounts_) {
+                      long long paid{(account.balance * percent + 50) / 100};
+                      account.balance += paid;
+                      account.history.push_back("interest +" + formatMoney(paid));
+                  }
+                  undo_.clear();
+                  std::cout << "Paid " << percent << "% interest to " << plural(accounts_.size(), "account") << '\n';
+              }
+
+          private:
+              Account& get(const std::string& name) {
+                  auto it = accounts_.find(name);
+                  if (it == accounts_.end()) {
+                      throw BankError{"no account " + name};
+                  }
+                  return it->second;
+              }
+
+              std::map<std::string, Account> accounts_{};
+              std::vector<Transaction> undo_{};
+          };
+
+          std::vector<std::string> splitWords(const std::string& line) {
+              std::istringstream in{line};
+              std::vector<std::string> words{};
+              std::string word{};
+              while (in >> word) {
+                  words.push_back(word);
+              }
+              return words;
+          }
+
+          void expectArgs(const std::vector<std::string>& words, std::size_t count, const std::string& usage) {
+              if (words.size() != count) {
+                  throw BankError{"usage: " + usage};
+              }
+          }
+
+          long long amountArg(const std::string& text, bool allowZero) {
+              std::optional<long long> cents{parseMoney(text)};
+              if (!cents || (!allowZero && *cents == 0)) {
+                  throw BankError{"invalid amount " + text};
+              }
+              return *cents;
+          }
+
+          int percentArg(const std::string& text) {
+              bool digits{!text.empty() && text.size() <= 3};
+              for (char c : text) {
+                  digits = digits && c >= '0' && c <= '9';
+              }
+              if (!digits || std::stoi(text) < 1 || std::stoi(text) > 100) {
+                  throw BankError{"invalid percent " + text};
+              }
+              return std::stoi(text);
+          }
+
+          void execute(Bank& bank, const std::vector<std::string>& words) {
+              const std::string& command{words[0]};
+              if (command == "open") {
+                  expectArgs(words, 3, "open NAME AMOUNT");
+                  bank.open(words[1], amountArg(words[2], true));
+              } else if (command == "balance") {
+                  expectArgs(words, 2, "balance NAME");
+                  bank.balance(words[1]);
+              } else if (command == "list") {
+                  expectArgs(words, 1, "list");
+                  bank.list();
+              } else if (command == "deposit") {
+                  expectArgs(words, 3, "deposit NAME AMOUNT");
+                  bank.deposit(words[1], amountArg(words[2], false));
+              } else if (command == "withdraw") {
+                  expectArgs(words, 3, "withdraw NAME AMOUNT");
+                  bank.withdraw(words[1], amountArg(words[2], false));
+              } else if (command == "transfer") {
+                  expectArgs(words, 4, "transfer FROM TO AMOUNT");
+                  bank.transfer(words[1], words[2], amountArg(words[3], false));
+              } else if (command == "history") {
+                  expectArgs(words, 2, "history NAME");
+                  bank.history(words[1]);
+              } else if (command == "undo") {
+                  expectArgs(words, 1, "undo");
+                  bank.undo();
+              } else if (command == "report") {
+                  expectArgs(words, 1, "report");
+                  bank.report();
+              } else if (command == "interest") {
+                  expectArgs(words, 2, "interest PERCENT");
+                  bank.interest(percentArg(words[1]));
+              } else {
+                  throw BankError{"unknown command " + command};
+              }
+          }
+
+          int main() {
+              Bank bank{};
+              std::string line{};
+              while (std::getline(std::cin, line)) {
+                  std::vector<std::string> words{splitWords(line)};
+                  if (words.empty()) {
+                      continue;
+                  }
+                  try {
+                      execute(bank, words);
+                  } catch (const BankError& e) {
+                      std::cout << "Error: " << e.what() << '\n';
+                  }
+              }
+              return 0;
+          }
+      - title: Saving and loading
+        prompt: |
+          Make the bank survive a restart.
+
+          `save FILE` writes one line per account — `NAME CENTS`, e.g.
+          `alice 10000` — and prints `Saved N accounts to FILE`.
+
+          `load FILE` **replaces** all accounts with the file's contents and
+          prints `Loaded N accounts from FILE`. History isn't saved: each
+          loaded account's history restarts as `open +BALANCE`. Loading also
+          clears the undo history. If the file can't be opened:
+          `Error: cannot open FILE`.
+
+          (`1 account`, not `1 accounts`, as before.)
+        tests:
+          - in: |
+              open alice 100
+              open bob 20
+              save bank.txt
+              deposit alice 900
+              balance alice
+              load bank.txt
+              balance alice
+              history alice
+              undo
+              list
+              load missing.txt
+            out: |
+              Opened alice with 100.00
+              Opened bob with 20.00
+              Saved 2 accounts to bank.txt
+              Deposited 900.00 to alice (balance 1000.00)
+              alice: 1000.00
+              Loaded 2 accounts from bank.txt
+              alice: 100.00
+              open +100.00
+              Error: nothing to undo
+              alice 100.00
+              bob 20.00
+              Error: cannot open missing.txt
+          - in: |
+              save empty.txt
+              open x 1
+              load empty.txt
+              list
+              open y 2.5
+              save one.txt
+              load one.txt
+              report
+            out: |
+              Saved 0 accounts to empty.txt
+              Opened x with 1.00
+              Loaded 0 accounts from empty.txt
+              No accounts
+              Opened y with 2.50
+              Saved 1 account to one.txt
+              Loaded 1 account from one.txt
+              1. y 2.50
+              Total: 2.50
+            hidden: true
+        hints:
+          - "`std::ofstream out{fileName};` and `std::ifstream in{fileName};` from `<fstream>` — check `if (!in)` before reading."
+          - "Load into a new `std::map` first and only replace the bank's map at the end — a good habit, so a failure halfway can't leave half-loaded data."
+        solution: |
+          #include <algorithm>
+          #include <fstream>
+          #include <iostream>
+          #include <map>
+          #include <optional>
+          #include <sstream>
+          #include <stdexcept>
+          #include <string>
+          #include <utility>
+          #include <vector>
+
+          class BankError : public std::runtime_error {
+          public:
+              using std::runtime_error::runtime_error;
+          };
+
+          // "12", "12.5" or "12.50" -> 1250 cents. Anything else -> nullopt.
+          std::optional<long long> parseMoney(const std::string& text) {
+              std::size_t dot{text.find('.')};
+              std::string whole{text.substr(0, dot)};
+              std::string cents{dot == std::string::npos ? "" : text.substr(dot + 1)};
+              if (whole.empty() || whole.size() > 12 || cents.size() > 2 ||
+                  (dot != std::string::npos && cents.empty())) {
+                  return std::nullopt;
+              }
+              for (char c : whole + cents) {
+                  if (c < '0' || c > '9') {
+                      return std::nullopt;
+                  }
+              }
+              while (cents.size() < 2) {
+                  cents += '0';
+              }
+              return std::stoll(whole) * 100 + std::stoll(cents);
+          }
+
+          std::string formatMoney(long long cents) {
+              std::string rest{std::to_string(cents % 100)};
+              if (rest.size() < 2) {
+                  rest = "0" + rest;
+              }
+              return std::to_string(cents / 100) + "." + rest;
+          }
+
+          std::string plural(std::size_t n, const std::string& word) {
+              return std::to_string(n) + " " + word + (n == 1 ? "" : "s");
+          }
+
+          struct Account {
+              long long balance{0};
+              std::vector<std::string> history{};
+          };
+
+          struct Transaction {
+              std::string kind{};     // "deposit", "withdraw" or "transfer"
+              std::string from{};
+              std::string to{};
+              long long cents{0};
+          };
+
+          class Bank {
+          public:
+              void open(const std::string& name, long long cents) {
+                  if (accounts_.count(name) > 0) {
+                      throw BankError{name + " already exists"};
+                  }
+                  accounts_[name] = Account{cents, {"open +" + formatMoney(cents)}};
+                  std::cout << "Opened " << name << " with " << formatMoney(cents) << '\n';
+              }
+
+              void balance(const std::string& name) {
+                  const Account& account = get(name);     // look up first: it may throw
+                  std::cout << name << ": " << formatMoney(account.balance) << '\n';
+              }
+
+              void list() const {
+                  if (accounts_.empty()) {
+                      std::cout << "No accounts\n";
+                      return;
+                  }
+                  for (const auto& [name, account] : accounts_) {
+                      std::cout << name << ' ' << formatMoney(account.balance) << '\n';
+                  }
+              }
+
+              void deposit(const std::string& name, long long cents) {
+                  Account& account = get(name);
+                  account.balance += cents;
+                  account.history.push_back("deposit +" + formatMoney(cents));
+                  undo_.push_back({"deposit", "", name, cents});
+                  std::cout << "Deposited " << formatMoney(cents) << " to " << name
+                            << " (balance " << formatMoney(account.balance) << ")\n";
+              }
+
+              void withdraw(const std::string& name, long long cents) {
+                  Account& account = get(name);
+                  if (account.balance < cents) {
+                      throw BankError{"insufficient funds in " + name};
+                  }
+                  account.balance -= cents;
+                  account.history.push_back("withdraw -" + formatMoney(cents));
+                  undo_.push_back({"withdraw", name, "", cents});
+                  std::cout << "Withdrew " << formatMoney(cents) << " from " << name
+                            << " (balance " << formatMoney(account.balance) << ")\n";
+              }
+
+              void transfer(const std::string& from, const std::string& to, long long cents) {
+                  Account& source = get(from);
+                  Account& target = get(to);
+                  if (from == to) {
+                      throw BankError{"cannot transfer to the same account"};
+                  }
+                  if (source.balance < cents) {
+                      throw BankError{"insufficient funds in " + from};
+                  }
+                  source.balance -= cents;
+                  target.balance += cents;
+                  source.history.push_back("transfer to " + to + " -" + formatMoney(cents));
+                  target.history.push_back("transfer from " + from + " +" + formatMoney(cents));
+                  undo_.push_back({"transfer", from, to, cents});
+                  std::cout << "Transferred " << formatMoney(cents) << " from " << from << " to " << to << '\n';
+              }
+
+              void history(const std::string& name) {
+                  for (const auto& entry : get(name).history) {
+                      std::cout << entry << '\n';
+                  }
+              }
+
+              void undo() {
+                  if (undo_.empty()) {
+                      throw BankError{"nothing to undo"};
+                  }
+                  Transaction t{undo_.back()};
+                  undo_.pop_back();
+                  if (t.kind == "deposit") {
+                      Account& account = get(t.to);
+                      account.balance -= t.cents;
+                      account.history.pop_back();
+                      std::cout << "Undid deposit of " << formatMoney(t.cents) << " to " << t.to << '\n';
+                  } else if (t.kind == "withdraw") {
+                      Account& account = get(t.from);
+                      account.balance += t.cents;
+                      account.history.pop_back();
+                      std::cout << "Undid withdraw of " << formatMoney(t.cents) << " from " << t.from << '\n';
+                  } else {
+                      Account& source = get(t.from);
+                      Account& target = get(t.to);
+                      source.balance += t.cents;
+                      target.balance -= t.cents;
+                      source.history.pop_back();
+                      target.history.pop_back();
+                      std::cout << "Undid transfer of " << formatMoney(t.cents) << " from " << t.from << " to " << t.to << '\n';
+                  }
+              }
+
+              void report() const {
+                  if (accounts_.empty()) {
+                      std::cout << "No accounts\n";
+                      return;
+                  }
+                  std::vector<std::pair<std::string, long long>> rows{};
+                  long long total{0};
+                  for (const auto& [name, account] : accounts_) {
+                      rows.push_back({name, account.balance});
+                      total += account.balance;
+                  }
+                  // The map is already sorted by name, so a stable sort by balance keeps ties alphabetical.
+                  std::stable_sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+                  for (std::size_t i{0}; i < rows.size(); ++i) {
+                      std::cout << i + 1 << ". " << rows[i].first << ' ' << formatMoney(rows[i].second) << '\n';
+                  }
+                  std::cout << "Total: " << formatMoney(total) << '\n';
+              }
+
+              void interest(int percent) {
+                  for (auto& [name, account] : accounts_) {
+                      long long paid{(account.balance * percent + 50) / 100};
+                      account.balance += paid;
+                      account.history.push_back("interest +" + formatMoney(paid));
+                  }
+                  undo_.clear();
+                  std::cout << "Paid " << percent << "% interest to " << plural(accounts_.size(), "account") << '\n';
+              }
+
+              void save(const std::string& fileName) const {
+                  std::ofstream out{fileName};
+                  if (!out) {
+                      throw BankError{"cannot write " + fileName};
+                  }
+                  for (const auto& [name, account] : accounts_) {
+                      out << name << ' ' << account.balance << '\n';
+                  }
+                  std::cout << "Saved " << plural(accounts_.size(), "account") << " to " << fileName << '\n';
+              }
+
+              void load(const std::string& fileName) {
+                  std::ifstream in{fileName};
+                  if (!in) {
+                      throw BankError{"cannot open " + fileName};
+                  }
+                  std::map<std::string, Account> loaded{};
+                  std::string name{};
+                  long long cents{};
+                  while (in >> name >> cents) {
+                      loaded[name] = Account{cents, {"open +" + formatMoney(cents)}};
+                  }
+                  accounts_ = std::move(loaded);
+                  undo_.clear();
+                  std::cout << "Loaded " << plural(accounts_.size(), "account") << " from " << fileName << '\n';
+              }
+
+          private:
+              Account& get(const std::string& name) {
+                  auto it = accounts_.find(name);
+                  if (it == accounts_.end()) {
+                      throw BankError{"no account " + name};
+                  }
+                  return it->second;
+              }
+
+              std::map<std::string, Account> accounts_{};
+              std::vector<Transaction> undo_{};
+          };
+
+          std::vector<std::string> splitWords(const std::string& line) {
+              std::istringstream in{line};
+              std::vector<std::string> words{};
+              std::string word{};
+              while (in >> word) {
+                  words.push_back(word);
+              }
+              return words;
+          }
+
+          void expectArgs(const std::vector<std::string>& words, std::size_t count, const std::string& usage) {
+              if (words.size() != count) {
+                  throw BankError{"usage: " + usage};
+              }
+          }
+
+          long long amountArg(const std::string& text, bool allowZero) {
+              std::optional<long long> cents{parseMoney(text)};
+              if (!cents || (!allowZero && *cents == 0)) {
+                  throw BankError{"invalid amount " + text};
+              }
+              return *cents;
+          }
+
+          int percentArg(const std::string& text) {
+              bool digits{!text.empty() && text.size() <= 3};
+              for (char c : text) {
+                  digits = digits && c >= '0' && c <= '9';
+              }
+              if (!digits || std::stoi(text) < 1 || std::stoi(text) > 100) {
+                  throw BankError{"invalid percent " + text};
+              }
+              return std::stoi(text);
+          }
+
+          void execute(Bank& bank, const std::vector<std::string>& words) {
+              const std::string& command{words[0]};
+              if (command == "open") {
+                  expectArgs(words, 3, "open NAME AMOUNT");
+                  bank.open(words[1], amountArg(words[2], true));
+              } else if (command == "balance") {
+                  expectArgs(words, 2, "balance NAME");
+                  bank.balance(words[1]);
+              } else if (command == "list") {
+                  expectArgs(words, 1, "list");
+                  bank.list();
+              } else if (command == "deposit") {
+                  expectArgs(words, 3, "deposit NAME AMOUNT");
+                  bank.deposit(words[1], amountArg(words[2], false));
+              } else if (command == "withdraw") {
+                  expectArgs(words, 3, "withdraw NAME AMOUNT");
+                  bank.withdraw(words[1], amountArg(words[2], false));
+              } else if (command == "transfer") {
+                  expectArgs(words, 4, "transfer FROM TO AMOUNT");
+                  bank.transfer(words[1], words[2], amountArg(words[3], false));
+              } else if (command == "history") {
+                  expectArgs(words, 2, "history NAME");
+                  bank.history(words[1]);
+              } else if (command == "undo") {
+                  expectArgs(words, 1, "undo");
+                  bank.undo();
+              } else if (command == "report") {
+                  expectArgs(words, 1, "report");
+                  bank.report();
+              } else if (command == "interest") {
+                  expectArgs(words, 2, "interest PERCENT");
+                  bank.interest(percentArg(words[1]));
+              } else if (command == "save") {
+                  expectArgs(words, 2, "save FILE");
+                  bank.save(words[1]);
+              } else if (command == "load") {
+                  expectArgs(words, 2, "load FILE");
+                  bank.load(words[1]);
+              } else {
+                  throw BankError{"unknown command " + command};
+              }
+          }
+
+          int main() {
+              Bank bank{};
+              std::string line{};
+              while (std::getline(std::cin, line)) {
+                  std::vector<std::string> words{splitWords(line)};
+                  if (words.empty()) {
+                      continue;
+                  }
+                  try {
+                      execute(bank, words);
+                  } catch (const BankError& e) {
+                      std::cout << "Error: " << e.what() << '\n';
+                  }
+              }
+              return 0;
+          }
+        explain: |
+          Congratulations — that's a real, robust, 300-line program: parsing,
+          validation, an exception-based error strategy, an undo stack,
+          sorting with a custom order, exact money arithmetic and persistence.
+          Read your final version once more from top to bottom as if reviewing
+          a colleague's code. What would you name differently? What would you
+          add next — `close`, monthly statements, several currencies?
+
+  - type: challenge
+    id: c19-ch-calc
+    title: A calculator that understands brackets
+    difficulty: 3
+    tags: [recursion, parsing, classes, exceptions]
+    prompt: |
+      Write `double evaluate(const std::string& expr)` for expressions with
+      numbers (possibly decimal), `+ - * /`, parentheses, unary minus and
+      spaces — respecting precedence (`*` and `/` before `+` and `-`) and
+      left-to-right order (`8 - 3 - 2` is 3). Throw `std::invalid_argument`
+      for malformed input.
+
+      This is a **recursive descent parser**, the technique real compilers
+      use. The grammar says it all — each rule becomes one function:
+
+      ```text
+      expression = term   { ("+" | "-") term }
+      term       = factor { ("*" | "/") factor }
+      factor     = number | "(" expression ")" | "-" factor
+      ```
+    starter: |
+      #include <stdexcept>
+      #include <string>
+
+      double evaluate(const std::string& expr) {
+          return 0.0;
+      }
+    harness: |
+      CHECK(evaluate("1 + 2 * 3"), 7.0);
+      CHECK(evaluate("(1 + 2) * 3"), 9.0);
+      CHECK(evaluate("10 / 4"), 2.5);
+      CHECK(evaluate("8 - 3 - 2"), 3.0);
+      CHECK(evaluate("-(2 + 3) * 2"), -10.0);
+      CHECK(evaluate("2 * -3"), -6.0);
+      CHECK(evaluate("2 * (3 + (4 - 1)) / 3"), 4.0);
+      CHECK(evaluate("  42 "), 42.0);
+      CHECK(evaluate("1.5 + 1.25"), 2.75);
+      CHECK_THROWS(evaluate("1 +"));
+      CHECK_THROWS(evaluate("(1 + 2"));
+      CHECK_THROWS(evaluate("1 2"));
+      CHECK_THROWS(evaluate(""));
+    hints:
+      - "Make a small class holding the text and a position `pos_`. Helpers: `skipSpaces()`, and `bool accept(char c)` which skips spaces and consumes `c` if it's next."
+      - "`expression()`: `double v = term(); while (true) { if (accept('+')) v += term(); else if (accept('-')) v -= term(); else return v; }` — `term()` is the same with `*` and `/`."
+      - "`factor()`: if `accept('-')` return `-factor()`; if `accept('(')`, parse an expression then require `)`; otherwise read the digits and dots and convert with `std::stod` (throw if there were none). After the top-level expression, anything left over is an error."
+    solution: |
+      #include <cctype>
+      #include <stdexcept>
+      #include <string>
+
+      class Parser {
+      public:
+          explicit Parser(const std::string& text) : text_{text} {}
+
+          double parse() {
+              double value{expression()};
+              skipSpaces();
+              if (pos_ != text_.size()) {
+                  throw std::invalid_argument{"unexpected '" + std::string(1, text_[pos_]) + "'"};
+              }
+              return value;
+          }
+
+      private:
+          double expression() {
+              double value{term()};
+              while (true) {
+                  if (accept('+')) {
+                      value += term();
+                  } else if (accept('-')) {
+                      value -= term();
+                  } else {
+                      return value;
+                  }
+              }
+          }
+
+          double term() {
+              double value{factor()};
+              while (true) {
+                  if (accept('*')) {
+                      value *= factor();
+                  } else if (accept('/')) {
+                      value /= factor();
+                  } else {
+                      return value;
+                  }
+              }
+          }
+
+          double factor() {
+              if (accept('-')) {
+                  return -factor();
+              }
+              if (accept('(')) {
+                  double value{expression()};
+                  if (!accept(')')) {
+                      throw std::invalid_argument{"missing ')'"};
+                  }
+                  return value;
+              }
+              return number();
+          }
+
+          double number() {
+              skipSpaces();
+              std::size_t start{pos_};
+              while (pos_ < text_.size() &&
+                     (std::isdigit(static_cast<unsigned char>(text_[pos_])) || text_[pos_] == '.')) {
+                  ++pos_;
+              }
+              if (start == pos_) {
+                  throw std::invalid_argument{"expected a number"};
+              }
+              return std::stod(text_.substr(start, pos_ - start));
+          }
+
+          bool accept(char c) {
+              skipSpaces();
+              if (pos_ < text_.size() && text_[pos_] == c) {
+                  ++pos_;
+                  return true;
+              }
+              return false;
+          }
+
+          void skipSpaces() {
+              while (pos_ < text_.size() && text_[pos_] == ' ') {
+                  ++pos_;
+              }
+          }
+
+          std::string text_;
+          std::size_t pos_{0};
+      };
+
+      double evaluate(const std::string& expr) {
+          Parser parser{expr};
+          return parser.parse();
+      }
+    explain: |
+      Precedence isn't coded anywhere explicitly — it falls out of the
+      structure: an `expression` is made of `term`s, so multiplications are
+      grouped before additions are even considered. Add a rule
+      `power = factor { "^" factor }` between term and factor, and you've
+      added exponentiation. Compilers for C++ itself are built on this idea.
+
+  - type: challenge
+    id: c19-ch-lru
+    title: An LRU cache
+    difficulty: 3
+    tags: [classes, list, unordered_map, iterators]
+    prompt: |
+      A cache keeps recently used data close at hand. When it's full, it
+      evicts the **least recently used** item. Write `class LRUCache`:
+
+      - `explicit LRUCache(std::size_t capacity)` (capacity ≥ 1)
+      - `std::optional<int> get(int key)` — the value, or `std::nullopt`; a successful get makes the key the most recently used
+      - `void put(int key, int value)` — insert or update; the key becomes the most recently used; if a new key doesn't fit, first evict the least recently used
+      - `std::size_t size() const`
+
+      Both operations must be **O(1)** — the last checks do 300,000
+      operations on a cache of 20,000 items.
+    starter: |
+      #include <list>
+      #include <optional>
+      #include <unordered_map>
+      #include <utility>
+
+      class LRUCache {
+      public:
+          explicit LRUCache(std::size_t capacity) : capacity_{capacity} {}
+
+          std::optional<int> get(int key) {
+              return std::nullopt;
+          }
+
+          void put(int key, int value) {
+          }
+
+          std::size_t size() const { return 0; }
+
+      private:
+          std::size_t capacity_;
+      };
+    harness: |
+      LRUCache c{2};
+      c.put(1, 10);
+      c.put(2, 20);
+      CHECK(c.get(1).value_or(-1), 10);
+      c.put(3, 30);
+      CHECK(c.get(2).has_value(), false);
+      CHECK(c.get(3).value_or(-1), 30);
+      c.put(1, 11);
+      c.put(4, 40);
+      CHECK(c.get(3).has_value(), false);
+      CHECK(c.get(1).value_or(-1), 11);
+      CHECK(c.get(4).value_or(-1), 40);
+      CHECK(c.size(), 2);
+      LRUCache big{20000};
+      for (int i{0}; i < 300000; ++i) {
+          big.put(i % 30000, i);
+          big.get((i * 7) % 30000);
+      }
+      CHECK(big.size(), 20000);
+      CHECK(big.get(29999).value_or(-1), 299999);
+    hints:
+      - "Keep the items in a `std::list<std::pair<int, int>>` ordered from most to least recently used — moving an element within a list is O(1)."
+      - "To find a key's list element in O(1), keep `std::unordered_map<int, std::list<std::pair<int, int>>::iterator>`. List iterators stay valid when other elements are added, removed or moved."
+      - "`items_.splice(items_.begin(), items_, it)` moves the element at `it` to the front without copying. To evict: the back of the list is the least recently used — erase its key from the map, then `pop_back()`."
+    solution: |
+      #include <list>
+      #include <optional>
+      #include <unordered_map>
+      #include <utility>
+
+      class LRUCache {
+      public:
+          explicit LRUCache(std::size_t capacity) : capacity_{capacity} {}
+
+          std::optional<int> get(int key) {
+              auto found = where_.find(key);
+              if (found == where_.end()) {
+                  return std::nullopt;
+              }
+              items_.splice(items_.begin(), items_, found->second);
+              return found->second->second;
+          }
+
+          void put(int key, int value) {
+              auto found = where_.find(key);
+              if (found != where_.end()) {
+                  found->second->second = value;
+                  items_.splice(items_.begin(), items_, found->second);
+                  return;
+              }
+              if (items_.size() == capacity_) {
+                  where_.erase(items_.back().first);
+                  items_.pop_back();
+              }
+              items_.push_front({key, value});
+              where_[key] = items_.begin();
+          }
+
+          std::size_t size() const { return items_.size(); }
+
+      private:
+          std::size_t capacity_;
+          std::list<std::pair<int, int>> items_{};   // front = most recently used
+          std::unordered_map<int, std::list<std::pair<int, int>>::iterator> where_{};
+      };
+    explain: |
+      Combining two containers so each covers the other's weakness — the
+      list gives O(1) reordering, the hash map gives O(1) lookup — is a
+      classic design move. Caches like this sit inside browsers, databases
+      and operating systems.
+
+  - type: challenge
+    id: c19-ch-wordle
+    title: Wordle, scored and solved
+    difficulty: 2
+    tags: [strings, arrays, functions]
+    prompt: |
+      In Wordle you guess a five-letter word and each letter is marked
+      `G` (green: right letter, right place), `Y` (yellow: in the word, but
+      elsewhere) or `.` (not in the word). Repeated letters are subtle: a
+      guess letter is yellow only while the secret still has **unmatched**
+      copies of it (greens are matched first).
+
+      1. `std::string score(const std::string& secret, const std::string& guess)`
+      2. `std::vector<std::string> candidates(const std::vector<std::string>& words, const std::string& guess, const std::string& pattern)` — the words (in order) that could still be the secret: those `w` with `score(w, guess) == pattern`. That's the heart of a Wordle solver!
+
+      All words are lowercase.
+    starter: |
+      #include <string>
+      #include <vector>
+
+      std::string score(const std::string& secret, const std::string& guess) {
+          return ".....";
+      }
+
+      std::vector<std::string> candidates(const std::vector<std::string>& words, const std::string& guess,
+                                          const std::string& pattern) {
+          return words;
+      }
+    harness: |
+      CHECK(score("crane", "crane"), "GGGGG");
+      CHECK(score("crane", "nacre"), "YYYYG");
+      CHECK(score("hello", "world"), ".Y.G.");
+      CHECK(score("hello", "lllll"), "..GG.");
+      CHECK(score("apple", "paper"), "YYGY.");
+      CHECK(score("speed", "erase"), "Y..YY");
+      CHECK(score("level", "eerie"), "YG...");
+      std::vector<std::string> words{"crane", "slate", "trace", "crate", "react", "caret", "cater", "grace", "track", "brace"};
+      CHECK(candidates(words, "crate", "GYYYY"), (std::vector<std::string>{"caret", "cater"}));
+      CHECK(candidates(words, "slate", "..G.G"), (std::vector<std::string>{"crane", "grace", "brace"}));
+      CHECK(candidates(words, "crate", "GGGGG"), (std::vector<std::string>{"crate"}));
+    hints:
+      - "Two passes. First mark greens, and count the secret's *unmatched* letters in `std::array<int, 26>` (index `letter - 'a'`)."
+      - "Second pass: for each non-green guess letter, if its unmatched count is above 0, mark it `Y` and decrease the count."
+    solution: |
+      #include <array>
+      #include <string>
+      #include <vector>
+
+      std::string score(const std::string& secret, const std::string& guess) {
+          std::string result(guess.size(), '.');
+          std::array<int, 26> unmatched{};
+          for (std::size_t i{0}; i < guess.size(); ++i) {
+              if (guess[i] == secret[i]) {
+                  result[i] = 'G';
+              } else {
+                  ++unmatched[static_cast<std::size_t>(secret[i] - 'a')];
+              }
+          }
+          for (std::size_t i{0}; i < guess.size(); ++i) {
+              auto letter = static_cast<std::size_t>(guess[i] - 'a');
+              if (result[i] != 'G' && unmatched[letter] > 0) {
+                  result[i] = 'Y';
+                  --unmatched[letter];
+              }
+          }
+          return result;
+      }
+
+      std::vector<std::string> candidates(const std::vector<std::string>& words, const std::string& guess,
+                                          const std::string& pattern) {
+          std::vector<std::string> out{};
+          for (const auto& w : words) {
+              if (score(w, guess) == pattern) {
+                  out.push_back(w);
+              }
+          }
+          return out;
+      }
+    explain: |
+      With a list of all five-letter words, a solver repeatedly narrows the
+      candidates. The clever part — which guess narrows them the most on
+      average — is a fun project to try on your own computer.
+
+  - type: challenge
+    id: c19-ch-sudoku
+    title: Sudoku solver
+    difficulty: 3
+    tags: [backtracking, grids]
+    prompt: |
+      A Sudoku board is 9 strings of 9 characters: digits `1`–`9`, or `.`
+      for an empty cell. Every row, column and 3 × 3 box must contain each
+      digit at most once.
+
+      - `bool isValid(const std::vector<std::string>& board)` — no rule is broken by the digits already there
+      - `bool solveSudoku(std::vector<std::string>& board)` — fill every empty cell and return `true`, or return `false` (board unchanged or partly changed — it doesn't matter) if there's no solution, including when the board is invalid to start with
+    starter: |
+      #include <string>
+      #include <vector>
+
+      bool isValid(const std::vector<std::string>& board) {
+          return true;
+      }
+
+      bool solveSudoku(std::vector<std::string>& board) {
+          return false;
+      }
+    harness: |
+      std::vector<std::string> puzzle{
+          "53..7....", "6..195...", ".98....6.", "8...6...3", "4..8.3..1",
+          "7...2...6", ".6....28.", "...419..5", "....8..79"};
+      CHECK(isValid(puzzle), true);
+      std::vector<std::string> board{puzzle};
+      CHECK(solveSudoku(board), true);
+      CHECK(board[0], "534678912");
+      CHECK(board[4], "426853791");
+      CHECK(board[8], "345286179");
+      CHECK(isValid(board), true);
+      std::vector<std::string> bad{puzzle};
+      bad[0][2] = '5';
+      CHECK(isValid(bad), false);
+      CHECK(solveSudoku(bad), false);
+      std::vector<std::string> stuck(9, std::string(9, '.'));
+      stuck[0] = "12345678.";
+      stuck[1][8] = '9';
+      CHECK(isValid(stuck), true);
+      CHECK(solveSudoku(stuck), false);
+    hints:
+      - "Helper `bool canPlace(board, r, c, digit)`: check row `r`, column `c`, and the box starting at `(3 * (r / 3), 3 * (c / 3))`."
+      - "`isValid`: for each filled cell, temporarily clear it (on a copy) and ask whether its digit could be placed there."
+      - "Backtracking: find the first `.`; try `'1'`…`'9'` where `canPlace`; recurse; if that fails, reset to `.` and try the next. If no digit works, return false. If there's no empty cell, you're done."
+    solution: |
+      #include <string>
+      #include <vector>
+
+      bool canPlace(const std::vector<std::string>& b, std::size_t r, std::size_t c, char d) {
+          for (std::size_t i{0}; i < 9; ++i) {
+              std::size_t boxRow{3 * (r / 3) + i / 3};
+              std::size_t boxCol{3 * (c / 3) + i % 3};
+              if (b[r][i] == d || b[i][c] == d || b[boxRow][boxCol] == d) {
+                  return false;
+              }
+          }
+          return true;
+      }
+
+      bool isValid(const std::vector<std::string>& board) {
+          std::vector<std::string> copy{board};
+          for (std::size_t r{0}; r < 9; ++r) {
+              for (std::size_t c{0}; c < 9; ++c) {
+                  char d{copy[r][c]};
+                  if (d == '.') {
+                      continue;
+                  }
+                  copy[r][c] = '.';
+                  bool ok{canPlace(copy, r, c, d)};
+                  copy[r][c] = d;
+                  if (!ok) {
+                      return false;
+                  }
+              }
+          }
+          return true;
+      }
+
+      bool fill(std::vector<std::string>& b) {
+          for (std::size_t r{0}; r < 9; ++r) {
+              for (std::size_t c{0}; c < 9; ++c) {
+                  if (b[r][c] != '.') {
+                      continue;
+                  }
+                  for (char d{'1'}; d <= '9'; ++d) {
+                      if (canPlace(b, r, c, d)) {
+                          b[r][c] = d;
+                          if (fill(b)) {
+                              return true;
+                          }
+                          b[r][c] = '.';
+                      }
+                  }
+                  return false;
+              }
+          }
+          return true;
+      }
+
+      bool solveSudoku(std::vector<std::string>& board) {
+          return isValid(board) && fill(board);
+      }
+    explain: |
+      Plain backtracking solves typical puzzles in milliseconds. A classic
+      speed-up: instead of the *first* empty cell, fill the one with the
+      *fewest* possible digits — the search tree shrinks dramatically.
+
+  - type: review
+    id: c19-review
+    title: "The whole course on one page"
+    body: |
+      Before the final exam, one page to review everything. For each line,
+      ask yourself: *could I explain this to a friend, with an example?*
+
+      ## Part I — First Steps
+
+      - A program is instructions; the compiler turns C++ into machine code. Errors: compile-time (syntax/types), link-time, run-time, logic.
+      - `int`, `double`, `char`, `bool`, `std::string`; initialise with `{}`; `const`/`constexpr`.
+      - Integer division truncates; `%` is remainder; watch overflow and narrowing.
+      - `if`/`else`, `switch`, `&&` `||` `!`; loops `while`, `for`, `do`-`while`, `break`/`continue`.
+      - Functions: parameters by value (copy) or by reference (`&`, can modify) or `const&` (read-only, no copy); return values; overloading; recursion needs a base case.
+
+      ## Part II — Working with Data
+
+      - `std::vector` (size, push_back, range-for, `.at()` checks bounds), `std::array`, C arrays.
+      - `std::string`: `size`, `substr`, `find`, `+`, `std::getline`, `<cctype>`.
+      - `struct` groups data; `enum class` names choices.
+      - References are aliases; pointers hold addresses (`&x`, `*p`, `nullptr`); the stack vs the heap; `new`/`delete` and why to avoid them.
+
+      ## Part III — Object-Oriented C++
+
+      - Classes: private data + public interface; constructors establish invariants; `const` member functions; destructors and RAII; operator overloading.
+      - Inheritance models "is a"; `virtual` + `override` give polymorphism through references and pointers; abstract classes as interfaces; virtual destructors; prefer composition.
+
+      ## Part IV — The Standard Library and Modern C++
+
+      - Containers: `vector`, `map`/`set` (sorted, O(log n)), `unordered_map`/`unordered_set` (O(1) average), `deque`, `list`, `stack`, `queue`, `priority_queue`; iterators.
+      - Algorithms: `sort`, `find_if`, `count_if`, `accumulate`, `transform`, … with lambdas (`[captures](params) { body }`).
+      - Ownership: `unique_ptr` (sole owner), `shared_ptr` (shared); move semantics; rules of zero/three/five; exceptions + RAII; `std::optional`.
+      - Templates: generic functions and classes; `if constexpr`, `static_assert`, concepts.
+
+      ## Part V — Becoming Fluent
+
+      - Headers/sources, include guards, namespaces, the build process; streams and files; debugging method; tests and edge cases; readable style.
+      - Problem solving: understand → plan → build → look back. Big-O. Binary search, sorting, backtracking, hashing, two pointers, sliding windows, prefix sums, DP, BFS/DFS.
+    questions:
+      - type: output
+        prompt: "Interleaving: classes, vectors, algorithms and lambdas."
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          struct Player {
+              std::string name;
+              int score;
+          };
+
+          int main() {
+              std::vector<Player> players{{"Ann", 30}, {"Bob", 45}, {"Cid", 30}, {"Dee", 12}};
+              std::stable_sort(players.begin(), players.end(),
+                               [](const Player& a, const Player& b) { return a.score > b.score; });
+              for (const auto& p : players) {
+                  std::cout << p.name[0];
+              }
+              auto high = std::count_if(players.begin(), players.end(), [](const Player& p) { return p.score >= 30; });
+              std::cout << ' ' << high << '\n';
+              return 0;
+          }
+        answer: |
+          BACD 3
+        why: "Sorted by score descending, ties keep their order (stable): Bob, Ann, Cid, Dee. Three have 30 or more."
+      - type: output
+        prompt: "Interleaving: maps, strings and references."
+        code: |
+          #include <iostream>
+          #include <map>
+          #include <string>
+
+          void tally(std::map<char, int>& counts, const std::string& word) {
+              for (char c : word) {
+                  ++counts[c];
+              }
+          }
+
+          int main() {
+              std::map<char, int> counts{};
+              tally(counts, "banana");
+              tally(counts, "bandana");
+              for (const auto& [letter, n] : counts) {
+                  std::cout << letter << n;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          a6b2d1n4
+        why: "banana: a3 b1 n2; bandana: a3 b1 n2 d1. Together a6 b2 d1 n4, in key order."
+      - type: mcq
+        prompt: "A function needs to look at a large `std::vector<std::string>` without changing it. Best parameter type?"
+        options:
+          - "`std::vector<std::string> v`"
+          - "`const std::vector<std::string>& v`"
+          - "`std::vector<std::string>* v`"
+          - "`std::vector<std::string>& v`"
+        answer: 1
+        why: "const reference: no copy, and the function promises not to modify it."
+
+  - type: exam
+    id: final-exam
+    title: "Final exam"
+    minutes: 90
+    pick: 25
+    body: |
+      This is it: one exam covering **the whole course**, from `std::cout` to
+      templates and algorithms. Take your time and answer from understanding.
+      Whatever your score, the explanations afterwards are one last review.
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{7};
+              int b{2};
+              double c{7.0 / 2};
+              std::cout << a / b << ' ' << a % b << ' ' << c << '\n';
+              return 0;
+          }
+        answer: |
+          3 1 3.5
+        why: "Integer division truncates (3), the remainder is 1, and 7.0 / 2 is a double division."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << 2 + 3 * 4 % 5 << ' ' << (10 - 4) / 4 * 2 << '\n';
+              return 0;
+          }
+        answer: |
+          4 2
+        why: "`3 * 4 % 5` = 12 % 5 = 2, plus 2 = 4. `(6) / 4` = 1, times 2 = 2."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int score{73};
+              if (score >= 90) {
+                  std::cout << 'A';
+              } else if (score >= 70) {
+                  std::cout << 'B';
+              } else {
+                  std::cout << 'C';
+              }
+              std::cout << (score % 2 == 0 ? " even" : " odd") << '\n';
+              return 0;
+          }
+        answer: |
+          B odd
+        why: "73 is at least 70 but below 90, and odd."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              for (int i{1}; i <= 3; ++i) {
+                  for (int j{1}; j <= i; ++j) {
+                      std::cout << j;
+                  }
+                  std::cout << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          1 12 123
+        why: "The inner loop runs i times."
+      - type: mcq
+        prompt: "What does this do?"
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{5};
+              while (n != 0) {
+                  n -= 2;
+              }
+              std::cout << "done\n";
+              return 0;
+          }
+        options:
+          - Prints done
+          - "Loops forever: n goes 5, 3, 1, -1, … and never equals 0"
+          - Doesn't compile
+          - Prints nothing and stops
+        answer: 1
+        why: "Odd n skips over 0. A condition like `n > 0` would be safer."
+      - type: output
+        code: |
+          #include <iostream>
+
+          void a(int x) { x += 10; }
+          void b(int& x) { x += 10; }
+
+          int main() {
+              int n{1};
+              a(n);
+              b(n);
+              b(n);
+              std::cout << n << '\n';
+              return 0;
+          }
+        answer: |
+          21
+        why: "`a` changes a copy; each `b` changes n itself: 1 + 10 + 10."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int f(int n) {
+              return n <= 1 ? 1 : n * f(n - 2);
+          }
+
+          int main() {
+              std::cout << f(7) << '\n';
+              return 0;
+          }
+        answer: |
+          105
+        why: "7 × 5 × 3 × 1."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{4, 8, 15};
+              v.push_back(16);
+              v[0] = v.back() - v.front();
+              std::cout << v.size() << ' ' << v[0] << '\n';
+              return 0;
+          }
+        answer: |
+          4 12
+        why: "Four elements; 16 − 4 = 12."
+      - type: mcq
+        prompt: "`std::vector<int> v(3);` — what happens with `v[3] = 1;` and with `v.at(3) = 1;`?"
+        options:
+          - "Both grow the vector"
+          - "`v[3]` is undefined behaviour; `v.at(3)` throws `std::out_of_range`"
+          - "Both throw"
+          - "Both are fine"
+        answer: 1
+        why: "`[]` doesn't check bounds; `.at()` does."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"programming"};
+              std::cout << s.substr(3, 4) << ' ' << s.find('g') << ' ' << s.rfind('m') << '\n';
+              return 0;
+          }
+        answer: |
+          gram 3 7
+        why: "p-r-o-g-r-a-m-m-i-n-g: 4 characters from index 3; first g at 3; last m at 7."
+      - type: output
+        code: |
+          #include <iostream>
+
+          struct Point {
+              int x{0};
+              int y{0};
+          };
+
+          Point shifted(Point p, int dx) {
+              p.x += dx;
+              return p;
+          }
+
+          int main() {
+              Point a{1, 2};
+              Point b{shifted(a, 5)};
+              std::cout << a.x << b.x << b.y << '\n';
+              return 0;
+          }
+        answer: |
+          162
+        why: "`a` is passed by value, so it stays {1, 2}; b is {6, 2}."
+      - type: mcq
+        prompt: "Why prefer `enum class Color { Red, Green };` to a plain `enum`?"
+        options:
+          - "It's faster"
+          - "Its names are scoped (`Color::Red`) and it doesn't silently convert to int"
+          - "It can hold strings"
+          - "Plain enums don't compile in C++20"
+        answer: 1
+        why: "Scoped, strongly typed enumerations avoid name clashes and accidental arithmetic."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{3};
+              int b{8};
+              int* p{&a};
+              *p += 1;
+              p = &b;
+              *p *= 2;
+              std::cout << a << ' ' << b << '\n';
+              return 0;
+          }
+        answer: |
+          4 16
+        why: "Through p, a becomes 4; then p points to b, which is doubled."
+      - type: tf
+        prompt: "A reference can be changed to refer to a different variable after it's initialised."
+        answer: false
+        why: "References are bound once. Assigning to a reference assigns to the object it refers to."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <utility>
+
+          struct Noisy {
+              std::string name;
+              explicit Noisy(std::string n) : name{std::move(n)} { std::cout << '+' << name; }
+              ~Noisy() { std::cout << '-' << name; }
+          };
+
+          int main() {
+              Noisy a{"a"};
+              {
+                  Noisy b{"b"};
+                  Noisy c{"c"};
+              }
+              std::cout << '|';
+              return 0;
+          }
+        answer: |
+          +a+b+c-c-b|-a
+        why: "Objects are destroyed in reverse order of construction when their scope ends; `a` lives until the end of main."
+      - type: mcq
+        prompt: "What does `const` after a member function's parameter list mean — `int size() const;`?"
+        options:
+          - The function returns a constant
+          - The function promises not to modify the object, so it can be called on const objects
+          - The function can't be overridden
+          - The function is evaluated at compile time
+        answer: 1
+        why: "Const member functions are the read-only part of a class's interface."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          struct Animal {
+              virtual ~Animal() = default;
+              virtual std::string sound() const { return "..."; }
+              std::string intro() const { return "I say " + sound(); }
+          };
+
+          struct Cat : Animal {
+              std::string sound() const override { return "meow"; }
+          };
+
+          int main() {
+              Cat c{};
+              const Animal& a = c;
+              Animal copy = c;
+              std::cout << a.intro() << " / " << copy.intro() << '\n';
+              return 0;
+          }
+        answer: |
+          I say meow / I say ...
+        why: "Through a reference the virtual call reaches Cat. `copy` is a sliced Animal, so it uses Animal's version."
+      - type: mcq
+        prompt: "Why must a base class with virtual functions have a virtual destructor?"
+        options:
+          - "Otherwise it doesn't compile"
+          - "So that deleting a derived object through a base pointer runs the derived destructor too"
+          - "To make the class abstract"
+          - "To allow copying"
+        answer: 1
+        why: "Without it, `delete basePtr` on a derived object is undefined behaviour."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <map>
+          #include <string>
+          #include <vector>
+
+          int main() {
+              std::vector<std::string> words{"b", "a", "b", "c", "b"};
+              std::map<std::string, int> m{};
+              for (const auto& w : words) {
+                  ++m[w];
+              }
+              for (const auto& [k, v] : m) {
+                  std::cout << k << v;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          a1b3c1
+        why: "A map counts and keeps keys sorted."
+      - type: mcq
+        prompt: "You need fast lookups by key and don't care about order. Best container?"
+        options:
+          - "`std::vector`"
+          - "`std::unordered_map`"
+          - "`std::list`"
+          - "`std::map`"
+        answer: 1
+        why: "O(1) average lookups. `std::map` works too, but pays O(log n) for ordering you don't need."
+      - type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{5, 3, 8, 1, 9, 2};
+              std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });
+              auto odd = std::count_if(v.begin(), v.end(), [](int x) { return x % 2 == 1; });
+              std::cout << v[0] << v[5] << ' ' << odd << '\n';
+              return 0;
+          }
+        answer: |
+          91 4
+        why: "Sorted descending: 9 8 5 3 2 1. Odd numbers: 5, 3, 1, 9."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int total{0};
+              auto addBy = [&total](int x) { total += x; };
+              auto snapshot = [total]() { return total; };
+              addBy(5);
+              addBy(7);
+              std::cout << total << ' ' << snapshot() << '\n';
+              return 0;
+          }
+        answer: |
+          12 0
+        why: "`addBy` captures by reference; `snapshot` copied total when it was created (0)."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <memory>
+          #include <utility>
+
+          int main() {
+              auto p = std::make_unique<int>(42);
+              auto q = std::move(p);
+              std::cout << (p == nullptr) << ' ' << *q << '\n';
+              return 0;
+          }
+        answer: |
+          1 42
+        why: "Moving a unique_ptr transfers ownership; the source becomes null."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <stdexcept>
+          #include <string>
+          #include <vector>
+
+          int parse(const std::string& s) {
+              if (s.empty()) {
+                  throw std::invalid_argument{"empty"};
+              }
+              return std::stoi(s);
+          }
+
+          int main() {
+              for (const auto& s : std::vector<std::string>{"12", "", "x7", "3"}) {
+                  try {
+                      std::cout << parse(s) << ' ';
+                  } catch (const std::invalid_argument&) {
+                      std::cout << "bad ";
+                  }
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          12 bad bad 3
+        why: "The empty string throws our exception; `std::stoi(\"x7\")` throws std::invalid_argument too. Each error is caught and the loop continues."
+      - type: mcq
+        prompt: "What is the **rule of zero**?"
+        options:
+          - "Classes should have no member variables"
+          - "If members manage themselves (containers, smart pointers), write no destructor, copy or move operations at all"
+          - "Always initialise to zero"
+          - "Never throw exceptions from constructors"
+        answer: 1
+        why: "Let the members' own special functions do the right thing."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          template <typename T>
+          T biggest(const std::vector<T>& v) {
+              T best = v[0];
+              for (const T& x : v) {
+                  if (best < x) {
+                      best = x;
+                  }
+              }
+              return best;
+          }
+
+          int main() {
+              std::cout << biggest(std::vector<int>{3, 9, 2}) << ' '
+                        << biggest(std::vector<std::string>{"pear", "apple", "zoo"}) << '\n';
+              return 0;
+          }
+        answer: |
+          9 zoo
+        why: "One template, two instantiations; strings compare alphabetically."
+      - type: mcq
+        prompt: "`undefined reference to 'Shop::total() const'` — what's the likely cause?"
+        options:
+          - "A missing semicolon in main.cpp"
+          - "Shop::total is declared but its definition wasn't compiled or linked (e.g. shop.cpp not in the build, or a signature mismatch)"
+          - "A runtime crash"
+          - "A missing #include <iostream>"
+        answer: 1
+        why: "It's a linker error: the declaration was seen, the definition wasn't found."
+      - type: spot
+        prompt: "This function has undefined behaviour. Which line?"
+        code: |
+          #include <vector>
+
+          int sumAll(const std::vector<int>& v) {
+              int total{0};
+              for (std::size_t i{0}; i <= v.size(); ++i) {
+                  total += v[i];
+              }
+              return total;
+          }
+        answer: 5
+        why: "`<=` makes the last iteration read `v[v.size()]`, one past the end. It should be `<`."
+      - type: mcq
+        prompt: "Complexity of this code?"
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{1000};
+              long long steps{0};
+              for (int i{0}; i < n; ++i) {
+                  for (int j{n}; j > 0; j /= 2) {
+                      ++steps;
+                  }
+              }
+              std::cout << steps << '\n';
+              return 0;
+          }
+        options:
+          - "O(n)"
+          - "O(n log n)"
+          - "O(n²)"
+          - "O(log n)"
+        answer: 1
+        why: "n outer iterations × log n halvings."
+      - type: tf
+        prompt: "Binary search on a sorted vector of a million elements needs at most about 20 comparisons."
+        answer: true
+        why: "2²⁰ ≈ 1,000,000."
+      - type: code
+        prompt: |
+          Write `std::vector<std::string> topWords(const std::string& text, std::size_t k)`:
+          the `k` most frequent words of `text` (lowercase words separated by
+          spaces), most frequent first, ties in alphabetical order. If there
+          are fewer than `k` different words, return them all.
+        starter: |
+          #include <string>
+          #include <vector>
+
+          std::vector<std::string> topWords(const std::string& text, std::size_t k) {
+              return {};
+          }
+        harness: |
+          CHECK(topWords("the cat and the hat and the bat", 2), (std::vector<std::string>{"the", "and"}));
+          CHECK(topWords("b a c b a b", 3), (std::vector<std::string>{"b", "a", "c"}));
+          CHECK(topWords("x y z", 2), (std::vector<std::string>{"x", "y"}));
+          CHECK(topWords("", 3), std::vector<std::string>{});
+          CHECK(topWords("solo", 5), (std::vector<std::string>{"solo"}));
+        solution: |
+          #include <algorithm>
+          #include <map>
+          #include <sstream>
+          #include <string>
+          #include <utility>
+          #include <vector>
+
+          std::vector<std::string> topWords(const std::string& text, std::size_t k) {
+              std::map<std::string, int> counts{};
+              std::istringstream in{text};
+              std::string word{};
+              while (in >> word) {
+                  ++counts[word];
+              }
+              std::vector<std::pair<std::string, int>> ranked(counts.begin(), counts.end());
+              std::stable_sort(ranked.begin(), ranked.end(),
+                               [](const auto& a, const auto& b) { return a.second > b.second; });
+              std::vector<std::string> out{};
+              for (std::size_t i{0}; i < ranked.size() && i < k; ++i) {
+                  out.push_back(ranked[i].first);
+              }
+              return out;
+          }
+      - type: code
+        prompt: |
+          Write `class Library`:
+
+          - `void addBook(const std::string& title, int copies)` — adds copies; throws `std::invalid_argument` if `copies <= 0`
+          - `bool borrow(const std::string& title)` — takes a copy if one is available and returns `true`; otherwise returns `false`
+          - `void giveBack(const std::string& title)` — returns a copy; throws `std::logic_error` if no copy of that title is currently borrowed
+          - `int available(const std::string& title) const` — copies on the shelf (0 for unknown titles)
+        starter: |
+          #include <map>
+          #include <stdexcept>
+          #include <string>
+
+          class Library {
+          public:
+              void addBook(const std::string& title, int copies) {
+              }
+
+              bool borrow(const std::string& title) {
+                  return false;
+              }
+
+              void giveBack(const std::string& title) {
+              }
+
+              int available(const std::string& title) const {
+                  return 0;
+              }
+          };
+        harness: |
+          Library lib{};
+          lib.addBook("Dune", 2);
+          CHECK(lib.available("Dune"), 2);
+          CHECK(lib.borrow("Dune"), true);
+          CHECK(lib.borrow("Dune"), true);
+          CHECK(lib.borrow("Dune"), false);
+          CHECK(lib.available("Dune"), 0);
+          lib.giveBack("Dune");
+          CHECK(lib.available("Dune"), 1);
+          CHECK(lib.borrow("Emma"), false);
+          CHECK(lib.available("Emma"), 0);
+          CHECK_THROWS(lib.addBook("Emma", 0));
+          CHECK_THROWS(lib.giveBack("Emma"));
+          lib.giveBack("Dune");
+          CHECK_THROWS(lib.giveBack("Dune"));
+          lib.addBook("Dune", 1);
+          CHECK(lib.available("Dune"), 3);
+        solution: |
+          #include <map>
+          #include <stdexcept>
+          #include <string>
+
+          class Library {
+          public:
+              void addBook(const std::string& title, int copies) {
+                  if (copies <= 0) {
+                      throw std::invalid_argument{"copies must be positive"};
+                  }
+                  shelf_[title] += copies;
+              }
+
+              bool borrow(const std::string& title) {
+                  auto it = shelf_.find(title);
+                  if (it == shelf_.end() || it->second == 0) {
+                      return false;
+                  }
+                  --it->second;
+                  ++borrowed_[title];
+                  return true;
+              }
+
+              void giveBack(const std::string& title) {
+                  auto it = borrowed_.find(title);
+                  if (it == borrowed_.end() || it->second == 0) {
+                      throw std::logic_error{"no borrowed copy of " + title};
+                  }
+                  --it->second;
+                  ++shelf_[title];
+              }
+
+              int available(const std::string& title) const {
+                  auto it = shelf_.find(title);
+                  return it == shelf_.end() ? 0 : it->second;
+              }
+
+          private:
+              std::map<std::string, int> shelf_{};
+              std::map<std::string, int> borrowed_{};
+          };
+      - type: code
+        prompt: |
+          Write `int longestConsecutive(const std::vector<int>& v)`: the length
+          of the longest run of **consecutive integers** that all appear in `v`,
+          in any order — `{100, 4, 200, 1, 3, 2}` gives 4 (1, 2, 3, 4). Aim for
+          O(n) with a hash set: only start counting at numbers that begin a run.
+        starter: |
+          #include <vector>
+
+          int longestConsecutive(const std::vector<int>& v) {
+              return 0;
+          }
+        harness: |
+          CHECK(longestConsecutive({100, 4, 200, 1, 3, 2}), 4);
+          CHECK(longestConsecutive({}), 0);
+          CHECK(longestConsecutive({1, 2, 0, 1}), 3);
+          CHECK(longestConsecutive({0, -1}), 2);
+          CHECK(longestConsecutive({10, 30, 20}), 1);
+          CHECK(longestConsecutive({9, 1, -3, 2, 4, 8, 3, -1, 6, -2, -4, 7, 5}), 9);
+        solution: |
+          #include <algorithm>
+          #include <unordered_set>
+          #include <vector>
+
+          int longestConsecutive(const std::vector<int>& v) {
+              std::unordered_set<int> present(v.begin(), v.end());
+              int best{0};
+              for (int x : present) {
+                  if (present.count(x - 1) > 0) {
+                      continue;
+                  }
+                  int length{1};
+                  while (present.count(x + length) > 0) {
+                      ++length;
+                  }
+                  best = std::max(best, length);
+              }
+              return best;
+          }
+
+  - type: lesson
+    id: c19-next
+    title: Where to go from here
+    minutes: 15
+    objectives:
+      - Plan your next steps in C++
+      - Know the best resources for continued learning
+      - Build the habits that turn knowledge into mastery
+    body: |
+      If you've worked through this course, stop for a moment and look back:
+      you started not knowing what a program was. Now you can design classes,
+      manage resources safely, use the standard library fluently, write
+      generic code, reason about complexity and build a 300-line program
+      from a specification. That's real.
+
+      **Mastery comes from what you do next.** Knowledge fades without use;
+      skill grows with deliberate practice. Here is a map.
+
+      ## 1. Keep your skills alive
+
+      - Keep doing your **Review** here — a few minutes a day keeps everything you've learned.
+      - Solve a small problem most days: **Exercism** (C++ track, with human mentoring), **LeetCode** or **Codewars** for algorithmic practice, **Advent of Code** every December, **Project Euler** for maths lovers, **Codeforces** if you like competition.
+
+      ## 2. Build things
+
+      Projects teach what exercises can't: design, debugging at scale,
+      finishing. Pick something you *want* to exist:
+
+      - **A game** with **raylib** or **SFML** — Snake, Tetris, Breakout, a platformer.
+      - **A command-line tool** you'd actually use: a to-do manager, a file renamer, a budget tracker.
+      - **An emulator** — CHIP-8 is the classic first one: a whole computer in a few hundred lines.
+      - **A ray tracer** — *Ray Tracing in One Weekend* (free online) walks you through it; you'll render real 3D images.
+      - **A language** — extend the calculator challenge into a tiny scripting language (*Crafting Interpreters*, free online).
+
+      ## 3. Read
+
+      - **cppreference.com** — the reference for every standard library feature. Get used to reading it.
+      - **learncpp.com** — a thorough free tutorial; great for filling any gaps.
+      - Bjarne Stroustrup, *A Tour of C++* — modern C++ in 250 pages, by its creator. *Programming: Principles and Practice Using C++* goes deeper.
+      - Scott Meyers, *Effective Modern C++* — 42 specific ways to write better modern C++.
+      - The **C++ Core Guidelines** — the reference for good style and safety.
+      - Talks from **CppCon** on YouTube — especially the "Back to Basics" track.
+
+      ## 4. What this course didn't cover
+
+      C++ is huge. Topics to explore next, roughly in order of usefulness:
+
+      - **Ranges** (`std::ranges::sort(v)`, views like `std::views::filter`) — the modern way to use algorithms.
+      - **Concurrency**: `std::thread`, `std::mutex`, `std::atomic`, `std::async` — using all your CPU's cores.
+      - **`std::variant`, `std::span`, `std::string_view`, `std::format`/`std::print`** — modern vocabulary types and formatting.
+      - **Build tools**: CMake in depth, package managers (vcpkg, Conan), unit test frameworks (GoogleTest, Catch2).
+      - **Performance**: profiling, caches and memory layout, move semantics in depth.
+      - **Modules** and **coroutines** (C++20) — newer language features you'll meet in modern code.
+
+      ## 5. The habits of people who get really good
+
+      - **Code a little every day** rather than a lot once a week.
+      - **Read other people's code** — open-source projects on GitHub — and ask why it's written that way.
+      - **Explain things**: write notes, help someone else learn, answer questions. Teaching is the best test of understanding.
+      - **Get feedback**: code reviews, mentors (Exercism), communities.
+      - **Stay curious about the machine**: compile tiny functions on Compiler Explorer (godbolt.org) and look at what the compiler makes of them.
+
+      > [!tip]
+      > Your progress, notes and code here are saved. Use the **Playground**
+      > whenever you want to try something, and the **Glossary** when a term
+      > slips your mind. Come back to any chapter's exam in a few months: if
+      > you can still pass it, you've truly learned it.
+
+      Thank you for learning with this course — and welcome to C++.
+    cards:
+      - front: Name three ways to keep practising C++ after the course.
+        back: Daily small problems (Exercism, LeetCode, Advent of Code), building projects you care about, and daily spaced review.
+      - front: What is cppreference.com?
+        back: The standard reference for the C++ language and standard library.

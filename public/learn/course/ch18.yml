@@ -1959,58 +1959,57 @@ items:
         back: "Direction arrays `dr{-1,1,0,0}`, `dc{0,0,-1,1}`, plus a bounds and wall check."
 
   - type: challenge
-    id: c18-ch-anagrams
-    title: Anagram groups
+    id: c18-ch-rooms
+    title: How many meeting rooms?
     difficulty: 2
-    tags: [hashing, sorting]
+    tags: [sorting, sweep line]
     prompt: |
-      Words are **anagrams** if they use the same letters (`listen`,
-      `silent`, `enlist`). Write
-      `std::vector<std::vector<std::string>> groupAnagrams(const std::vector<std::string>& words)`.
-      Each group lists its words in input order; groups are ordered by the
-      position of their first word.
+      Each meeting is a pair `{start, end}` and occupies a room from `start`
+      up to (but not including) `end` — so a meeting ending at 10 frees its
+      room for one starting at 10. Write
+      `int roomsNeeded(const std::vector<std::pair<int, int>>& meetings)`: the
+      fewest rooms needed to hold them all.
     starter: |
-      #include <string>
+      #include <utility>
       #include <vector>
 
-      std::vector<std::vector<std::string>> groupAnagrams(const std::vector<std::string>& words) {
-          return {};
+      int roomsNeeded(const std::vector<std::pair<int, int>>& meetings) {
+          return 0;
       }
     harness: |
-      using Groups = std::vector<std::vector<std::string>>;
-      CHECK(groupAnagrams({"listen", "google", "silent", "elgoog", "enlist", "cat"}),
-            (Groups{{"listen", "silent", "enlist"}, {"google", "elgoog"}, {"cat"}}));
-      CHECK(groupAnagrams({}), Groups{});
-      CHECK(groupAnagrams({"ab", "ba", "ab"}), (Groups{{"ab", "ba", "ab"}}));
-      CHECK(groupAnagrams({"a", "b", "a"}), (Groups{{"a", "a"}, {"b"}}));
+      CHECK(roomsNeeded({{0, 30}, {5, 10}, {15, 20}}), 2);
+      CHECK(roomsNeeded({{7, 10}, {2, 4}}), 1);
+      CHECK(roomsNeeded({}), 0);
+      CHECK(roomsNeeded({{1, 5}, {5, 10}}), 1);
+      CHECK(roomsNeeded({{1, 4}, {2, 5}, {3, 6}}), 3);
+      CHECK(roomsNeeded({{1, 10}, {2, 3}, {3, 4}, {4, 5}}), 2);
     hints:
-      - "Two words are anagrams exactly when their **sorted letters** are equal: `\"listen\"` and `\"silent\"` both sort to `\"eilnst\"`. Use that as a key."
-      - "Map each key to its group's index: `std::unordered_map<std::string, std::size_t>`. New key → append a new group."
+      - "**Sweep line:** turn each meeting into two events — `{start, +1}` and `{end, -1}` — and sort them by time."
+      - "At equal times, process the `-1` (a room freed) before the `+1` — sorting pairs does that automatically, since -1 < +1. Walk the events keeping a running count; the answer is its maximum."
     solution: |
       #include <algorithm>
-      #include <string>
-      #include <unordered_map>
+      #include <utility>
       #include <vector>
 
-      std::vector<std::vector<std::string>> groupAnagrams(const std::vector<std::string>& words) {
-          std::vector<std::vector<std::string>> groups{};
-          std::unordered_map<std::string, std::size_t> groupOf{};
-          for (const auto& w : words) {
-              std::string key{w};
-              std::sort(key.begin(), key.end());
-              auto it = groupOf.find(key);
-              if (it == groupOf.end()) {
-                  groupOf[key] = groups.size();
-                  groups.push_back({w});
-              } else {
-                  groups[it->second].push_back(w);
-              }
+      int roomsNeeded(const std::vector<std::pair<int, int>>& meetings) {
+          std::vector<std::pair<int, int>> events{};
+          for (const auto& [start, end] : meetings) {
+              events.push_back({start, 1});
+              events.push_back({end, -1});
           }
-          return groups;
+          std::sort(events.begin(), events.end());
+          int inUse{0};
+          int most{0};
+          for (const auto& event : events) {
+              inUse += event.second;
+              most = std::max(most, inUse);
+          }
+          return most;
       }
     explain: |
-      The key idea — a **canonical form** (sorted letters) that is equal
-      exactly when two things are "the same" — is a powerful general trick.
+      The **sweep line** is another classic pattern: turn intervals into
+      sorted start/end events and walk through time once. It solves overlap,
+      scheduling and "busiest moment" problems in O(n log n).
 
   - type: challenge
     id: c18-ch-inversions

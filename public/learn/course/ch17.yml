@@ -1120,7 +1120,7 @@ items:
 
       {{check edge-cases}}
 
-      {{task leap}}
+      {{task password}}
     checks:
       - id: edge-cases
         type: mcq
@@ -1133,65 +1133,90 @@ items:
         answer: [0, 1, 2]
         why: "Negatives catch a `best{0}` start; one element and last-position catch loop-bound bugs. Two near-identical typical cases add little."
     tasks:
-      - id: leap
-        title: "Test-first: calendar functions"
+      - id: password
+        title: "Test-first: a password policy"
         prompt: |
-          The tests are already written — read them first, then make them pass:
+          The tests are already written — they *are* the specification. Read
+          them first, then make them pass. `std::string checkPassword(const std::string& pw)`
+          returns `"ok"`, or the **first** rule broken, checked in this order:
 
-          - `bool isLeapYear(int year)` — divisible by 4, except centuries, which must be divisible by 400
-          - `int daysInMonth(int year, int month)` — month 1–12
-          - `int dayOfYear(int year, int month, int day)` — 1 for January 1st
+          1. `"too short"` — fewer than 8 characters
+          2. `"has space"` — contains a space
+          3. `"no digit"`
+          4. `"no uppercase"`
+          5. `"no lowercase"`
         starter: |
-          bool isLeapYear(int year) {
+          #include <string>
+
+          std::string checkPassword(const std::string& pw) {
+              return "ok";
+          }
+        harness: |
+          CHECK(checkPassword("abc"), "too short");
+          CHECK(checkPassword(""), "too short");
+          CHECK(checkPassword("Pass 1"), "too short");
+          CHECK(checkPassword("Correct Horse 1"), "has space");
+          CHECK(checkPassword("Password"), "no digit");
+          CHECK(checkPassword("password1"), "no uppercase");
+          CHECK(checkPassword("PASSWORD1"), "no lowercase");
+          CHECK(checkPassword("Passw0rd"), "ok");
+          CHECK(checkPassword("xY7xxxxx"), "ok");
+        hints:
+          - "Write one small helper per rule — e.g. `bool hasDigit(const std::string& s)` — using `std::isdigit`, `std::isupper`, `std::islower` from `<cctype>` (cast each char to `unsigned char`)."
+          - "Then `checkPassword` is a list of `if (...) return \"...\";` in the given order, ending with `return \"ok\";`."
+        solution: |
+          #include <cctype>
+          #include <string>
+
+          bool hasDigit(const std::string& s) {
+              for (char c : s) {
+                  if (std::isdigit(static_cast<unsigned char>(c))) {
+                      return true;
+                  }
+              }
               return false;
           }
 
-          int daysInMonth(int year, int month) {
-              return 31;
+          bool hasUpper(const std::string& s) {
+              for (char c : s) {
+                  if (std::isupper(static_cast<unsigned char>(c))) {
+                      return true;
+                  }
+              }
+              return false;
           }
 
-          int dayOfYear(int year, int month, int day) {
-              return day;
-          }
-        harness: |
-          CHECK(isLeapYear(2024), true);
-          CHECK(isLeapYear(2023), false);
-          CHECK(isLeapYear(1900), false);
-          CHECK(isLeapYear(2000), true);
-          CHECK(daysInMonth(2023, 2), 28);
-          CHECK(daysInMonth(2024, 2), 29);
-          CHECK(daysInMonth(2024, 4), 30);
-          CHECK(daysInMonth(2024, 12), 31);
-          CHECK(dayOfYear(2024, 1, 1), 1);
-          CHECK(dayOfYear(2023, 3, 1), 60);
-          CHECK(dayOfYear(2024, 3, 1), 61);
-          CHECK(dayOfYear(2024, 12, 31), 366);
-        hints:
-          - "`isLeapYear`: `(year % 4 == 0 && year % 100 != 0) || year % 400 == 0`."
-          - "`daysInMonth`: February depends on the leap year; April, June, September and November have 30."
-          - "`dayOfYear`: add `daysInMonth` for every month before `month`, then add `day`."
-        solution: |
-          bool isLeapYear(int year) {
-              return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+          bool hasLower(const std::string& s) {
+              for (char c : s) {
+                  if (std::islower(static_cast<unsigned char>(c))) {
+                      return true;
+                  }
+              }
+              return false;
           }
 
-          int daysInMonth(int year, int month) {
-              if (month == 2) {
-                  return isLeapYear(year) ? 29 : 28;
+          std::string checkPassword(const std::string& pw) {
+              if (pw.size() < 8) {
+                  return "too short";
               }
-              if (month == 4 || month == 6 || month == 9 || month == 11) {
-                  return 30;
+              if (pw.find(' ') != std::string::npos) {
+                  return "has space";
               }
-              return 31;
+              if (!hasDigit(pw)) {
+                  return "no digit";
+              }
+              if (!hasUpper(pw)) {
+                  return "no uppercase";
+              }
+              if (!hasLower(pw)) {
+                  return "no lowercase";
+              }
+              return "ok";
           }
-
-          int dayOfYear(int year, int month, int day) {
-              int total{day};
-              for (int m{1}; m < month; ++m) {
-                  total += daysInMonth(year, m);
-              }
-              return total;
-          }
+        explain: |
+          Notice the tests covered each rule on its own, the boundary (`"Pass 1"`
+          is short *and* has a space — the order decides), the empty string, and
+          two different valid passwords. That's what a good test list looks like.
     cards:
       - front: Why write automated tests?
         back: Confidence that code works, safety to change it later, and documentation of how it's used.

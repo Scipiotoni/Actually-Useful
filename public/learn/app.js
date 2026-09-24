@@ -1496,7 +1496,7 @@
       let sub = '';
       if (item.type === 'lesson') sub = itemLabel(item) + (item.minutes ? ' · ' + item.minutes + ' min' : '');
       if (item.type === 'quiz' || item.type === 'review') sub = typeName(item.type) + ' · ' + plural(item.questions.length, 'question');
-      if (item.type === 'exam') sub = 'Chapter exam · ' + (item.pick || item.questions.length) + ' questions · pass with ' + pct(item.pass);
+      if (item.type === 'exam') sub = (item.id === 'final-exam' ? 'Final exam · ' : 'Chapter exam · ') + (item.pick || item.questions.length) + ' questions · pass with ' + pct(item.pass);
       if (item.type === 'challenge') sub = 'Challenge · ' + ['', 'warm-up', 'solid', 'hard'][item.difficulty];
       if (item.type === 'project') sub = 'Project · ' + plural(item.milestones.length, 'milestone');
       let side = done ? '✓ Done' : r ? 'In progress' : '';
@@ -1760,7 +1760,7 @@
     const count = item.pick || item.questions.length;
     const hasCode = item.questions.some((q) => q.type === 'code');
     p.append(h('div', { class: 'meta-row' },
-      h('span', { class: 'tag tag-gold' }, 'Exam'),
+      h('span', { class: 'tag tag-gold' }, item.id === 'final-exam' ? 'Final exam' : 'Exam'),
       h('span', { class: 'tag' }, count + ' questions'),
       item.minutes ? h('span', { class: 'tag' }, '⏱ ' + item.minutes + ' min') : null,
       passedBefore ? h('span', { class: 'tag tag-ok' }, '✓ Passed') : null));
@@ -1772,8 +1772,8 @@
       const card = h('div', { class: 'exam-intro' });
       if (item.body) card.append(md(item.body));
       card.append(h('ul', null,
-        h('li', null, count + ' questions drawn from everything in this chapter' + (item.pick && item.pick < item.questions.length ? ' (a different mix each attempt)' : '') + '.'),
-        h('li', null, 'Pass mark: ', h('b', null, pct(item.pass)), '. Passing unlocks the next chapter.'),
+        h('li', null, count + ' questions drawn from everything in ' + (item.id === 'final-exam' ? 'the course' : 'this chapter') + (item.pick && item.pick < item.questions.length ? ' (a different mix each attempt)' : '') + '.'),
+        h('li', null, 'Pass mark: ', h('b', null, pct(item.pass)), item.id === 'final-exam' ? '. Passing earns the C++ Graduate badge.' : '. Passing unlocks the next chapter.'),
         item.minutes ? h('li', null, 'Time limit: ' + item.minutes + ' minutes. It submits itself when time is up.') : h('li', null, 'No time limit — but try to answer from memory.'),
         h('li', null, 'No feedback until you submit. Then every answer is explained.'),
         hasCode ? h('li', null, 'Coding questions are marked by running your code against tests — use ▶ Run to try things before submitting.') : null,
