@@ -1,0 +1,2322 @@
+id: ch11
+number: 11
+part: p3
+title: Classes
+blurb: Types that protect their own data and keep their promises — the heart of how large C++ programs are organised.
+hours: 7
+goals:
+  - Write classes with private data and a public interface
+  - Initialise objects correctly with constructors and member initialiser lists
+  - Design classes around invariants that always hold
+  - Use `const` member functions, `this`, and `static` members
+  - Explain destructors and the RAII idea
+  - Overload operators so your types feel built-in
+  - Decide what a class should be responsible for
+
+items:
+  - type: lesson
+    id: c11-class
+    title: "From struct to class: encapsulation"
+    minutes: 22
+    objectives:
+      - Declare a class with `private` data and `public` member functions
+      - Explain why hiding data prevents bugs
+      - Tell the only difference between `struct` and `class`
+    body: |
+      Here's a struct for a bank account:
+
+      ```cpp static
+      struct Account {
+          std::string owner{};
+          double balance{0.0};
+      };
+      ```
+
+      Nothing stops any line of code, anywhere, from writing
+      `acc.balance = -1000000;`. The rule "a balance can't go below zero"
+      exists only in your head, and in a program with 50,000 lines you can't
+      check every place that touches `balance`.
+
+      A **class** fixes this by **hiding** the data and offering only a
+      controlled set of operations — its **interface**:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      class Account {
+      public:
+          void deposit(double amount) {
+              if (amount > 0) {
+                  balance_ += amount;
+              }
+          }
+
+          bool withdraw(double amount) {
+              if (amount <= 0 || amount > balance_) {
+                  return false;
+              }
+              balance_ -= amount;
+              return true;
+          }
+
+          double balance() const {
+              return balance_;
+          }
+
+      private:
+          double balance_{0.0};
+      };
+
+      int main() {
+          Account acc{};
+          acc.deposit(100);
+          std::cout << acc.withdraw(30) << ' ' << acc.withdraw(500) << '\n';
+          std::cout << acc.balance() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1 0
+      70
+      ```
+
+      - Members after **`public:`** can be used by anyone.
+      - Members after **`private:`** can only be used inside the class's own member functions. `acc.balance_ = -5;` in `main` is now a **compile error**.
+      - The only way to change the balance is through `deposit` and `withdraw`, which enforce the rules. Now "the balance is never negative" is guaranteed by **one short piece of code** you can read in a minute.
+
+      This is **encapsulation**: bundling data with the only operations
+      allowed on it, and hiding the rest. It's the core idea of
+      object-oriented programming.
+
+      > [!note] Naming private data
+      > Many codebases mark private members with a trailing underscore
+      > (`balance_`), so a member function can have a public `balance()` and a
+      > private `balance_` without clashing. This course follows that style;
+      > you'll also see `m_balance` or `mBalance` elsewhere.
+
+      ## `struct` versus `class`
+
+      There's exactly **one** technical difference: members of a `struct` are
+      public by default, members of a `class` are private by default. By
+      convention, use `struct` for simple bundles of data with no rules to
+      enforce (a `Point`), and `class` when there's an invariant to protect.
+
+      {{check access}}
+
+      {{check struct-class}}
+    checks:
+      - id: access
+        type: spot
+        prompt: Which line doesn't compile?
+        code: |
+          #include <iostream>
+
+          class Thermostat {
+          public:
+              void set(int t) {
+                  if (t >= 5 && t <= 30) {
+                      target_ = t;
+                  }
+              }
+              int target() const {
+                  return target_;
+              }
+          private:
+              int target_{20};
+          };
+
+          int main() {
+              Thermostat t{};
+              t.set(25);
+              t.target_ = 99;
+              std::cout << t.target() << '\n';
+              return 0;
+          }
+        answer: 21
+        why: "`target_` is private: only Thermostat's own member functions may touch it. That's what stops the 99."
+      - id: struct-class
+        type: mcq
+        prompt: What is the only technical difference between `struct` and `class` in C++?
+        options:
+          - Classes can have member functions, structs can't
+          - Structs can't have private members
+          - Members are public by default in a struct and private by default in a class
+          - Classes are faster
+        answer: 2
+        why: Everything else — member functions, private sections, constructors — works in both.
+    cards:
+      - front: What does `private:` mean in a class?
+        back: Those members can only be used by the class's own member functions — not by outside code.
+      - front: What is **encapsulation**?
+        back: Bundling data with the operations allowed on it, and hiding the data so only those operations can change it.
+      - front: "`struct` vs `class`: the one technical difference?"
+        back: Default access — public for `struct`, private for `class`.
+
+  - type: lesson
+    id: c11-ctor
+    title: Constructors
+    minutes: 24
+    objectives:
+      - Write constructors that initialise every member
+      - Use a member initialiser list
+      - Provide a default constructor and several overloaded constructors
+      - Explain what `explicit` prevents
+    body: |
+      A **constructor** is a special member function that runs automatically
+      when an object is created. It has the **same name as the class** and
+      **no return type**. Its job: put the object into a valid state.
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      class Player {
+      public:
+          Player(const std::string& name, int health)
+              : name_{name}, health_{health} {
+          }
+
+          void describe() const {
+              std::cout << name_ << " (" << health_ << " HP)\n";
+          }
+
+      private:
+          std::string name_;
+          int health_;
+      };
+
+      int main() {
+          Player hero{"Link", 100};
+          Player villain{"Ganon", 250};
+          hero.describe();
+          villain.describe();
+          return 0;
+      }
+      ```
+
+      ```output
+      Link (100 HP)
+      Ganon (250 HP)
+      ```
+
+      The part after the colon — `: name_{name}, health_{health}` — is the
+      **member initialiser list**. It initialises the members directly, before
+      the constructor's body runs. Prefer it to assigning in the body: it's the
+      only way to initialise `const` members and references, and it avoids
+      creating a member and then overwriting it. (Members are always
+      initialised in the order they're **declared** in the class, whatever
+      order you list them in — keep the two orders the same.)
+
+      Once a class has a constructor, objects **must** be created through one:
+      `Player p{};` no longer compiles, because there's no constructor taking
+      no arguments.
+
+      ## Several constructors and defaults
+
+      Constructors can be overloaded, and a constructor with no parameters is
+      the **default constructor**:
+
+      ```cpp
+      #include <iostream>
+
+      class Timer {
+      public:
+          Timer() = default;                        // uses the member defaults
+          explicit Timer(int seconds) : seconds_{seconds} {}
+          Timer(int minutes, int seconds) : seconds_{minutes * 60 + seconds} {}
+
+          int seconds() const {
+              return seconds_;
+          }
+
+      private:
+          int seconds_{0};
+      };
+
+      int main() {
+          Timer a{};
+          Timer b{90};
+          Timer c{2, 30};
+          std::cout << a.seconds() << ' ' << b.seconds() << ' ' << c.seconds() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      0 90 150
+      ```
+
+      `Timer() = default;` asks the compiler for the default constructor that
+      simply uses each member's default initialiser (`seconds_{0}`).
+
+      ## `explicit`
+
+      A constructor with one parameter also acts as an automatic **conversion**:
+      without `explicit`, a function taking a `Timer` would silently accept
+      `42` and turn it into `Timer{42}`. That's rarely what you want, so mark
+      single-argument constructors **`explicit`** unless the conversion really
+      makes sense.
+
+      {{check ctor-output}}
+
+      {{check init-order}}
+
+      {{task temperature}}
+    checks:
+      - id: ctor-output
+        type: output
+        code: |
+          #include <iostream>
+
+          class Box {
+          public:
+              Box() : Box(1, 1) {}
+              Box(int w, int h) : w_{w}, h_{h} {}
+              int area() const { return w_ * h_; }
+          private:
+              int w_{0};
+              int h_{0};
+          };
+
+          int main() {
+              Box a{};
+              Box b{3, 4};
+              std::cout << a.area() << ' ' << b.area() << '\n';
+              return 0;
+          }
+        answer: |
+          1 12
+        why: "The default constructor *delegates* to the two-argument one with 1 and 1."
+      - id: init-order
+        type: mcq
+        prompt: "Why prefer `Player(int hp) : hp_{hp} {}` to `Player(int hp) { hp_ = hp; }`?"
+        options:
+          - They're identical in every case
+          - The initialiser list initialises members directly — required for const and reference members, and avoids initialise-then-assign
+          - The body version doesn't compile
+          - The initialiser list makes the object private
+        answer: 1
+        why: The initialiser list is initialisation; assignment in the body happens after the member was already initialised.
+    tasks:
+      - id: temperature
+        title: A temperature class
+        prompt: |
+          Write `class Temperature` with:
+
+          - a constructor `explicit Temperature(double celsius)`,
+          - `double celsius() const` and `double fahrenheit() const` (F = C × 9/5 + 32),
+          - a default constructor giving 0 °C.
+        starter: |
+          class Temperature {
+          public:
+              // TODO: a default constructor and explicit Temperature(double celsius)
+
+              double celsius() const {
+                  return 0.0;
+              }
+
+              double fahrenheit() const {
+                  return 0.0;
+              }
+
+          private:
+              double celsius_{0.0};
+          };
+        starter_broken: true
+        harness: |
+          Temperature t{100.0};
+          CHECK(t.celsius(), 100.0);
+          CHECK(t.fahrenheit(), 212.0);
+          Temperature z{};
+          CHECK(z.celsius(), 0.0);
+          CHECK(z.fahrenheit(), 32.0);
+          const Temperature minus{-40.0};
+          CHECK(minus.fahrenheit(), -40.0);
+        hints:
+          - "`Temperature() = default;` and `explicit Temperature(double c) : celsius_{c} {}`."
+          - "Both getters must be `const` — the harness calls one on a const object."
+        solution: |
+          class Temperature {
+          public:
+              Temperature() = default;
+              explicit Temperature(double celsius) : celsius_{celsius} {}
+
+              double celsius() const {
+                  return celsius_;
+              }
+
+              double fahrenheit() const {
+                  return celsius_ * 9.0 / 5.0 + 32.0;
+              }
+
+          private:
+              double celsius_{0.0};
+          };
+    cards:
+      - front: What is a **constructor**?
+        back: A special member function with the class's name and no return type, run automatically when an object is created, to put it into a valid state.
+      - front: What is a **member initialiser list**?
+        back: "The `: member_{value}, ...` part before a constructor's body, which initialises members directly."
+      - front: What does `ClassName() = default;` do?
+        back: Asks the compiler to generate the default constructor, using each member's default initialiser.
+      - front: Why mark a one-parameter constructor `explicit`?
+        back: To stop it being used for silent automatic conversions (e.g. an `int` quietly becoming a `Timer`).
+
+  - type: lesson
+    id: c11-invariants
+    title: Invariants
+    minutes: 20
+    objectives:
+      - State a class's invariant — what must always be true of its objects
+      - Establish the invariant in constructors and keep it in every member function
+      - Choose what to do with invalid input
+    body: |
+      An **invariant** is a condition that is **always** true for every object
+      of a class, from construction to destruction. It's what makes a class
+      more than a bag of variables:
+
+      | Class | Invariant |
+      |---|---|
+      | `Account` | balance ≥ 0 |
+      | `Fraction` | denominator > 0, in lowest terms |
+      | `Date` | the day exists in that month and year |
+      | `SortedList` | the elements are in ascending order |
+
+      A class keeps its invariant with a simple discipline:
+
+      1. **Every constructor establishes it.**
+      2. **Every public member function preserves it** — it may break it briefly inside, but must restore it before returning.
+      3. **Data is private**, so nothing else can break it.
+
+      Then the rest of the program can **rely** on it without checking.
+
+      ```cpp
+      #include <iostream>
+      #include <numeric>
+
+      class Fraction {
+      public:
+          Fraction(int num, int den) : num_{num}, den_{den == 0 ? 1 : den} {
+              normalise();
+          }
+
+          int num() const { return num_; }
+          int den() const { return den_; }
+
+          void multiplyBy(int k) {
+              num_ *= k;
+              normalise();
+          }
+
+      private:
+          void normalise() {
+              if (den_ < 0) {
+                  num_ = -num_;
+                  den_ = -den_;
+              }
+              int g = std::gcd(num_, den_);
+              if (g != 0) {
+                  num_ /= g;
+                  den_ /= g;
+              }
+          }
+
+          int num_;
+          int den_;
+      };
+
+      int main() {
+          Fraction f{6, -8};
+          std::cout << f.num() << '/' << f.den() << '\n';
+          f.multiplyBy(2);
+          std::cout << f.num() << '/' << f.den() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      -3/4
+      -3/2
+      ```
+
+      Notice `normalise()` is a **private member function** — a helper only
+      the class itself may call. (`std::gcd` from `<numeric>` computes the
+      greatest common divisor, like your Chapter 5 challenge.)
+
+      ## What to do with invalid input?
+
+      A constructor or member function receives something that would break
+      the invariant — a zero denominator, a negative deposit. Options:
+
+      - **Ignore or refuse it** and report it: `withdraw` returns `false`.
+      - **Correct it** to a sensible value (the `Fraction` above turns a zero denominator into 1 — questionable, but at least the invariant holds).
+      - **Throw an exception** — the standard C++ answer for a constructor that can't build a valid object. You'll learn exceptions in Chapter 15.
+
+      Whatever you choose, never let an invalid object exist.
+
+      {{check invariant}}
+
+      {{task account}}
+    checks:
+      - id: invariant
+        type: mcq
+        prompt: What is a class **invariant**?
+        options:
+          - A member that never changes
+          - A condition that is always true for every object of the class
+          - A constant defined inside a class
+          - A function that can't be overloaded
+        answer: 1
+        why: "Constructors establish it and every public member function preserves it."
+      - id: private-helper
+        type: tf
+        prompt: A private member function can be called from `main`.
+        answer: false
+        why: "Private members — data or functions — are only usable inside the class."
+    tasks:
+      - id: account
+        title: A safe bank account
+        prompt: |
+          Write `class BankAccount` whose invariant is: the balance is never
+          negative. It needs:
+
+          - `explicit BankAccount(double initial)` — a negative initial balance becomes 0.
+          - `bool deposit(double amount)` — rejects (returns `false`) amounts ≤ 0.
+          - `bool withdraw(double amount)` — rejects amounts ≤ 0 or larger than the balance.
+          - `double balance() const`.
+        starter: |
+          class BankAccount {
+          public:
+              explicit BankAccount(double initial) {
+              }
+
+              bool deposit(double amount) {
+                  return false;
+              }
+
+              bool withdraw(double amount) {
+                  return false;
+              }
+
+              double balance() const {
+                  return 0.0;
+              }
+
+          private:
+              double balance_{0.0};
+          };
+        harness: |
+          BankAccount a{50.0};
+          CHECK(a.balance(), 50.0);
+          CHECK(a.deposit(25.0), true);
+          CHECK(a.deposit(-5.0), false);
+          CHECK(a.withdraw(100.0), false);
+          CHECK(a.withdraw(75.0), true);
+          CHECK(a.balance(), 0.0);
+          CHECK(a.withdraw(0.0), false);
+          BankAccount b{-10.0};
+          CHECK(b.balance(), 0.0);
+        hints:
+          - "In the constructor: `balance_{initial < 0 ? 0.0 : initial}`."
+          - Check the bad cases first and return `false`; otherwise change the balance and return `true`.
+        solution: |
+          class BankAccount {
+          public:
+              explicit BankAccount(double initial) : balance_{initial < 0 ? 0.0 : initial} {}
+
+              bool deposit(double amount) {
+                  if (amount <= 0) {
+                      return false;
+                  }
+                  balance_ += amount;
+                  return true;
+              }
+
+              bool withdraw(double amount) {
+                  if (amount <= 0 || amount > balance_) {
+                      return false;
+                  }
+                  balance_ -= amount;
+                  return true;
+              }
+
+              double balance() const {
+                  return balance_;
+              }
+
+          private:
+              double balance_{0.0};
+          };
+    cards:
+      - front: How does a class keep its invariant?
+        back: Constructors establish it, every public member function preserves it, and the data is private so nothing else can break it.
+      - front: Give an example of an invariant.
+        back: "An account's balance is never negative; a fraction's denominator is positive; a date's day exists in its month."
+
+  - type: quiz
+    id: c11-quiz1
+    title: "Quiz: classes and constructors"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          class Counter {
+          public:
+              explicit Counter(int start) : value_{start} {}
+              void increment() { ++value_; }
+              int value() const { return value_; }
+          private:
+              int value_;
+          };
+
+          int main() {
+              Counter a{5};
+              Counter b = a;
+              a.increment();
+              a.increment();
+              b.increment();
+              std::cout << a.value() << ' ' << b.value() << '\n';
+              return 0;
+          }
+        answer: |
+          7 6
+        why: "Copies of objects are independent, just like struct copies."
+      - type: mcq
+        prompt: "`class P { public: P(int x) : x_{x} {} private: int x_; };` — which line compiles?"
+        options:
+          - "`P p{};`"
+          - "`P p{3};`"
+          - "`P p{3, 4};`"
+          - "`P p = \"3\";`"
+        answer: 1
+        why: "The only constructor takes one int. With a user-declared constructor, there's no default constructor unless you add one."
+      - type: tf
+        prompt: A constructor has a return type of `void`.
+        answer: false
+        why: Constructors have no return type at all — not even `void`.
+      - type: output
+        code: |
+          #include <iostream>
+
+          class Clamp {
+          public:
+              Clamp(int lo, int hi) : lo_{lo}, hi_{hi} {}
+              int operator()(int v) const {
+                  return v < lo_ ? lo_ : (v > hi_ ? hi_ : v);
+              }
+          private:
+              int lo_;
+              int hi_;
+          };
+
+          int main() {
+              Clamp c{0, 10};
+              std::cout << c(-5) << ' ' << c(5) << ' ' << c(50) << '\n';
+              return 0;
+          }
+        answer: |
+          0 5 10
+        why: "An object with `operator()` can be called like a function (a *function object*). This one clamps to [0, 10]."
+
+  - type: lesson
+    id: c11-const-this
+    title: "const, this and static members"
+    minutes: 20
+    objectives:
+      - Apply `const` correctness to member functions and parameters
+      - Use `this`, and return `*this` to allow chaining
+      - Share data between all objects with `static` members
+    body: |
+      ## const correctness
+
+      You met `const` member functions in Chapter 9. In classes they matter
+      even more: objects are usually passed around as `const &`, and through a
+      `const &` only `const` member functions can be called. Rule: **every
+      member function that doesn't change the object is `const`.** Getters,
+      calculations, printing — all `const`.
+
+      ## `this`
+
+      Inside a member function, **`this`** is a pointer to the object the
+      function was called on. You rarely need it, since members can be named
+      directly. Two uses are common: resolving a name clash, and returning
+      `*this` (the object itself, by reference) so calls can be **chained**:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      class Message {
+      public:
+          Message& add(const std::string& word) {
+              if (!text_.empty()) {
+                  text_ += ' ';
+              }
+              text_ += word;
+              return *this;
+          }
+
+          const std::string& text() const {
+              return text_;
+          }
+
+      private:
+          std::string text_{};
+      };
+
+      int main() {
+          Message m{};
+          m.add("chaining").add("calls").add("works");
+          std::cout << m.text() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      chaining calls works
+      ```
+
+      Each `add` returns a reference to the same `m`, so the next `.add` is
+      called on it again. (`std::cout << a << b` works the same way: each `<<`
+      returns the stream.)
+
+      ## `static` members
+
+      A **`static` data member** belongs to the **class**, not to any one
+      object: there is a single copy, shared by all of them. A **`static`
+      member function** can be called without an object, as
+      `ClassName::function()`.
+
+      ```cpp
+      #include <iostream>
+
+      class Ticket {
+      public:
+          Ticket() : number_{++issued_} {}
+
+          int number() const { return number_; }
+          static int issued() { return issued_; }
+
+      private:
+          static inline int issued_{0};   // one counter for the whole class
+          int number_;
+      };
+
+      int main() {
+          Ticket a{};
+          Ticket b{};
+          Ticket c{};
+          std::cout << a.number() << b.number() << c.number() << ' ' << Ticket::issued() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      123 3
+      ```
+
+      (`static inline` lets you initialise the static member right inside the
+      class — a C++17 feature. Older code defines it separately in a `.cpp`
+      file.)
+
+      {{check this-chain}}
+
+      {{check static-count}}
+    checks:
+      - id: this-chain
+        type: output
+        code: |
+          #include <iostream>
+
+          class Acc {
+          public:
+              Acc& plus(int n) { total_ += n; return *this; }
+              Acc& times(int n) { total_ *= n; return *this; }
+              int total() const { return total_; }
+          private:
+              int total_{0};
+          };
+
+          int main() {
+              Acc a{};
+              std::cout << a.plus(2).times(5).plus(1).total() << '\n';
+              return 0;
+          }
+        answer: |
+          11
+        why: "(0 + 2) × 5 + 1 = 11, each call returning the same object."
+      - id: static-count
+        type: mcq
+        prompt: "A class has `static inline int count{0};`. Five objects are created, and each constructor does `++count;`. How many `count` variables exist, and what's its value?"
+        options:
+          - Five variables, each 1
+          - One variable, 5
+          - Five variables, values 1 to 5
+          - None — static members need an object
+        answer: 1
+        why: A static data member is shared by the whole class.
+    cards:
+      - front: What is `this` inside a member function?
+        back: A pointer to the object the member function was called on.
+      - front: Why return `*this` by reference from a member function?
+        back: So calls can be chained on the same object, e.g. `m.add(x).add(y)`.
+      - front: What is a `static` data member?
+        back: A single variable shared by all objects of the class (it belongs to the class, not to any object).
+
+  - type: lesson
+    id: c11-dtor
+    title: Destructors and RAII
+    minutes: 22
+    objectives:
+      - Write a destructor and predict when it runs
+      - Explain RAII — tying a resource to an object's lifetime
+      - Prevent copying a class that owns a resource, with `= delete`
+    body: |
+      A **destructor** is the opposite of a constructor: it runs automatically
+      when an object's lifetime **ends**. It's named `~ClassName()`, takes no
+      parameters and returns nothing.
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      class Tracer {
+      public:
+          explicit Tracer(const std::string& name) : name_{name} {
+              std::cout << "create " << name_ << '\n';
+          }
+          ~Tracer() {
+              std::cout << "destroy " << name_ << '\n';
+          }
+      private:
+          std::string name_;
+      };
+
+      int main() {
+          Tracer a{"a"};
+          {
+              Tracer b{"b"};
+              std::cout << "inner block ends\n";
+          }
+          Tracer c{"c"};
+          std::cout << "main ends\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      create a
+      create b
+      inner block ends
+      destroy b
+      create c
+      main ends
+      destroy c
+      destroy a
+      ```
+
+      Automatic objects are destroyed at the end of their block, in the
+      **reverse order** of creation — `c` before `a`. This happens no matter
+      how the block is left: reaching its end, `return`, `break`, or an
+      exception.
+
+      ## RAII: the most important idea in C++
+
+      Programs use **resources** that must be released: heap memory, open
+      files, network connections, locks. The C++ answer is **RAII** —
+      *Resource Acquisition Is Initialisation*:
+
+      - the **constructor** acquires the resource,
+      - the **destructor** releases it.
+
+      Then the resource is released **automatically and exactly once**, when
+      the object dies — you can't forget, even with early returns. It's why
+      you never had to free a `std::vector`'s or `std::string`'s memory: their
+      destructors do it.
+
+      ```cpp
+      #include <iostream>
+
+      class IntBuffer {
+      public:
+          explicit IntBuffer(int size) : size_{size}, data_{new int[size]{}} {}
+          ~IntBuffer() { delete[] data_; }
+
+          IntBuffer(const IntBuffer&) = delete;             // no copying (see below)
+          IntBuffer& operator=(const IntBuffer&) = delete;
+
+          int& at(int i) { return data_[i]; }
+          int size() const { return size_; }
+
+      private:
+          int size_;
+          int* data_;
+      };
+
+      int main() {
+          IntBuffer buf{5};
+          for (int i{0}; i < buf.size(); ++i) {
+              buf.at(i) = i * i;
+          }
+          std::cout << buf.at(4) << '\n';
+          return 0;
+      }   // buf's destructor frees the memory here
+      ```
+
+      ```output
+      16
+      ```
+
+      ## Why forbid copying?
+
+      Copying an object copies its members. For `IntBuffer`, that copies the
+      **pointer** — so two objects would point to the same array, and **both**
+      destructors would `delete[]` it: a double delete. Writing
+      `= delete` for the copy constructor and copy assignment makes any copy a
+      compile error. Chapter 15 shows how to make such classes copyable or
+      movable properly (the *rule of three/five*) — and why you usually don't
+      need to, because `std::vector` and `std::unique_ptr` already do it right.
+
+      {{check dtor-order}}
+
+      {{check raii}}
+    checks:
+      - id: dtor-order
+        type: output
+        code: |
+          #include <iostream>
+
+          class Noisy {
+          public:
+              explicit Noisy(char c) : c_{c} { std::cout << '+' << c_; }
+              ~Noisy() { std::cout << '-' << c_; }
+          private:
+              char c_;
+          };
+
+          void f() {
+              Noisy x{'x'};
+          }
+
+          int main() {
+              Noisy a{'a'};
+              f();
+              Noisy b{'b'};
+              std::cout << '|';
+              return 0;
+          }
+        answer: |
+          +a+x-x+b|-b-a
+        why: "x lives only during f(). At the end of main, b is destroyed before a (reverse order)."
+      - id: raii
+        type: mcq
+        prompt: What does **RAII** mean in practice?
+        options:
+          - Always use raw pointers
+          - A resource is acquired in a constructor and released in the destructor, so it's freed automatically
+          - Every class must have an `init()` function
+          - Resources are freed when the program ends
+        answer: 1
+        why: Tying a resource to an object's lifetime makes release automatic and exactly-once.
+    cards:
+      - front: When does a destructor run?
+        back: When the object's lifetime ends — for automatic objects, at the end of their block (however it's left), in reverse order of creation.
+      - front: What is **RAII**?
+        back: Resource Acquisition Is Initialisation — acquire a resource in the constructor, release it in the destructor.
+      - front: Why is copying a class that owns a raw pointer dangerous by default?
+        back: The copy shares the same pointer, so both destructors delete it — a double delete. Forbid copying with `= delete` (or implement it properly).
+
+  - type: lesson
+    id: c11-operators
+    title: Operator overloading
+    minutes: 24
+    objectives:
+      - Overload arithmetic and comparison operators for your own types
+      - Print your types with `operator<<`
+      - Implement compound assignment operators and build others on them
+    body: |
+      C++ lets your own types use operators: `a + b`, `a == b`,
+      `std::cout << a`. This is how `std::string` supports `+` and `==` — and
+      you can do the same. An operator is just a function with a special
+      name, `operator+`, `operator==`, …
+
+      ```cpp
+      #include <iostream>
+
+      struct Vec2 {
+          double x{0.0};
+          double y{0.0};
+
+          Vec2& operator+=(const Vec2& other) {
+              x += other.x;
+              y += other.y;
+              return *this;
+          }
+      };
+
+      Vec2 operator+(Vec2 a, const Vec2& b) {
+          a += b;          // reuse +=
+          return a;
+      }
+
+      Vec2 operator*(const Vec2& v, double k) {
+          return {v.x * k, v.y * k};
+      }
+
+      bool operator==(const Vec2& a, const Vec2& b) {
+          return a.x == b.x && a.y == b.y;
+      }
+
+      std::ostream& operator<<(std::ostream& out, const Vec2& v) {
+          out << '(' << v.x << ", " << v.y << ')';
+          return out;
+      }
+
+      int main() {
+          Vec2 pos{1, 2};
+          Vec2 speed{0.5, -1};
+          pos += speed * 2;
+          std::cout << pos << '\n';
+          std::cout << (pos == Vec2{2, 0}) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      (2, 0)
+      1
+      ```
+
+      A few conventions carry most of the weight:
+
+      - **`operator+=` as a member** that changes the object and returns `*this`; then **`operator+` as a free function** built on it. You write the logic once.
+      - **`operator==`** as a free function comparing members. (`!=` is then generated automatically in C++20; in C++17 write it as `!(a == b)`.)
+      - **`operator<<`** must be a free function taking `std::ostream&` and your type, and returning the stream — so `std::cout << a << b` chains.
+      - **`operator<`** defines an ordering — it's what sorting uses (Chapter 14).
+
+      ## `operator<<` for a class with private data
+
+      A free function can't see private members. Either print through public
+      getters, or declare the operator a **`friend`** inside the class, which
+      grants it access:
+
+      ```cpp
+      #include <iostream>
+
+      class Money {
+      public:
+          explicit Money(long long cents) : cents_{cents} {}
+          friend std::ostream& operator<<(std::ostream& out, const Money& m) {
+              out << m.cents_ / 100 << '.' << (m.cents_ % 100 < 10 ? "0" : "") << m.cents_ % 100 << " EUR";
+              return out;
+          }
+      private:
+          long long cents_;
+      };
+
+      int main() {
+          std::cout << Money{1205} << ' ' << Money{99} << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      12.05 EUR 0.99 EUR
+      ```
+
+      > [!pro] Only overload when the meaning is obvious
+      > `+` on vectors, money or matrices: natural. `+` on a `Customer` to mean
+      > "send an email": confusing. If a reader would have to look up what the
+      > operator does, use a named function instead.
+
+      {{check ops}}
+
+      {{task money}}
+    checks:
+      - id: ops
+        type: output
+        code: |
+          #include <iostream>
+
+          struct Score {
+              int points{0};
+          };
+
+          Score operator+(Score a, Score b) {
+              return {a.points + b.points};
+          }
+
+          bool operator<(Score a, Score b) {
+              return a.points < b.points;
+          }
+
+          std::ostream& operator<<(std::ostream& out, Score s) {
+              return out << s.points << "pts";
+          }
+
+          int main() {
+              Score a{3};
+              Score b{4};
+              Score c = a + b + a;
+              std::cout << c << ' ' << (a < b) << ' ' << (c < b) << '\n';
+              return 0;
+          }
+        answer: |
+          10pts 1 0
+        why: "3 + 4 + 3 = 10; 3 < 4 is true; 10 < 4 is false."
+      - id: stream-ret
+        type: mcq
+        prompt: Why does `operator<<` return `std::ostream&`?
+        options:
+          - It's required by the compiler for all operators
+          - So that `std::cout << a << b` can continue with the same stream
+          - To print a newline
+          - To make the object printable only once
+        answer: 1
+        why: "`(std::cout << a)` returns the stream, and then `<< b` is applied to it."
+    tasks:
+      - id: money
+        title: Money arithmetic
+        prompt: |
+          `struct Money { long long cents{0}; };` Add:
+
+          - `Money& operator+=(const Money& other)` as a member,
+          - a free `Money operator+(Money a, const Money& b)`,
+          - a free `bool operator==(const Money& a, const Money& b)`,
+          - a free `bool operator<(const Money& a, const Money& b)`.
+        starter: |
+          struct Money {
+              long long cents{0};
+              // TODO: operator+=
+          };
+
+          // TODO: operator+, operator== and operator<
+        starter_broken: true
+        harness: |
+          Money a{150};
+          Money b{275};
+          Money c = a + b;
+          CHECK(c.cents, 425LL);
+          a += b;
+          CHECK(a.cents, 425LL);
+          CHECK(a == c, true);
+          CHECK(b < c, true);
+          CHECK(c < b, false);
+          CHECK((Money{1} + Money{2} + Money{3}).cents, 6LL);
+        hints:
+          - "Inside the struct: `Money& operator+=(const Money& other) { cents += other.cents; return *this; }`"
+          - "`operator+` takes `a` by value, does `a += b;` and returns `a`."
+        solution: |
+          struct Money {
+              long long cents{0};
+
+              Money& operator+=(const Money& other) {
+                  cents += other.cents;
+                  return *this;
+              }
+          };
+
+          Money operator+(Money a, const Money& b) {
+              a += b;
+              return a;
+          }
+
+          bool operator==(const Money& a, const Money& b) {
+              return a.cents == b.cents;
+          }
+
+          bool operator<(const Money& a, const Money& b) {
+              return a.cents < b.cents;
+          }
+    cards:
+      - front: How do you make `std::cout << myObject` work?
+        back: "Write `std::ostream& operator<<(std::ostream& out, const MyType& x)` that prints the members and returns `out`."
+      - front: What's the usual way to implement `+` and `+=` together?
+        back: "`+=` as a member that modifies and returns `*this`; `+` as a free function that copies, uses `+=`, and returns the copy."
+      - front: What does `friend` do in a class?
+        back: Grants a function (or class) access to the class's private members.
+      - front: When should you overload an operator?
+        back: Only when its meaning is obvious for the type (maths-like types, comparisons, printing).
+
+  - type: lesson
+    id: c11-design
+    title: Designing classes
+    minutes: 18
+    objectives:
+      - Give a class one clear responsibility and a small interface
+      - Choose between a free function, a struct and a class
+      - Read and plan a class before writing it
+    body: |
+      Syntax is the easy part of classes. The hard part is deciding **what
+      classes to have** and **what each one does**. A few principles guide
+      almost every good design.
+
+      ## One responsibility
+
+      A class should represent **one** concept and be responsible for **one**
+      thing. `Deck` manages cards; `Player` holds a hand; `Game` runs the rules.
+      A class called `GameManagerHelperUtils` that does all three is a warning
+      sign.
+
+      ## A small, complete interface
+
+      Expose the fewest public member functions that make the class useful —
+      and make them complete enough that users never need the internals.
+      Every public function is a promise you have to keep forever.
+
+      ## Don't write getters and setters for everything
+
+      A class where every private member has a `getX()` and a `setX()` is just
+      a struct with extra typing — and no invariant is protected. Offer
+      **operations** that mean something (`withdraw`, `deal`, `addScore`)
+      instead of raw access.
+
+      ## A worked example: a deck of cards
+
+      ```cpp
+      #include <iostream>
+      #include <random>
+      #include <string>
+      #include <utility>
+      #include <vector>
+
+      struct Card {
+          int rank{};   // 1 (ace) to 13 (king)
+          char suit{};  // 'H', 'D', 'C', 'S'
+      };
+
+      std::string name(const Card& c) {
+          const std::string ranks{"A23456789TJQK"};
+          return std::string{ranks[c.rank - 1], c.suit};
+      }
+
+      class Deck {
+      public:
+          Deck() {
+              for (char suit : std::string{"HDCS"}) {
+                  for (int rank{1}; rank <= 13; ++rank) {
+                      cards_.push_back({rank, suit});
+                  }
+              }
+          }
+
+          void shuffle(unsigned seed) {
+              std::mt19937 rng{seed};
+              for (std::size_t i = cards_.size() - 1; i > 0; --i) {
+                  std::size_t j = rng() % (i + 1);
+                  std::swap(cards_[i], cards_[j]);
+              }
+          }
+
+          bool empty() const { return cards_.empty(); }
+          std::size_t size() const { return cards_.size(); }
+
+          Card deal() {
+              Card top = cards_.back();
+              cards_.pop_back();
+              return top;
+          }
+
+      private:
+          std::vector<Card> cards_{};
+      };
+
+      int main() {
+          Deck deck{};
+          std::cout << deck.size() << " cards\n";
+          Card first = deck.deal();
+          std::cout << "Top card: " << name(first) << ", " << deck.size() << " left\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      52 cards
+      Top card: KS, 51 left
+      ```
+
+      Look at what's **not** there: no way to get at the vector, no
+      `setCards`. The deck's invariant ("each card appears at most once")
+      holds because the only ways to change it are shuffling and dealing.
+      `Card` is a plain `struct` — it has no rules to protect — and `name` is a
+      free function because it doesn't need anything private.
+
+      > [!tip] Where do functions go?
+      > If a function needs private data or keeps an invariant, make it a
+      > member. If it can be written with the public interface alone, a free
+      > function keeps the class smaller.
+
+      {{check design}}
+    checks:
+      - id: design
+        type: mcq
+        prompt: "A `Temperature` class has private `celsius_`, and public `getCelsius()` and `setCelsius(double)` that accept any value. What's the problem?"
+        options:
+          - Nothing
+          - The setter lets anyone put in any value, so the class protects no invariant (e.g. below absolute zero)
+          - Getters must be static
+          - Private members can't be doubles
+        answer: 1
+        why: "Unchecked setters make privacy pointless. Offer meaningful operations that keep the object valid."
+    cards:
+      - front: What's wrong with a getter and setter for every member?
+        back: It exposes the data anyway, so no invariant is protected. Prefer meaningful operations.
+      - front: When should a function be a member rather than a free function?
+        back: When it needs private data or must maintain the invariant. Otherwise a free function keeps the class smaller.
+
+  - type: quiz
+    id: c11-quiz2
+    title: "Quiz: this, static, destructors and operators"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          class Id {
+          public:
+              Id() : id_{next_++} {}
+              int id() const { return id_; }
+          private:
+              static inline int next_{100};
+              int id_;
+          };
+
+          int main() {
+              Id a{};
+              Id b{};
+              Id c = a;
+              std::cout << a.id() << ' ' << b.id() << ' ' << c.id() << '\n';
+              return 0;
+          }
+        answer: |
+          100 101 100
+        why: "Copying doesn't run the default constructor; `c` copies `a`'s id."
+      - type: output
+        code: |
+          #include <iostream>
+
+          class Guard {
+          public:
+              Guard() { std::cout << "["; }
+              ~Guard() { std::cout << "]"; }
+          };
+
+          int main() {
+              for (int i{0}; i < 3; ++i) {
+                  Guard g{};
+                  std::cout << i;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          [0][1][2]
+        why: "`g` is created and destroyed in every iteration of the loop."
+      - type: mcq
+        prompt: Which signature is right for printing a `Point` with `std::cout << p`?
+        options:
+          - "`void operator<<(Point p)`"
+          - "`std::ostream& operator<<(std::ostream& out, const Point& p)`"
+          - "`Point operator<<(std::ostream out)`"
+          - "`std::string operator<<(const Point& p)`"
+        answer: 1
+        why: "It takes the stream by reference and returns it for chaining."
+      - type: tf
+        prompt: "Declaring `MyClass(const MyClass&) = delete;` makes copying a `MyClass` a compile error."
+        answer: true
+        why: A deleted copy constructor can't be called.
+
+  - type: challenge
+    id: c11-ch-stack
+    title: A stack class
+    difficulty: 2
+    tags: [classes, vectors]
+    prompt: |
+      A **stack** is last-in, first-out, like a pile of plates. Write
+      `class IntStack` with:
+
+      - `void push(int v)`
+      - `bool pop()` — removes the top; returns `false` if the stack was empty
+      - `int top() const` — the top value (only called when not empty)
+      - `bool empty() const` and `int size() const`
+    starter: |
+      #include <vector>
+
+      class IntStack {
+      public:
+          void push(int v) {
+          }
+
+          bool pop() {
+              return false;
+          }
+
+          int top() const {
+              return 0;
+          }
+
+          bool empty() const {
+              return true;
+          }
+
+          int size() const {
+              return 0;
+          }
+
+      private:
+          std::vector<int> items_{};
+      };
+    harness: |
+      IntStack s{};
+      CHECK(s.empty(), true);
+      CHECK(s.pop(), false);
+      s.push(1);
+      s.push(2);
+      s.push(3);
+      CHECK(s.size(), 3);
+      CHECK(s.top(), 3);
+      CHECK(s.pop(), true);
+      CHECK(s.top(), 2);
+      s.push(9);
+      CHECK(s.top(), 9);
+      CHECK(s.size(), 3);
+      const IntStack& view = s;
+      CHECK(view.empty(), false);
+    hints:
+      - "The top of the stack is the back of the vector: `push_back`, `back()`, `pop_back()`."
+    solution: |
+      #include <vector>
+
+      class IntStack {
+      public:
+          void push(int v) {
+              items_.push_back(v);
+          }
+
+          bool pop() {
+              if (items_.empty()) {
+                  return false;
+              }
+              items_.pop_back();
+              return true;
+          }
+
+          int top() const {
+              return items_.back();
+          }
+
+          bool empty() const {
+              return items_.empty();
+          }
+
+          int size() const {
+              return static_cast<int>(items_.size());
+          }
+
+      private:
+          std::vector<int> items_{};
+      };
+
+  - type: challenge
+    id: c11-ch-fraction
+    title: A Fraction class
+    difficulty: 2
+    tags: [classes, operators, invariants]
+    prompt: |
+      Write `class Fraction` whose invariant is: **always in lowest terms with
+      a positive denominator**.
+
+      - `Fraction(int num, int den)` (den ≠ 0) and a default constructor giving 0/1.
+      - `int num() const`, `int den() const`.
+      - `operator+`, `operator*`, `operator==` (all free functions or friends).
+      - `operator<<` printing `3/4` — or just `3` when the denominator is 1.
+    starter: |
+      #include <iostream>
+      #include <numeric>
+
+      class Fraction {
+      public:
+          Fraction() = default;
+
+          Fraction(int num, int den) : num_{num}, den_{den} {
+              // TODO: keep the invariant (lowest terms, positive denominator)
+          }
+
+          int num() const { return num_; }
+          int den() const { return den_; }
+
+      private:
+          int num_{0};
+          int den_{1};
+      };
+
+      // TODO: operator+, operator*, operator== and operator<<
+    starter_broken: true
+    harness: |
+      Fraction a{1, 2};
+      Fraction b{1, 3};
+      Fraction s = a + b;
+      CHECK(s.num(), 5);
+      CHECK(s.den(), 6);
+      Fraction m = Fraction{2, 3} * Fraction{9, -4};
+      CHECK(m.num(), -3);
+      CHECK(m.den(), 2);
+      CHECK(Fraction{2, 4} == Fraction{1, 2}, true);
+      CHECK(Fraction{1, 2} == Fraction{1, 3}, false);
+      Fraction z{};
+      CHECK(z.num(), 0);
+      CHECK(z.den(), 1);
+      std::ostringstream out;
+      out << Fraction{6, 8} << ' ' << Fraction{4, 2} << ' ' << Fraction{0, 5};
+      CHECK(out.str(), "3/4 2 0");
+    hints:
+      - "Put the normalising in a private `void normalise()` called by the constructor."
+      - "`operator+` can be `return Fraction{a.num() * b.den() + b.num() * a.den(), a.den() * b.den()};` — the constructor normalises."
+      - "Because of the invariant, `==` just compares num and den."
+    solution: |
+      #include <iostream>
+      #include <numeric>
+
+      class Fraction {
+      public:
+          Fraction() = default;
+
+          Fraction(int num, int den) : num_{num}, den_{den} {
+              normalise();
+          }
+
+          int num() const { return num_; }
+          int den() const { return den_; }
+
+      private:
+          void normalise() {
+              if (den_ < 0) {
+                  num_ = -num_;
+                  den_ = -den_;
+              }
+              int g = std::gcd(num_, den_);
+              if (g != 0) {
+                  num_ /= g;
+                  den_ /= g;
+              }
+          }
+
+          int num_{0};
+          int den_{1};
+      };
+
+      Fraction operator+(const Fraction& a, const Fraction& b) {
+          return Fraction{a.num() * b.den() + b.num() * a.den(), a.den() * b.den()};
+      }
+
+      Fraction operator*(const Fraction& a, const Fraction& b) {
+          return Fraction{a.num() * b.num(), a.den() * b.den()};
+      }
+
+      bool operator==(const Fraction& a, const Fraction& b) {
+          return a.num() == b.num() && a.den() == b.den();
+      }
+
+      std::ostream& operator<<(std::ostream& out, const Fraction& f) {
+          out << f.num();
+          if (f.den() != 1) {
+              out << '/' << f.den();
+          }
+          return out;
+      }
+    explain: |
+      The invariant pays off in `operator==`: because every Fraction is kept in
+      lowest terms, equal values always have identical members, and
+      comparison is trivial.
+
+  - type: challenge
+    id: c11-ch-time
+    title: A Time class
+    difficulty: 2
+    tags: [classes, operators]
+    prompt: |
+      Write `class Time` for a time of day, stored as minutes since midnight
+      (0–1439 — the invariant):
+
+      - `Time(int hours, int minutes)` — any values, normalised to the day (`Time{25, 70}` is 02:10; `Time{0, -30}` is 23:30).
+      - `int hours() const`, `int minutes() const`.
+      - `Time& operator+=(int mins)` and `Time operator+(Time t, int mins)`.
+      - `bool operator<(const Time&, const Time&)` and `operator==`.
+      - `operator<<` printing `HH:MM` with two digits each.
+    starter: |
+      #include <iomanip>
+      #include <iostream>
+
+      class Time {
+      public:
+          Time(int hours, int minutes) {
+              // TODO: normalise into 0..1439
+          }
+
+          int hours() const { return 0; }
+          int minutes() const { return 0; }
+
+      private:
+          int total_{0};
+      };
+
+      // TODO: operator+=, operator+, operator<, operator== and operator<<
+    starter_broken: true
+    harness: |
+      Time a{9, 5};
+      CHECK(a.hours(), 9);
+      CHECK(a.minutes(), 5);
+      Time b{25, 70};
+      CHECK(b.hours(), 2);
+      CHECK(b.minutes(), 10);
+      Time c{0, -30};
+      CHECK(c.hours(), 23);
+      CHECK(c.minutes(), 30);
+      Time d = Time{23, 50} + 20;
+      CHECK(d.hours(), 0);
+      CHECK(d.minutes(), 10);
+      a += 60;
+      CHECK(a.hours(), 10);
+      CHECK(Time{8, 0} < Time{9, 0}, true);
+      CHECK(Time{12, 0} == Time{11, 60}, true);
+      std::ostringstream out;
+      out << Time{7, 5} << ' ' << Time{23, 59};
+      CHECK(out.str(), "07:05 23:59");
+    hints:
+      - "Normalise with a never-negative modulo: `total_ = ((h * 60 + m) % 1440 + 1440) % 1440;`"
+      - "Printing: `out << std::setfill('0') << std::setw(2) << t.hours() << ':' << std::setw(2) << t.minutes();`"
+    solution: |
+      #include <iomanip>
+      #include <iostream>
+
+      class Time {
+      public:
+          Time(int hours, int minutes) {
+              set(hours * 60 + minutes);
+          }
+
+          int hours() const { return total_ / 60; }
+          int minutes() const { return total_ % 60; }
+
+          Time& operator+=(int mins) {
+              set(total_ + mins);
+              return *this;
+          }
+
+          friend bool operator<(const Time& a, const Time& b) {
+              return a.total_ < b.total_;
+          }
+
+          friend bool operator==(const Time& a, const Time& b) {
+              return a.total_ == b.total_;
+          }
+
+      private:
+          void set(int minutes) {
+              constexpr int day{1440};
+              total_ = ((minutes % day) + day) % day;
+          }
+
+          int total_{0};
+      };
+
+      Time operator+(Time t, int mins) {
+          t += mins;
+          return t;
+      }
+
+      std::ostream& operator<<(std::ostream& out, const Time& t) {
+          out << std::setfill('0') << std::setw(2) << t.hours() << ':' << std::setw(2) << t.minutes();
+          return out;
+      }
+
+  - type: challenge
+    id: c11-ch-matrix
+    title: A small Matrix class
+    difficulty: 3
+    tags: [classes, operators, 2D]
+    prompt: |
+      Write `class Matrix` of `double`s:
+
+      - `Matrix(int rows, int cols)` — all zeros.
+      - `int rows() const`, `int cols() const`.
+      - `double& at(int r, int c)` and `double at(int r, int c) const`.
+      - `Matrix operator*(const Matrix& a, const Matrix& b)` — matrix multiplication (assume `a.cols() == b.rows()`): element (r, c) is the sum over k of a(r, k) × b(k, c).
+      - `static Matrix identity(int n)`.
+
+      Store the elements in one `std::vector<double>` of size rows × cols,
+      with element (r, c) at index `r * cols + c`.
+    starter: |
+      #include <vector>
+
+      class Matrix {
+      public:
+          Matrix(int rows, int cols) : rows_{rows}, cols_{cols} {
+              // TODO: make data_ hold rows * cols zeros
+          }
+
+          int rows() const { return rows_; }
+          int cols() const { return cols_; }
+
+          // TODO: double& at(int r, int c), double at(int r, int c) const,
+          //       and static Matrix identity(int n)
+
+      private:
+          int rows_{0};
+          int cols_{0};
+          std::vector<double> data_{};
+      };
+
+      // TODO: Matrix operator*(const Matrix& a, const Matrix& b)
+    starter_broken: true
+    harness: |
+      Matrix a{2, 3};
+      CHECK(a.rows(), 2);
+      CHECK(a.cols(), 3);
+      CHECK(a.at(1, 2), 0.0);
+      a.at(0, 0) = 1; a.at(0, 1) = 2; a.at(0, 2) = 3;
+      a.at(1, 0) = 4; a.at(1, 1) = 5; a.at(1, 2) = 6;
+      Matrix b{3, 2};
+      b.at(0, 0) = 7;  b.at(0, 1) = 8;
+      b.at(1, 0) = 9;  b.at(1, 1) = 10;
+      b.at(2, 0) = 11; b.at(2, 1) = 12;
+      Matrix p = a * b;
+      CHECK(p.rows(), 2);
+      CHECK(p.cols(), 2);
+      CHECK(p.at(0, 0), 58.0);
+      CHECK(p.at(0, 1), 64.0);
+      CHECK(p.at(1, 0), 139.0);
+      CHECK(p.at(1, 1), 154.0);
+      Matrix i = Matrix::identity(3);
+      CHECK(i.at(1, 1), 1.0);
+      CHECK(i.at(0, 2), 0.0);
+      Matrix same = a * i;
+      CHECK(same.at(1, 2), 6.0);
+      const Matrix& view = p;
+      CHECK(view.at(1, 0), 139.0);
+    hints:
+      - "Constructor: `: rows_{rows}, cols_{cols}, data_(rows * cols, 0.0)` — parentheses, to get the size!"
+      - "`at` returns `data_[r * cols_ + c]` — the non-const version returns a reference so it can be assigned."
+      - "Multiplication is a triple loop over r, c and k."
+    solution: |
+      #include <vector>
+
+      class Matrix {
+      public:
+          Matrix(int rows, int cols)
+              : rows_{rows}, cols_{cols}, data_(static_cast<std::size_t>(rows * cols), 0.0) {}
+
+          int rows() const { return rows_; }
+          int cols() const { return cols_; }
+
+          double& at(int r, int c) { return data_[static_cast<std::size_t>(r * cols_ + c)]; }
+          double at(int r, int c) const { return data_[static_cast<std::size_t>(r * cols_ + c)]; }
+
+          static Matrix identity(int n) {
+              Matrix m{n, n};
+              for (int i{0}; i < n; ++i) {
+                  m.at(i, i) = 1.0;
+              }
+              return m;
+          }
+
+      private:
+          int rows_{0};
+          int cols_{0};
+          std::vector<double> data_{};
+      };
+
+      Matrix operator*(const Matrix& a, const Matrix& b) {
+          Matrix result{a.rows(), b.cols()};
+          for (int r{0}; r < a.rows(); ++r) {
+              for (int c{0}; c < b.cols(); ++c) {
+                  double sum{0.0};
+                  for (int k{0}; k < a.cols(); ++k) {
+                      sum += a.at(r, k) * b.at(k, c);
+                  }
+                  result.at(r, c) = sum;
+              }
+          }
+          return result;
+      }
+    explain: |
+      Two overloads of `at` — one `const` returning a value, one non-const
+      returning a reference — is the standard way to give read access to
+      const objects and write access to others. Storing a grid in one flat
+      vector is faster than a vector of vectors: one allocation, and the
+      elements sit next to each other in memory.
+
+  - type: challenge
+    id: c11-ch-inventory
+    title: Inventory manager
+    difficulty: 3
+    tags: [classes, design, parsing]
+    prompt: |
+      Write a program around a class `Inventory` that processes commands, one
+      per line:
+
+      - `add NAME QTY` — add stock (a new item starts at 0).
+      - `remove NAME QTY` — remove stock; if there isn't enough (or no such item), print `Not enough NAME` and change nothing.
+      - `count NAME` — print `NAME: QTY` (0 for unknown items).
+      - `report` — print every item with quantity > 0 as `NAME QTY`, in the order the items were first added, then a line `Total: N` with the sum of all quantities.
+
+      For example:
+
+      ```text
+      add apple 5
+      add pear 2
+      remove apple 3
+      remove pear 5
+      count apple
+      report
+      ```
+
+      prints
+
+      ```text
+      Not enough pear
+      apple: 2
+      apple 2
+      pear 2
+      Total: 4
+      ```
+    starter: |
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      class Inventory {
+      public:
+
+      private:
+      };
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          add apple 5
+          add pear 2
+          remove apple 3
+          remove pear 5
+          count apple
+          report
+        out: |
+          Not enough pear
+          apple: 2
+          apple 2
+          pear 2
+          Total: 4
+      - in: |
+          count ghost
+          remove ghost 1
+          add x 1
+          remove x 1
+          report
+        out: |
+          ghost: 0
+          Not enough ghost
+          Total: 0
+      - in: |
+          add a 1
+          add b 2
+          add a 10
+          report
+        out: |
+          a 11
+          b 2
+          Total: 13
+    hints:
+      - "Inside `Inventory`, keep a `std::vector<Item>` where `struct Item { std::string name; int qty; };` — a private helper `Item* find(const std::string&)` returns the item or `nullptr`."
+      - "Public operations: `void add(name, qty)`, `bool remove(name, qty)`, `int count(name) const`, `void report(std::ostream&) const`."
+      - "`main` reads a command word with `>>`, then the arguments it needs."
+    solution: |
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      class Inventory {
+      public:
+          void add(const std::string& name, int qty) {
+              Item* item = find(name);
+              if (item == nullptr) {
+                  items_.push_back({name, 0});
+                  item = &items_.back();
+              }
+              item->qty += qty;
+          }
+
+          bool remove(const std::string& name, int qty) {
+              Item* item = find(name);
+              if (item == nullptr || item->qty < qty) {
+                  return false;
+              }
+              item->qty -= qty;
+              return true;
+          }
+
+          int count(const std::string& name) const {
+              for (const auto& item : items_) {
+                  if (item.name == name) {
+                      return item.qty;
+                  }
+              }
+              return 0;
+          }
+
+          void report(std::ostream& out) const {
+              int total{0};
+              for (const auto& item : items_) {
+                  if (item.qty > 0) {
+                      out << item.name << ' ' << item.qty << '\n';
+                      total += item.qty;
+                  }
+              }
+              out << "Total: " << total << '\n';
+          }
+
+      private:
+          struct Item {
+              std::string name;
+              int qty;
+          };
+
+          Item* find(const std::string& name) {
+              for (auto& item : items_) {
+                  if (item.name == name) {
+                      return &item;
+                  }
+              }
+              return nullptr;
+          }
+
+          std::vector<Item> items_{};
+      };
+
+      int main() {
+          Inventory inv{};
+          std::string command{};
+          while (std::cin >> command) {
+              if (command == "add") {
+                  std::string name{};
+                  int qty{};
+                  std::cin >> name >> qty;
+                  inv.add(name, qty);
+              } else if (command == "remove") {
+                  std::string name{};
+                  int qty{};
+                  std::cin >> name >> qty;
+                  if (!inv.remove(name, qty)) {
+                      std::cout << "Not enough " << name << '\n';
+                  }
+              } else if (command == "count") {
+                  std::string name{};
+                  std::cin >> name;
+                  std::cout << name << ": " << inv.count(name) << '\n';
+              } else if (command == "report") {
+                  inv.report(std::cout);
+              }
+          }
+          return 0;
+      }
+    explain: |
+      `Item` is a **nested** struct — private to `Inventory`, because nobody
+      else needs it. `report` takes any `std::ostream&`, so it can print to
+      `std::cout`, a string stream or (Chapter 17) a file: design for reuse
+      costs nothing here.
+
+  - type: review
+    id: c11-review
+    title: "Chapter 11 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      class Account {
+      public:
+          Account() = default;
+          explicit Account(double initial) : balance_{initial < 0 ? 0 : initial} {}
+          ~Account() = default;
+
+          bool withdraw(double amount);        // modifies
+          double balance() const;              // doesn't modify
+          Account& add(double x) { ...; return *this; }   // chainable
+
+          static int count();                  // belongs to the class
+          friend std::ostream& operator<<(std::ostream&, const Account&);
+
+      private:
+          double balance_{0.0};
+          static inline int count_{0};
+      };
+
+      Vec2& operator+=(const Vec2&);  Vec2 operator+(Vec2, const Vec2&);
+      bool operator==(const T&, const T&);  bool operator<(const T&, const T&);
+      std::ostream& operator<<(std::ostream& out, const T& x) { ...; return out; }
+
+      T(const T&) = delete;  T& operator=(const T&) = delete;   // no copies
+      ```
+
+      ## Key ideas
+
+      - Encapsulation: private data, a public interface of meaningful operations.
+      - An **invariant** is always true: constructors establish it, member functions preserve it.
+      - Initialise members in the initialiser list, in declaration order.
+      - `const` member functions for everything that doesn't modify.
+      - Destructors run automatically, in reverse order, however a scope is left — the basis of **RAII**.
+      - A class that owns a raw resource must not be copied naively.
+      - Overload operators only where the meaning is obvious; build `+` on `+=`.
+    questions:
+      - type: output
+        prompt: "Interleaving: classes, vectors and loops."
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          class Bag {
+          public:
+              void add(int w) {
+                  if (total_ + w <= limit_) {
+                      items_.push_back(w);
+                      total_ += w;
+                  }
+              }
+              int count() const { return static_cast<int>(items_.size()); }
+              int total() const { return total_; }
+          private:
+              std::vector<int> items_{};
+              int total_{0};
+              int limit_{10};
+          };
+
+          int main() {
+              Bag b{};
+              for (int w : {4, 5, 3, 1}) {
+                  b.add(w);
+              }
+              std::cout << b.count() << ' ' << b.total() << '\n';
+              return 0;
+          }
+        answer: |
+          3 10
+        why: "4 and 5 fit (9); 3 would make 12 (rejected); 1 fits (10)."
+      - type: mcq
+        prompt: "Which member function should NOT be `const`?"
+        options:
+          - "`double area() const`"
+          - "`void resize(double factor)`"
+          - "`std::string name() const`"
+          - "`bool isEmpty() const`"
+        answer: 1
+        why: "`resize` changes the object."
+      - type: output
+        code: |
+          #include <iostream>
+
+          class T {
+          public:
+              explicit T(int n) : n_{n} { std::cout << "c" << n_; }
+              ~T() { std::cout << "d" << n_; }
+          private:
+              int n_;
+          };
+
+          T make(int n) {
+              return T{n};
+          }
+
+          int main() {
+              T a = make(1);
+              {
+                  T b{2};
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          c1c2d2
+          d1
+        why: "`make` builds the object directly in `a` (guaranteed copy elision); b is created and destroyed in the inner block; a is destroyed when main ends — after the newline, so `d1` lands on the second line."
+
+  - type: exam
+    id: c11-exam
+    title: "Chapter 11 exam"
+    minutes: 45
+    pick: 12
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          class Light {
+          public:
+              void toggle() { on_ = !on_; ++switches_; }
+              bool on() const { return on_; }
+              int switches() const { return switches_; }
+          private:
+              bool on_{false};
+              int switches_{0};
+          };
+
+          int main() {
+              Light l{};
+              for (int i{0}; i < 5; ++i) {
+                  l.toggle();
+              }
+              std::cout << l.on() << ' ' << l.switches() << '\n';
+              return 0;
+          }
+        answer: |
+          1 5
+        why: "Five toggles leave it on."
+      - type: mcq
+        prompt: "Why make a class's data members private?"
+        options:
+          - To make the program faster
+          - So only the class's own functions can change them, which lets it guarantee its invariant
+          - Because public members can't be initialised
+          - It's required by the compiler
+        answer: 1
+        why: Encapsulation protects invariants.
+      - type: spot
+        prompt: Which line fails to compile?
+        code: |
+          #include <iostream>
+
+          class Circle {
+          public:
+              explicit Circle(double r) : r_{r} {}
+              double area() { return 3.14159 * r_ * r_; }
+          private:
+              double r_;
+          };
+
+          void show(const Circle& c) {
+              std::cout << c.area() << '\n';
+          }
+
+          int main() {
+              show(Circle{1.0});
+              return 0;
+          }
+        answer: 12
+        why: "`area()` isn't `const`, so it can't be called through a `const Circle&`."
+      - type: output
+        code: |
+          #include <iostream>
+
+          class A {
+          public:
+              explicit A(int v) : v_{v} { std::cout << "A" << v_; }
+              ~A() { std::cout << "~A" << v_; }
+          private:
+              int v_;
+          };
+
+          int main() {
+              A x{1};
+              A y{2};
+              std::cout << ' ';
+              return 0;
+          }
+        answer: |
+          A1A2 ~A2~A1
+        why: "Destruction happens in reverse order of construction."
+      - type: mcq
+        prompt: "Given only `class P { public: P(int, int); ... };`, what happens with `P p{};`?"
+        options:
+          - It creates p with zeros
+          - Compile error — there's no default constructor
+          - It creates p with garbage values
+          - Run-time error
+        answer: 1
+        why: Declaring any constructor stops the compiler from generating the default one. Add `P() = default;` if you want it.
+      - type: fill
+        prompt: Complete the member initialiser list.
+        code: |
+          class Pixel {
+          public:
+              Pixel(int x, int y) ___ x_{x}, y_{y} {}
+          private:
+              int x_;
+              int y_;
+          };
+        blanks:
+          - [':']
+        why: "The initialiser list starts with a colon after the parameter list."
+      - type: output
+        code: |
+          #include <iostream>
+
+          struct V {
+              int a{0};
+              V& operator+=(int n) { a += n; return *this; }
+          };
+
+          V operator+(V v, int n) {
+              v += n;
+              return v;
+          }
+
+          int main() {
+              V x{1};
+              V y = x + 5;
+              x += 2;
+              (x += 1) += 1;
+              std::cout << x.a << ' ' << y.a << '\n';
+              return 0;
+          }
+        answer: |
+          5 6
+        why: "y = 1 + 5 = 6 (x unchanged); then x: 1 → 3 → 4 → 5 (the chained += works because it returns a reference)."
+      - type: tf
+        prompt: A destructor can take parameters.
+        answer: false
+        why: "Destructors take no parameters and have no return type; each class has exactly one."
+      - type: mcq
+        prompt: "`static inline int created{0};` inside a class. Where does `created` live?"
+        options:
+          - In every object
+          - In the class — one shared variable
+          - Only in the first object
+          - On the heap of each object
+        answer: 1
+        why: Static data members are shared by the whole class.
+      - type: mcq
+        prompt: "A class holds `int* data_` allocated with `new[]` in the constructor and freed in the destructor. What's the danger if objects are copied with the default copy constructor?"
+        options:
+          - None
+          - Both copies share the pointer, so the memory is deleted twice
+          - The copy has no data
+          - Copying is slower
+        answer: 1
+        why: "Default copies copy the pointer, not what it points to. Delete the copy operations or implement them properly."
+      - type: code
+        prompt: |
+          Write `class Countdown` with `explicit Countdown(int start)` (negative
+          values become 0), `bool tick()` which decrements and returns `true`,
+          or returns `false` without changing anything when already at 0,
+          `int remaining() const`, and `bool finished() const`.
+        starter: |
+          class Countdown {
+          public:
+              explicit Countdown(int start) {
+              }
+
+              bool tick() {
+                  return false;
+              }
+
+              int remaining() const { return 0; }
+              bool finished() const { return false; }
+
+          private:
+              int left_{0};
+          };
+        harness: |
+          Countdown c{2};
+          CHECK(c.remaining(), 2);
+          CHECK(c.finished(), false);
+          CHECK(c.tick(), true);
+          CHECK(c.tick(), true);
+          CHECK(c.finished(), true);
+          CHECK(c.tick(), false);
+          CHECK(c.remaining(), 0);
+          Countdown n{-5};
+          CHECK(n.remaining(), 0);
+          const Countdown& view = c;
+          CHECK(view.finished(), true);
+        solution: |
+          class Countdown {
+          public:
+              explicit Countdown(int start) : left_{start < 0 ? 0 : start} {}
+
+              bool tick() {
+                  if (left_ == 0) {
+                      return false;
+                  }
+                  --left_;
+                  return true;
+              }
+
+              int remaining() const { return left_; }
+              bool finished() const { return left_ == 0; }
+
+          private:
+              int left_{0};
+          };
+      - type: code
+        prompt: |
+          `struct Vec3 { double x{0}; double y{0}; double z{0}; };` Add free
+          functions `operator+`, `operator-`, `operator*` (a `Vec3` times a
+          `double`), `double dot(const Vec3&, const Vec3&)` and `operator==`.
+        starter: |
+          struct Vec3 {
+              double x{0};
+              double y{0};
+              double z{0};
+          };
+
+          Vec3 operator+(const Vec3& a, const Vec3& b) {
+              return {};
+          }
+
+          Vec3 operator-(const Vec3& a, const Vec3& b) {
+              return {};
+          }
+
+          Vec3 operator*(const Vec3& v, double k) {
+              return {};
+          }
+
+          double dot(const Vec3& a, const Vec3& b) {
+              return 0;
+          }
+
+          bool operator==(const Vec3& a, const Vec3& b) {
+              return false;
+          }
+        harness: |
+          Vec3 a{1, 2, 3};
+          Vec3 b{4, 5, 6};
+          Vec3 s = a + b;
+          CHECK(s.x, 5.0);
+          CHECK(s.z, 9.0);
+          Vec3 d = b - a;
+          CHECK(d.y, 3.0);
+          Vec3 m = a * 2.0;
+          CHECK(m.z, 6.0);
+          CHECK(dot(a, b), 32.0);
+          CHECK(a == Vec3{1, 2, 3}, true);
+          CHECK(a == b, false);
+        solution: |
+          struct Vec3 {
+              double x{0};
+              double y{0};
+              double z{0};
+          };
+
+          Vec3 operator+(const Vec3& a, const Vec3& b) {
+              return {a.x + b.x, a.y + b.y, a.z + b.z};
+          }
+
+          Vec3 operator-(const Vec3& a, const Vec3& b) {
+              return {a.x - b.x, a.y - b.y, a.z - b.z};
+          }
+
+          Vec3 operator*(const Vec3& v, double k) {
+              return {v.x * k, v.y * k, v.z * k};
+          }
+
+          double dot(const Vec3& a, const Vec3& b) {
+              return a.x * b.x + a.y * b.y + a.z * b.z;
+          }
+
+          bool operator==(const Vec3& a, const Vec3& b) {
+              return a.x == b.x && a.y == b.y && a.z == b.z;
+          }

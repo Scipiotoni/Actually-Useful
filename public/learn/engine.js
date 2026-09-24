@@ -94,10 +94,11 @@
     '  if constexpr (std::is_floating_point<A>::value || std::is_floating_point<B>::value) { return std::fabs(static_cast<double>(a) - static_cast<double>(b)) < 1e-6; }',
     '  else { return a == b; }',
     '}',
-    'template <class F, class B> void check(const char* expr, F get, const B& want) {',
-    '  try { auto got = get(); report(same(got, want), expr, show(got), show(want)); }',
-    '  catch (const std::exception& e) { report(false, expr, std::string("threw an exception: ") + e.what(), show(want)); }',
-    '  catch (...) { report(false, expr, "threw an exception", show(want)); }',
+    'template <class A, class B> std::pair<std::decay_t<A>, std::decay_t<B>> pack(A&& a, B&& b) { return {std::forward<A>(a), std::forward<B>(b)}; }',
+    'template <class F> void check(const char* expr, F get) {',
+    '  try { auto r = get(); report(same(r.first, r.second), expr, show(r.first), show(r.second)); }',
+    '  catch (const std::exception& e) { report(false, expr, std::string("threw an exception: ") + e.what(), "a value, not an exception"); }',
+    '  catch (...) { report(false, expr, "threw an exception", "a value, not an exception"); }',
     '}',
     'template <class F> void throws(const char* expr, F run) {',
     '  try { run(); report(false, expr, "no exception", "an exception"); }',
@@ -106,7 +107,9 @@
     'struct Restore { std::streambuf* old; ~Restore() { std::cout.rdbuf(old); } };',
     'template <class F> std::string capture(F run) { std::ostringstream out; Restore r{std::cout.rdbuf(out.rdbuf())}; run(); return out.str(); }',
     '}',
-    '#define CHECK(expr, want) ::au_check::check(#expr, [&]() { return (expr); }, (want))',
+    // Variadic, so commas inside braces (Fraction{1, 2}) don't split the
+    // arguments: the parts are separated by the compiler, not the preprocessor.
+    '#define CHECK(...) ::au_check::check(#__VA_ARGS__, [&]() { return ::au_check::pack(__VA_ARGS__); })',
     '#define CHECK_THROWS(expr) ::au_check::throws(#expr, [&]() { (void)(expr); })',
     '#define OUTPUT(...) ::au_check::capture([&]() { __VA_ARGS__; })'
   ].join('\n');
@@ -116,6 +119,29 @@
     return String(code).replace(/\s*$/, '\n') + '\n' + PRELUDE + '\n' +
       (pre ? String(pre) + '\n' : '') +
       'int main() {\n' + String(harness) + '\n  std::cout << "\\n\\x1e" "DONE\\n";\n  return 0;\n}\n';
+  }
+
+  /**
+   * CHECK's text is "expression, expected"; keep the expression. The split is
+   * at the last comma that isn't inside brackets or quotes.
+   */
+  function checkedExpression(text) {
+    var depth = 0;
+    var quote = null;
+    var cut = -1;
+    for (var i = 0; i < text.length; i += 1) {
+      var c = text.charAt(i);
+      if (quote) {
+        if (c === '\\') { i += 1; continue; }
+        if (c === quote) quote = null;
+        continue;
+      }
+      if (c === '"' || c === "'") quote = c;
+      else if (c === '(' || c === '[' || c === '{') depth += 1;
+      else if (c === ')' || c === ']' || c === '}') depth -= 1;
+      else if (c === ',' && depth === 0) cut = i;
+    }
+    return cut === -1 ? text : text.slice(0, cut).trim();
   }
 
   /** Splits a checked program's output into results and ordinary prints. */
@@ -129,7 +155,9 @@
       if (body === 'DONE') { done = true; return; }
       var parts = body.split(SEP);
       var restore = function (s) { return String(s == null ? '' : s).replace(/\u001d/g, '\n'); };
-      checks.push({ ok: parts[0] === 'PASS', expr: restore(parts[1]), got: restore(parts[2]), want: restore(parts[3]) });
+      var expr = restore(parts[1]);
+      expr = checkedExpression(expr);
+      checks.push({ ok: parts[0] === 'PASS', expr: expr, got: restore(parts[2]), want: restore(parts[3]) });
     });
     // The checker starts each result on a fresh line; drop the blanks it adds.
     var printed = other.join('\n').replace(/\n{2,}/g, '\n').replace(/^\n+|\n+$/g, '');
@@ -489,6 +517,7 @@
     PRELUDE: PRELUDE,
     buildChecked: buildChecked,
     parseChecked: parseChecked,
+    checkedExpression: checkedExpression,
     learnerDiagnostics: learnerDiagnostics,
     squash: squash,
     checkAnswer: checkAnswer,
