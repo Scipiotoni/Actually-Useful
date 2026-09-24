@@ -1,0 +1,2022 @@
+id: ch09
+number: 9
+part: p2
+title: Structs, Enums and Your Own Types
+blurb: Stop juggling loose variables — bundle data that belongs together, and name the choices your program makes.
+hours: 5
+goals:
+  - Define a `struct`, create values of it and access their members
+  - Pass structs to functions, return them, and keep them in vectors
+  - Add member functions to a struct
+  - Use `enum class` for a fixed set of named choices
+  - Use `std::pair` and structured bindings, and know when a struct is clearer
+  - Model a real problem as a set of types
+
+items:
+  - type: lesson
+    id: c9-struct
+    title: "Structs: grouping related data"
+    minutes: 20
+    objectives:
+      - Define a struct with members and default values
+      - Create struct values with brace initialisation
+      - Read and change members with `.`
+    body: |
+      A point on a map has an x and a y. A student has a name, an age and a
+      list of scores. You *could* keep them in separate variables — `x1, y1,
+      x2, y2`… `name1, age1`… — but that falls apart fast. What you want is a
+      **new type** that bundles related values together. That's a **struct**:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      struct Student {
+          std::string name{};
+          int age{0};
+          double average{0.0};
+      };
+
+      int main() {
+          Student ada{"Ada", 17, 9.4};
+          Student alan{};           // every member gets its default
+
+          alan.name = "Alan";
+          alan.age = ada.age + 1;
+
+          std::cout << ada.name << " is " << ada.age << '\n';
+          std::cout << alan.name << " is " << alan.age << ", average " << alan.average << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Ada is 17
+      Alan is 18, average 0
+      ```
+
+      - `struct Student { ... };` defines a new type called `Student`. Note the `;` after the closing brace — it's required.
+      - Inside are its **members** (also called *fields*), each with a type, a name and — always, as with any variable — a default value.
+      - `Student ada{"Ada", 17, 9.4};` creates a `Student`, giving the members values **in the order they're declared**.
+      - `ada.name` reads or writes a member with the **dot** operator.
+
+      A struct type is used like any other type: variables, parameters, return
+      values, vectors of them.
+
+      ## Copying
+
+      Assigning one struct to another copies **every** member. The two are
+      then independent:
+
+      ```cpp
+      #include <iostream>
+
+      struct Point {
+          double x{};
+          double y{};
+      };
+
+      int main() {
+          Point a{1.0, 2.0};
+          Point b = a;      // copy
+          b.x = 10.0;
+          std::cout << a.x << ' ' << b.x << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1 10
+      ```
+
+      > [!note] Printing a struct
+      > `std::cout << a;` doesn't compile — C++ can't guess how you'd like a
+      > `Point` to look. Print its members, or write a function (or, in Chapter
+      > 11, an `operator<<`) that does it.
+
+      {{check struct-output}}
+
+      {{task make-point}}
+    checks:
+      - id: struct-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          struct Book {
+              std::string title{};
+              int pages{0};
+              bool read{false};
+          };
+
+          int main() {
+              Book b{"Dune", 412};
+              Book c = b;
+              c.pages += 100;
+              std::cout << b.pages << ' ' << c.pages << ' ' << b.read << '\n';
+              return 0;
+          }
+        answer: |
+          412 512 0
+        why: "`read` wasn't given a value, so it takes its default, false (0). `c` is a copy, so changing it doesn't affect `b`."
+      - id: semicolon
+        type: spot
+        prompt: Which line stops this from compiling?
+        code: |
+          #include <iostream>
+
+          struct Size {
+              int width{};
+              int height{};
+          }
+
+          int main() {
+              Size s{3, 4};
+              std::cout << s.width * s.height << '\n';
+              return 0;
+          }
+        answer: 6
+        why: "A struct definition must end with `};` — the semicolon after the brace is missing."
+    tasks:
+      - id: make-point
+        title: Midpoint
+        prompt: |
+          The starter defines `struct Point { double x{}; double y{}; };`.
+          Write `Point midpoint(Point a, Point b)` returning the point halfway
+          between `a` and `b`.
+        starter: |
+          struct Point {
+              double x{};
+              double y{};
+          };
+
+          Point midpoint(Point a, Point b) {
+              return {};
+          }
+        harness: |
+          Point m = midpoint({0.0, 0.0}, {4.0, 2.0});
+          CHECK(m.x, 2.0);
+          CHECK(m.y, 1.0);
+          Point n = midpoint({-1.0, 5.0}, {1.0, -5.0});
+          CHECK(n.x, 0.0);
+          CHECK(n.y, 0.0);
+        hints:
+          - "`return {(a.x + b.x) / 2, (a.y + b.y) / 2};` — braces build the Point to return."
+        solution: |
+          struct Point {
+              double x{};
+              double y{};
+          };
+
+          Point midpoint(Point a, Point b) {
+              return {(a.x + b.x) / 2, (a.y + b.y) / 2};
+          }
+    cards:
+      - front: What is a **struct**?
+        back: A user-defined type that groups related values (its **members**) under one name.
+      - front: How do you access a member `age` of a struct variable `s`?
+        back: "`s.age` — the dot operator."
+      - front: What does `Point b = a;` do when `Point` is a struct?
+        back: Copies every member. `a` and `b` are then independent.
+      - front: What must follow the closing brace of a struct definition?
+        back: A semicolon — `};`
+
+  - type: lesson
+    id: c9-struct-fn
+    title: Structs with functions and vectors
+    minutes: 20
+    objectives:
+      - Pass structs by `const &`, and change them through `&`
+      - Return a struct from a function
+      - Keep many struct values in a vector and search them
+    body: |
+      Structs really shine together with functions and vectors — a vector of
+      structs is a table, each element a row.
+
+      ```cpp
+      #include <iomanip>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      struct Product {
+          std::string name{};
+          double price{0.0};
+          int stock{0};
+      };
+
+      double stockValue(const Product& p) {
+          return p.price * p.stock;
+      }
+
+      void restock(Product& p, int amount) {
+          p.stock += amount;
+      }
+
+      int main() {
+          std::vector<Product> shop{
+              {"Pen", 1.20, 50},
+              {"Notebook", 3.50, 20},
+              {"Backpack", 24.99, 3}
+          };
+          restock(shop[2], 5);
+
+          double total{0.0};
+          for (const auto& p : shop) {
+              std::cout << std::left << std::setw(10) << p.name << p.stock << '\n';
+              total += stockValue(p);
+          }
+          std::cout << std::fixed << std::setprecision(2) << "Total value: " << total << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Pen       50
+      Notebook  20
+      Backpack  8
+      Total value: 329.92
+      ```
+
+      Same rules as before: `const Product&` to read without copying,
+      `Product&` to change the caller's value.
+
+      ## Finding in a table
+
+      Searching a vector of structs is the linear search you know — you just
+      compare a member:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      struct Contact {
+          std::string name{};
+          std::string phone{};
+      };
+
+      int indexOf(const std::vector<Contact>& book, const std::string& name) {
+          for (std::size_t i{0}; i < book.size(); ++i) {
+              if (book[i].name == name) {
+                  return static_cast<int>(i);
+              }
+          }
+          return -1;
+      }
+
+      int main() {
+          std::vector<Contact> book{{"Ada", "555-0101"}, {"Grace", "555-0199"}};
+          int i = indexOf(book, "Grace");
+          if (i != -1) {
+              std::cout << book[i].phone << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      555-0199
+      ```
+
+      {{check vec-struct}}
+
+      {{task oldest}}
+    checks:
+      - id: vec-struct
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          struct Item {
+              int weight{};
+              int value{};
+          };
+
+          int main() {
+              std::vector<Item> bag{{2, 10}, {5, 7}, {1, 4}};
+              int w{0};
+              int v{0};
+              for (const auto& it : bag) {
+                  if (it.value > 5) {
+                      w += it.weight;
+                      v += it.value;
+                  }
+              }
+              std::cout << w << ' ' << v << '\n';
+              return 0;
+          }
+        answer: |
+          7 17
+        why: "Only the first two items have value > 5: weights 2 + 5, values 10 + 7."
+    tasks:
+      - id: oldest
+        title: The oldest person
+        prompt: |
+          Given `struct Person { std::string name{}; int age{0}; };`, write
+          `std::string oldest(const std::vector<Person>& people)` returning the
+          name of the oldest person (the first on a tie), or `""` if the vector
+          is empty.
+        starter: |
+          #include <string>
+          #include <vector>
+
+          struct Person {
+              std::string name{};
+              int age{0};
+          };
+
+          std::string oldest(const std::vector<Person>& people) {
+              return "";
+          }
+        harness: |
+          CHECK(oldest({{"Ada", 36}, {"Alan", 41}, {"Grace", 85}, {"Linus", 54}}), "Grace");
+          CHECK(oldest({{"Tie1", 30}, {"Tie2", 30}}), "Tie1");
+          CHECK(oldest({}), "");
+        hints:
+          - The max pattern, comparing `.age` and remembering the index (or the person).
+        solution: |
+          #include <string>
+          #include <vector>
+
+          struct Person {
+              std::string name{};
+              int age{0};
+          };
+
+          std::string oldest(const std::vector<Person>& people) {
+              if (people.empty()) {
+                  return "";
+              }
+              std::size_t best{0};
+              for (std::size_t i{1}; i < people.size(); ++i) {
+                  if (people[i].age > people[best].age) {
+                      best = i;
+                  }
+              }
+              return people[best].name;
+          }
+    cards:
+      - front: How do you pass a struct to a function that only reads it?
+        back: "By const reference: `void show(const Student& s)`."
+      - front: How do you create a vector of structs with values?
+        back: "With nested braces: `std::vector<Point> pts{{0, 0}, {3, 4}};`"
+
+  - type: lesson
+    id: c9-members
+    title: Member functions
+    minutes: 16
+    objectives:
+      - Add functions to a struct that work on its members
+      - Mark member functions that don't change the object as `const`
+    body: |
+      Functions like `stockValue(p)` belong so closely to their struct that
+      C++ lets you put them **inside** it. They're called **member
+      functions** — you've used plenty already: `s.size()`, `v.push_back(x)`.
+
+      ```cpp
+      #include <iostream>
+
+      struct Rectangle {
+          double width{0.0};
+          double height{0.0};
+
+          double area() const {
+              return width * height;
+          }
+
+          double perimeter() const {
+              return 2 * (width + height);
+          }
+
+          void scale(double factor) {
+              width *= factor;
+              height *= factor;
+          }
+      };
+
+      int main() {
+          Rectangle r{3.0, 2.0};
+          std::cout << r.area() << ' ' << r.perimeter() << '\n';
+          r.scale(2.0);
+          std::cout << r.area() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      6 10
+      24
+      ```
+
+      Inside a member function, the members (`width`, `height`) are used
+      directly — they're the members of **the object the function was called
+      on**. `r.area()` computes with `r`'s width and height.
+
+      ## `const` member functions
+
+      The `const` after `area()` promises that the function **doesn't change**
+      the object. That matters because a `const` object — or one received as a
+      `const &` parameter — may only call `const` member functions:
+
+      ```cpp static
+      void report(const Rectangle& r) {
+          std::cout << r.area();   // fine: area() is const
+          r.scale(2.0);            // error: scale() changes r, and r is const
+      }
+      ```
+
+      > [!pro]
+      > Mark every member function that doesn't modify the object as `const`.
+      > It documents intent, and it lets your type work with `const &`
+      > parameters.
+
+      Chapter 11 turns structs with member functions into full **classes**,
+      which can also protect their data from outside meddling.
+
+      {{check member-output}}
+
+      {{task temp}}
+    checks:
+      - id: member-output
+        type: output
+        code: |
+          #include <iostream>
+
+          struct Counter {
+              int value{0};
+
+              void add(int n) {
+                  value += n;
+              }
+
+              bool isBig() const {
+                  return value > 10;
+              }
+          };
+
+          int main() {
+              Counter a{};
+              Counter b{8};
+              a.add(4);
+              b.add(4);
+              std::cout << a.value << a.isBig() << ' ' << b.value << b.isBig() << '\n';
+              return 0;
+          }
+        answer: |
+          40 121
+        why: "Each object has its own `value`: a goes 0 → 4 (not big), b goes 8 → 12 (big)."
+      - id: const-mf
+        type: mcq
+        prompt: "What does `const` mean in `double area() const`?"
+        options:
+          - The function returns a constant
+          - The function doesn't change the object it's called on
+          - The function can't be called twice
+          - "`area` can only be used with constants"
+        answer: 1
+        why: A `const` member function promises not to modify the object — so it can be called on const objects.
+    tasks:
+      - id: temp
+        title: Temperature record
+        prompt: |
+          Complete `struct TempLog` with a `std::vector<double> readings{}`:
+
+          - `void add(double t)` — records a reading.
+          - `double highest() const` — the highest reading (0.0 if none).
+          - `double average() const` — the average (0.0 if none).
+        starter: |
+          #include <vector>
+
+          struct TempLog {
+              std::vector<double> readings{};
+
+              void add(double t) {
+              }
+
+              double highest() const {
+                  return 0.0;
+              }
+
+              double average() const {
+                  return 0.0;
+              }
+          };
+        harness: |
+          TempLog log{};
+          CHECK(log.highest(), 0.0);
+          CHECK(log.average(), 0.0);
+          log.add(12.5);
+          log.add(20.0);
+          log.add(15.5);
+          CHECK(log.readings.size(), 3);
+          CHECK(log.highest(), 20.0);
+          CHECK(log.average(), 16.0);
+          const TempLog& view = log;
+          CHECK(view.highest(), 20.0);
+        hints:
+          - "`add` is `readings.push_back(t);`"
+          - "In `highest`, start with `readings[0]` — after checking `readings.empty()`."
+        solution: |
+          #include <vector>
+
+          struct TempLog {
+              std::vector<double> readings{};
+
+              void add(double t) {
+                  readings.push_back(t);
+              }
+
+              double highest() const {
+                  if (readings.empty()) {
+                      return 0.0;
+                  }
+                  double best = readings[0];
+                  for (double r : readings) {
+                      if (r > best) {
+                          best = r;
+                      }
+                  }
+                  return best;
+              }
+
+              double average() const {
+                  if (readings.empty()) {
+                      return 0.0;
+                  }
+                  double sum{0.0};
+                  for (double r : readings) {
+                      sum += r;
+                  }
+                  return sum / static_cast<double>(readings.size());
+              }
+          };
+    cards:
+      - front: What is a **member function**?
+        back: A function defined inside a struct/class that works on the object it's called on, e.g. `r.area()`.
+      - front: Why mark a member function `const`?
+        back: It promises not to change the object, and it's required for calling the function on const objects or through `const &`.
+
+  - type: quiz
+    id: c9-quiz1
+    title: "Quiz: structs"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          struct P {
+              int a{1};
+              int b{2};
+          };
+
+          int main() {
+              P x{};
+              P y{5};
+              P z{7, 8};
+              std::cout << x.a << x.b << y.a << y.b << z.a << z.b << '\n';
+              return 0;
+          }
+        answer: |
+          125278
+        why: "Missing initialisers use the defaults: x is {1, 2}, y is {5, 2}, z is {7, 8}."
+      - type: output
+        code: |
+          #include <iostream>
+
+          struct Box {
+              int n{0};
+          };
+
+          void grow(Box b) {
+              b.n += 10;
+          }
+
+          void growRef(Box& b) {
+              b.n += 1;
+          }
+
+          int main() {
+              Box box{};
+              grow(box);
+              growRef(box);
+              std::cout << box.n << '\n';
+              return 0;
+          }
+        answer: |
+          1
+        why: "`grow` changes a copy; only `growRef` changes the caller's box."
+      - type: mcq
+        prompt: "`void print(const Shape& s)` calls `s.area()`. What must be true of `area`?"
+        options:
+          - It must be `static`
+          - It must be a `const` member function
+          - It must return `void`
+          - Nothing special
+        answer: 1
+        why: "Through a `const &`, only `const` member functions can be called."
+      - type: tf
+        prompt: "`std::cout << point;` works for any struct `point`."
+        answer: false
+        why: "C++ doesn't know how to print your type unless you tell it (with a function, or `operator<<` in Chapter 11)."
+
+  - type: lesson
+    id: c9-enum
+    title: "Named choices: enum class"
+    minutes: 18
+    objectives:
+      - Define an `enum class` for a fixed set of values
+      - Use enumerations in variables, comparisons and `switch`
+      - Convert an enumeration to text and to its underlying number
+    body: |
+      A traffic light is red, amber or green. A card's suit is one of four. A
+      game is running, paused or over. You *could* encode these as numbers (0
+      = red, 1 = amber…) or strings (`"red"`), but numbers are meaningless to
+      a reader and strings can be misspelled with no error.
+
+      An **enumeration** creates a type whose values are a fixed list of
+      names:
+
+      ```cpp
+      #include <iostream>
+
+      enum class Light {
+          red,
+          amber,
+          green
+      };
+
+      Light next(Light l) {
+          switch (l) {
+          case Light::red:
+              return Light::green;
+          case Light::green:
+              return Light::amber;
+          case Light::amber:
+              return Light::red;
+          }
+          return Light::red;
+      }
+
+      const char* name(Light l) {
+          switch (l) {
+          case Light::red:
+              return "red";
+          case Light::amber:
+              return "amber";
+          case Light::green:
+              return "green";
+          }
+          return "?";
+      }
+
+      int main() {
+          Light l{Light::red};
+          for (int i{0}; i < 4; ++i) {
+              std::cout << name(l) << ' ';
+              l = next(l);
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      red green amber red
+      ```
+
+      - The values are written `Light::red`, `Light::amber`… — each enum class is its own scope.
+      - Only the listed values exist: a typo like `Light::rde` is a compile error.
+      - They work beautifully with `switch`. Compilers even warn if a `switch` forgets one of the values — so when you add a new value later, the compiler shows every place that must handle it.
+      - To print one, write a function that turns it into text (`const char*` is plain C-style text — enough for fixed names).
+
+      ## Underneath, numbers
+
+      Each value is stored as an integer: `red` is 0, `amber` 1, `green` 2,
+      unless you choose otherwise. `enum class` never converts to `int`
+      implicitly — you have to ask:
+
+      ```cpp
+      #include <iostream>
+
+      enum class Priority {
+          low = 1,
+          normal = 5,
+          urgent = 10
+      };
+
+      int main() {
+          Priority p{Priority::urgent};
+          std::cout << static_cast<int>(p) << '\n';
+          std::cout << (p == Priority::urgent) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      10
+      1
+      ```
+
+      > [!note] `enum` versus `enum class`
+      > Older code uses plain `enum Light { red, amber, green };`. Its values
+      > (`red`) leak into the surrounding scope and silently convert to `int`,
+      > which causes clashes and bugs. Use `enum class` in new code.
+
+      {{check enum-output}}
+
+      {{task season}}
+    checks:
+      - id: enum-output
+        type: output
+        code: |
+          #include <iostream>
+
+          enum class Dir {
+              north,
+              east,
+              south,
+              west
+          };
+
+          int main() {
+              Dir d{Dir::east};
+              int turns = static_cast<int>(d) + 2;
+              Dir opposite = static_cast<Dir>(turns % 4);
+              std::cout << static_cast<int>(opposite) << ' ' << (opposite == Dir::west) << '\n';
+              return 0;
+          }
+        answer: |
+          3 1
+        why: "east is 1; 1 + 2 = 3, which is west."
+      - id: why-enum
+        type: mcq
+        prompt: Why is `enum class Suit { hearts, diamonds, clubs, spades };` better than storing the suit as a string?
+        options:
+          - Enums take less typing
+          - Only the four valid values exist, so typos are compile errors and `switch` can check every case
+          - Strings can't be compared
+          - Enums can be printed with `std::cout` directly
+        answer: 1
+        why: "The compiler knows the complete set of values. A string like \"harts\" would compile fine and be a bug."
+    tasks:
+      - id: season
+        title: Seasons
+        prompt: |
+          The starter defines `enum class Season { winter, spring, summer, autumn };`.
+          Write `Season seasonOf(int month)` for months 1–12 (Dec–Feb winter,
+          Mar–May spring, Jun–Aug summer, Sep–Nov autumn).
+        starter: |
+          enum class Season {
+              winter,
+              spring,
+              summer,
+              autumn
+          };
+
+          Season seasonOf(int month) {
+              return Season::winter;
+          }
+        harness: |
+          CHECK(static_cast<int>(seasonOf(1)), static_cast<int>(Season::winter));
+          CHECK(static_cast<int>(seasonOf(12)), static_cast<int>(Season::winter));
+          CHECK(static_cast<int>(seasonOf(3)), static_cast<int>(Season::spring));
+          CHECK(static_cast<int>(seasonOf(7)), static_cast<int>(Season::summer));
+          CHECK(static_cast<int>(seasonOf(8)), static_cast<int>(Season::summer));
+          CHECK(static_cast<int>(seasonOf(10)), static_cast<int>(Season::autumn));
+        hints:
+          - "An `if` chain on ranges: `if (month >= 3 && month <= 5) return Season::spring;` …"
+        solution: |
+          enum class Season {
+              winter,
+              spring,
+              summer,
+              autumn
+          };
+
+          Season seasonOf(int month) {
+              if (month >= 3 && month <= 5) {
+                  return Season::spring;
+              }
+              if (month >= 6 && month <= 8) {
+                  return Season::summer;
+              }
+              if (month >= 9 && month <= 11) {
+                  return Season::autumn;
+              }
+              return Season::winter;
+          }
+    cards:
+      - front: What does `enum class Color { red, green };` define?
+        back: A new type `Color` whose only values are `Color::red` and `Color::green`.
+      - front: How do you get the number behind an `enum class` value?
+        back: "`static_cast<int>(value)` — it doesn't convert implicitly."
+      - front: Why prefer `enum class` over plain `enum`?
+        back: Its names don't leak into the surrounding scope, and it doesn't silently convert to `int`.
+
+  - type: lesson
+    id: c9-pair
+    title: Pairs, tuples and structured bindings
+    minutes: 16
+    objectives:
+      - Store two values together with `std::pair`
+      - Unpack a pair or struct with structured bindings
+      - Choose between a pair and a named struct
+    body: |
+      Sometimes you need to bundle just two values quickly — say, to return
+      both the minimum and the maximum from a function. The standard library
+      has **`std::pair`** (in `<utility>`):
+
+      ```cpp
+      #include <iostream>
+      #include <utility>
+      #include <vector>
+
+      std::pair<int, int> minMax(const std::vector<int>& v) {
+          int lo = v[0];
+          int hi = v[0];
+          for (int x : v) {
+              if (x < lo) {
+                  lo = x;
+              }
+              if (x > hi) {
+                  hi = x;
+              }
+          }
+          return {lo, hi};
+      }
+
+      int main() {
+          std::pair<int, int> r = minMax({4, -2, 9, 3});
+          std::cout << r.first << ' ' << r.second << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      -2 9
+      ```
+
+      A pair's members are called `first` and `second`; the two can have
+      different types (`std::pair<std::string, int>`).
+
+      ## Structured bindings
+
+      Instead of `.first` and `.second`, you can **unpack** a pair — or any
+      simple struct — into named variables in one go:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <utility>
+
+      struct Score {
+          std::string player{};
+          int points{0};
+      };
+
+      int main() {
+          std::pair<std::string, int> best{"Ada", 97};
+          auto [name, points] = best;
+          std::cout << name << ": " << points << '\n';
+
+          Score s{"Alan", 88};
+          auto [who, pts] = s;
+          std::cout << who << ": " << pts << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Ada: 97
+      Alan: 88
+      ```
+
+      `auto [a, b] = x;` creates variables `a` and `b` from the members of `x`,
+      in order. It becomes really handy with maps in Chapter 13.
+
+      ## Pair or struct?
+
+      `std::tuple` generalises pairs to any number of values. But `first`,
+      `second` and `std::get<2>(t)` say nothing about *meaning*. If the values
+      go together beyond one quick return, give them a **struct** with good
+      member names — `range.low` beats `range.first`.
+
+      {{check binding}}
+    checks:
+      - id: binding
+        type: output
+        code: |
+          #include <iostream>
+          #include <utility>
+
+          std::pair<int, int> divide(int a, int b) {
+              return {a / b, a % b};
+          }
+
+          int main() {
+              auto [q, r] = divide(17, 5);
+              std::cout << q << ' ' << r << '\n';
+              return 0;
+          }
+        answer: |
+          3 2
+        why: "The function returns both the quotient and the remainder; the structured binding unpacks them."
+      - id: pair-or-struct
+        type: mcq
+        prompt: "A function returns a person's height and weight together. The most readable return type?"
+        options:
+          - "`std::pair<double, double>`"
+          - "`struct Measurements { double heightCm{}; double weightKg{}; };`"
+          - "`double` — return only one"
+          - "`std::string` with both joined"
+        answer: 1
+        why: "Named members say what each value means. `first`/`second` would force every reader to remember which is which."
+    cards:
+      - front: What are the members of a `std::pair` called?
+        back: "`first` and `second`."
+      - front: What does `auto [a, b] = p;` do?
+        back: A **structured binding** — it creates `a` and `b` from the members of `p` (a pair or simple struct), in order.
+      - front: When is a struct better than a pair?
+        back: Whenever the values have meaning beyond a quick return — named members make code self-explanatory.
+
+  - type: quiz
+    id: c9-quiz2
+    title: "Quiz: enums and pairs"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          enum class Level {
+              easy = 1,
+              medium,
+              hard
+          };
+
+          int main() {
+              std::cout << static_cast<int>(Level::medium) + static_cast<int>(Level::hard) << '\n';
+              return 0;
+          }
+        answer: |
+          5
+        why: "Values continue counting from the last explicit one: easy = 1, medium = 2, hard = 3."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <utility>
+          #include <vector>
+
+          int main() {
+              std::vector<std::pair<std::string, int>> v{{"a", 3}, {"b", 1}, {"c", 2}};
+              int total{0};
+              std::string names{};
+              for (const auto& [name, n] : v) {
+                  total += n;
+                  names += name;
+              }
+              std::cout << names << total << '\n';
+              return 0;
+          }
+        answer: |
+          abc6
+        why: "Structured bindings work in range-based loops too."
+      - type: tf
+        prompt: "An `enum class` value can be printed directly with `std::cout << Light::red;`."
+        answer: false
+        why: "It has no `operator<<` and doesn't convert to `int` implicitly. Write a name function or cast."
+      - type: mcq
+        prompt: What happens if you misspell an enum value, like `Light::gren`?
+        options:
+          - It becomes a new value automatically
+          - A compile error
+          - It's treated as 0
+          - It's treated as the last value
+        answer: 1
+        why: Only the declared names exist.
+
+  - type: project
+    id: c9-project
+    title: "Project: Grade Book"
+    body: |
+      A teacher's grade book. Each line of input is a student: a name followed
+      by **three** scores out of 100, like `Ada 90 95 88`. You'll model the
+      data with a struct and an enum, and build up a class report.
+    milestones:
+      - title: Read and average
+        prompt: |
+          Define a `Student` struct (name and three scores, or a vector of
+          scores) and read every line of input into a `std::vector<Student>`.
+          Then print each student's name and average with 2 decimals:
+
+          ```text
+          Ada 91.00
+          Alan 70.33
+          ```
+
+          for the input `Ada 90 95 88` / `Alan 60 75 76`.
+        starter: |
+          #include <iomanip>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          struct Student {
+              std::string name{};
+              std::vector<int> scores{};
+
+              double average() const {
+                  return 0.0;
+              }
+          };
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: |
+              Ada 90 95 88
+              Alan 60 75 76
+            out: |
+              Ada 91.00
+              Alan 70.33
+          - in: |
+              Grace 100 100 100
+            out: |
+              Grace 100.00
+          - in: ""
+            out: ""
+        hints:
+          - "Read with `while (std::cin >> name >> a >> b >> c)` and `push_back` a `Student{name, {a, b, c}}`."
+          - "Make `average()` a const member function."
+        solution: |
+          #include <iomanip>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          struct Student {
+              std::string name{};
+              std::vector<int> scores{};
+
+              double average() const {
+                  if (scores.empty()) {
+                      return 0.0;
+                  }
+                  int sum{0};
+                  for (int s : scores) {
+                      sum += s;
+                  }
+                  return static_cast<double>(sum) / static_cast<double>(scores.size());
+              }
+          };
+
+          int main() {
+              std::vector<Student> students{};
+              std::string name{};
+              int a{};
+              int b{};
+              int c{};
+              while (std::cin >> name >> a >> b >> c) {
+                  students.push_back(Student{name, {a, b, c}});
+              }
+
+              std::cout << std::fixed << std::setprecision(2);
+              for (const auto& s : students) {
+                  std::cout << s.name << ' ' << s.average() << '\n';
+              }
+              return 0;
+          }
+      - title: Letter grades
+        prompt: |
+          Add `enum class Grade { A, B, C, D, F };` with a function
+          `Grade gradeFor(double average)` (A ≥ 90, B ≥ 80, C ≥ 70, D ≥ 60,
+          else F) and a function turning a `Grade` into a `char`. Print the
+          grade after each average:
+
+          ```text
+          Ada 91.00 A
+          Alan 70.33 C
+          ```
+        tests:
+          - in: |
+              Ada 90 95 88
+              Alan 60 75 76
+            out: |
+              Ada 91.00 A
+              Alan 70.33 C
+          - in: |
+              Low 10 20 30
+              Border 80 80 80
+              Almost 89 90 89
+            out: |
+              Low 20.00 F
+              Border 80.00 B
+              Almost 89.33 B
+        hints:
+          - "`char letter(Grade g)` with a `switch` returning `'A'`… `'F'`."
+        solution: |
+          #include <iomanip>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          enum class Grade { A, B, C, D, F };
+
+          Grade gradeFor(double average) {
+              if (average >= 90) {
+                  return Grade::A;
+              }
+              if (average >= 80) {
+                  return Grade::B;
+              }
+              if (average >= 70) {
+                  return Grade::C;
+              }
+              if (average >= 60) {
+                  return Grade::D;
+              }
+              return Grade::F;
+          }
+
+          char letter(Grade g) {
+              switch (g) {
+              case Grade::A: return 'A';
+              case Grade::B: return 'B';
+              case Grade::C: return 'C';
+              case Grade::D: return 'D';
+              case Grade::F: return 'F';
+              }
+              return '?';
+          }
+
+          struct Student {
+              std::string name{};
+              std::vector<int> scores{};
+
+              double average() const {
+                  if (scores.empty()) {
+                      return 0.0;
+                  }
+                  int sum{0};
+                  for (int s : scores) {
+                      sum += s;
+                  }
+                  return static_cast<double>(sum) / static_cast<double>(scores.size());
+              }
+          };
+
+          int main() {
+              std::vector<Student> students{};
+              std::string name{};
+              int a{};
+              int b{};
+              int c{};
+              while (std::cin >> name >> a >> b >> c) {
+                  students.push_back(Student{name, {a, b, c}});
+              }
+
+              std::cout << std::fixed << std::setprecision(2);
+              for (const auto& s : students) {
+                  double avg = s.average();
+                  std::cout << s.name << ' ' << avg << ' ' << letter(gradeFor(avg)) << '\n';
+              }
+              return 0;
+          }
+      - title: Class summary
+        prompt: |
+          After the list, print a blank line and a summary: the number of
+          students, the class average (the average of the students' averages,
+          2 decimals), the top student (first on a tie), and how many got each
+          grade:
+
+          ```text
+          Ada 91.00 A
+          Alan 70.33 C
+
+          Students: 2
+          Class average: 80.67
+          Top: Ada
+          A:1 B:0 C:1 D:0 F:0
+          ```
+
+          With no students, print only `No students`.
+        tests:
+          - in: |
+              Ada 90 95 88
+              Alan 60 75 76
+            out: |
+              Ada 91.00 A
+              Alan 70.33 C
+
+              Students: 2
+              Class average: 80.67
+              Top: Ada
+              A:1 B:0 C:1 D:0 F:0
+          - in: ""
+            out: No students
+          - in: |
+              Low 10 20 30
+              Border 80 80 80
+              Almost 89 90 89
+            out: |
+              Low 20.00 F
+              Border 80.00 B
+              Almost 89.33 B
+
+              Students: 3
+              Class average: 63.11
+              Top: Almost
+              A:0 B:2 C:0 D:0 F:1
+        hints:
+          - "Count grades in `std::vector<int> counts(5, 0);`, indexing with `static_cast<int>(grade)`."
+          - "Handle the empty case right after reading, before printing anything."
+        solution: |
+          #include <iomanip>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          enum class Grade { A, B, C, D, F };
+
+          Grade gradeFor(double average) {
+              if (average >= 90) {
+                  return Grade::A;
+              }
+              if (average >= 80) {
+                  return Grade::B;
+              }
+              if (average >= 70) {
+                  return Grade::C;
+              }
+              if (average >= 60) {
+                  return Grade::D;
+              }
+              return Grade::F;
+          }
+
+          char letter(Grade g) {
+              switch (g) {
+              case Grade::A: return 'A';
+              case Grade::B: return 'B';
+              case Grade::C: return 'C';
+              case Grade::D: return 'D';
+              case Grade::F: return 'F';
+              }
+              return '?';
+          }
+
+          struct Student {
+              std::string name{};
+              std::vector<int> scores{};
+
+              double average() const {
+                  if (scores.empty()) {
+                      return 0.0;
+                  }
+                  int sum{0};
+                  for (int s : scores) {
+                      sum += s;
+                  }
+                  return static_cast<double>(sum) / static_cast<double>(scores.size());
+              }
+          };
+
+          int main() {
+              std::vector<Student> students{};
+              std::string name{};
+              int a{};
+              int b{};
+              int c{};
+              while (std::cin >> name >> a >> b >> c) {
+                  students.push_back(Student{name, {a, b, c}});
+              }
+              if (students.empty()) {
+                  std::cout << "No students\n";
+                  return 0;
+              }
+
+              std::cout << std::fixed << std::setprecision(2);
+              std::vector<int> counts(5, 0);
+              double total{0.0};
+              std::size_t top{0};
+              for (std::size_t i{0}; i < students.size(); ++i) {
+                  double avg = students[i].average();
+                  Grade g = gradeFor(avg);
+                  std::cout << students[i].name << ' ' << avg << ' ' << letter(g) << '\n';
+                  ++counts[static_cast<int>(g)];
+                  total += avg;
+                  if (avg > students[top].average()) {
+                      top = i;
+                  }
+              }
+
+              std::cout << '\n';
+              std::cout << "Students: " << students.size() << '\n';
+              std::cout << "Class average: " << total / static_cast<double>(students.size()) << '\n';
+              std::cout << "Top: " << students[top].name << '\n';
+              std::cout << "A:" << counts[0] << " B:" << counts[1] << " C:" << counts[2]
+                        << " D:" << counts[3] << " F:" << counts[4] << '\n';
+              return 0;
+          }
+        explain: |
+          Look at how the types carry the design: `Student` knows how to
+          compute its own average; `Grade` makes the five outcomes explicit and
+          doubles as an index into the counts. When the types are right, the
+          rest of the code gets simpler.
+
+  - type: challenge
+    id: c9-ch-fraction
+    title: Fractions
+    difficulty: 2
+    tags: [structs, gcd]
+    prompt: |
+      With `struct Fraction { int num{0}; int den{1}; };`, write:
+
+      - `Fraction simplify(Fraction f)` — lowest terms, with a positive denominator: `{6, -8}` → `{-3, 4}`, `{0, 5}` → `{0, 1}`.
+      - `Fraction add(Fraction a, Fraction b)` and `Fraction multiply(Fraction a, Fraction b)` — both returning simplified results.
+
+      Denominators are never 0.
+    starter: |
+      #include <cstdlib>
+
+      struct Fraction {
+          int num{0};
+          int den{1};
+      };
+
+      Fraction simplify(Fraction f) {
+          return f;
+      }
+
+      Fraction add(Fraction a, Fraction b) {
+          return a;
+      }
+
+      Fraction multiply(Fraction a, Fraction b) {
+          return a;
+      }
+    harness: |
+      Fraction s = simplify({6, -8});
+      CHECK(s.num, -3);
+      CHECK(s.den, 4);
+      Fraction z = simplify({0, 5});
+      CHECK(z.num, 0);
+      CHECK(z.den, 1);
+      Fraction h = add({1, 2}, {1, 3});
+      CHECK(h.num, 5);
+      CHECK(h.den, 6);
+      Fraction w = add({1, 4}, {3, 4});
+      CHECK(w.num, 1);
+      CHECK(w.den, 1);
+      Fraction m = multiply({2, 3}, {9, 4});
+      CHECK(m.num, 3);
+      CHECK(m.den, 2);
+      Fraction n = multiply({-1, 2}, {1, -2});
+      CHECK(n.num, 1);
+      CHECK(n.den, 4);
+    hints:
+      - "Divide both parts by the GCD of their absolute values (Chapter 5's Euclid), then if the denominator is negative, flip both signs."
+      - "a/b + c/d = (a·d + c·b) / (b·d); a/b × c/d = (a·c) / (b·d). Then simplify."
+    solution: |
+      #include <cstdlib>
+
+      struct Fraction {
+          int num{0};
+          int den{1};
+      };
+
+      int gcd(int a, int b) {
+          while (b != 0) {
+              int r = a % b;
+              a = b;
+              b = r;
+          }
+          return a;
+      }
+
+      Fraction simplify(Fraction f) {
+          int g = gcd(std::abs(f.num), std::abs(f.den));
+          if (g == 0) {
+              return {0, 1};
+          }
+          f.num /= g;
+          f.den /= g;
+          if (f.den < 0) {
+              f.num = -f.num;
+              f.den = -f.den;
+          }
+          return f;
+      }
+
+      Fraction add(Fraction a, Fraction b) {
+          return simplify({a.num * b.den + b.num * a.den, a.den * b.den});
+      }
+
+      Fraction multiply(Fraction a, Fraction b) {
+          return simplify({a.num * b.num, a.den * b.den});
+      }
+    explain: |
+      Keeping every fraction in one **canonical form** (lowest terms, positive
+      denominator) means two equal fractions always have equal members — a
+      preview of the *invariants* that classes enforce in Chapter 11.
+
+  - type: challenge
+    id: c9-ch-time
+    title: Clock time
+    difficulty: 2
+    tags: [structs, remainder]
+    prompt: |
+      With `struct Time { int h{0}; int m{0}; int s{0}; };` (a time of day,
+      24-hour clock), write:
+
+      - `int toSeconds(Time t)` — seconds since midnight.
+      - `Time fromSeconds(int total)` — the time of day for any number of seconds, **wrapping around** midnight (so 86400 is 00:00:00, and −1 is 23:59:59).
+      - `Time addSeconds(Time t, int seconds)`.
+    starter: |
+      struct Time {
+          int h{0};
+          int m{0};
+          int s{0};
+      };
+
+      int toSeconds(Time t) {
+          return 0;
+      }
+
+      Time fromSeconds(int total) {
+          return {};
+      }
+
+      Time addSeconds(Time t, int seconds) {
+          return t;
+      }
+    harness: |
+      CHECK(toSeconds({1, 2, 3}), 3723);
+      Time a = fromSeconds(3723);
+      CHECK(a.h, 1);
+      CHECK(a.m, 2);
+      CHECK(a.s, 3);
+      Time b = fromSeconds(86400);
+      CHECK(b.h, 0);
+      CHECK(b.m, 0);
+      Time c = fromSeconds(-1);
+      CHECK(c.h, 23);
+      CHECK(c.m, 59);
+      CHECK(c.s, 59);
+      Time d = addSeconds({23, 59, 30}, 45);
+      CHECK(d.h, 0);
+      CHECK(d.m, 0);
+      CHECK(d.s, 15);
+    hints:
+      - "Wrap into one day first with a never-negative modulo: `((total % 86400) + 86400) % 86400`."
+      - "`addSeconds` is just `fromSeconds(toSeconds(t) + seconds)`."
+    solution: |
+      struct Time {
+          int h{0};
+          int m{0};
+          int s{0};
+      };
+
+      int toSeconds(Time t) {
+          return t.h * 3600 + t.m * 60 + t.s;
+      }
+
+      Time fromSeconds(int total) {
+          constexpr int day{86400};
+          int t = ((total % day) + day) % day;
+          return {t / 3600, t % 3600 / 60, t % 60};
+      }
+
+      Time addSeconds(Time t, int seconds) {
+          return fromSeconds(toSeconds(t) + seconds);
+      }
+
+  - type: challenge
+    id: c9-ch-rect
+    title: Overlapping rectangles
+    difficulty: 2
+    tags: [structs, geometry]
+    prompt: |
+      An axis-aligned rectangle is `struct Rect { int x1{}; int y1{}; int x2{}; int y2{}; };`
+      with `(x1, y1)` the bottom-left and `(x2, y2)` the top-right corner.
+      Write `int overlapArea(Rect a, Rect b)` returning the area of their
+      intersection (0 if they don't overlap or only touch).
+    starter: |
+      #include <algorithm>
+
+      struct Rect {
+          int x1{};
+          int y1{};
+          int x2{};
+          int y2{};
+      };
+
+      int overlapArea(Rect a, Rect b) {
+          return 0;
+      }
+    harness: |
+      CHECK(overlapArea({0, 0, 4, 4}, {2, 2, 6, 6}), 4);
+      CHECK(overlapArea({0, 0, 4, 4}, {4, 0, 8, 4}), 0);
+      CHECK(overlapArea({0, 0, 10, 10}, {2, 3, 5, 4}), 3);
+      CHECK(overlapArea({0, 0, 1, 1}, {5, 5, 6, 6}), 0);
+      CHECK(overlapArea({-3, -3, 3, 3}, {-1, -5, 1, 5}), 12);
+    hints:
+      - "The overlap's left edge is the larger of the two left edges: `std::max(a.x1, b.x1)`; its right edge the smaller of the right edges."
+      - "Width = right − left, height likewise; if either is ≤ 0, there's no overlap."
+    solution: |
+      #include <algorithm>
+
+      struct Rect {
+          int x1{};
+          int y1{};
+          int x2{};
+          int y2{};
+      };
+
+      int overlapArea(Rect a, Rect b) {
+          int width = std::min(a.x2, b.x2) - std::max(a.x1, b.x1);
+          int height = std::min(a.y2, b.y2) - std::max(a.y1, b.y1);
+          if (width <= 0 || height <= 0) {
+              return 0;
+          }
+          return width * height;
+      }
+
+  - type: challenge
+    id: c9-ch-league
+    title: League table
+    difficulty: 3
+    tags: [structs, vectors, sorting]
+    prompt: |
+      Each input line is a match: `HomeTeam homeGoals AwayTeam awayGoals`. A
+      win is worth 3 points, a draw 1, a loss 0. Print the league table,
+      sorted by **points** (most first), then by **goal difference** (goals
+      for minus goals against), then by **name** alphabetically. Each line:
+      name, points, goal difference.
+
+      For the input
+
+      ```text
+      Lions 2 Tigers 1
+      Bears 0 Lions 0
+      Tigers 3 Bears 3
+      ```
+
+      print
+
+      ```text
+      Lions 4 1
+      Bears 2 0
+      Tigers 1 -1
+      ```
+
+      (No `std::sort` yet — you'll write a simple sort yourself. Chapter 14
+      shows the library way.)
+    starter: |
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      struct Team {
+          std::string name{};
+          int points{0};
+          int goalsFor{0};
+          int goalsAgainst{0};
+      };
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          Lions 2 Tigers 1
+          Bears 0 Lions 0
+          Tigers 3 Bears 3
+        out: |
+          Lions 4 1
+          Bears 2 0
+          Tigers 1 -1
+      - in: |
+          B 1 A 1
+        out: |
+          A 1 0
+          B 1 0
+      - in: |
+          Red 5 Blue 0
+          Green 1 Red 0
+          Blue 2 Green 0
+        out: |
+          Red 3 4
+          Green 3 -1
+          Blue 3 -3
+      - in: ""
+        out: ""
+    hints:
+      - "Write `Team& find(std::vector<Team>& teams, const std::string& name)` that returns the team with that name, adding a new one if it isn't there yet (return `teams.back()` after `push_back`)."
+      - "Write `bool before(const Team& a, const Team& b)` that says whether `a` should be listed before `b` — compare points, then goal difference, then names."
+      - "Selection sort: for each position `i`, find the team among `i..end` that comes first according to `before`, and `std::swap` it into position `i`."
+    solution: |
+      #include <iostream>
+      #include <string>
+      #include <utility>
+      #include <vector>
+
+      struct Team {
+          std::string name{};
+          int points{0};
+          int goalsFor{0};
+          int goalsAgainst{0};
+
+          int difference() const {
+              return goalsFor - goalsAgainst;
+          }
+      };
+
+      Team& find(std::vector<Team>& teams, const std::string& name) {
+          for (auto& t : teams) {
+              if (t.name == name) {
+                  return t;
+              }
+          }
+          teams.push_back(Team{name});
+          return teams.back();
+      }
+
+      void record(Team& t, int scored, int conceded) {
+          t.goalsFor += scored;
+          t.goalsAgainst += conceded;
+          if (scored > conceded) {
+              t.points += 3;
+          } else if (scored == conceded) {
+              t.points += 1;
+          }
+      }
+
+      bool before(const Team& a, const Team& b) {
+          if (a.points != b.points) {
+              return a.points > b.points;
+          }
+          if (a.difference() != b.difference()) {
+              return a.difference() > b.difference();
+          }
+          return a.name < b.name;
+      }
+
+      int main() {
+          std::vector<Team> teams{};
+          std::string home{};
+          std::string away{};
+          int hg{};
+          int ag{};
+          while (std::cin >> home >> hg >> away >> ag) {
+              record(find(teams, home), hg, ag);
+              record(find(teams, away), ag, hg);
+          }
+
+          for (std::size_t i{0}; i < teams.size(); ++i) {
+              std::size_t best{i};
+              for (std::size_t j{i + 1}; j < teams.size(); ++j) {
+                  if (before(teams[j], teams[best])) {
+                      best = j;
+                  }
+              }
+              std::swap(teams[i], teams[best]);
+          }
+
+          for (const auto& t : teams) {
+              std::cout << t.name << ' ' << t.points << ' ' << t.difference() << '\n';
+          }
+          return 0;
+      }
+    explain: |
+      Careful with `find`: it returns a **reference** into the vector, and
+      `push_back` can move the vector's elements in memory, making older
+      references invalid. Here each reference is used immediately, before the
+      next `find` — safe. (Chapter 10 explains why this matters.)
+
+  - type: review
+    id: c9-review
+    title: "Chapter 9 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      struct Point {
+          double x{0.0};                       // members with defaults
+          double y{0.0};
+          double length() const { ... }        // member function, doesn't modify
+          void move(double dx, double dy) { }  // member function, modifies
+      };                                       // <- semicolon!
+
+      Point p{1.0, 2.0};    p.x = 5.0;    p.length();
+      std::vector<Point> path{{0, 0}, {3, 4}};
+
+      enum class Light { red, amber, green };
+      Light l{Light::red};  static_cast<int>(l);
+
+      std::pair<std::string, int> best{"Ada", 97};   best.first;  best.second;
+      auto [name, score] = best;                     // structured binding
+      ```
+
+      ## Key ideas
+
+      - A struct groups related data into a new type; initialise members in declaration order.
+      - Structs copy member by member. Pass them by `const &` to read, `&` to change.
+      - A vector of structs is a table: search and aggregate by comparing members.
+      - Mark non-modifying member functions `const`.
+      - `enum class` gives a fixed, checked set of named values; it doesn't convert to `int` by itself.
+      - Pairs are for quick two-value bundles; structs with names are clearer for anything lasting.
+    questions:
+      - type: output
+        prompt: "Interleaving: structs, loops and strings."
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          struct Word {
+              std::string text{};
+              int count{0};
+          };
+
+          int main() {
+              std::vector<Word> words{{"to", 2}, {"be", 2}, {"or", 1}, {"not", 1}};
+              std::string out{};
+              for (const auto& w : words) {
+                  for (int i{0}; i < w.count; ++i) {
+                      out += w.text[0];
+                  }
+              }
+              std::cout << out << '\n';
+              return 0;
+          }
+        answer: |
+          ttbbon
+        why: "Each word's first letter, repeated `count` times."
+      - type: mcq
+        prompt: "Which declaration of a function that prints an `Employee` is best?"
+        options:
+          - "`void print(Employee e);`"
+          - "`void print(const Employee& e);`"
+          - "`void print(Employee& e);`"
+          - "`Employee print();`"
+        answer: 1
+        why: Read-only, no copy.
+      - type: output
+        code: |
+          #include <iostream>
+
+          enum class Op { add, sub };
+
+          int apply(Op op, int a, int b) {
+              return op == Op::add ? a + b : a - b;
+          }
+
+          int main() {
+              std::cout << apply(Op::sub, apply(Op::add, 2, 3), 10) << '\n';
+              return 0;
+          }
+        answer: |
+          -5
+        why: "The inner call gives 5; then 5 − 10 = −5."
+
+  - type: exam
+    id: c9-exam
+    title: "Chapter 9 exam"
+    minutes: 35
+    pick: 10
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          struct V {
+              int x{0};
+              int y{0};
+          };
+
+          V add(V a, V b) {
+              return {a.x + b.x, a.y + b.y};
+          }
+
+          int main() {
+              V p{1, 2};
+              V q = add(p, p);
+              q = add(q, {10, 20});
+              std::cout << q.x << ' ' << q.y << '\n';
+              return 0;
+          }
+        answer: |
+          12 24
+        why: "p + p = {2, 4}; + {10, 20} = {12, 24}."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          struct Account {
+              std::string owner{};
+              int balance{0};
+
+              void deposit(int amount) {
+                  if (amount > 0) {
+                      balance += amount;
+                  }
+              }
+          };
+
+          int main() {
+              Account a{"Ada"};
+              a.deposit(50);
+              a.deposit(-20);
+              Account b = a;
+              b.deposit(5);
+              std::cout << a.balance << ' ' << b.balance << '\n';
+              return 0;
+          }
+        answer: |
+          50 55
+        why: "The negative deposit is ignored. `b` is a copy of `a`, so only `b` gets the 5."
+      - type: mcq
+        prompt: What's wrong with calling a non-const member function on a `const` object?
+        options:
+          - Nothing
+          - It's a compile error — the function might modify the object
+          - It crashes at run time
+          - It silently does nothing
+        answer: 1
+        why: Only `const` member functions can be called on const objects.
+      - type: spot
+        prompt: Which line doesn't compile?
+        code: |
+          #include <iostream>
+
+          enum class Mode { read, write };
+
+          int main() {
+              Mode m{Mode::write};
+              int n = m;
+              std::cout << n << '\n';
+              return 0;
+          }
+        answer: 7
+        why: "An `enum class` doesn't convert to `int` implicitly — use `static_cast<int>(m)`."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <utility>
+
+          std::pair<int, int> step(std::pair<int, int> p) {
+              return {p.second, p.first + p.second};
+          }
+
+          int main() {
+              std::pair<int, int> p{0, 1};
+              for (int i{0}; i < 5; ++i) {
+                  p = step(p);
+              }
+              std::cout << p.first << ' ' << p.second << '\n';
+              return 0;
+          }
+        answer: |
+          5 8
+        why: "It walks the Fibonacci sequence: (0,1) → (1,1) → (1,2) → (2,3) → (3,5) → (5,8)."
+      - type: tf
+        prompt: "`auto [a, b] = somePair;` copies the pair's members into new variables `a` and `b`."
+        answer: true
+        why: "That's a structured binding (with `auto&` it would refer to them instead)."
+      - type: fill
+        prompt: Complete the struct so `r.area()` can be called on a `const Rect`.
+        code: |
+          struct Rect {
+              int w{0};
+              int h{0};
+              int area() ___ {
+                  return w * h;
+              }
+          };
+        blanks:
+          - [const]
+        why: "A const member function can be called on const objects."
+      - type: mcq
+        prompt: "For `struct S { int a{1}; int b{2}; int c{3}; };`, what does `S s{7, 8};` give?"
+        options:
+          - "a = 7, b = 8, c = 3"
+          - "a = 1, b = 7, c = 8"
+          - A compile error
+          - "a = 7, b = 8, c = 0"
+        answer: 0
+        why: "Values fill members in order; the rest keep their defaults."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          struct Cell {
+              bool mine{false};
+              int near{0};
+          };
+
+          int main() {
+              std::vector<Cell> row(5);
+              row[1].mine = true;
+              row[3].mine = true;
+              for (int i{0}; i < 5; ++i) {
+                  if (i > 0 && row[i - 1].mine) {
+                      ++row[i].near;
+                  }
+                  if (i < 4 && row[i + 1].mine) {
+                      ++row[i].near;
+                  }
+              }
+              for (const auto& c : row) {
+                  std::cout << (c.mine ? '*' : static_cast<char>('0' + c.near));
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          1*2*1
+        why: "Each non-mine cell counts mines next to it: cell 0 has 1, cell 2 has 2, cell 4 has 1."
+      - type: code
+        prompt: |
+          With `struct Item { std::string name{}; double price{0.0}; int qty{0}; };`,
+          write `double orderTotal(const std::vector<Item>& items)` returning the
+          sum of price × quantity, with a 10% discount on the whole order when
+          that sum is **100 or more**.
+        starter: |
+          #include <string>
+          #include <vector>
+
+          struct Item {
+              std::string name{};
+              double price{0.0};
+              int qty{0};
+          };
+
+          double orderTotal(const std::vector<Item>& items) {
+              return 0.0;
+          }
+        harness: |
+          CHECK(orderTotal({{"pen", 2.0, 5}, {"book", 20.0, 2}}), 50.0);
+          CHECK(orderTotal({{"chair", 60.0, 2}}), 108.0);
+          CHECK(orderTotal({}), 0.0);
+          CHECK(orderTotal({{"a", 50.0, 1}, {"b", 25.0, 2}}), 90.0);
+        solution: |
+          #include <string>
+          #include <vector>
+
+          struct Item {
+              std::string name{};
+              double price{0.0};
+              int qty{0};
+          };
+
+          double orderTotal(const std::vector<Item>& items) {
+              double sum{0.0};
+              for (const auto& it : items) {
+                  sum += it.price * it.qty;
+              }
+              if (sum >= 100.0) {
+                  sum *= 0.9;
+              }
+              return sum;
+          }
+      - type: code
+        prompt: |
+          With `enum class Move { rock, paper, scissors };` write
+          `int judge(Move a, Move b)` returning `1` if `a` beats `b`, `-1` if
+          `b` beats `a`, and `0` for a draw.
+        starter: |
+          enum class Move { rock, paper, scissors };
+
+          int judge(Move a, Move b) {
+              return 0;
+          }
+        harness: |
+          CHECK(judge(Move::rock, Move::scissors), 1);
+          CHECK(judge(Move::scissors, Move::rock), -1);
+          CHECK(judge(Move::paper, Move::rock), 1);
+          CHECK(judge(Move::paper, Move::scissors), -1);
+          CHECK(judge(Move::paper, Move::paper), 0);
+        solution: |
+          enum class Move { rock, paper, scissors };
+
+          bool beats(Move a, Move b) {
+              return (a == Move::rock && b == Move::scissors) ||
+                     (a == Move::paper && b == Move::rock) ||
+                     (a == Move::scissors && b == Move::paper);
+          }
+
+          int judge(Move a, Move b) {
+              if (a == b) {
+                  return 0;
+              }
+              return beats(a, b) ? 1 : -1;
+          }

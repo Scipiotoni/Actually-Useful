@@ -1,0 +1,1865 @@
+id: ch10
+number: 10
+part: p2
+title: References, Pointers and Memory
+blurb: Look under the hood — how values live in memory, how to refer to them, and how to avoid the bugs C++ is famous for.
+hours: 6
+goals:
+  - Explain memory as numbered bytes, and get a variable's address with `&`
+  - Use references as aliases, and know their rules and dangers
+  - Declare, dereference and reseat pointers, and use `nullptr` safely
+  - Explain pointer arithmetic and how C arrays and C strings relate to pointers
+  - Allocate and free memory with `new` and `delete`, and explain leaks and dangling pointers
+  - Reason about lifetime and ownership
+  - Build and traverse a linked list
+
+items:
+  - type: lesson
+    id: c10-memory
+    title: Memory and addresses
+    minutes: 16
+    objectives:
+      - Describe memory as a long row of numbered bytes
+      - Get the address of a variable with `&`
+      - Use `sizeof` to see how many bytes a value takes
+    body: |
+      A computer's memory is a very long row of **bytes**, each with a number
+      — its **address**. Every variable lives somewhere in that row: an
+      `int` typically takes 4 consecutive bytes, a `double` 8. When you write
+      `int score{42};`, the compiler reserves 4 bytes and remembers where.
+
+      You can ask where a variable lives with the **address-of** operator `&`
+      placed *before* a variable:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int a{42};
+          int b{7};
+          double d{3.5};
+          std::cout << "a lives at " << &a << " and takes " << sizeof(a) << " bytes\n";
+          std::cout << "b lives at " << &b << '\n';
+          std::cout << "d lives at " << &d << " and takes " << sizeof(d) << " bytes\n";
+          return 0;
+      }
+      ```
+
+      Run it a few times: the addresses are printed in **hexadecimal**
+      (base 16 — `0x7ffc…`), and they may change on every run, because the
+      operating system places the program somewhere different each time (a
+      security feature). What *doesn't* change: every variable has one, and
+      you can find it.
+
+      > [!note] Two meanings of `&`
+      > In a **declaration** (`int& r = x;`, `void f(int& n)`), `&` means
+      > *reference*. In an **expression** (`&x`), it means *address of*.
+      > Same symbol, different jobs — context tells them apart.
+
+      Why care about addresses? Because sometimes you need to refer to a value
+      that lives *somewhere else* — a value owned by another part of the
+      program, or one created while the program runs. References and pointers
+      are the two tools for that, and they are the subject of this chapter.
+
+      {{check sizeof}}
+    checks:
+      - id: sizeof
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int numbers[5]{};
+              std::cout << sizeof(int) << ' ' << sizeof(numbers) << ' ' << sizeof(char) << '\n';
+              return 0;
+          }
+        answer: |
+          4 20 1
+        why: "An int is 4 bytes here; an array of five ints is 20; a char is always exactly 1 byte."
+      - id: amp
+        type: mcq
+        prompt: "What does `&x` mean in `std::cout << &x;`?"
+        options:
+          - A reference to x
+          - The address of x in memory
+          - x and something else
+          - x's value doubled
+        answer: 1
+        why: "In an expression, `&` before a variable is the address-of operator."
+    cards:
+      - front: What is a memory **address**?
+        back: The number identifying a location (byte) in memory. Every variable lives at an address.
+      - front: What does `&x` give (in an expression)?
+        back: The address of `x`.
+      - front: What does `sizeof(x)` give?
+        back: The number of bytes `x` (or a type) occupies.
+
+  - type: lesson
+    id: c10-refs
+    title: References in depth
+    minutes: 18
+    objectives:
+      - Create references as aliases for existing variables
+      - State the rules of references (must be initialised, can't be reseated)
+      - Explain why returning a reference to a local variable is a bug
+    body: |
+      You've used references as parameters (`int& x`) and in loops
+      (`for (auto& x : v)`). A reference can also be a plain variable. It's
+      always an **alias** — another name for an existing object:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int original{10};
+          int& alias = original;
+
+          alias = 20;
+          std::cout << original << '\n';
+
+          ++original;
+          std::cout << alias << '\n';
+          std::cout << (&alias == &original) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      20
+      21
+      1
+      ```
+
+      `alias` and `original` are one object with two names — they even have
+      the same address.
+
+      ## The rules
+
+      1. **A reference must be initialised** — `int& r;` alone doesn't compile. There's no such thing as a reference to nothing.
+      2. **A reference can't be reseated.** Once it refers to something, it refers to that thing forever. `alias = other;` doesn't make `alias` refer to `other` — it copies `other`'s *value* into `original`.
+      3. **A non-const reference needs a real variable**; a `const` reference can also bind to a temporary value (`const int& r = 5;`).
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int a{1};
+          int b{2};
+          int& r = a;
+          r = b;          // copies b's value into a; r still refers to a
+          b = 99;
+          std::cout << a << ' ' << r << ' ' << b << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      2 2 99
+      ```
+
+      {{check reseat}}
+
+      ## Returning references
+
+      A function can return a reference — `std::vector`'s `[]` does, which is
+      why `v[0] = 5;` works. It's powerful and dangerous: the referenced object
+      must **outlive** the reference. Returning a reference to a **local
+      variable** is a classic bug:
+
+      ```cpp ub
+      #include <iostream>
+
+      int& broken() {
+          int local{42};
+          return local;   // local is destroyed when the function returns!
+      }
+
+      int main() {
+          int& r = broken();
+          std::cout << r << '\n';   // undefined behaviour: r refers to a dead object
+          return 0;
+      }
+      ```
+
+      The compiler warns, and the program might print 42, garbage, or crash.
+      A reference to an object that no longer exists is called a **dangling
+      reference**. Returning a reference is only safe when the object lives on
+      after the function — a member of an object that still exists, an element
+      of a vector passed in by reference, and so on.
+
+      {{check dangling}}
+    checks:
+      - id: reseat
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{5};
+              int y{8};
+              int& r = x;
+              r += 1;
+              r = y;
+              r += 1;
+              std::cout << x << ' ' << y << '\n';
+              return 0;
+          }
+        answer: |
+          9 8
+        why: "r always refers to x: x becomes 6, then gets y's value 8, then 9. y is never changed."
+      - id: dangling
+        type: mcq
+        prompt: Which function returns a dangling reference?
+        options:
+          - "`int& first(std::vector<int>& v) { return v[0]; }`"
+          - "`int& bigger(int& a, int& b) { return a > b ? a : b; }`"
+          - "`int& twice(int x) { int r = 2 * x; return r; }`"
+          - "`const std::string& name(const Person& p) { return p.name; }`"
+        answer: 2
+        why: "`r` is local to `twice` and is destroyed when it returns. The others refer to objects owned by the caller."
+    cards:
+      - front: What is a **reference**?
+        back: An alias — another name for an existing object. Same object, same address.
+      - front: Can a reference be made to refer to a different object later?
+        back: No. `r = other;` assigns other's value to the referred object; the reference itself can't be reseated.
+      - front: What is a **dangling reference**?
+        back: A reference to an object that no longer exists (e.g. a local variable returned by reference). Using it is undefined behaviour.
+
+  - type: lesson
+    id: c10-pointers
+    title: Pointers
+    minutes: 24
+    objectives:
+      - Declare a pointer and store an address in it
+      - Read and change the pointed-to value with `*`
+      - Use `nullptr` and always check before dereferencing
+      - Access struct members through a pointer with `->`
+      - Choose between a pointer and a reference
+    body: |
+      A **pointer** is a variable whose value is an **address**. Where a
+      reference is another name for an object, a pointer is a separate
+      variable that *points at* an object:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int score{10};
+          int* p = &score;      // p holds the address of score
+
+          std::cout << *p << '\n';   // follow the pointer: 10
+          *p = 25;                   // change score through p
+          std::cout << score << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      10
+      25
+      ```
+
+      - `int* p` declares a **pointer to int**. The type says what it points at.
+      - `&score` gives the address to store in it.
+      - `*p` **dereferences** the pointer: "the object at that address". It can be read or assigned.
+
+      > [!analogy]
+      > A variable is a house. Its address is written on a piece of paper — the
+      > pointer. `*p` means "go to the address on the paper". You can copy the
+      > paper, cross the address out and write another one, or leave it blank.
+
+      ## Pointers can change what they point at
+
+      Unlike a reference, a pointer can be **reseated** — pointed at something
+      else:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int a{1};
+          int b{2};
+          int* p = &a;
+          *p += 10;
+          p = &b;        // now points at b
+          *p += 10;
+          std::cout << a << ' ' << b << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      11 12
+      ```
+
+      ## Pointing at nothing: `nullptr`
+
+      A pointer can also point at **nothing**: `nullptr`. Dereferencing
+      `nullptr` is undefined behaviour (typically an instant crash —
+      *segmentation fault*), so any pointer that might be null must be
+      **checked first**:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      const int* findFirstNegative(const std::vector<int>& v) {
+          for (const int& x : v) {
+              if (x < 0) {
+                  return &x;
+              }
+          }
+          return nullptr;   // nothing found
+      }
+
+      int main() {
+          std::vector<int> data{4, 7, -2, 9};
+          const int* found = findFirstNegative(data);
+          if (found != nullptr) {
+              std::cout << "Found " << *found << '\n';
+          }
+          if (findFirstNegative({1, 2, 3}) == nullptr) {
+              std::cout << "No negatives\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      Found -2
+      No negatives
+      ```
+
+      (Here `const int*` is a pointer to an int that must not be changed
+      through it.) Returning a pointer or `nullptr` is a common way to say
+      "here it is — or there's nothing".
+
+      > [!mistake] Uninitialised pointers
+      > `int* p;` holds a garbage address, pointing who-knows-where. Always
+      > initialise: to a real address, or to `nullptr`.
+
+      ## Pointers to structs: `->`
+
+      With a pointer to a struct, `(*p).member` is so common that it has a
+      shortcut: **`p->member`**.
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      struct Player {
+          std::string name{};
+          int hp{100};
+      };
+
+      void hit(Player* target, int damage) {
+          if (target != nullptr) {
+              target->hp -= damage;
+          }
+      }
+
+      int main() {
+          Player hero{"Link"};
+          hit(&hero, 30);
+          hit(nullptr, 30);   // safely ignored
+          std::cout << hero.name << ": " << hero.hp << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Link: 70
+      ```
+
+      ## Pointer or reference?
+
+      | | Reference `T&` | Pointer `T*` |
+      |---|---|---|
+      | Can be null | No | Yes (`nullptr`) |
+      | Can be reseated | No | Yes |
+      | Syntax | Use like the object | `*p`, `p->m`, `&x` |
+      | Use it for | parameters, aliases | optional things, things that change, data structures |
+
+      **Prefer references** when something always exists and never changes
+      target. Use pointers when "nothing" is a valid answer, or when you need
+      to point at different things over time — as you will when building a
+      linked list at the end of this chapter.
+
+      {{check deref}}
+
+      {{check arrow}}
+
+      {{task swap-ptr}}
+    checks:
+      - id: deref
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{3};
+              int y{4};
+              int* p = &x;
+              int* q = &y;
+              *p = *p + *q;
+              p = q;
+              *p = 0;
+              std::cout << x << ' ' << y << '\n';
+              return 0;
+          }
+        answer: |
+          7 0
+        why: "x becomes 3 + 4 = 7. Then p points at y, so `*p = 0` sets y to 0."
+      - id: arrow
+        type: mcq
+        prompt: "`s` is a pointer to a struct with a member `size`. Which reads the member?"
+        options:
+          - "`s.size`"
+          - "`s->size`"
+          - "`*s.size`"
+          - "`&s.size`"
+        answer: 1
+        why: "`s->size` means `(*s).size`. (`*s.size` would parse as `*(s.size)`.)"
+      - id: null-crash
+        type: tf
+        prompt: Dereferencing a pointer that is `nullptr` is safe and gives 0.
+        answer: false
+        why: It's undefined behaviour — usually an immediate crash. Always check for `nullptr` first.
+    tasks:
+      - id: swap-ptr
+        title: Swap through pointers
+        prompt: |
+          Write `void swapValues(int* a, int* b)` that swaps the two ints `a`
+          and `b` point to. If either pointer is `nullptr`, do nothing.
+        starter: |
+          void swapValues(int* a, int* b) {
+
+          }
+        harness: |
+          int x{1};
+          int y{2};
+          swapValues(&x, &y);
+          CHECK(x, 2);
+          CHECK(y, 1);
+          swapValues(&x, nullptr);
+          CHECK(x, 2);
+          swapValues(&x, &x);
+          CHECK(x, 2);
+        hints:
+          - "Check `a == nullptr || b == nullptr` first and return."
+          - "Then `int temp = *a; *a = *b; *b = temp;`"
+        solution: |
+          void swapValues(int* a, int* b) {
+              if (a == nullptr || b == nullptr) {
+                  return;
+              }
+              int temp = *a;
+              *a = *b;
+              *b = temp;
+          }
+    cards:
+      - front: What is a **pointer**?
+        back: A variable holding the address of another object (or `nullptr`).
+      - front: "Given `int* p = &x;`, what are `p` and `*p`?"
+        back: "`p` is the address of `x`; `*p` is `x` itself (dereferencing)."
+      - front: What is `nullptr`, and what must you do before dereferencing a pointer that might be null?
+        back: A pointer value meaning "points to nothing". Check `p != nullptr` first — dereferencing null is undefined behaviour.
+      - front: What does `p->member` mean?
+        back: "`(*p).member` — the member of the struct `p` points to."
+      - front: When prefer a reference, when a pointer?
+        back: References when the target always exists and never changes; pointers when "nothing" is valid or the target changes.
+
+  - type: quiz
+    id: c10-quiz1
+    title: "Quiz: references and pointers"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          void f(int* p) {
+              *p *= 2;
+              p = nullptr;
+          }
+
+          int main() {
+              int v{5};
+              int* ptr = &v;
+              f(ptr);
+              std::cout << v << ' ' << (ptr == nullptr) << '\n';
+              return 0;
+          }
+        answer: |
+          10 0
+        why: "`f` changes the int through its copy of the pointer. Setting its own copy `p` to null doesn't affect `ptr`."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{1};
+              int& r = a;
+              int* p = &r;
+              *p = 5;
+              r += 1;
+              std::cout << a << '\n';
+              return 0;
+          }
+        answer: |
+          6
+        why: "`r` is `a`; `&r` is `a`'s address; so `*p` and `r` are both `a`."
+      - type: mcq
+        prompt: Which declaration does **not** compile?
+        options:
+          - "`int* p = nullptr;`"
+          - "`int& r;`"
+          - "`const int& c = 7;`"
+          - "`int x{}; int* q = &x;`"
+        answer: 1
+        why: A reference must be initialised.
+      - type: fill
+        prompt: Complete the code so `p` points at `n`, then print the value through `p`.
+        code: |
+          int n{42};
+          int* p = ___n;
+          std::cout << ___p;
+        blanks:
+          - ['&']
+          - ['*']
+        why: "`&n` is n's address; `*p` follows the pointer."
+      - type: spot
+        prompt: Which line may crash?
+        code: |
+          #include <iostream>
+          #include <string>
+
+          struct Node {
+              std::string label{};
+          };
+
+          int main() {
+              Node* current = nullptr;
+              std::cout << "start\n";
+              std::cout << current->label << '\n';
+              return 0;
+          }
+        answer: 11
+        why: "`current` is null; `current->label` dereferences it. Check for `nullptr` first."
+
+  - type: lesson
+    id: c10-arrays
+    title: Pointers, arrays and C strings
+    minutes: 18
+    objectives:
+      - Explain how a C array decays into a pointer to its first element
+      - Move through memory with pointer arithmetic
+      - Recognise C-style strings and their terminating `'\0'`
+    body: |
+      This lesson explains the machinery underneath arrays. You'll rarely
+      write code like this in modern C++ — but you'll read it, and it explains
+      why the safer tools exist.
+
+      ## Arrays decay into pointers
+
+      Elements of an array sit **next to each other** in memory. When you use
+      a C array's name in most expressions, it **decays** into a pointer to its
+      first element:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int a[4]{10, 20, 30, 40};
+          int* p = a;               // same as &a[0]
+          std::cout << *p << '\n';
+          std::cout << *(p + 2) << '\n';   // two elements further
+          std::cout << p[3] << '\n';       // p[i] means *(p + i)
+          return 0;
+      }
+      ```
+
+      ```output
+      10
+      30
+      40
+      ```
+
+      **Pointer arithmetic**: `p + 2` doesn't add 2 *bytes* — it moves two
+      *elements* forward (8 bytes for `int`). And `p[i]` is just shorthand for
+      `*(p + i)`: that's all the `[]` of a C array really is.
+
+      ## Walking with pointers
+
+      A range of elements is often described by two pointers: the first
+      element, and **one past the last**. The loop runs while they differ:
+
+      ```cpp
+      #include <iostream>
+
+      int sum(const int* begin, const int* end) {
+          int total{0};
+          for (const int* p = begin; p != end; ++p) {
+              total += *p;
+          }
+          return total;
+      }
+
+      int main() {
+          int a[5]{1, 2, 3, 4, 5};
+          std::cout << sum(a, a + 5) << ' ' << sum(a + 1, a + 3) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      15 5
+      ```
+
+      This *begin/end* pattern is exactly how the standard library's
+      algorithms work (Chapter 14), with *iterators* playing the part of
+      pointers.
+
+      ## Why arrays forget their size
+
+      Pass a C array to a function and what arrives is only a pointer — the
+      size is lost. That's why C functions always take a separate length,
+      and why `std::vector` and `std::array` (which carry their size) are
+      safer. A vector's elements are also contiguous; `v.data()` gives a
+      pointer to the first one when a C-style function needs it.
+
+      ## C strings
+
+      Text in C is an array of `char` ending with a special **null character**
+      `'\0'` (value 0) that marks the end. A string literal like `"Hi"` is
+      exactly that: 3 chars, `'H'`, `'i'`, `'\0'`.
+
+      ```cpp
+      #include <iostream>
+
+      int length(const char* s) {
+          int n{0};
+          while (s[n] != '\0') {
+              ++n;
+          }
+          return n;
+      }
+
+      int main() {
+          const char* greeting = "Hello";
+          std::cout << length(greeting) << ' ' << sizeof("Hello") << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      5 6
+      ```
+
+      Forgetting that final `'\0'`, or writing past the end of a char array,
+      caused decades of security bugs. `std::string` manages all of it for
+      you — which is why you've used it from the start.
+
+      {{check arith}}
+
+      {{task count-range}}
+    checks:
+      - id: arith
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a[6]{5, 10, 15, 20, 25, 30};
+              int* p = a + 1;
+              int* q = a + 4;
+              std::cout << *p << ' ' << q[1] << ' ' << q - p << '\n';
+              return 0;
+          }
+        answer: |
+          10 30 3
+        why: "p points at a[1] (10), q at a[4]; q[1] is a[5] (30). Subtracting pointers gives the number of elements between them: 3."
+      - id: cstr
+        type: mcq
+        prompt: How many chars does the literal `"cat"` occupy in memory?
+        options:
+          - "3"
+          - "4, including the terminating '\\0'"
+          - "1"
+          - "8"
+        answer: 1
+        why: C strings end with a null character that marks the end.
+    tasks:
+      - id: count-range
+        title: Count in a range
+        prompt: |
+          Write `int countEqual(const int* begin, const int* end, int target)`
+          that counts how many elements in `[begin, end)` equal `target`, using
+          pointers (no indexes).
+        starter: |
+          int countEqual(const int* begin, const int* end, int target) {
+              return 0;
+          }
+        harness: |
+          int data[7]{1, 3, 3, 7, 3, 1, 9};
+          CHECK(countEqual(data, data + 7, 3), 3);
+          CHECK(countEqual(data, data + 3, 3), 2);
+          CHECK(countEqual(data + 5, data + 7, 1), 1);
+          CHECK(countEqual(data, data, 1), 0);
+        hints:
+          - "`for (const int* p = begin; p != end; ++p)` and compare `*p` with `target`."
+        solution: |
+          int countEqual(const int* begin, const int* end, int target) {
+              int count{0};
+              for (const int* p = begin; p != end; ++p) {
+                  if (*p == target) {
+                      ++count;
+                  }
+              }
+              return count;
+          }
+    cards:
+      - front: What does it mean that an array **decays** to a pointer?
+        back: Used in most expressions (or passed to a function), a C array becomes a pointer to its first element, losing its size.
+      - front: What is `p + 3` for an `int* p`?
+        back: A pointer three **elements** further on (3 × sizeof(int) bytes). And `p[3]` means `*(p + 3)`.
+      - front: How does a C string mark its end?
+        back: With a null character `'\0'` after the last real character.
+
+  - type: lesson
+    id: c10-heap
+    title: "The heap: new and delete"
+    minutes: 22
+    objectives:
+      - Explain the difference between automatic (stack) and dynamic (heap) storage
+      - Create and destroy objects with `new` and `delete`
+      - Recognise memory leaks, dangling pointers and double deletes
+      - Explain why modern C++ avoids raw `new` and `delete`
+    body: |
+      So far, every variable has been **automatic**: created when its
+      declaration runs, destroyed automatically at the end of its block. They
+      live on the **stack**, which is fast but limited in size, and their
+      lifetime is fixed by the code's structure.
+
+      Sometimes an object must **outlive** the function that creates it, or you
+      don't know how many you'll need until the program runs. For that there's
+      **dynamic** storage — the **heap** (or *free store*). You create objects
+      there with `new`, which returns a pointer, and you must destroy them
+      yourself with `delete`:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int* p = new int{42};   // create an int on the heap
+          std::cout << *p << '\n';
+          *p += 1;
+          std::cout << *p << '\n';
+          delete p;               // destroy it: we're done with it
+          p = nullptr;            // don't leave a dangling address behind
+          return 0;
+      }
+      ```
+
+      ```output
+      42
+      43
+      ```
+
+      For arrays there's `new[]` and the matching `delete[]`:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int n{5};
+          int* squares = new int[n];     // size decided at run time
+          for (int i{0}; i < n; ++i) {
+              squares[i] = i * i;
+          }
+          std::cout << squares[4] << '\n';
+          delete[] squares;              // [] because it was new[]
+          return 0;
+      }
+      ```
+
+      ```output
+      16
+      ```
+
+      ## What can go wrong
+
+      Manual memory management has three classic failure modes:
+
+      1. **Memory leak** — forgetting `delete`. The memory stays reserved until the program ends. A program that leaks in a loop slowly eats all available memory.
+      2. **Dangling pointer** — using a pointer after `delete`. The memory may already hold something else. Undefined behaviour.
+      3. **Double delete** — deleting the same memory twice. Undefined behaviour, often a crash.
+
+      ```cpp static
+      int* p = new int{1};
+      delete p;
+      std::cout << *p;   // dangling: undefined behaviour
+      delete p;          // double delete: undefined behaviour
+      ```
+
+      And every early `return` or exception between `new` and `delete` is a
+      chance to leak. In large programs these bugs are extremely hard to find.
+
+      > [!pro] The modern rule
+      > **Don't write `new` and `delete` in everyday code.** Use a container
+      > (`std::vector`, `std::string`) when you need many objects, and a
+      > **smart pointer** (`std::unique_ptr`, Chapter 15) when you need one
+      > dynamic object. They call `delete` for you, automatically and exactly
+      > once. You're learning `new` and `delete` to understand what those tools
+      > do inside — and to read older code.
+
+      {{check leak}}
+
+      {{check match}}
+    checks:
+      - id: leak
+        type: mcq
+        prompt: What is a **memory leak**?
+        options:
+          - Reading memory you don't own
+          - Memory allocated with `new` that is never `delete`d
+          - Deleting memory twice
+          - A variable going out of scope
+        answer: 1
+        why: The memory stays reserved but nothing can use it any more.
+      - id: match
+        type: mcq
+        prompt: "Memory from `new int[10]` must be released with:"
+        options:
+          - "`delete p;`"
+          - "`delete[] p;`"
+          - "`free(p);`"
+          - Nothing — it's released automatically
+        answer: 1
+        why: "`new[]` pairs with `delete[]`, and `new` with `delete`. Mixing them is undefined behaviour."
+      - id: stack-heap
+        type: tf
+        prompt: A local variable declared inside a function lives on the heap and must be deleted.
+        answer: false
+        why: Local variables are automatic (on the stack) and are destroyed automatically at the end of their block. Only `new` creates heap objects.
+    cards:
+      - front: Automatic (stack) vs dynamic (heap) storage?
+        back: Automatic variables are destroyed at the end of their block. Heap objects, created with `new`, live until you `delete` them.
+      - front: Name the three classic manual-memory bugs.
+        back: Memory leak (never deleted), dangling pointer (used after delete), double delete.
+      - front: What does modern C++ use instead of raw `new`/`delete`?
+        back: Containers (`std::vector`, `std::string`) and smart pointers (`std::unique_ptr`), which free memory automatically.
+
+  - type: lesson
+    id: c10-lifetime
+    title: Lifetime and ownership
+    minutes: 16
+    objectives:
+      - Explain why references and pointers into a vector can dangle after it grows
+      - Use the idea of an owner to reason about who deletes what
+    body: |
+      Every object has a **lifetime**: the stretch of the program between its
+      creation and destruction. A reference or pointer is only valid while the
+      object it refers to is alive. Most memory bugs are really **lifetime
+      bugs**.
+
+      ## A subtle one: vectors move their elements
+
+      A vector keeps its elements in one contiguous block of heap memory. When
+      it runs out of room, `push_back` allocates a **bigger** block, moves the
+      elements there, and frees the old block. Any pointer or reference to an
+      element made *before* that now points into freed memory:
+
+      ```cpp ub
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{1, 2, 3};
+          int& first = v[0];
+          for (int i{0}; i < 100; ++i) {
+              v.push_back(i);   // the storage moves somewhere else
+          }
+          std::cout << first << '\n';   // dangling: undefined behaviour
+          return 0;
+      }
+      ```
+
+      It might print 1, or garbage, and a program with that bug can seem to
+      work for months. The rule: **don't keep references, pointers (or
+      iterators) into a vector across anything that can change its size.**
+      Keep an index instead, or look the element up again. (`v.capacity()`
+      tells you how many elements fit before the next move.)
+
+      ## Ownership
+
+      For every heap object, ask: **who owns it?** The owner is the one
+      responsible for destroying it. Everyone else may *use* it through
+      pointers or references, but must not delete it and must not use it after
+      the owner is done.
+
+      - An automatic variable is owned by its scope.
+      - A vector owns its elements.
+      - A `std::unique_ptr` (Chapter 15) owns exactly one object.
+      - A raw pointer from `new` has **no automatic owner** — which is exactly why it's so easy to leak or double-delete.
+
+      Thinking in terms of owners is the single most useful habit for writing
+      correct C++. The next chapters give you types that make ownership
+      automatic.
+
+      {{check vector-move}}
+    checks:
+      - id: vector-move
+        type: mcq
+        prompt: "`int* p = &v[0];` then `v.push_back(7);`. Is `*p` still safe to use?"
+        options:
+          - Yes, always
+          - Only if the vector didn't need to reallocate — so in general, no
+          - Yes, but it points at the new element
+          - No, `&v[0]` doesn't compile
+        answer: 1
+        why: "If push_back reallocates, the elements move and p dangles. Code must not rely on it not reallocating."
+    cards:
+      - front: Why can a pointer to a vector element dangle after `push_back`?
+        back: When capacity runs out, the vector moves its elements to a new, bigger block and frees the old one.
+      - front: What does it mean for something to **own** a heap object?
+        back: It's responsible for destroying it. Others may use the object but must not delete it or use it after the owner is done.
+
+  - type: lesson
+    id: c10-list
+    title: "Building a data structure: the linked list"
+    minutes: 26
+    objectives:
+      - Define a node struct that points to the next node
+      - Build, walk and free a singly linked list
+      - Insert at the front and at the end of a list
+    body: |
+      Pointers let you build your own **data structures**. The classic first
+      one is the **linked list**: a chain of **nodes**, each holding a value
+      and a pointer to the next node. The last node's `next` is `nullptr`.
+
+      ```text
+      head -> [ 3 | next ] -> [ 7 | next ] -> [ 1 | nullptr ]
+      ```
+
+      ```cpp
+      #include <iostream>
+
+      struct Node {
+          int value{0};
+          Node* next{nullptr};
+      };
+
+      int main() {
+          // Build 3 -> 7 -> 1 by hand
+          Node* head = new Node{3, nullptr};
+          head->next = new Node{7, nullptr};
+          head->next->next = new Node{1, nullptr};
+
+          // Walk the list
+          for (Node* n = head; n != nullptr; n = n->next) {
+              std::cout << n->value << ' ';
+          }
+          std::cout << '\n';
+
+          // Free every node
+          while (head != nullptr) {
+              Node* next = head->next;   // remember where to go before deleting
+              delete head;
+              head = next;
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      3 7 1
+      ```
+
+      The walking loop is the heart of every list algorithm:
+      `for (Node* n = head; n != nullptr; n = n->next)`. And look carefully at
+      the freeing loop — once a node is deleted, `head->next` can't be read any
+      more, so it's saved first.
+
+      ## Inserting
+
+      Adding at the **front** is instant: the new node points at the old head,
+      and becomes the head. Because the function must change the caller's
+      `head` pointer, it takes it **by reference** (`Node*&`):
+
+      ```cpp
+      #include <iostream>
+
+      struct Node {
+          int value{0};
+          Node* next{nullptr};
+      };
+
+      void pushFront(Node*& head, int value) {
+          head = new Node{value, head};
+      }
+
+      void pushBack(Node*& head, int value) {
+          Node* fresh = new Node{value, nullptr};
+          if (head == nullptr) {
+              head = fresh;
+              return;
+          }
+          Node* last = head;
+          while (last->next != nullptr) {
+              last = last->next;
+          }
+          last->next = fresh;
+      }
+
+      void freeAll(Node*& head) {
+          while (head != nullptr) {
+              Node* next = head->next;
+              delete head;
+              head = next;
+          }
+      }
+
+      int main() {
+          Node* list{nullptr};
+          pushBack(list, 2);
+          pushFront(list, 1);
+          pushBack(list, 3);
+          for (Node* n = list; n != nullptr; n = n->next) {
+              std::cout << n->value << ' ';
+          }
+          std::cout << '\n';
+          freeAll(list);
+          std::cout << (list == nullptr) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1 2 3
+      1
+      ```
+
+      ## Lists versus vectors
+
+      A linked list can insert at the front (or after any known node) without
+      moving other elements — but reaching the 1000th element means walking
+      past 999 others, and nodes are scattered around memory, which modern
+      processors hate. In practice, **`std::vector` is faster for almost
+      everything**. You build a linked list to master pointers, and because
+      the same idea — nodes linked by pointers — underlies trees and graphs,
+      which are everywhere.
+
+      {{check list-output}}
+
+      {{task list-sum}}
+    checks:
+      - id: list-output
+        type: output
+        code: |
+          #include <iostream>
+
+          struct Node {
+              int value{0};
+              Node* next{nullptr};
+          };
+
+          int main() {
+              Node c{30, nullptr};
+              Node b{20, &c};
+              Node a{10, &b};
+              int total{0};
+              int count{0};
+              for (Node* n = &a; n != nullptr; n = n->next) {
+                  total += n->value;
+                  ++count;
+              }
+              std::cout << count << ' ' << total << ' ' << a.next->next->value << '\n';
+              return 0;
+          }
+        answer: |
+          3 60 30
+        why: "The nodes here are automatic, linked by addresses. Walking visits 10, 20, 30; `a.next->next` is `c`."
+    tasks:
+      - id: list-sum
+        title: List length and sum
+        prompt: |
+          Using the `Node` struct in the starter, write `int length(const Node* head)`
+          and `int sum(const Node* head)`.
+        starter: |
+          struct Node {
+              int value{0};
+              Node* next{nullptr};
+          };
+
+          int length(const Node* head) {
+              return 0;
+          }
+
+          int sum(const Node* head) {
+              return 0;
+          }
+        harness: |
+          Node c{5, nullptr};
+          Node b{-2, &c};
+          Node a{10, &b};
+          CHECK(length(&a), 3);
+          CHECK(sum(&a), 13);
+          CHECK(length(&c), 1);
+          CHECK(length(nullptr), 0);
+          CHECK(sum(nullptr), 0);
+        hints:
+          - "`for (const Node* n = head; n != nullptr; n = n->next)`"
+        solution: |
+          struct Node {
+              int value{0};
+              Node* next{nullptr};
+          };
+
+          int length(const Node* head) {
+              int count{0};
+              for (const Node* n = head; n != nullptr; n = n->next) {
+                  ++count;
+              }
+              return count;
+          }
+
+          int sum(const Node* head) {
+              int total{0};
+              for (const Node* n = head; n != nullptr; n = n->next) {
+                  total += n->value;
+              }
+              return total;
+          }
+    cards:
+      - front: What is a **linked list**?
+        back: A chain of nodes, each holding a value and a pointer to the next node; the last points to `nullptr`.
+      - front: What's the standard loop to visit every node of a list?
+        back: "`for (Node* n = head; n != nullptr; n = n->next) { ... }`"
+      - front: Why does `pushFront` take `Node*& head`?
+        back: It must change the caller's head pointer itself, so it takes the pointer by reference.
+      - front: When freeing a list, why save `head->next` before `delete head`?
+        back: After deleting a node its members can't be read; you need the next address first.
+
+  - type: quiz
+    id: c10-quiz2
+    title: "Quiz: memory, heap and lists"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int* p = new int{7};
+              int* q = p;
+              *q = 9;
+              std::cout << *p << '\n';
+              delete p;
+              return 0;
+          }
+        answer: |
+          9
+        why: "p and q hold the same address — one int. Delete it once (deleting q as well would be a double delete)."
+      - type: mcq
+        prompt: What's wrong here? `int* data = new int[100]; ... delete data;`
+        options:
+          - Nothing
+          - It should be `delete[] data;`
+          - It should be `delete *data;`
+          - Arrays can't be created with `new`
+        answer: 1
+        why: "Array `new[]` must be matched with `delete[]`."
+      - type: output
+        code: |
+          #include <iostream>
+
+          struct Node {
+              int value{0};
+              Node* next{nullptr};
+          };
+
+          int main() {
+              Node* head{nullptr};
+              for (int i{1}; i <= 3; ++i) {
+                  head = new Node{i, head};
+              }
+              for (Node* n = head; n != nullptr; n = n->next) {
+                  std::cout << n->value;
+              }
+              std::cout << '\n';
+              while (head != nullptr) {
+                  Node* next = head->next;
+                  delete head;
+                  head = next;
+              }
+              return 0;
+          }
+        answer: |
+          321
+        why: "Each new node goes in front of the old head, so the list is built in reverse."
+      - type: tf
+        prompt: "After `delete p;`, `p` automatically becomes `nullptr`."
+        answer: false
+        why: "`p` still holds the old address — now dangling. Set it to `nullptr` yourself if it will be used again."
+      - type: mcq
+        prompt: Which is the modern replacement for `new`/`delete` for a variable number of ints?
+        options:
+          - "`int* a = new int[n];`"
+          - "`std::vector<int> a(n);`"
+          - "A global array of size 1000000"
+          - "`malloc`"
+        answer: 1
+        why: The vector allocates and frees the memory for you, and knows its size.
+
+  - type: challenge
+    id: c10-ch-find
+    title: Find a record
+    difficulty: 2
+    tags: [pointers, structs]
+    prompt: |
+      With `struct Book { std::string title{}; int year{0}; };`, write
+      `Book* findByTitle(std::vector<Book>& books, const std::string& title)`
+      returning a pointer to the matching book (so the caller can change it),
+      or `nullptr` if there's none.
+    starter: |
+      #include <string>
+      #include <vector>
+
+      struct Book {
+          std::string title{};
+          int year{0};
+      };
+
+      Book* findByTitle(std::vector<Book>& books, const std::string& title) {
+          return nullptr;
+      }
+    harness: |
+      std::vector<Book> shelf{{"Dune", 1965}, {"Neuromancer", 1984}, {"Hyperion", 1989}};
+      Book* b = findByTitle(shelf, "Neuromancer");
+      CHECK(b != nullptr, true);
+      CHECK(b == &shelf[1], true);
+      b->year = 1985;
+      CHECK(shelf[1].year, 1985);
+      CHECK(findByTitle(shelf, "Foundation") == nullptr, true);
+      std::vector<Book> none{};
+      CHECK(findByTitle(none, "Dune") == nullptr, true);
+    hints:
+      - "Loop with a reference: `for (Book& b : books)`, and on a match `return &b;`."
+    solution: |
+      #include <string>
+      #include <vector>
+
+      struct Book {
+          std::string title{};
+          int year{0};
+      };
+
+      Book* findByTitle(std::vector<Book>& books, const std::string& title) {
+          for (Book& b : books) {
+              if (b.title == title) {
+                  return &b;
+              }
+          }
+          return nullptr;
+      }
+    explain: |
+      The returned pointer is only valid while `books` doesn't change size —
+      the lifetime rule from lesson 10.6.
+
+  - type: challenge
+    id: c10-ch-reverse
+    title: Reverse with two pointers
+    difficulty: 2
+    tags: [pointers, arrays]
+    prompt: |
+      Write `void reverseRange(int* begin, int* end)` that reverses the
+      elements of `[begin, end)` in place, using only pointers. It must work
+      for empty ranges.
+    starter: |
+      void reverseRange(int* begin, int* end) {
+
+      }
+    harness: |
+      int a[5]{1, 2, 3, 4, 5};
+      reverseRange(a, a + 5);
+      CHECK(a[0], 5);
+      CHECK(a[2], 3);
+      CHECK(a[4], 1);
+      int b[4]{1, 2, 3, 4};
+      reverseRange(b + 1, b + 4);
+      CHECK(b[0], 1);
+      CHECK(b[1], 4);
+      CHECK(b[3], 2);
+      int c[1]{9};
+      reverseRange(c, c);
+      reverseRange(c, c + 1);
+      CHECK(c[0], 9);
+    hints:
+      - "`end` points one past the last element, so the last element is at `end - 1`."
+      - "`while (begin < end - 1)`… or more safely: `--end; while (begin < end) { swap; ++begin; --end; }` after checking the range isn't empty."
+    solution: |
+      void reverseRange(int* begin, int* end) {
+          if (begin == end) {
+              return;
+          }
+          --end;
+          while (begin < end) {
+              int temp = *begin;
+              *begin = *end;
+              *end = temp;
+              ++begin;
+              --end;
+          }
+      }
+
+  - type: challenge
+    id: c10-ch-strlen
+    title: C string tools
+    difficulty: 2
+    tags: [pointers, C strings]
+    prompt: |
+      Without using `<cstring>` or `std::string`, write:
+
+      - `int cLength(const char* s)` — the number of characters before `'\0'`.
+      - `int countChar(const char* s, char c)`.
+      - `bool cEqual(const char* a, const char* b)` — the same characters, same length.
+    starter: |
+      int cLength(const char* s) {
+          return 0;
+      }
+
+      int countChar(const char* s, char c) {
+          return 0;
+      }
+
+      bool cEqual(const char* a, const char* b) {
+          return false;
+      }
+    harness: |
+      CHECK(cLength("hello"), 5);
+      CHECK(cLength(""), 0);
+      CHECK(countChar("banana", 'a'), 3);
+      CHECK(countChar("", 'a'), 0);
+      CHECK(cEqual("abc", "abc"), true);
+      CHECK(cEqual("abc", "abd"), false);
+      CHECK(cEqual("abc", "ab"), false);
+      CHECK(cEqual("", ""), true);
+    hints:
+      - "Walk a pointer: `for (const char* p = s; *p != '\\0'; ++p)`."
+      - "`cEqual`: advance both while the characters match and neither is at `'\\0'`; they're equal if both end together."
+    solution: |
+      int cLength(const char* s) {
+          int n{0};
+          for (const char* p = s; *p != '\0'; ++p) {
+              ++n;
+          }
+          return n;
+      }
+
+      int countChar(const char* s, char c) {
+          int n{0};
+          for (const char* p = s; *p != '\0'; ++p) {
+              if (*p == c) {
+                  ++n;
+              }
+          }
+          return n;
+      }
+
+      bool cEqual(const char* a, const char* b) {
+          while (*a != '\0' && *a == *b) {
+              ++a;
+              ++b;
+          }
+          return *a == *b;
+      }
+
+  - type: challenge
+    id: c10-ch-list-ops
+    title: Linked list operations
+    difficulty: 2
+    tags: [linked list, pointers]
+    prompt: |
+      Using the `Node` struct, write:
+
+      - `void pushBack(Node*& head, int value)`
+      - `bool contains(const Node* head, int value)`
+      - `bool removeFirst(Node*& head, int value)` — deletes the first node holding `value` and returns `true`, or returns `false` if there is none.
+      - `void clear(Node*& head)` — deletes every node and leaves `head` as `nullptr`.
+    starter: |
+      struct Node {
+          int value{0};
+          Node* next{nullptr};
+      };
+
+      void pushBack(Node*& head, int value) {
+      }
+
+      bool contains(const Node* head, int value) {
+          return false;
+      }
+
+      bool removeFirst(Node*& head, int value) {
+          return false;
+      }
+
+      void clear(Node*& head) {
+      }
+    harness_pre: |
+      std::vector<int> toVector(const Node* head) {
+          std::vector<int> out;
+          for (const Node* n = head; n != nullptr; n = n->next) out.push_back(n->value);
+          return out;
+      }
+    harness: |
+      Node* list{nullptr};
+      pushBack(list, 1);
+      pushBack(list, 2);
+      pushBack(list, 3);
+      pushBack(list, 2);
+      CHECK(toVector(list), (std::vector<int>{1, 2, 3, 2}));
+      CHECK(contains(list, 3), true);
+      CHECK(contains(list, 9), false);
+      CHECK(removeFirst(list, 2), true);
+      CHECK(toVector(list), (std::vector<int>{1, 3, 2}));
+      CHECK(removeFirst(list, 1), true);
+      CHECK(toVector(list), (std::vector<int>{3, 2}));
+      CHECK(removeFirst(list, 7), false);
+      clear(list);
+      CHECK(list == nullptr, true);
+      CHECK(removeFirst(list, 1), false);
+    hints:
+      - "Removing the head is a special case: `Node* old = head; head = head->next; delete old;`."
+      - "Otherwise walk with a pointer to the node **before** the one to remove: `prev->next = victim->next; delete victim;`."
+    solution: |
+      struct Node {
+          int value{0};
+          Node* next{nullptr};
+      };
+
+      void pushBack(Node*& head, int value) {
+          Node* fresh = new Node{value, nullptr};
+          if (head == nullptr) {
+              head = fresh;
+              return;
+          }
+          Node* last = head;
+          while (last->next != nullptr) {
+              last = last->next;
+          }
+          last->next = fresh;
+      }
+
+      bool contains(const Node* head, int value) {
+          for (const Node* n = head; n != nullptr; n = n->next) {
+              if (n->value == value) {
+                  return true;
+              }
+          }
+          return false;
+      }
+
+      bool removeFirst(Node*& head, int value) {
+          if (head == nullptr) {
+              return false;
+          }
+          if (head->value == value) {
+              Node* old = head;
+              head = head->next;
+              delete old;
+              return true;
+          }
+          for (Node* prev = head; prev->next != nullptr; prev = prev->next) {
+              if (prev->next->value == value) {
+                  Node* victim = prev->next;
+                  prev->next = victim->next;
+                  delete victim;
+                  return true;
+              }
+          }
+          return false;
+      }
+
+      void clear(Node*& head) {
+          while (head != nullptr) {
+              Node* next = head->next;
+              delete head;
+              head = next;
+          }
+      }
+
+  - type: challenge
+    id: c10-ch-list-reverse
+    title: Reverse a linked list
+    difficulty: 3
+    tags: [linked list, pointers]
+    prompt: |
+      Write `void reverse(Node*& head)` that reverses a linked list **in
+      place** — without creating or deleting any node, only by changing
+      `next` pointers. A famous interview question!
+    starter: |
+      struct Node {
+          int value{0};
+          Node* next{nullptr};
+      };
+
+      void reverse(Node*& head) {
+      }
+    harness_pre: |
+      std::vector<int> toVector(const Node* head) {
+          std::vector<int> out;
+          for (const Node* n = head; n != nullptr; n = n->next) out.push_back(n->value);
+          return out;
+      }
+    harness: |
+      Node d{4, nullptr};
+      Node c{3, &d};
+      Node b{2, &c};
+      Node a{1, &b};
+      Node* head = &a;
+      reverse(head);
+      CHECK(toVector(head), (std::vector<int>{4, 3, 2, 1}));
+      CHECK(head == &d, true);
+      reverse(head);
+      CHECK(toVector(head), (std::vector<int>{1, 2, 3, 4}));
+      Node* empty{nullptr};
+      reverse(empty);
+      CHECK(empty == nullptr, true);
+      Node solo{7, nullptr};
+      Node* one = &solo;
+      reverse(one);
+      CHECK(toVector(one), (std::vector<int>{7}));
+    hints:
+      - "Walk the list keeping three pointers: `prev` (starts `nullptr`), `current` (starts `head`) and `next`."
+      - "At each node: save `next = current->next`, point `current->next = prev`, then move `prev = current` and `current = next`."
+      - "When `current` is `nullptr`, `prev` is the new head."
+    solution: |
+      struct Node {
+          int value{0};
+          Node* next{nullptr};
+      };
+
+      void reverse(Node*& head) {
+          Node* prev{nullptr};
+          Node* current{head};
+          while (current != nullptr) {
+              Node* next = current->next;
+              current->next = prev;
+              prev = current;
+              current = next;
+          }
+          head = prev;
+      }
+    explain: |
+      Draw it on paper with boxes and arrows — it's the only way pointer code
+      really makes sense. Each step flips one arrow to point backwards; `next`
+      remembers the rest of the list before its arrow is flipped.
+
+  - type: review
+    id: c10-review
+    title: "Chapter 10 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      int x{5};
+      int& r = x;        // reference: another name for x (must be initialised, can't be reseated)
+      int* p = &x;       // pointer: holds x's address
+      *p = 7;            // dereference: x is now 7
+      p = nullptr;       // points at nothing — check before dereferencing!
+      obj->member;       // (*obj).member
+
+      int a[4]{};  int* q = a;   q[2] == *(q + 2);    // arrays decay; pointer arithmetic
+      const char* s = "Hi";      // 'H' 'i' '\0'
+
+      int* h = new int{1};       delete h;            // single object
+      int* arr = new int[n];     delete[] arr;        // array
+      ```
+
+      ## Key ideas
+
+      - Every object lives at an address. `&x` gets it; `*p` follows it.
+      - References: always valid (unless dangling), never null, never reseated. Pointers: can be null, can move.
+      - Prefer references; use pointers for "maybe nothing", changing targets, and data structures.
+      - Arrays decay to pointers and forget their size; `std::vector`/`std::array` don't.
+      - Heap objects live until deleted: watch for leaks, dangling pointers and double deletes.
+      - Every object has a lifetime and (ideally) one owner. References/pointers into a vector can dangle after it grows.
+      - Modern C++: containers and smart pointers instead of raw `new`/`delete`.
+    questions:
+      - type: output
+        prompt: "Interleaving: functions, vectors and pointers."
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int* largest(std::vector<int>& v) {
+              if (v.empty()) {
+                  return nullptr;
+              }
+              int* best = &v[0];
+              for (int& x : v) {
+                  if (x > *best) {
+                      best = &x;
+                  }
+              }
+              return best;
+          }
+
+          int main() {
+              std::vector<int> v{3, 9, 4};
+              *largest(v) = 0;
+              std::cout << v[0] << v[1] << v[2] << ' ' << *largest(v) << '\n';
+              return 0;
+          }
+        answer: |
+          304 4
+        why: "The first call finds 9 and sets it to 0; the largest is then 4."
+      - type: mcq
+        prompt: "A function might or might not find a matching `Customer`. Which return type expresses that best, with what you know now?"
+        options:
+          - "`Customer&`"
+          - "`Customer*` (nullptr if not found)"
+          - "`Customer` (a default one if not found)"
+          - "`void`"
+        answer: 1
+        why: "A reference can't be null; a pointer can say \"nothing\". (Chapter 15's `std::optional` is another good answer.)"
+      - type: spot
+        prompt: Which line is a use-after-delete bug?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int* p = new int{10};
+              int* q = p;
+              delete p;
+              p = nullptr;
+              std::cout << *q << '\n';
+              return 0;
+          }
+        answer: 8
+        why: "`q` still holds the address of the deleted int. Nulling `p` doesn't fix other copies of the pointer."
+
+  - type: exam
+    id: c10-exam
+    title: "Chapter 10 exam"
+    minutes: 40
+    pick: 12
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{2};
+              int b{3};
+              int* p = &a;
+              int& r = b;
+              *p = r * 10;
+              r = *p + 1;
+              std::cout << a << ' ' << b << '\n';
+              return 0;
+          }
+        answer: |
+          30 31
+        why: "a = 3 × 10 = 30; then b = 30 + 1 = 31."
+      - type: output
+        code: |
+          #include <iostream>
+
+          void bump(int* p, int& r, int v) {
+              ++*p;
+              ++r;
+              ++v;
+          }
+
+          int main() {
+              int x{0};
+              int y{0};
+              int z{0};
+              bump(&x, y, z);
+              std::cout << x << y << z << '\n';
+              return 0;
+          }
+        answer: |
+          110
+        why: "Through a pointer and a reference the caller's variables change; the by-value copy doesn't."
+      - type: mcq
+        prompt: What is the value of a pointer that points to nothing?
+        options:
+          - "0.0"
+          - "`nullptr`"
+          - An empty string
+          - Any random address
+        answer: 1
+        why: "`nullptr` — and it must never be dereferenced."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a[5]{2, 4, 6, 8, 10};
+              int* p = a;
+              p += 2;
+              std::cout << *p << ' ' << p[2] << ' ' << *(p - 1) << '\n';
+              return 0;
+          }
+        answer: |
+          6 10 4
+        why: "p points at a[2] = 6; p[2] is a[4] = 10; p − 1 is a[1] = 4."
+      - type: tf
+        prompt: "A reference, once bound to a variable, can be made to refer to a different variable."
+        answer: false
+        why: "References can't be reseated; assignment through them changes the referred object."
+      - type: mcq
+        prompt: "Which pair is correct?"
+        options:
+          - "`new int[5]` with `delete`"
+          - "`new int` with `delete[]`"
+          - "`new int[5]` with `delete[]`"
+          - "`new int` with nothing — it's freed automatically"
+        answer: 2
+        why: "Array new ↔ array delete; single new ↔ single delete."
+      - type: spot
+        prompt: Which line returns a dangling pointer?
+        code: |
+          #include <iostream>
+
+          int* makeValue() {
+              int value{99};
+              return &value;
+          }
+
+          int main() {
+              int* p = makeValue();
+              std::cout << (p != nullptr) << '\n';
+              return 0;
+          }
+        answer: 5
+        why: "`value` is a local; its address is invalid once the function returns."
+      - type: output
+        code: |
+          #include <iostream>
+
+          struct Node {
+              char c{};
+              Node* next{nullptr};
+          };
+
+          int main() {
+              Node t{'t', nullptr};
+              Node a{'a', &t};
+              Node c{'c', &a};
+              Node* p = &c;
+              p->next->next->next = &c;
+              for (int i{0}; i < 7; ++i) {
+                  std::cout << p->c;
+                  p = p->next;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          catcatc
+        why: "The last node now points back to the first, making a circle: c, a, t, c, a, t, c."
+      - type: fill
+        prompt: Complete the loop that frees every node of a list.
+        code: |
+          while (head != nullptr) {
+              Node* next = head___next;
+              delete head;
+              head = ___;
+          }
+        blanks:
+          - ['->']
+          - [next]
+        why: "Save the next pointer before deleting, then move on to it."
+      - type: mcq
+        prompt: "Why is holding a `T&` to `v[0]` across `v.push_back(...)` dangerous?"
+        options:
+          - "`push_back` changes the value of v[0]"
+          - "`push_back` may move all elements to new memory, leaving the reference dangling"
+          - References to vector elements aren't allowed
+          - It isn't dangerous
+        answer: 1
+        why: Reallocation frees the old storage.
+      - type: code
+        prompt: |
+          Write `int* maxElement(int* begin, int* end)` returning a pointer to
+          the largest element of `[begin, end)` (the first one on a tie), or
+          `end` if the range is empty.
+        starter: |
+          int* maxElement(int* begin, int* end) {
+              return end;
+          }
+        harness: |
+          int a[6]{3, 8, 1, 8, 2, 7};
+          CHECK(maxElement(a, a + 6) == a + 1, true);
+          CHECK(*maxElement(a + 2, a + 6), 8);
+          CHECK(maxElement(a + 2, a + 6) == a + 3, true);
+          CHECK(maxElement(a, a) == a, true);
+          CHECK(maxElement(a + 4, a + 5) == a + 4, true);
+        solution: |
+          int* maxElement(int* begin, int* end) {
+              if (begin == end) {
+                  return end;
+              }
+              int* best = begin;
+              for (int* p = begin + 1; p != end; ++p) {
+                  if (*p > *best) {
+                      best = p;
+                  }
+              }
+              return best;
+          }
+      - type: code
+        prompt: |
+          With the `Node` struct, write `int countIf(const Node* head, int limit)`
+          returning how many values are **greater than** `limit`, and
+          `Node* nth(Node* head, int n)` returning the node at position `n`
+          (0-based), or `nullptr` if the list is too short.
+        starter: |
+          struct Node {
+              int value{0};
+              Node* next{nullptr};
+          };
+
+          int countIf(const Node* head, int limit) {
+              return 0;
+          }
+
+          Node* nth(Node* head, int n) {
+              return nullptr;
+          }
+        harness: |
+          Node c{9, nullptr};
+          Node b{2, &c};
+          Node a{5, &b};
+          CHECK(countIf(&a, 4), 2);
+          CHECK(countIf(&a, 100), 0);
+          CHECK(countIf(nullptr, 0), 0);
+          CHECK(nth(&a, 0) == &a, true);
+          CHECK(nth(&a, 2) == &c, true);
+          CHECK(nth(&a, 3) == nullptr, true);
+          CHECK(nth(nullptr, 0) == nullptr, true);
+        solution: |
+          struct Node {
+              int value{0};
+              Node* next{nullptr};
+          };
+
+          int countIf(const Node* head, int limit) {
+              int count{0};
+              for (const Node* n = head; n != nullptr; n = n->next) {
+                  if (n->value > limit) {
+                      ++count;
+                  }
+              }
+              return count;
+          }
+
+          Node* nth(Node* head, int n) {
+              Node* current{head};
+              for (int i{0}; i < n && current != nullptr; ++i) {
+                  current = current->next;
+              }
+              return current;
+          }
