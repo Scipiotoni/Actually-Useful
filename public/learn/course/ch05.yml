@@ -1,0 +1,2754 @@
+id: ch05
+number: 5
+part: p1
+title: Loops
+blurb: Make the computer repeat work — thousands of times, correctly — and build your first real game.
+hours: 6
+goals:
+  - Repeat code with `while`, `for` and `do`-`while`, choosing the right one
+  - Trace a loop by hand, iteration by iteration
+  - Avoid off-by-one errors and infinite loops
+  - Leave or skip iterations with `break` and `continue`
+  - Apply the classic loop patterns — accumulate, count, find min/max, process digits, read until the end
+  - Use nested loops for tables and patterns
+  - Generate random numbers with `<random>`
+
+items:
+  - type: lesson
+    id: c5-while
+    title: while loops
+    minutes: 20
+    objectives:
+      - Write a `while` loop that repeats while a condition is true
+      - Trace a loop with a table of variable values
+      - Recognise and avoid an infinite loop
+    body: |
+      Print the numbers from 1 to 5. Easy — five lines. From 1 to 1000? You
+      need a way to **repeat**. That's a **loop**, and the simplest is
+      `while`:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int i{1};
+          while (i <= 5) {
+              std::cout << i << '\n';
+              ++i;
+          }
+          std::cout << "Done!\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      1
+      2
+      3
+      4
+      5
+      Done!
+      ```
+
+      A `while` loop works like an `if` that keeps coming back:
+
+      1. Check the condition. If it's **false**, skip the block and carry on after the loop.
+      2. If it's **true**, run the block (the **body**) once — one **iteration**.
+      3. Go back to step 1.
+
+      ## Tracing a loop
+
+      To understand a loop, trace it: write down the variables at each
+      check of the condition. For the loop above:
+
+      | Check | `i` | `i <= 5`? | Prints |
+      |---|---|---|---|
+      | 1st | 1 | true | 1 |
+      | 2nd | 2 | true | 2 |
+      | 3rd | 3 | true | 3 |
+      | 4th | 4 | true | 4 |
+      | 5th | 5 | true | 5 |
+      | 6th | 6 | **false** | — loop ends |
+
+      The body ran 5 times, but the condition was checked **6** times. And
+      after the loop, `i` is 6.
+
+      {{check trace-while}}
+
+      ## Loops that do real work
+
+      The body can do anything. This one doubles a value until it passes a
+      limit — something you couldn't write without a loop, because you don't
+      know in advance how many steps it takes:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int bacteria{1};
+          int minutes{0};
+          while (bacteria < 1000) {
+              bacteria *= 2;
+              minutes += 20;
+          }
+          std::cout << "After " << minutes << " minutes: " << bacteria << " bacteria\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      After 200 minutes: 1024 bacteria
+      ```
+
+      ## Infinite loops
+
+      If the condition never becomes false, the loop never ends. The most
+      common cause: forgetting to change the variable the condition depends
+      on.
+
+      ```cpp static
+      int i{1};
+      while (i <= 5) {
+          std::cout << i << '\n';
+          // forgot ++i — i is 1 forever!
+      }
+      ```
+
+      On your own computer, stop a stuck program with [[Ctrl+C]]. Here, the
+      server stops any program after a few seconds and tells you why.
+
+      > [!remember]
+      > Every loop needs three things: a variable **initialised** before it, a
+      > **condition** that tests it, and an **update** inside the body that
+      > moves it towards making the condition false.
+
+      {{check infinite}}
+
+      {{task countdown}}
+    checks:
+      - id: trace-while
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{10};
+              int steps{0};
+              while (n > 1) {
+                  n = n / 2;
+                  ++steps;
+              }
+              std::cout << n << ' ' << steps << '\n';
+              return 0;
+          }
+        answer: |
+          1 3
+        why: "n goes 10 → 5 → 2 → 1 (integer division). That's 3 iterations; then 1 > 1 is false."
+      - id: infinite
+        type: mcq
+        warnings: true
+        prompt: Why does this loop never end?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{10};
+              while (x > 0) {
+                  std::cout << x << '\n';
+                  x = x + 1;
+              }
+              return 0;
+          }
+        options:
+          - The condition should use `>=`
+          - "`x` moves **away** from making `x > 0` false"
+          - "`std::cout` inside a loop is not allowed"
+          - It does end, after 10 iterations
+        answer: 1
+        why: "`x` grows, so `x > 0` stays true forever (in practice, until it overflows — which is undefined behaviour). It should be `x = x - 1`."
+    tasks:
+      - id: countdown
+        title: Countdown
+        prompt: |
+          Read a whole number `n` and count down from `n` to 1, one number per
+          line, then print `Liftoff!`. For input `3`:
+
+          ```text
+          3
+          2
+          1
+          Liftoff!
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+
+              return 0;
+          }
+        tests:
+          - in: "3"
+            out: |
+              3
+              2
+              1
+              Liftoff!
+          - in: "1"
+            out: |
+              1
+              Liftoff!
+          - in: "0"
+            out: |
+              Liftoff!
+            hidden: true
+        hints:
+          - "`while (n >= 1)` — print `n`, then decrease it."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              while (n >= 1) {
+                  std::cout << n << '\n';
+                  --n;
+              }
+              std::cout << "Liftoff!\n";
+              return 0;
+          }
+    cards:
+      - front: How does a `while` loop run?
+        back: Check the condition; if true, run the body and check again; if false, continue after the loop.
+      - front: What three things does every loop need?
+        back: A variable initialised before the loop, a condition that tests it, and an update in the body that moves it towards ending the loop.
+      - front: "A `while (i <= 5)` loop starting at `i = 1` runs its body how many times, and how often is the condition checked?"
+        back: The body runs 5 times; the condition is checked 6 times (the last check is false).
+
+  - type: lesson
+    id: c5-for
+    title: for loops
+    minutes: 20
+    objectives:
+      - Write a counting loop with `for`
+      - Count up, down and in steps
+      - Avoid off-by-one errors
+      - Choose between `for` and `while`
+    body: |
+      Most loops have the same three parts: set up a counter, test it, update
+      it. The **`for`** loop puts all three on one line:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          for (int i{1}; i <= 5; ++i) {
+              std::cout << i << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1 2 3 4 5
+      ```
+
+      `for (init; condition; update)`:
+
+      - **init** runs once, before anything else: `int i{1}`.
+      - **condition** is checked before every iteration: `i <= 5`.
+      - **update** runs after every iteration: `++i`.
+
+      It does exactly what the `while` version did, but a reader sees the
+      whole loop — where it starts, where it stops, how it moves — at a
+      glance. And `i` exists only inside the loop (its scope is the loop).
+
+      ## Different counts
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          for (int i{10}; i > 0; i -= 3) {   // count down in threes
+              std::cout << i << ' ';
+          }
+          std::cout << '\n';
+
+          for (int i{0}; i < 5; ++i) {       // 5 times, starting at 0
+              std::cout << i << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      10 7 4 1
+      0 1 2 3 4
+      ```
+
+      The second form — start at **0**, test **`< n`** — is the standard way
+      to do something `n` times. You'll see it everywhere, because (Chapter 7)
+      positions in a list start at 0.
+
+      {{check for-output}}
+
+      ## Off-by-one errors
+
+      The most common loop bug is running **one time too many or too few**:
+      `<` instead of `<=`, starting at 1 instead of 0. Programmers even have a
+      name for it: the **off-by-one error**. Defend yourself by checking the
+      edges: *what's the first value? The last? How many iterations?* For
+      `for (int i{0}; i < n; ++i)`: first 0, last `n - 1`, `n` iterations.
+
+      {{check off-by-one}}
+
+      ## `for` or `while`?
+
+      - **`for`** when you know how the loop counts: "for each number from 1 to 100", "10 times".
+      - **`while`** when you loop until something happens, and you don't know when: "until the user guesses right", "while there's input", "until the value passes 1000".
+
+      {{task table}}
+
+      {{task sum-to-n}}
+    checks:
+      - id: for-output
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int total{0};
+              for (int i{2}; i <= 10; i += 2) {
+                  total += i;
+              }
+              std::cout << total << '\n';
+              return 0;
+          }
+        answer: |
+          30
+        why: "i takes 2, 4, 6, 8, 10; their sum is 30."
+      - id: off-by-one
+        type: mcq
+        prompt: How many times does `for (int i{1}; i < 10; ++i)` run its body?
+        options:
+          - "10"
+          - "9"
+          - "11"
+          - "1"
+        answer: 1
+        why: "i goes from 1 to 9 (the loop stops when i reaches 10): 9 iterations."
+      - id: which-loop
+        type: mcq
+        prompt: Which loop fits best for *keep asking for a password until it's right*?
+        options:
+          - "a `for` loop from 1 to 10"
+          - a `while` (or `do`-`while`) loop
+          - no loop — an `if` is enough
+          - "a `switch`"
+        answer: 1
+        why: You don't know in advance how many attempts it takes, so loop *until* the condition changes.
+    tasks:
+      - id: table
+        title: Times table
+        prompt: |
+          Read a number `n` and print its times table from 1 to 10. For input
+          `7`, the first lines are:
+
+          ```text
+          7 x 1 = 7
+          7 x 2 = 14
+          ```
+
+          …down to `7 x 10 = 70`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+
+              return 0;
+          }
+        tests:
+          - in: "7"
+            out: |
+              7 x 1 = 7
+              7 x 2 = 14
+              7 x 3 = 21
+              7 x 4 = 28
+              7 x 5 = 35
+              7 x 6 = 42
+              7 x 7 = 49
+              7 x 8 = 56
+              7 x 9 = 63
+              7 x 10 = 70
+          - in: "12"
+            out: |
+              12 x 1 = 12
+              12 x 2 = 24
+              12 x 3 = 36
+              12 x 4 = 48
+              12 x 5 = 60
+              12 x 6 = 72
+              12 x 7 = 84
+              12 x 8 = 96
+              12 x 9 = 108
+              12 x 10 = 120
+        hints:
+          - "`for (int i{1}; i <= 10; ++i)` — and print `n`, `\" x \"`, `i`, `\" = \"`, `n * i`."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              for (int i{1}; i <= 10; ++i) {
+                  std::cout << n << " x " << i << " = " << n * i << '\n';
+              }
+              return 0;
+          }
+      - id: sum-to-n
+        title: Sum 1 to n
+        prompt: |
+          Read `n` and print the sum 1 + 2 + … + n. For input `100`, print
+          `5050`. (Use a loop — even if you know the formula!)
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "100"
+            out: "5050"
+          - in: "1"
+            out: "1"
+          - in: "10"
+            out: "55"
+            hidden: true
+        hints:
+          - "Keep a running total that starts at 0: `int sum{0};`"
+          - "Inside the loop: `sum += i;`"
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              int sum{0};
+              for (int i{1}; i <= n; ++i) {
+                  sum += i;
+              }
+              std::cout << sum << '\n';
+              return 0;
+          }
+    cards:
+      - front: "What are the three parts of `for (A; B; C)` and when does each run?"
+        back: "A (init) runs once at the start; B (condition) is checked before each iteration; C (update) runs after each iteration."
+      - front: What's the standard loop to do something `n` times?
+        back: "`for (int i{0}; i < n; ++i)` — i goes 0, 1, …, n−1."
+      - front: What is an **off-by-one error**?
+        back: A loop that runs one time too many or too few, often from `<` vs `<=` or starting at 1 vs 0.
+      - front: "`for` or `while`?"
+        back: "`for` when you know how the loop counts; `while` when you loop until something happens."
+
+  - type: lesson
+    id: c5-dowhile
+    title: do-while and reading until the end
+    minutes: 18
+    objectives:
+      - Use `do`-`while` when the body must run at least once
+      - Keep asking until the input is valid
+      - Read and process any number of values with `while (std::cin >> x)`
+    body: |
+      ## `do`-`while`: test at the end
+
+      A `while` loop may run zero times. Sometimes you need the body to run
+      **at least once** — like asking a question before you can check the
+      answer. That's **`do`-`while`**:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int guess{};
+          do {
+              std::cout << "Pick a number from 1 to 10: ";
+              std::cin >> guess;
+          } while (guess < 1 || guess > 10);
+          std::cout << "\nYou picked " << guess << '\n';
+          return 0;
+      }
+      ```
+
+      ```stdin
+      0 42 7
+      ```
+
+      ```output
+      Pick a number from 1 to 10: Pick a number from 1 to 10: Pick a number from 1 to 10:
+      You picked 7
+      ```
+
+      The body runs, *then* the condition is tested. Note the `;` after
+      `while (...)` — it's required here.
+
+      ## Reading until the input runs out
+
+      This is one of the most useful patterns in the whole course. A read
+      used as a condition is true when it succeeds, and false when there's
+      nothing left (or it isn't a number). So this loop processes **every**
+      number the user types, however many:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int value{};
+          int sum{0};
+          int count{0};
+          while (std::cin >> value) {
+              sum += value;
+              ++count;
+          }
+          std::cout << count << " numbers, sum " << sum << '\n';
+          return 0;
+      }
+      ```
+
+      ```stdin
+      4 8 15 16 23 42
+      ```
+
+      ```output
+      6 numbers, sum 108
+      ```
+
+      Edit the input: add numbers, remove them, even leave it empty. The same
+      code handles them all. (On a real keyboard, the user signals the end of
+      input with [[Ctrl+D]] on Linux/Mac or [[Ctrl+Z]] then Enter on Windows.)
+
+      ## A sentinel value
+
+      Another common way to end input is a **sentinel**: a special value that
+      means "stop", like `0` or `-1`:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int total{0};
+          int price{};
+          std::cin >> price;
+          while (price != 0) {
+              total += price;
+              std::cin >> price;
+          }
+          std::cout << "Total: " << total << '\n';
+          return 0;
+      }
+      ```
+
+      ```stdin
+      5 12 3 0
+      ```
+
+      ```output
+      Total: 20
+      ```
+
+      Notice the shape: read once **before** the loop, and again at the
+      **end** of the body — so the sentinel is never added to the total.
+
+      {{check do-once}}
+
+      {{check read-all}}
+
+      {{task max-input}}
+    checks:
+      - id: do-once
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{100};
+              do {
+                  std::cout << n << '\n';
+                  n = n + 1;
+              } while (n < 50);
+              return 0;
+          }
+        answer: |
+          100
+        why: "The body runs once before the condition is checked. Then 101 < 50 is false, so the loop ends."
+      - id: read-all
+        type: output
+        prompt: "The Input box contains `3 9 -2 5`."
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{};
+              int positives{0};
+              while (std::cin >> x) {
+                  if (x > 0) {
+                      ++positives;
+                  }
+              }
+              std::cout << positives << '\n';
+              return 0;
+          }
+        stdin: "3 9 -2 5"
+        answer: |
+          3
+        why: "The loop reads all four numbers, then the read fails (no more input) and the loop ends. Three were positive."
+    tasks:
+      - id: max-input
+        title: The biggest number
+        prompt: |
+          Read whole numbers until the input ends, and print the largest one.
+          There is always at least one number. For input `4 17 -3 9`, print
+          `17`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "4 17 -3 9"
+            out: "17"
+          - in: "-8 -3 -11"
+            out: "-3"
+          - in: "5"
+            out: "5"
+            hidden: true
+        hints:
+          - Don't start the maximum at 0 — what if every number is negative?
+          - "Read the **first** number into `largest` before the loop, then `while (std::cin >> x)` compare each new one."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int largest{};
+              std::cin >> largest;
+              int x{};
+              while (std::cin >> x) {
+                  if (x > largest) {
+                      largest = x;
+                  }
+              }
+              std::cout << largest << '\n';
+              return 0;
+          }
+    cards:
+      - front: How is `do { ... } while (cond);` different from `while`?
+        back: The body runs **at least once**; the condition is checked after each iteration. (And it ends with `;`.)
+      - front: How do you process every number the user types, however many?
+        back: "`while (std::cin >> x) { ... }` — the read is false when input runs out or isn't a number."
+      - front: What is a **sentinel** value?
+        back: A special input value that means "stop", like 0 or −1. Read before the loop and at the end of the body so it isn't processed.
+
+  - type: lesson
+    id: c5-break
+    title: break and continue
+    minutes: 14
+    objectives:
+      - Leave a loop early with `break`
+      - Skip the rest of one iteration with `continue`
+      - Write a `while (true)` loop with a clear exit
+    body: |
+      ## `break`: leave the loop now
+
+      `break` (which you met in `switch`) immediately ends the loop, jumping
+      to the first statement after it. It's perfect for **searching**: stop
+      as soon as you've found what you're looking for.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          // Find the first number above 100 that is divisible by 17.
+          int found{0};
+          for (int n{101}; n < 1000; ++n) {
+              if (n % 17 == 0) {
+                  found = n;
+                  break;
+              }
+          }
+          std::cout << found << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      102
+      ```
+
+      ## `continue`: skip to the next iteration
+
+      `continue` skips the rest of the current iteration and goes straight on
+      to the next one (in a `for` loop, the update still runs).
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          for (int i{1}; i <= 10; ++i) {
+              if (i % 3 == 0) {
+                  continue;          // skip multiples of 3
+              }
+              std::cout << i << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1 2 4 5 7 8 10
+      ```
+
+      ## `while (true)` with a `break`
+
+      Sometimes the natural place to decide whether to stop is in the
+      **middle** of the loop. A common and readable pattern:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string command{};
+          while (true) {
+              std::cin >> command;
+              if (command == "quit") {
+                  break;
+              }
+              std::cout << "You said: " << command << '\n';
+          }
+          std::cout << "Bye!\n";
+          return 0;
+      }
+      ```
+
+      ```stdin
+      hello again quit ignored
+      ```
+
+      ```output
+      You said: hello
+      You said: again
+      Bye!
+      ```
+
+      > [!warning]
+      > `break` only leaves the **innermost** loop it's in. And if the input
+      > ran out before `quit`, this loop would never end — a robust version
+      > uses `if (!(std::cin >> command) || command == "quit")`.
+
+      {{check break-output}}
+
+      {{check continue-output}}
+    checks:
+      - id: break-output
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int i{0};
+              while (i < 10) {
+                  i += 3;
+                  if (i > 7) {
+                      break;
+                  }
+                  std::cout << i << ' ';
+              }
+              std::cout << i << '\n';
+              return 0;
+          }
+        answer: |
+          3 6 9
+        why: "i becomes 3 (printed), 6 (printed), then 9 — 9 > 7, so break before printing inside the loop. After the loop, 9 is printed."
+      - id: continue-output
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int sum{0};
+              for (int i{1}; i <= 6; ++i) {
+                  if (i % 2 == 0) {
+                      continue;
+                  }
+                  sum += i;
+              }
+              std::cout << sum << '\n';
+              return 0;
+          }
+        answer: |
+          9
+        why: "Even numbers are skipped; 1 + 3 + 5 = 9."
+    cards:
+      - front: What does `break` do in a loop?
+        back: Ends the (innermost) loop immediately; execution continues after it.
+      - front: What does `continue` do in a loop?
+        back: Skips the rest of this iteration and moves on to the next (in a `for`, the update still runs).
+      - front: When is `while (true) { ... break; ... }` a good idea?
+        back: When the natural place to decide to stop is in the middle of the body — as long as there's always a way out.
+
+  - type: quiz
+    id: c5-quiz1
+    title: "Quiz: loops"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              for (int i{5}; i >= 1; i -= 2) {
+                  std::cout << i;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          531
+        why: "i takes 5, 3, 1; then −1 >= 1 is false."
+      - type: mcq
+        prompt: How many times does the body of `for (int i{0}; i <= 10; ++i)` run?
+        options:
+          - "10"
+          - "11"
+          - "9"
+          - "12"
+        answer: 1
+        why: "0 to 10 inclusive is 11 values."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{0};
+              int count{0};
+              do {
+                  ++count;
+              } while (n > 0);
+              std::cout << count << '\n';
+              return 0;
+          }
+        answer: |
+          1
+        why: "A `do`-`while` body always runs at least once."
+      - type: output
+        prompt: "The Input box contains `2 4 6 0 8`."
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{};
+              int sum{0};
+              std::cin >> x;
+              while (x != 0) {
+                  sum += x;
+                  std::cin >> x;
+              }
+              std::cout << sum << '\n';
+              return 0;
+          }
+        stdin: "2 4 6 0 8"
+        answer: |
+          12
+        why: "0 is the sentinel: reading stops there, so the 8 is never read. 2 + 4 + 6 = 12."
+      - type: spot
+        prompt: This should print 1 to 5 but never stops. Which line is wrong?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int i{1};
+              while (i <= 5) {
+                  std::cout << i << '\n';
+                  i - 1;
+              }
+              return 0;
+          }
+        answer: 7
+        why: "`i - 1;` computes a value and throws it away — `i` never changes. It should be `++i;` (and the compiler warns: statement has no effect)."
+      - type: order
+        prompt: Arrange the lines into a program that prints the sum of all numbers in the input.
+        lines:
+          - "#include <iostream>"
+          - "int main() {"
+          - "    int x{};"
+          - "    int sum{0};"
+          - "    while (std::cin >> x) {"
+          - "        sum += x;"
+          - "    }"
+          - "    std::cout << sum << '\\n';"
+          - "}"
+        alternatives:
+          - [0, 1, 3, 2, 4, 5, 6, 7, 8]
+        why: Declare the variables, loop over every input value adding it to the total, and print after the loop ends.
+
+  - type: lesson
+    id: c5-patterns
+    title: Loop patterns you'll use forever
+    minutes: 24
+    objectives:
+      - Recognise and write the accumulator, counter, min/max and search patterns
+      - Process the digits of a number with a loop
+      - Compute products like factorials without overflowing
+    body: |
+      Almost every loop you'll ever write is a variation of a handful of
+      **patterns**. Learn to recognise them and half of every problem is
+      already solved.
+
+      ## 1. Accumulator: build up a total
+
+      Start with a neutral value, and combine each item into it.
+
+      ```cpp static
+      int sum{0};                 // 0 for sums
+      for (...) { sum += item; }
+
+      long long product{1};       // 1 for products
+      for (...) { product *= item; }
+      ```
+
+      ## 2. Counter: how many match?
+
+      ```cpp static
+      int count{0};
+      for (...) {
+          if (matches) { ++count; }
+      }
+      ```
+
+      ## 3. Min / max: the best so far
+
+      Keep the best value seen so far, and replace it when you find a better
+      one. Start with the **first item** (not 0!).
+
+      ## 4. Search: is there one? Where?
+
+      Use a flag, and `break` once found.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          // Is there a multiple of 7 between 50 and 55?
+          bool found{false};
+          for (int n{50}; n <= 55; ++n) {
+              if (n % 7 == 0) {
+                  found = true;
+                  break;
+              }
+          }
+          std::cout << (found ? "yes" : "no") << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      no
+      ```
+
+      ## 5. Digit loop: take a number apart
+
+      `n % 10` is the last digit, `n / 10` removes it. Repeat until nothing
+      is left:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int n{90417};
+          int digits{0};
+          int sum{0};
+          while (n > 0) {
+              int last = n % 10;
+              sum += last;
+              ++digits;
+              n /= 10;
+          }
+          std::cout << digits << " digits, digit sum " << sum << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      5 digits, digit sum 21
+      ```
+
+      Trace it: `n` goes 90417 → 9041 → 904 → 90 → 9 → 0, and `last` takes
+      7, 1, 4, 0, 9.
+
+      > [!warning] The zero case
+      > For `n = 0`, `while (n > 0)` doesn't run at all, so this counts **0**
+      > digits. If 0 should count as one digit, handle it separately — or use a
+      > `do`-`while`. Edge cases like 0, 1, negative numbers and empty input are
+      > where bugs hide. Always test them.
+
+      ## 6. Product: factorial
+
+      n! (*n factorial*) is 1 × 2 × … × n. It grows **fast** — 13! is already
+      too big for an `int` — so use `long long`:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int n{20};
+          long long factorial{1};
+          for (int i{2}; i <= n; ++i) {
+              factorial *= i;
+          }
+          std::cout << n << "! = " << factorial << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      20! = 2432902008176640000
+      ```
+
+      (21! doesn't fit even in a `long long`.)
+
+      {{check pattern-which}}
+
+      {{check digits-output}}
+
+      {{task count-div}}
+
+      {{task reverse}}
+    checks:
+      - id: pattern-which
+        type: mcq
+        prompt: "To find the **smallest** of the numbers read, what should the \"smallest so far\" start as?"
+        options:
+          - "0"
+          - A very small number, like −1000000
+          - The first number read
+          - "1"
+        answer: 2
+        why: "Starting at 0 fails when all numbers are positive (0 would win). The first value is always a correct starting point."
+      - id: digits-output
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{1203};
+              int product{1};
+              while (n > 0) {
+                  int d = n % 10;
+                  if (d != 0) {
+                      product *= d;
+                  }
+                  n /= 10;
+              }
+              std::cout << product << '\n';
+              return 0;
+          }
+        answer: |
+          6
+        why: "The digits are 3, 0, 2, 1; zeros are skipped, so 3 × 2 × 1 = 6."
+    tasks:
+      - id: count-div
+        title: Count the multiples
+        prompt: |
+          Read two numbers `n` and `k`, and print how many numbers from 1 to
+          `n` are divisible by `k`. For input `20 3` print `6` (3, 6, 9, 12,
+          15, 18).
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "20 3"
+            out: "6"
+          - in: "10 10"
+            out: "1"
+          - in: "7 8"
+            out: "0"
+            hidden: true
+        hints:
+          - The counter pattern.
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              int k{};
+              std::cin >> n >> k;
+              int count{0};
+              for (int i{1}; i <= n; ++i) {
+                  if (i % k == 0) {
+                      ++count;
+                  }
+              }
+              std::cout << count << '\n';
+              return 0;
+          }
+      - id: reverse
+        title: Reverse a number
+        prompt: |
+          Read a positive whole number and print its digits in reverse order,
+          as a number. For input `1234` print `4321`; for `1200` print `21`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "1234"
+            out: "4321"
+          - in: "1200"
+            out: "21"
+          - in: "7"
+            out: "7"
+            hidden: true
+        hints:
+          - "Build the result as you go: `result = result * 10 + n % 10;`"
+          - "Then `n /= 10;` — the digit loop pattern."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              int result{0};
+              while (n > 0) {
+                  result = result * 10 + n % 10;
+                  n /= 10;
+              }
+              std::cout << result << '\n';
+              return 0;
+          }
+    cards:
+      - front: Name the six classic loop patterns.
+        back: Accumulator (total), counter (how many), min/max (best so far), search (flag + break), digit loop (`% 10`, `/ 10`), product (e.g. factorial).
+      - front: What should an accumulator start at, for a sum and for a product?
+        back: 0 for a sum, 1 for a product.
+      - front: How do you loop over the digits of `n`?
+        back: "`while (n > 0) { int d = n % 10; ...; n /= 10; }` — and handle `n = 0` separately if it matters."
+      - front: Why use `long long` for factorials?
+        back: They grow very fast — 13! already overflows an `int`. `long long` fits up to 20!.
+
+  - type: lesson
+    id: c5-nested
+    title: Nested loops
+    minutes: 20
+    objectives:
+      - Put a loop inside another loop, and trace it
+      - Print grids and triangle patterns
+      - Estimate how many times the inner body runs
+    body: |
+      A loop's body can contain another loop. For **each** iteration of the
+      outer loop, the inner loop runs **completely**.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          for (int row{1}; row <= 3; ++row) {
+              for (int col{1}; col <= 4; ++col) {
+                  std::cout << row * col << '\t';
+              }
+              std::cout << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      1	2	3	4
+      2	4	6	8
+      3	6	9	12
+      ```
+
+      The outer loop picks a row; the inner loop walks across its columns;
+      then `'\n'` ends the row. The inner body runs 3 × 4 = **12** times.
+
+      ## Patterns
+
+      The inner loop's range can depend on the outer loop's variable. That's
+      how you draw shapes:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int height{4};
+          for (int row{1}; row <= height; ++row) {
+              for (int i{0}; i < row; ++i) {
+                  std::cout << '*';
+              }
+              std::cout << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      *
+      **
+      ***
+      ****
+      ```
+
+      Row 1 gets 1 star, row 2 gets 2… The trick with any pattern: work out,
+      for row number `row`, **how many** of each character to print. For a
+      right-aligned triangle, each row starts with `height - row` spaces:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int height{4};
+          for (int row{1}; row <= height; ++row) {
+              for (int s{0}; s < height - row; ++s) {
+                  std::cout << ' ';
+              }
+              for (int i{0}; i < row; ++i) {
+                  std::cout << '*';
+              }
+              std::cout << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+         *
+        **
+       ***
+      ****
+      ```
+
+      > [!tip]
+      > `std::string(n, '*')` builds a string of `n` stars — often simpler than
+      > an inner loop for printing repeated characters. Both are good to know.
+
+      ## How much work?
+
+      If the outer loop runs `n` times and the inner loop `n` times, the body
+      runs `n × n` times. For `n = 1000`, that's a million — fine. For `n` = a
+      million, it's a trillion — far too slow. Chapter 18 turns this intuition
+      into a tool (*Big-O*).
+
+      {{check nested-count}}
+
+      {{check pattern-output}}
+
+      {{task square}}
+    checks:
+      - id: nested-count
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int count{0};
+              for (int i{0}; i < 4; ++i) {
+                  for (int j{0}; j < i; ++j) {
+                      ++count;
+                  }
+              }
+              std::cout << count << '\n';
+              return 0;
+          }
+        answer: |
+          6
+        why: "The inner loop runs 0, 1, 2 and 3 times: 0 + 1 + 2 + 3 = 6."
+      - id: pattern-output
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              for (int r{3}; r >= 1; --r) {
+                  for (int c{1}; c <= r; ++c) {
+                      std::cout << c;
+                  }
+                  std::cout << '\n';
+              }
+              return 0;
+          }
+        answer: |
+          123
+          12
+          1
+        why: "Rows count down from 3 to 1; each row prints 1 up to the row number."
+    tasks:
+      - id: square
+        title: Hollow square
+        prompt: |
+          Read `n` (at least 2) and print a hollow square of `#` with side `n`.
+          For input `4`:
+
+          ```text
+          ####
+          #  #
+          #  #
+          ####
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+
+              return 0;
+          }
+        tests:
+          - in: "4"
+            out: |
+              ####
+              #  #
+              #  #
+              ####
+          - in: "2"
+            out: |
+              ##
+              ##
+          - in: "5"
+            out: |
+              #####
+              #   #
+              #   #
+              #   #
+              #####
+            hidden: true
+        hints:
+          - "Loop over rows and columns. A cell is `#` when it's on the edge: first/last row or first/last column."
+          - "Edge test: `row == 0 || row == n - 1 || col == 0 || col == n - 1`."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              for (int row{0}; row < n; ++row) {
+                  for (int col{0}; col < n; ++col) {
+                      bool edge = row == 0 || row == n - 1 || col == 0 || col == n - 1;
+                      std::cout << (edge ? '#' : ' ');
+                  }
+                  std::cout << '\n';
+              }
+              return 0;
+          }
+    cards:
+      - front: In nested loops, how often does the inner loop run?
+        back: Completely, once for **each** iteration of the outer loop.
+      - front: If the outer loop runs `n` times and the inner `m` times, how many times does the inner body run?
+        back: "`n × m` times."
+      - front: How do you approach printing a pattern with loops?
+        back: For each row number, work out **how many** of each character to print (spaces, stars…), then use an inner loop (or `std::string(n, c)`) for each.
+
+  - type: lesson
+    id: c5-random
+    title: Random numbers
+    minutes: 16
+    objectives:
+      - Generate random integers in a range with `<random>`
+      - Seed a generator, and explain why a fixed seed gives the same sequence
+    body: |
+      Games, simulations and tests need randomness. Modern C++ provides it in
+      **`<random>`**, in two parts:
+
+      - an **engine** that produces raw random bits — `std::mt19937` (the *Mersenne Twister*, a high-quality generator), and
+      - a **distribution** that shapes them into what you want — for example `std::uniform_int_distribution`, whole numbers in a range, all equally likely.
+
+      ```cpp
+      #include <iostream>
+      #include <random>
+
+      int main() {
+          std::mt19937 rng{std::random_device{}()};
+          std::uniform_int_distribution<int> die{1, 6};
+
+          for (int i{0}; i < 5; ++i) {
+              std::cout << die(rng) << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      Run it several times — the numbers change each time.
+
+      - `std::random_device{}()` asks the system for a truly unpredictable number, used as the **seed** (the starting point) for the engine.
+      - `die(rng)` gives the next random number from 1 to 6. Make **one** engine and reuse it; don't create a new one every time you need a number.
+
+      ## Seeds and repeatability
+
+      An engine is really a very long, fixed sequence of numbers; the seed
+      picks where it starts. The same seed always gives the **same**
+      sequence — which is exactly what you want when testing a game:
+
+      ```cpp
+      #include <iostream>
+      #include <random>
+
+      int main() {
+          std::mt19937 rng{42};   // fixed seed: same "random" numbers every run
+          for (int i{0}; i < 3; ++i) {
+              std::cout << rng() << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      1608637542
+      3421126067
+      4083286876
+      ```
+
+      These three numbers are the same on every computer: the C++ standard
+      defines exactly what `std::mt19937` produces. (Distributions are allowed
+      to differ between compilers, so this course's graded exercises use
+      `rng() % n` when they need exactly reproducible numbers.)
+
+      > [!deep] Why not `rand()`?
+      > Older code uses `std::rand()` from `<cstdlib>`. It's still there, but
+      > its quality isn't guaranteed and `rand() % n` is subtly biased. Prefer
+      > `<random>` in new code.
+
+      {{check seed}}
+    checks:
+      - id: seed
+        type: mcq
+        prompt: Two programs create `std::mt19937 rng{123};` and print `rng()` three times. What do they print?
+        options:
+          - Different numbers each time they run
+          - The same three numbers, every run, on every computer
+          - 1, 2, 3
+          - 123, 123, 123
+        answer: 1
+        why: "The seed fixes the starting point of the sequence, and `std::mt19937`'s sequence is defined by the standard."
+      - id: one-engine
+        type: tf
+        prompt: You should create a new random engine every time you need a random number.
+        answer: false
+        why: Create one engine (seeded once) and keep drawing numbers from it.
+    cards:
+      - front: What are the two parts of generating random numbers with `<random>`?
+        back: An **engine** (e.g. `std::mt19937`) that makes random bits, and a **distribution** (e.g. `std::uniform_int_distribution<int>{1, 6}`) that shapes them.
+      - front: What is a **seed**?
+        back: The starting point of a random engine's sequence. The same seed gives the same sequence; seed from `std::random_device` for unpredictability.
+
+  - type: quiz
+    id: c5-quiz2
+    title: "Quiz: patterns and nesting"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              for (int i{1}; i <= 3; ++i) {
+                  for (int j{1}; j <= 2; ++j) {
+                      std::cout << i << j << ' ';
+                  }
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          11 12 21 22 31 32
+        why: "For each i (1–3), j goes through 1 and 2 completely."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{305};
+              int count{0};
+              while (n > 0) {
+                  if (n % 10 == 0) {
+                      ++count;
+                  }
+                  n /= 10;
+              }
+              std::cout << count << '\n';
+              return 0;
+          }
+        answer: |
+          1
+        why: "The digits of 305 are 5, 0, 3; one of them is zero."
+      - type: fill
+        prompt: Complete the program so it prints the product 1 × 2 × 3 × 4 × 5.
+        code: |
+          #include <iostream>
+
+          int main() {
+              long long p{___};
+              for (int i{1}; i <= 5; ++i) {
+                  p ___ i;
+              }
+              std::cout << p << '\n';
+              return 0;
+          }
+        blanks:
+          - ['1']
+          - ['*=']
+        output: |
+          120
+        why: A product accumulator starts at 1 (starting at 0 would make everything 0) and multiplies each item in.
+      - type: mcq
+        prompt: A loop runs `n` times, and inside it another loop runs `n` times. For `n = 1000`, how many times does the innermost body run?
+        options:
+          - "1,000"
+          - "2,000"
+          - "1,000,000"
+          - "1,000,000,000"
+        answer: 2
+        why: "1000 × 1000 = one million."
+      - type: spot
+        prompt: This should print the smallest of the input numbers (all positive), but always prints 0. Which line is the bug?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int smallest{0};
+              int x{};
+              while (std::cin >> x) {
+                  if (x < smallest) {
+                      smallest = x;
+                  }
+              }
+              std::cout << smallest << '\n';
+              return 0;
+          }
+        answer: 4
+        why: "Starting at 0, no positive number is ever smaller. Start with the first value read instead."
+
+  - type: project
+    id: c5-project
+    title: "Project: Guess the Number"
+    body: |
+      Your first complete program: the classic number-guessing game. You'll
+      build it in four milestones, each adding one idea — exactly how real
+      programs are written. Your code carries over from one milestone to the
+      next.
+
+      Because this runs on a server, the game reads the player's guesses from
+      the **Input** box instead of the keyboard. The logic is exactly what it
+      would be on your own computer.
+    milestones:
+      - title: One guess
+        prompt: |
+          Read the **secret number**, then **one guess**. Print `Too low`,
+          `Too high` or `Correct!`.
+
+          For input `42 30`, print `Too low`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int secret{};
+              int guess{};
+              std::cin >> secret >> guess;
+
+              return 0;
+          }
+        tests:
+          - in: "42 30"
+            out: Too low
+          - in: "42 50"
+            out: Too high
+          - in: "42 42"
+            out: Correct!
+        hints:
+          - An `if` / `else if` / `else` chain comparing `guess` with `secret`.
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int secret{};
+              int guess{};
+              std::cin >> secret >> guess;
+
+              if (guess < secret) {
+                  std::cout << "Too low\n";
+              } else if (guess > secret) {
+                  std::cout << "Too high\n";
+              } else {
+                  std::cout << "Correct!\n";
+              }
+              return 0;
+          }
+      - title: Keep guessing
+        prompt: |
+          Now read the secret, then keep reading guesses **until one is
+          right**, printing a hint for each. When the player gets it, print
+          `Correct! You got it in N guesses.`
+
+          For input `42 50 30 42`:
+
+          ```text
+          Too high
+          Too low
+          Correct! You got it in 3 guesses.
+          ```
+
+          (You can assume the right answer always appears in the input.)
+        tests:
+          - in: "42 50 30 42"
+            out: |
+              Too high
+              Too low
+              Correct! You got it in 3 guesses.
+          - in: "7 7"
+            out: |
+              Correct! You got it in 1 guesses.
+          - in: "64 50 75 62 68 65 63 64"
+            out: |
+              Too low
+              Too high
+              Too low
+              Too high
+              Too high
+              Too low
+              Correct! You got it in 7 guesses.
+        hints:
+          - "A loop that reads a guess each time round: `do { ... } while (guess != secret);` fits well."
+          - Count guesses with a counter that starts at 0.
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int secret{};
+              std::cin >> secret;
+
+              int guess{};
+              int guesses{0};
+              do {
+                  std::cin >> guess;
+                  ++guesses;
+                  if (guess < secret) {
+                      std::cout << "Too low\n";
+                  } else if (guess > secret) {
+                      std::cout << "Too high\n";
+                  }
+              } while (guess != secret);
+
+              std::cout << "Correct! You got it in " << guesses << " guesses.\n";
+              return 0;
+          }
+      - title: A random secret
+        prompt: |
+          A real game picks the secret itself. The first input is now a
+          **seed**; make the secret from it like this, so the game can be
+          tested:
+
+          ```cpp static
+          std::mt19937 rng{seed};
+          int secret = static_cast<int>(rng() % 100) + 1;   // 1 to 100
+          ```
+
+          (`#include <random>`. On your own computer you'd seed with
+          `std::random_device{}()` instead.) Then play exactly as before. For
+          input `42 50 30 43`, the secret is 43.
+
+          To check your secret is right: seed `1` gives secret `46`, seed `42`
+          gives `43`.
+        tests:
+          - in: "1 50 46"
+            out: |
+              Too high
+              Correct! You got it in 2 guesses.
+          - in: "42 43"
+            out: |
+              Correct! You got it in 1 guesses.
+          - in: "7 50 25 12 18 15 16"
+            out: |
+              Too high
+              Too high
+              Too low
+              Too high
+              Too low
+              Correct! You got it in 6 guesses.
+        hints:
+          - Read the seed first, build the engine from it, and compute `secret` before the loop.
+          - "`rng() % 100` is 0–99; `+ 1` shifts it to 1–100."
+        solution: |
+          #include <iostream>
+          #include <random>
+
+          int main() {
+              unsigned int seed{};
+              std::cin >> seed;
+              std::mt19937 rng{seed};
+              int secret = static_cast<int>(rng() % 100) + 1;
+
+              int guess{};
+              int guesses{0};
+              do {
+                  std::cin >> guess;
+                  ++guesses;
+                  if (guess < secret) {
+                      std::cout << "Too low\n";
+                  } else if (guess > secret) {
+                      std::cout << "Too high\n";
+                  }
+              } while (guess != secret);
+
+              std::cout << "Correct! You got it in " << guesses << " guesses.\n";
+              return 0;
+          }
+      - title: Seven tries and bad input
+        prompt: |
+          The final game:
+
+          1. The player has **7 guesses**. If they haven't got it after 7, print `Out of guesses! The number was N.` and end.
+          2. If the input runs out before the game ends, print `Game abandoned.` and end.
+          3. A guess outside 1–100 prints `Out of range` and **doesn't** use up a try.
+          4. On a win, print `Correct! You got it in N guesses.` — as before, counting only valid guesses.
+
+          For input `1 150 50 46` (secret 46):
+
+          ```text
+          Out of range
+          Too high
+          Correct! You got it in 2 guesses.
+          ```
+        tests:
+          - in: "1 150 50 46"
+            out: |
+              Out of range
+              Too high
+              Correct! You got it in 2 guesses.
+          - in: "1 10 11 12 13 14 15 16"
+            out: |
+              Too low
+              Too low
+              Too low
+              Too low
+              Too low
+              Too low
+              Too low
+              Out of guesses! The number was 46.
+          - in: "1 50 0"
+            out: |
+              Too high
+              Out of range
+              Game abandoned.
+          - in: "42 43"
+            out: |
+              Correct! You got it in 1 guesses.
+        hints:
+          - "Loop while `guesses < 7`. Inside, read with `if (!(std::cin >> guess))` to detect the end of input."
+          - "For out-of-range guesses, print the message and `continue` — before counting the guess."
+          - After the loop, you need to know *why* it ended. A `bool won{false};` set when the guess is right helps.
+        solution: |
+          #include <iostream>
+          #include <random>
+
+          int main() {
+              constexpr int maxGuesses{7};
+              unsigned int seed{};
+              std::cin >> seed;
+              std::mt19937 rng{seed};
+              int secret = static_cast<int>(rng() % 100) + 1;
+
+              int guesses{0};
+              bool won{false};
+              while (guesses < maxGuesses) {
+                  int guess{};
+                  if (!(std::cin >> guess)) {
+                      std::cout << "Game abandoned.\n";
+                      return 0;
+                  }
+                  if (guess < 1 || guess > 100) {
+                      std::cout << "Out of range\n";
+                      continue;
+                  }
+                  ++guesses;
+                  if (guess < secret) {
+                      std::cout << "Too low\n";
+                  } else if (guess > secret) {
+                      std::cout << "Too high\n";
+                  } else {
+                      won = true;
+                      break;
+                  }
+              }
+
+              if (won) {
+                  std::cout << "Correct! You got it in " << guesses << " guesses.\n";
+              } else {
+                  std::cout << "Out of guesses! The number was " << secret << ".\n";
+              }
+              return 0;
+          }
+        explain: |
+          Three ideas from this chapter meet here: a counting loop with an
+          early `break`, `continue` to skip invalid input without counting it,
+          and a read-as-condition to detect the end of input. The `won` flag
+          records *why* the loop ended, so the code after it can react. With a
+          smart strategy — always guess the middle of the remaining range —
+          7 guesses are always enough for 1–100, because 2⁷ = 128 > 100.
+
+  - type: challenge
+    id: c5-ch-fizzbuzz
+    title: FizzBuzz
+    difficulty: 1
+    tags: [loops, remainder]
+    prompt: |
+      The most famous programming interview question. Read `n` and print the
+      numbers from 1 to `n`, one per line — but print `Fizz` instead of
+      multiples of 3, `Buzz` instead of multiples of 5, and `FizzBuzz` instead
+      of multiples of both.
+    starter: |
+      #include <iostream>
+
+      int main() {
+          int n{};
+          std::cin >> n;
+
+          return 0;
+      }
+    tests:
+      - in: "15"
+        out: |
+          1
+          2
+          Fizz
+          4
+          Buzz
+          Fizz
+          7
+          8
+          Fizz
+          Buzz
+          11
+          Fizz
+          13
+          14
+          FizzBuzz
+      - in: "5"
+        out: |
+          1
+          2
+          Fizz
+          4
+          Buzz
+    hints:
+      - Check "both" first — a multiple of 15 is also a multiple of 3.
+    solution: |
+      #include <iostream>
+
+      int main() {
+          int n{};
+          std::cin >> n;
+          for (int i{1}; i <= n; ++i) {
+              if (i % 15 == 0) {
+                  std::cout << "FizzBuzz\n";
+              } else if (i % 3 == 0) {
+                  std::cout << "Fizz\n";
+              } else if (i % 5 == 0) {
+                  std::cout << "Buzz\n";
+              } else {
+                  std::cout << i << '\n';
+              }
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c5-ch-prime
+    title: Is it prime?
+    difficulty: 2
+    tags: [loops, search]
+    prompt: |
+      A **prime** is a whole number greater than 1 whose only divisors are 1
+      and itself (2, 3, 5, 7, 11…). Read numbers until the input ends and, for
+      each, print `N is prime` or `N is not prime`.
+
+      Numbers can be as large as 2,000,000,000, so be clever: you only need
+      to test divisors up to √N.
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "7 1 9 2"
+        out: |
+          7 is prime
+          1 is not prime
+          9 is not prime
+          2 is prime
+      - in: "97 100 0"
+        out: |
+          97 is prime
+          100 is not prime
+          0 is not prime
+      - in: "1999999973 2000000000"
+        out: |
+          1999999973 is prime
+          2000000000 is not prime
+        hidden: true
+    hints:
+      - "Numbers below 2 are not prime. Then look for any divisor `d` with `n % d == 0`."
+      - "If `n` has a divisor bigger than √n, it also has one smaller. So loop while `d * d <= n` — and use `long long` for `d * d`, or it can overflow near 2 billion."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          long long n{};
+          while (std::cin >> n) {
+              bool prime = n >= 2;
+              for (long long d{2}; d * d <= n; ++d) {
+                  if (n % d == 0) {
+                      prime = false;
+                      break;
+                  }
+              }
+              std::cout << n << (prime ? " is prime\n" : " is not prime\n");
+          }
+          return 0;
+      }
+    explain: |
+      Testing up to √n instead of n turns ~2 billion steps into ~45,000 —
+      the difference between a program that times out and one that answers
+      instantly. Thinking about how much work a loop does is a skill you'll
+      keep sharpening.
+
+  - type: challenge
+    id: c5-ch-collatz
+    title: The Collatz journey
+    difficulty: 2
+    tags: [loops]
+    prompt: |
+      Take any positive number. If it's even, halve it; if it's odd, multiply
+      by 3 and add 1. Repeat until you reach 1. (Nobody has ever proved that
+      you *always* reach 1 — it's a famous unsolved problem!)
+
+      Read `n` and print the whole journey on one line, separated by spaces,
+      then the number of steps on the next line. For input `6`:
+
+      ```text
+      6 3 10 5 16 8 4 2 1
+      Steps: 8
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "6"
+        out: |
+          6 3 10 5 16 8 4 2 1
+          Steps: 8
+      - in: "1"
+        out: |
+          1
+          Steps: 0
+      - in: "27"
+        out: |
+          27 82 41 124 62 31 94 47 142 71 214 107 322 161 484 242 121 364 182 91 274 137 412 206 103 310 155 466 233 700 350 175 526 263 790 395 1186 593 1780 890 445 1336 668 334 167 502 251 754 377 1132 566 283 850 425 1276 638 319 958 479 1438 719 2158 1079 3238 1619 4858 2429 7288 3644 1822 911 2734 1367 4102 2051 6154 3077 9232 4616 2308 1154 577 1732 866 433 1300 650 325 976 488 244 122 61 184 92 46 23 70 35 106 53 160 80 40 20 10 5 16 8 4 2 1
+          Steps: 111
+        hidden: true
+    hints:
+      - Print the first number before the loop, then print `' '` and the new value after each step.
+      - "`while (n != 1)` — and use `long long`, since values can climb high."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          long long n{};
+          std::cin >> n;
+          int steps{0};
+          std::cout << n;
+          while (n != 1) {
+              if (n % 2 == 0) {
+                  n /= 2;
+              } else {
+                  n = 3 * n + 1;
+              }
+              ++steps;
+              std::cout << ' ' << n;
+          }
+          std::cout << "\nSteps: " << steps << '\n';
+          return 0;
+      }
+
+  - type: challenge
+    id: c5-ch-gcd
+    title: Greatest common divisor
+    difficulty: 2
+    tags: [loops, maths]
+    prompt: |
+      The **greatest common divisor** (GCD) of two numbers is the largest
+      number that divides both. Euclid found a beautiful method 2,300 years
+      ago: replace the pair `(a, b)` with `(b, a % b)` until `b` is 0 — then
+      `a` is the answer.
+
+      Read two positive numbers and print their GCD and their **least common
+      multiple** (LCM = a × b / GCD). For input `12 18`:
+
+      ```text
+      GCD: 6
+      LCM: 36
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "12 18"
+        out: |
+          GCD: 6
+          LCM: 36
+      - in: "7 13"
+        out: |
+          GCD: 1
+          LCM: 91
+      - in: "100000 250000"
+        out: |
+          GCD: 50000
+          LCM: 500000
+        hidden: true
+    hints:
+      - Keep copies of the original `a` and `b` — the loop destroys them, and you need them for the LCM.
+      - "Inside the loop: `long long r = a % b; a = b; b = r;`"
+      - Compute the LCM as `a / gcd * b` to keep intermediate values small.
+    solution: |
+      #include <iostream>
+
+      int main() {
+          long long a{};
+          long long b{};
+          std::cin >> a >> b;
+          long long x{a};
+          long long y{b};
+          while (y != 0) {
+              long long r = x % y;
+              x = y;
+              y = r;
+          }
+          std::cout << "GCD: " << x << '\n';
+          std::cout << "LCM: " << a / x * b << '\n';
+          return 0;
+      }
+    explain: |
+      Why does it work? Any number dividing both `a` and `b` also divides
+      `a % b` (which is `a` minus a multiple of `b`), so the pair's common
+      divisors never change — while the numbers shrink fast.
+
+  - type: challenge
+    id: c5-ch-pyramid
+    title: Star pyramid
+    difficulty: 2
+    tags: [nested loops, patterns]
+    prompt: |
+      Read a height `n` and print a centred pyramid. For input `4`:
+
+      ```text
+         *
+        ***
+       *****
+      *******
+      ```
+
+      No spaces after the stars.
+    starter: |
+      #include <iostream>
+
+      int main() {
+          int n{};
+          std::cin >> n;
+
+          return 0;
+      }
+    tests:
+      - in: "4"
+        out: |
+             *
+            ***
+           *****
+          *******
+      - in: "1"
+        out: |
+          *
+      - in: "6"
+        out: |
+               *
+              ***
+             *****
+            *******
+           *********
+          ***********
+        hidden: true
+    hints:
+      - "Row `r` (starting at 1) has `2 * r - 1` stars."
+      - "And `n - r` spaces before them."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          int n{};
+          std::cin >> n;
+          for (int r{1}; r <= n; ++r) {
+              for (int s{0}; s < n - r; ++s) {
+                  std::cout << ' ';
+              }
+              for (int i{0}; i < 2 * r - 1; ++i) {
+                  std::cout << '*';
+              }
+              std::cout << '\n';
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c5-ch-stats
+    title: Quick statistics
+    difficulty: 2
+    tags: [loops, patterns, formatting]
+    prompt: |
+      Read decimal numbers until the input ends, and print how many there
+      were, their sum, minimum, maximum and average — all but the count with
+      2 decimals. If there are no numbers, print `No data`. For input
+      `4 8 15 16 23 42`:
+
+      ```text
+      Count: 6
+      Sum: 108.00
+      Min: 4.00
+      Max: 42.00
+      Average: 18.00
+      ```
+    starter: |
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "4 8 15 16 23 42"
+        out: |
+          Count: 6
+          Sum: 108.00
+          Min: 4.00
+          Max: 42.00
+          Average: 18.00
+      - in: "-1.5 2.25"
+        out: |
+          Count: 2
+          Sum: 0.75
+          Min: -1.50
+          Max: 2.25
+          Average: 0.38
+      - in: ""
+        out: No data
+      - in: "7"
+        out: |
+          Count: 1
+          Sum: 7.00
+          Min: 7.00
+          Max: 7.00
+          Average: 7.00
+        hidden: true
+    hints:
+      - "Use the count to know whether a value is the first one: `if (count == 0 || x < minimum)`."
+      - "Accumulator + counter + min + max, all in one loop."
+    solution: |
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          double x{};
+          int count{0};
+          double sum{0};
+          double minimum{0};
+          double maximum{0};
+          while (std::cin >> x) {
+              if (count == 0 || x < minimum) {
+                  minimum = x;
+              }
+              if (count == 0 || x > maximum) {
+                  maximum = x;
+              }
+              sum += x;
+              ++count;
+          }
+          if (count == 0) {
+              std::cout << "No data\n";
+              return 0;
+          }
+          std::cout << "Count: " << count << '\n';
+          std::cout << std::fixed << std::setprecision(2);
+          std::cout << "Sum: " << sum << '\n';
+          std::cout << "Min: " << minimum << '\n';
+          std::cout << "Max: " << maximum << '\n';
+          std::cout << "Average: " << sum / count << '\n';
+          return 0;
+      }
+
+  - type: challenge
+    id: c5-ch-fib
+    title: Fibonacci
+    difficulty: 1
+    tags: [loops]
+    prompt: |
+      In the Fibonacci sequence, each number is the sum of the two before it:
+      0, 1, 1, 2, 3, 5, 8, 13… Read `n` (1 to 90) and print the first `n`
+      numbers separated by spaces. For input `8`:
+
+      ```text
+      0 1 1 2 3 5 8 13
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "8"
+        out: "0 1 1 2 3 5 8 13"
+      - in: "1"
+        out: "0"
+      - in: "90"
+        out: "0 1 1 2 3 5 8 13 21 34 55 89 144 233 377 610 987 1597 2584 4181 6765 10946 17711 28657 46368 75025 121393 196418 317811 514229 832040 1346269 2178309 3524578 5702887 9227465 14930352 24157817 39088169 63245986 102334155 165580141 267914296 433494437 701408733 1134903170 1836311903 2971215073 4807526976 7778742049 12586269025 20365011074 32951280099 53316291173 86267571272 139583862445 225851433717 365435296162 591286729879 956722026041 1548008755920 2504730781961 4052739537881 6557470319842 10610209857723 17167680177565 27777890035288 44945570212853 72723460248141 117669030460994 190392490709135 308061521170129 498454011879264 806515533049393 1304969544928657 2111485077978050 3416454622906707 5527939700884757 8944394323791464 14472334024676221 23416728348467685 37889062373143906 61305790721611591 99194853094755497 160500643816367088 259695496911122585 420196140727489673 679891637638612258 1100087778366101931 1779979416004714189"
+        hidden: true
+    hints:
+      - "Keep two variables, the previous and the current: `long long a{0}; long long b{1};`"
+      - "Each step: print `a`, then `long long next = a + b; a = b; b = next;`"
+    solution: |
+      #include <iostream>
+
+      int main() {
+          int n{};
+          std::cin >> n;
+          long long a{0};
+          long long b{1};
+          for (int i{0}; i < n; ++i) {
+              if (i > 0) {
+                  std::cout << ' ';
+              }
+              std::cout << a;
+              long long next = a + b;
+              a = b;
+              b = next;
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    explain: |
+      Printing a separator *between* items (not after the last) is a pattern
+      of its own: print the separator before every item except the first.
+
+  - type: challenge
+    id: c5-ch-diamond
+    title: Diamond
+    difficulty: 3
+    tags: [nested loops, patterns]
+    prompt: |
+      Read an odd width `w` and print a diamond whose widest row has `w`
+      stars. For input `5`:
+
+      ```text
+        *
+       ***
+      *****
+       ***
+        *
+      ```
+    starter: |
+      #include <iostream>
+
+      int main() {
+          int w{};
+          std::cin >> w;
+
+          return 0;
+      }
+    tests:
+      - in: "5"
+        out: |
+            *
+           ***
+          *****
+           ***
+            *
+      - in: "1"
+        out: |
+          *
+      - in: "7"
+        out: |
+             *
+            ***
+           *****
+          *******
+           *****
+            ***
+             *
+        hidden: true
+    hints:
+      - "There are `w` rows. Row `r` (0 to w−1) is `d` steps away from the middle row, where `d = std::abs(r - w / 2)`."
+      - "A row `d` steps from the middle has `d` spaces and `w - 2 * d` stars."
+    solution: |
+      #include <cstdlib>
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          int w{};
+          std::cin >> w;
+          int middle = w / 2;
+          for (int r{0}; r < w; ++r) {
+              int d = std::abs(r - middle);
+              std::cout << std::string(d, ' ') << std::string(w - 2 * d, '*') << '\n';
+          }
+          return 0;
+      }
+    explain: |
+      Instead of two loops (one growing, one shrinking), this uses the
+      distance from the middle row — one formula for the whole shape. Finding
+      the right quantity to loop over often turns a fiddly problem into a
+      simple one.
+
+  - type: review
+    id: c5-review
+    title: "Chapter 5 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      while (condition) { ... }                 // may run 0 times
+      do { ... } while (condition);             // runs at least once
+      for (int i{0}; i < n; ++i) { ... }        // n times: i = 0 .. n-1
+      for (int i{n}; i >= 1; --i) { ... }       // counting down
+      while (std::cin >> x) { ... }             // every value in the input
+      break;      // leave the innermost loop
+      continue;   // next iteration
+
+      std::mt19937 rng{std::random_device{}()};
+      std::uniform_int_distribution<int> dist{1, 6};
+      int roll = dist(rng);
+      ```
+
+      ## Patterns
+
+      | Pattern | Shape |
+      |---|---|
+      | Accumulate | `total` starts at 0 (sum) or 1 (product), `total += x` |
+      | Count | `if (matches) ++count;` |
+      | Min / max | start with the **first** value |
+      | Search | `found = true; break;` |
+      | Digits | `while (n > 0) { d = n % 10; n /= 10; }` |
+      | Separator between items | print it before every item except the first |
+
+      ## Key ideas
+
+      - Trace loops with a table. The condition is checked one more time than the body runs.
+      - Every loop needs: initialisation, condition, update towards the end.
+      - Off-by-one: check the first value, the last value and the count.
+      - Nested loops multiply: n × m iterations.
+      - Test edge cases: 0, 1, negative numbers, empty input.
+    questions:
+      - type: output
+        prompt: "Interleaving. The Input box contains `hello 3`."
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string w{};
+              int n{};
+              std::cin >> w >> n;
+              for (int i{0}; i < n; ++i) {
+                  std::cout << w.length() + i << (i < n - 1 ? "," : "\n");
+              }
+              return 0;
+          }
+        stdin: "hello 3"
+        answer: |
+          5,6,7
+        why: "The length is 5; i adds 0, 1, 2. The ternary prints commas between items and a newline after the last."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{17};
+              int steps{0};
+              while (x != 1) {
+                  x = (x % 2 == 0) ? x / 2 : x - 1;
+                  ++steps;
+              }
+              std::cout << steps << '\n';
+              return 0;
+          }
+        answer: |
+          5
+        why: "17 → 16 → 8 → 4 → 2 → 1: five steps."
+      - type: mcq
+        prompt: Which loop best fits *print every line of a file, however many there are*?
+        options:
+          - "`for (int i{0}; i < 100; ++i)`"
+          - "a `while` loop that reads until the input ends"
+          - "a `switch`"
+          - "`do { } while (false);`"
+        answer: 1
+        why: The number of lines isn't known in advance; loop while reading succeeds.
+
+  - type: exam
+    id: c5-exam
+    title: "Chapter 5 exam"
+    minutes: 35
+    pick: 15
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int i{0};
+              int s{0};
+              while (i < 5) {
+                  s += i;
+                  i += 2;
+              }
+              std::cout << s << ' ' << i << '\n';
+              return 0;
+          }
+        answer: |
+          6 6
+        why: "i takes 0, 2, 4 (summed: 6), then becomes 6 and the loop ends."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              for (int i{1}; i <= 20; i *= 3) {
+                  std::cout << i << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          1 3 9
+        why: "i goes 1, 3, 9, then 27 > 20."
+      - type: mcq
+        prompt: "What's wrong with `for (int i{0}; i < 10; ++i); { std::cout << i; }`?"
+        options:
+          - Nothing
+          - The `;` after the `for` makes the loop body empty, and `i` is out of scope in the block
+          - "`++i` should be `i++`"
+          - "`i` must start at 1"
+        answer: 1
+        why: "The stray `;` is the whole loop body. The block after it is separate — and `i` doesn't exist there, so it won't even compile."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int count{0};
+              for (int a{1}; a <= 3; ++a) {
+                  for (int b{a}; b <= 3; ++b) {
+                      ++count;
+                  }
+              }
+              std::cout << count << '\n';
+              return 0;
+          }
+        answer: |
+          6
+        why: "a = 1: b = 1..3 (3); a = 2: b = 2..3 (2); a = 3: b = 3 (1). Total 6."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              for (int i{1}; i <= 10; ++i) {
+                  if (i % 4 == 0) {
+                      break;
+                  }
+                  if (i % 2 == 0) {
+                      continue;
+                  }
+                  std::cout << i;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          13
+        why: "1 printed; 2 skipped; 3 printed; at 4 the loop breaks."
+      - type: output
+        prompt: "The Input box contains `5 -2 7 x 9`."
+        code: |
+          #include <iostream>
+
+          int main() {
+              int v{};
+              int total{0};
+              while (std::cin >> v) {
+                  total += v;
+              }
+              std::cout << total << '\n';
+              return 0;
+          }
+        stdin: "5 -2 7 x 9"
+        answer: |
+          10
+        why: "5 − 2 + 7 = 10. Reading `x` fails, which ends the loop — the 9 is never read."
+      - type: tf
+        prompt: A `do`-`while` loop's body may run zero times.
+        answer: false
+        why: The condition is checked after the body, so it always runs at least once.
+      - type: mcq
+        prompt: "Which starting value makes `max` correct for any list of numbers?"
+        options:
+          - "0"
+          - "the first number in the list"
+          - "-1"
+          - "the number of items"
+        answer: 1
+        why: Any fixed value can be wrong for some input; the first element is always a valid candidate.
+      - type: fill
+        prompt: Complete the loop so it prints the digits of `n` from last to first (`n = 572` prints `2 7 5`).
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{572};
+              while (n ___ 0) {
+                  std::cout << n ___ 10 << ' ';
+                  n /= 10;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        blanks:
+          - ['>', '!=']
+          - ['%']
+        output: |
+          2 7 5
+        why: "Loop while digits remain; `n % 10` is the last digit, and `n /= 10` removes it."
+      - type: spot
+        prompt: "This should print `*****` (5 stars) but prints 6. Which line is wrong?"
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{5};
+              for (int i{0}; i <= n; ++i) {
+                  std::cout << '*';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: 5
+        why: "Starting at 0, `<=` makes it run n + 1 times. Use `i < n`."
+      - type: mcq
+        prompt: What does `std::uniform_int_distribution<int> d{1, 10};` produce when called with an engine?
+        options:
+          - Numbers from 1 to 9
+          - Numbers from 0 to 10
+          - Numbers from 1 to 10, all equally likely
+          - Always 1, then 2, then 3…
+        answer: 2
+        why: Both ends are included for `uniform_int_distribution`.
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              long long f{1};
+              int n{0};
+              while (f < 1000) {
+                  ++n;
+                  f *= n;
+              }
+              std::cout << n << ' ' << f << '\n';
+              return 0;
+          }
+        answer: |
+          7 5040
+        why: "f goes 1, 2, 6, 24, 120, 720 (n = 6), then 5040 (n = 7), which is ≥ 1000."
+      - type: order
+        prompt: Put the lines in order to print the numbers from 10 down to 1.
+        lines:
+          - "#include <iostream>"
+          - "int main() {"
+          - "    for (int i{10}; i >= 1; --i) {"
+          - "        std::cout << i << '\\n';"
+          - "    }"
+          - "    return 0;"
+          - "}"
+        why: Include, open main, the loop header, its body, close the loop, return, close main.
+      - type: code
+        prompt: |
+          Read whole numbers until the input ends, and print how many of them
+          are **even** and how many are **odd**. For input `3 8 10 -5 0`:
+
+          ```text
+          Even: 3
+          Odd: 2
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "3 8 10 -5 0"
+            out: |
+              Even: 3
+              Odd: 2
+          - in: ""
+            out: |
+              Even: 0
+              Odd: 0
+          - in: "-7 -9 11"
+            out: |
+              Even: 0
+              Odd: 3
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int x{};
+              int even{0};
+              int odd{0};
+              while (std::cin >> x) {
+                  if (x % 2 == 0) {
+                      ++even;
+                  } else {
+                      ++odd;
+                  }
+              }
+              std::cout << "Even: " << even << '\n';
+              std::cout << "Odd: " << odd << '\n';
+              return 0;
+          }
+      - type: code
+        prompt: |
+          Read `n` and print a multiplication grid from 1×1 to n×n, each
+          number followed by a single space (trailing spaces are ignored).
+          For input `3`:
+
+          ```text
+          1 2 3
+          2 4 6
+          3 6 9
+          ```
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "3"
+            out: |
+              1 2 3
+              2 4 6
+              3 6 9
+          - in: "1"
+            out: "1"
+          - in: "5"
+            out: |
+              1 2 3 4 5
+              2 4 6 8 10
+              3 6 9 12 15
+              4 8 12 16 20
+              5 10 15 20 25
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              for (int r{1}; r <= n; ++r) {
+                  for (int c{1}; c <= n; ++c) {
+                      std::cout << r * c << ' ';
+                  }
+                  std::cout << '\n';
+              }
+              return 0;
+          }
+      - type: code
+        prompt: |
+          A number is **perfect** if it equals the sum of its divisors smaller
+          than itself (6 = 1 + 2 + 3). Read `n` and print all perfect numbers
+          from 1 to `n`, one per line (print nothing if there are none).
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "30"
+            out: |
+              6
+              28
+          - in: "5"
+            out: ""
+          - in: "10000"
+            out: |
+              6
+              28
+              496
+              8128
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              for (int x{2}; x <= n; ++x) {
+                  int sum{1};
+                  for (int d{2}; d * d <= x; ++d) {
+                      if (x % d == 0) {
+                          sum += d;
+                          if (d != x / d) {
+                              sum += x / d;
+                          }
+                      }
+                  }
+                  if (sum == x) {
+                      std::cout << x << '\n';
+                  }
+              }
+              return 0;
+          }

@@ -1,0 +1,2179 @@
+id: ch04
+number: 4
+part: p1
+title: Making Decisions
+blurb: Programs that choose — comparisons, if and else, logic, switch, and the traps that catch everyone.
+hours: 4.5
+goals:
+  - Compare values with `== != < > <= >=` and predict the `bool` result
+  - Write `if`, `else if` and `else` chains that choose exactly one path
+  - Combine conditions with `&&`, `||` and `!`, including range checks
+  - Use `switch` to choose between many fixed values
+  - Use the conditional operator `?:` for simple choices
+  - Spot the classic bugs — `=` for `==`, a stray `;`, missing braces
+  - Detect invalid input and react to it
+
+items:
+  - type: lesson
+    id: c4-compare
+    title: Comparisons
+    minutes: 16
+    objectives:
+      - Use the six comparison operators
+      - Predict the `bool` result of a comparison
+      - Compare strings, and doubles safely
+    body: |
+      Decisions start with questions: *Is the score above 100? Is the
+      password right? Is the list empty?* In C++ you ask them with
+      **comparison operators**, and the answer is a `bool`: `true` or `false`.
+
+      | Operator | Asks | `5 ? 3` |
+      |---|---|---|
+      | `==` | equal to? | `false` |
+      | `!=` | not equal to? | `true` |
+      | `<` | less than? | `false` |
+      | `>` | greater than? | `true` |
+      | `<=` | less than or equal? | `false` |
+      | `>=` | greater than or equal? | `true` |
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int age{16};
+          std::cout << std::boolalpha;
+          std::cout << (age >= 18) << '\n';
+          std::cout << (age == 16) << '\n';
+          std::cout << (age != 16) << '\n';
+
+          bool isTeen = age >= 13 && age <= 19;   // more on && soon
+          std::cout << isTeen << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      false
+      true
+      false
+      true
+      ```
+
+      (The parentheses around the comparisons are needed when printing,
+      because `<<` binds more tightly than `>=`.)
+
+      > [!mistake] `=` versus `==`
+      > `=` **assigns**; `==` **compares**. Mixing them up is one of the most
+      > common bugs in C-family languages, and the next lessons show why
+      > it's so sneaky.
+
+      {{check compare}}
+
+      ## Comparing strings
+
+      `==` and `!=` work on `std::string` as you'd hope: same characters in the
+      same order. `<` and `>` compare alphabetically — character by character,
+      using the character codes. That means **uppercase comes before
+      lowercase** (`'Z'` is 90, `'a'` is 97):
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string a{"apple"};
+          std::string b{"banana"};
+          std::cout << std::boolalpha;
+          std::cout << (a < b) << '\n';
+          std::cout << (a == "apple") << '\n';
+          std::cout << (std::string{"Zebra"} < "apple") << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      true
+      true
+      true
+      ```
+
+      ## Comparing doubles
+
+      Remember that doubles carry tiny rounding errors. So this is `false`:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          std::cout << std::boolalpha << (0.1 + 0.2 == 0.3) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      false
+      ```
+
+      Instead of testing *equal*, test *close enough*: is the difference
+      smaller than a tiny tolerance?
+
+      ```cpp
+      #include <cmath>
+      #include <iostream>
+
+      int main() {
+          double x{0.1 + 0.2};
+          constexpr double tolerance{1e-9};
+          std::cout << std::boolalpha << (std::abs(x - 0.3) < tolerance) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      true
+      ```
+
+      {{check strings}}
+    checks:
+      - id: compare
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{7};
+              int b{10};
+              std::cout << (a < b) << (a == b) << (b - a >= 3) << '\n';
+              return 0;
+          }
+        answer: |
+          101
+        why: "Without `boolalpha`, true prints as 1 and false as 0: 7 < 10 is true, 7 == 10 is false, 3 >= 3 is true."
+      - id: strings
+        type: mcq
+        prompt: "Which of these is `true`?"
+        options:
+          - "`std::string{\"cat\"} == \"Cat\"`"
+          - "`std::string{\"cat\"} < \"dog\"`"
+          - "`std::string{\"b\"} < \"a\"`"
+          - "`std::string{\"apple\"} > \"apples\"`"
+        answer: 1
+        why: "Comparison is character by character: 'c' < 'd'. \"cat\" ≠ \"Cat\" (case matters), 'b' > 'a', and \"apple\" is a prefix of \"apples\", so it is smaller."
+    cards:
+      - front: What are the six comparison operators?
+        back: "`==` equal, `!=` not equal, `<`, `>`, `<=`, `>=`. Each gives a `bool`."
+      - front: What's the difference between `=` and `==`?
+        back: "`=` assigns a value; `==` compares two values and gives `true` or `false`."
+      - front: How do you check whether two doubles are "equal"?
+        back: "Check whether they're close: `std::abs(a - b) < tolerance`, with a small tolerance like `1e-9`."
+      - front: "Is `\"Zebra\" < \"apple\"` for std::string?"
+        back: "Yes — comparison uses character codes, and all uppercase letters (65–90) come before lowercase ones (97–122)."
+
+  - type: lesson
+    id: c4-if
+    title: if and else
+    minutes: 20
+    objectives:
+      - Run code only when a condition is true with `if`
+      - Choose between two paths with `if` / `else`
+      - Explain the scope of a variable declared inside a block
+    body: |
+      An **`if` statement** runs a block of code only when a condition is
+      true:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int temperature{};
+          std::cin >> temperature;
+
+          if (temperature > 30) {
+              std::cout << "It's hot! Drink water.\n";
+          }
+          std::cout << "Have a nice day.\n";
+          return 0;
+      }
+      ```
+
+      ```stdin
+      35
+      ```
+
+      ```output
+      It's hot! Drink water.
+      Have a nice day.
+      ```
+
+      The condition goes in **parentheses**; the code to run goes in a block
+      `{ }`. If the condition is false, the whole block is skipped and the
+      program carries on after it. Edit the input to `20` and run it again.
+
+      ## `else`: the other path
+
+      Add `else` to run something when the condition is **false**. Exactly one
+      of the two blocks runs — never both, never neither.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int number{};
+          std::cin >> number;
+
+          if (number % 2 == 0) {
+              std::cout << number << " is even\n";
+          } else {
+              std::cout << number << " is odd\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      7
+      ```
+
+      ```output
+      7 is odd
+      ```
+
+      > [!tip] Always use braces
+      > C++ lets you leave out `{ }` when a branch is a single statement. Don't.
+      > Sooner or later someone adds a second line, indents it to look like
+      > it's inside — and it isn't. Braces every time; it's one of the
+      > cheapest bug-preventers there is.
+
+      {{check if-else}}
+
+      ## Scope: variables live inside their block
+
+      A variable declared **inside** a block exists only until that block's
+      closing `}`. That region is called its **scope**.
+
+      ```cpp error
+      #include <iostream>
+
+      int main() {
+          int age{20};
+          if (age >= 18) {
+              int yearsAdult = age - 18;
+              std::cout << "Adult for " << yearsAdult << " years\n";
+          }
+          std::cout << yearsAdult << '\n';   // error: out of scope
+          return 0;
+      }
+      ```
+
+      If you need a value after the `if`, declare the variable **before** it:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int price{50};
+          bool member{true};
+
+          int toPay{price};          // declared outside, so it's visible after
+          if (member) {
+              toPay = price * 9 / 10;
+          }
+          std::cout << "To pay: " << toPay << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      To pay: 45
+      ```
+
+      Notice `if (member)`: a `bool` is already a condition, so you don't need
+      `member == true`.
+
+      {{check scope}}
+
+      {{task abs}}
+    checks:
+      - id: if-else
+        type: output
+        prompt: The Input box contains `-3`. What is printed?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{};
+              std::cin >> x;
+              if (x > 0) {
+                  std::cout << "positive ";
+              } else {
+                  std::cout << "not positive ";
+              }
+              std::cout << "done\n";
+              return 0;
+          }
+        stdin: "-3"
+        answer: |
+          not positive done
+        why: "−3 > 0 is false, so the `else` block runs. `done` is after the if/else, so it always prints."
+      - id: scope
+        type: mcq
+        prompt: "Why doesn't this compile?"
+        code: |
+          #include <iostream>
+
+          int main() {
+              int score{80};
+              if (score > 50) {
+                  int bonus{10};
+              }
+              std::cout << score + bonus << '\n';
+              return 0;
+          }
+        compiles: error
+        options:
+          - "`bonus` is uninitialised"
+          - "`bonus` only exists inside the `if` block"
+          - "`score + bonus` is too big"
+          - You can't declare variables inside `if`
+        answer: 1
+        why: "`bonus` is declared inside the block, so its scope ends at that block's `}`. Declare it before the `if` to use it after."
+    tasks:
+      - id: abs
+        title: Distance from zero
+        prompt: |
+          Read a whole number and print its distance from zero — without using
+          `std::abs`. For input `-12` print `12`; for `5` print `5`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+
+              return 0;
+          }
+        tests:
+          - in: "-12"
+            out: "12"
+          - in: "5"
+            out: "5"
+          - in: "0"
+            out: "0"
+            hidden: true
+        hints:
+          - "If `n` is negative, make it positive: `n = -n;`"
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              if (n < 0) {
+                  n = -n;
+              }
+              std::cout << n << '\n';
+              return 0;
+          }
+    cards:
+      - front: What does `if (condition) { ... } else { ... }` guarantee?
+        back: Exactly one of the two blocks runs — the first if the condition is true, the second otherwise.
+      - front: What is the **scope** of a variable declared inside `{ }`?
+        back: From its declaration to the closing `}` of that block. After that, it doesn't exist.
+      - front: Why always use braces with `if`, even for one statement?
+        back: So a line added later can't silently end up outside the `if` while looking as if it's inside.
+
+  - type: lesson
+    id: c4-elseif
+    title: Choosing among many with else if
+    minutes: 18
+    objectives:
+      - Write an `if` / `else if` / `else` chain that picks one of several paths
+      - Order the conditions of a chain correctly
+      - Nest one `if` inside another when a decision depends on a previous one
+    body: |
+      When there are more than two possibilities, chain them with
+      **`else if`**. C++ tests the conditions **top to bottom** and runs the
+      **first** branch whose condition is true — then skips the rest. The
+      final `else` catches everything else.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int score{};
+          std::cin >> score;
+
+          if (score >= 90) {
+              std::cout << "A\n";
+          } else if (score >= 80) {
+              std::cout << "B\n";
+          } else if (score >= 70) {
+              std::cout << "C\n";
+          } else if (score >= 60) {
+              std::cout << "D\n";
+          } else {
+              std::cout << "F\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      84
+      ```
+
+      ```output
+      B
+      ```
+
+      Trace it with 84: `84 >= 90`? No. `84 >= 80`? Yes → print `B`, and the
+      rest of the chain is skipped. That's why the second condition doesn't
+      need to say `score >= 80 && score < 90`: by the time we get there, we
+      already know it's below 90.
+
+      ## Order matters
+
+      Put the same conditions in the wrong order and the program breaks
+      without any error:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int score{95};
+          if (score >= 60) {
+              std::cout << "D\n";
+          } else if (score >= 90) {
+              std::cout << "A\n";   // never reached for 95!
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      D
+      ```
+
+      A 95 is also `>= 60`, so the first branch wins. In a chain, put the
+      **most specific** (or highest) conditions first.
+
+      {{check chain}}
+
+      ## Nested ifs
+
+      An `if` can sit inside another. Use it when the second question only
+      makes sense after the first:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int age{};
+          bool hasTicket{};
+          std::cin >> age >> hasTicket;
+
+          if (hasTicket) {
+              if (age >= 12) {
+                  std::cout << "Enjoy the film!\n";
+              } else {
+                  std::cout << "You need an adult with you.\n";
+              }
+          } else {
+              std::cout << "Please buy a ticket first.\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      10 1
+      ```
+
+      ```output
+      You need an adult with you.
+      ```
+
+      (Reading a `bool` with `>>` expects `1` or `0`.)
+
+      Deep nesting gets hard to read quickly. If you find yourself three
+      levels deep, a chain or combined conditions (next lesson) are usually
+      clearer.
+
+      {{check nested}}
+
+      {{task sign}}
+    checks:
+      - id: chain
+        type: output
+        prompt: The Input box contains `15`. What is printed?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              if (n % 15 == 0) {
+                  std::cout << "FizzBuzz\n";
+              } else if (n % 3 == 0) {
+                  std::cout << "Fizz\n";
+              } else if (n % 5 == 0) {
+                  std::cout << "Buzz\n";
+              } else {
+                  std::cout << n << '\n';
+              }
+              return 0;
+          }
+        stdin: "15"
+        answer: |
+          FizzBuzz
+        why: "15 is divisible by 15, so the first branch runs and the rest are skipped — even though 15 is also divisible by 3 and 5."
+      - id: nested
+        type: mcq
+        prompt: "In an `if` / `else if` / `else` chain, how many branches run?"
+        options:
+          - All branches whose condition is true
+          - Exactly one
+          - At most one, unless there's no `else`
+          - None, unless the first condition is true
+        answer: 1
+        why: "The first true condition's branch runs and the rest are skipped; if none is true, the `else` runs. With a final `else`, exactly one branch always runs."
+    tasks:
+      - id: sign
+        title: Positive, negative or zero
+        prompt: |
+          Read a whole number and print `positive`, `negative` or `zero`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+
+              return 0;
+          }
+        tests:
+          - in: "42"
+            out: positive
+          - in: "-7"
+            out: negative
+          - in: "0"
+            out: zero
+        hints:
+          - "`if (n > 0) { ... } else if (n < 0) { ... } else { ... }`"
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              if (n > 0) {
+                  std::cout << "positive\n";
+              } else if (n < 0) {
+                  std::cout << "negative\n";
+              } else {
+                  std::cout << "zero\n";
+              }
+              return 0;
+          }
+    cards:
+      - front: How does an `if` / `else if` / `else` chain decide what to run?
+        back: It tests conditions top to bottom and runs the **first** true branch, skipping all the rest. If none is true, the `else` runs.
+      - front: Why does the order of an `else if` chain matter?
+        back: Earlier branches win. If a broad condition (`score >= 60`) comes before a narrow one (`score >= 90`), the narrow one is never reached.
+
+  - type: quiz
+    id: c4-quiz1
+    title: "Quiz: if and else"
+    questions:
+      - type: output
+        prompt: The Input box contains `12`.
+        code: |
+          #include <iostream>
+
+          int main() {
+              int h{};
+              std::cin >> h;
+              if (h < 12) {
+                  std::cout << "Good morning\n";
+              } else if (h < 18) {
+                  std::cout << "Good afternoon\n";
+              } else {
+                  std::cout << "Good evening\n";
+              }
+              return 0;
+          }
+        stdin: "12"
+        answer: |
+          Good afternoon
+        why: "12 < 12 is false; 12 < 18 is true."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{5};
+              if (x > 3) {
+                  x = x * 2;
+              }
+              if (x > 8) {
+                  x = x + 1;
+              }
+              std::cout << x << '\n';
+              return 0;
+          }
+        answer: |
+          11
+        why: "These are two *separate* ifs, not a chain: both are checked. 5 > 3 → x = 10; 10 > 8 → x = 11."
+      - type: mcq
+        prompt: "What does `if (isReady)` mean when `isReady` is a `bool`?"
+        options:
+          - It's a compile error; you must write `== true`
+          - The same as `if (isReady == true)`
+          - It checks whether `isReady` exists
+          - It sets `isReady` to true
+        answer: 1
+        why: A `bool` is already a condition. `== true` is redundant.
+      - type: spot
+        prompt: This should print `Big` only for numbers over 100, but prints `Big` for 5. Which line is the bug?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{5};
+              if (n > 100); {
+                  std::cout << "Big\n";
+              }
+              return 0;
+          }
+        answer: 5
+        why: "The `;` right after the condition ends the `if` with an empty statement. The block below is then just a normal block that always runs."
+      - type: tf
+        prompt: A variable declared inside an `if` block can be used after the block ends.
+        answer: false
+        why: Its scope ends at the block's closing brace.
+
+  - type: lesson
+    id: c4-logic
+    title: "Combining conditions: &&, || and !"
+    minutes: 20
+    objectives:
+      - Combine conditions with `&&` (and), `||` (or) and `!` (not)
+      - Write a correct range check
+      - Use short-circuit evaluation to avoid errors
+    body: |
+      Real questions often have parts: *is it a weekend **and** sunny?* *Is the
+      user an admin **or** the owner?* C++ has three **logical operators**:
+
+      | Operator | Name | True when |
+      |---|---|---|
+      | `a && b` | and | **both** `a` and `b` are true |
+      | `a \|\| b` | or | **at least one** of them is true |
+      | `!a` | not | `a` is false |
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int age{25};
+          bool hasLicence{true};
+          bool isWeekend{false};
+
+          if (age >= 18 && hasLicence) {
+              std::cout << "Can drive\n";
+          }
+          if (isWeekend || age < 18) {
+              std::cout << "No work today\n";
+          }
+          if (!isWeekend) {
+              std::cout << "It's a weekday\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      Can drive
+      It's a weekday
+      ```
+
+      `&&` binds more tightly than `||` (like `*` and `+`), and `!` binds
+      tightest of all. When mixing `&&` and `||`, **use parentheses** so the
+      meaning is obvious: `(a && b) || c`.
+
+      ## Range checks
+
+      To check that `x` is between 1 and 10, you must write **two**
+      comparisons joined by `&&`:
+
+      ```cpp static
+      if (x >= 1 && x <= 10) { ... }   // correct
+      ```
+
+      > [!mistake] `1 <= x <= 10`
+      > This compiles, and it's always true! C++ evaluates it left to right:
+      > `1 <= x` is `true` or `false` — that is, `1` or `0` — and both `1 <= 10`
+      > and `0 <= 10` are true. Maths notation doesn't work here.
+
+      ```cpp ub
+      #include <iostream>
+
+      int main() {
+          int x{50};
+          if (1 <= x <= 10) {
+              std::cout << "Looks in range, but it isn't!\n";
+          }
+          if (x >= 1 && x <= 10) {
+              std::cout << "Really in range\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      Looks in range, but it isn't!
+      ```
+
+      (Notice the compiler warning when you run it.) And the opposite —
+      *outside* the range — is `x < 1 || x > 10`.
+
+      {{check range}}
+
+      ## Short-circuit evaluation
+
+      `&&` and `||` evaluate their left side first, and **only look at the
+      right side if they need to**. If the left side of `&&` is false, the
+      answer is already false; if the left side of `||` is true, it's already
+      true. This lets you guard a risky test:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int total{50};
+          int count{0};
+          if (count != 0 && total / count > 10) {
+              std::cout << "High average\n";
+          } else {
+              std::cout << "No data or low average\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      No data or low average
+      ```
+
+      Because `count != 0` is false, `total / count` is never evaluated — so
+      no division by zero. Swap the two conditions and the program would
+      crash.
+
+      > [!deep] De Morgan's laws
+      > "Not (A and B)" is the same as "(not A) or (not B)", and "not (A or B)"
+      > is "(not A) and (not B)". So `!(x >= 1 && x <= 10)` can be rewritten
+      > `x < 1 || x > 10`. Useful for simplifying conditions.
+
+      {{check short}}
+
+      {{check demorgan}}
+
+      {{task leap}}
+    checks:
+      - id: range
+        type: mcq
+        prompt: Which condition is true exactly when `h` is a valid hour from 0 to 23?
+        options:
+          - "`0 <= h <= 23`"
+          - "`h >= 0 || h <= 23`"
+          - "`h >= 0 && h <= 23`"
+          - "`h > 0 && h < 23`"
+        answer: 2
+        why: "Both limits must hold (`&&`), and both are inclusive. `||` would accept every number; `0 <= h <= 23` is always true."
+      - id: short
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{0};
+              bool r1 = (a == 0) || (10 / a > 1);
+              bool r2 = (a != 0) && (10 / a > 1);
+              std::cout << r1 << r2 << '\n';
+              return 0;
+          }
+        answer: |
+          10
+        why: "In `r1`, `a == 0` is true, so `||` stops: true. In `r2`, `a != 0` is false, so `&&` stops: false. The division by zero is never evaluated."
+      - id: demorgan
+        type: mcq
+        prompt: "Which is the same as `!(rain || cold)`?"
+        options:
+          - "`!rain || !cold`"
+          - "`!rain && !cold`"
+          - "`rain && cold`"
+          - "`!rain || cold`"
+        answer: 1
+        why: "\"Not (rain or cold)\" means \"no rain and not cold\" — De Morgan's law."
+    tasks:
+      - id: leap
+        title: Leap year
+        prompt: |
+          A year is a **leap year** if it's divisible by 4 — except years
+          divisible by 100, which aren't — except years divisible by 400,
+          which are. Read a year and print `leap` or `common`.
+
+          (2024 → leap, 1900 → common, 2000 → leap, 2023 → common.)
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int year{};
+              std::cin >> year;
+
+              return 0;
+          }
+        tests:
+          - in: "2024"
+            out: leap
+          - in: "1900"
+            out: common
+          - in: "2000"
+            out: leap
+          - in: "2023"
+            out: common
+          - in: "2100"
+            out: common
+            hidden: true
+        hints:
+          - "\"Divisible by k\" is `year % k == 0`."
+          - "One way: `(year % 4 == 0 && year % 100 != 0) || year % 400 == 0`."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int year{};
+              std::cin >> year;
+              bool leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+              if (leap) {
+                  std::cout << "leap\n";
+              } else {
+                  std::cout << "common\n";
+              }
+              return 0;
+          }
+    cards:
+      - front: When is `a && b` true? `a || b`? `!a`?
+        back: "`a && b`: both true. `a || b`: at least one true. `!a`: `a` is false."
+      - front: How do you check that `x` is between 1 and 10 inclusive?
+        back: "`x >= 1 && x <= 10` — never `1 <= x <= 10`, which is always true."
+      - front: What is **short-circuit evaluation**?
+        back: "`&&` skips its right side if the left is false; `||` skips it if the left is true. Useful as a guard: `n != 0 && total / n > 5`."
+      - front: "Which binds tighter: `&&` or `||`?"
+        back: "`&&` (like `*` over `+`). Use parentheses when mixing them."
+
+  - type: lesson
+    id: c4-switch
+    title: switch
+    minutes: 16
+    objectives:
+      - Choose between many fixed values with `switch`
+      - Use `break` and `default` correctly
+      - Group several cases that share code
+    body: |
+      When you compare **one** value against many **fixed** possibilities, a
+      `switch` is often clearer than a long `else if` chain:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int day{};
+          std::cin >> day;
+
+          switch (day) {
+          case 1:
+              std::cout << "Monday\n";
+              break;
+          case 2:
+              std::cout << "Tuesday\n";
+              break;
+          case 3:
+              std::cout << "Wednesday\n";
+              break;
+          case 6:
+          case 7:
+              std::cout << "Weekend!\n";
+              break;
+          default:
+              std::cout << "Some other day\n";
+              break;
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      7
+      ```
+
+      ```output
+      Weekend!
+      ```
+
+      How it works:
+
+      - The value in `switch ( )` is compared with each `case`. Execution **jumps** to the matching case.
+      - It then runs **until a `break`**, which leaves the switch.
+      - `default:` runs if no case matches (like a final `else`).
+      - Several `case` labels in a row share the same code — that's how 6 and 7 both print *Weekend!*.
+
+      > [!mistake] Forgetting `break`
+      > Without `break`, execution **falls through** into the next case's code
+      > — and the next, until a `break` or the end. Run this with 2:
+      >
+      > ```cpp static
+      > case 1: std::cout << "one ";
+      > case 2: std::cout << "two ";
+      > case 3: std::cout << "three ";
+      > ```
+      >
+      > It prints `two three`. Compilers warn about this; if you really want it,
+      > write `[[fallthrough]];` to say so.
+
+      ## What can you switch on?
+
+      Only **integer-like** values: `int`, `char`, `bool`, and enumerations
+      (Chapter 9) — each `case` being a constant. You **can't** switch on a
+      `std::string` or a `double`; use `if` / `else if` for those.
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          char answer{};
+          std::cin >> answer;
+          switch (answer) {
+          case 'y':
+          case 'Y':
+              std::cout << "Great!\n";
+              break;
+          case 'n':
+          case 'N':
+              std::cout << "Maybe next time.\n";
+              break;
+          default:
+              std::cout << "Please answer y or n.\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      N
+      ```
+
+      ```output
+      Maybe next time.
+      ```
+
+      {{check fall}}
+
+      {{task menu}}
+    checks:
+      - id: fall
+        type: output
+        prompt: What does this print? (Look carefully for `break`s.)
+        code: |
+          #include <iostream>
+
+          int main() {
+              int level{2};
+              switch (level) {
+              case 1:
+                  std::cout << "easy ";
+                  break;
+              case 2:
+                  std::cout << "medium ";
+                  [[fallthrough]];
+              case 3:
+                  std::cout << "hard ";
+                  break;
+              default:
+                  std::cout << "unknown ";
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          medium hard
+        why: "Execution jumps to `case 2`, prints `medium`, then falls through (no `break`) into `case 3`, prints `hard`, and stops at that `break`."
+      - id: switch-string
+        type: mcq
+        prompt: Which of these can **not** be used as the value of a `switch`?
+        options:
+          - "an `int`"
+          - "a `char`"
+          - "a `std::string`"
+          - "a `bool`"
+        answer: 2
+        why: "`switch` works only with integer-like types. For strings, use `if` / `else if`."
+    tasks:
+      - id: menu
+        title: Vending machine
+        prompt: |
+          Read a single character and print the drink:
+
+          - `c` → `Coffee`
+          - `t` → `Tea`
+          - `w` or `W` → `Water`
+          - anything else → `Unknown choice`
+
+          Use a `switch`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+              char choice{};
+              std::cin >> choice;
+
+              return 0;
+          }
+        tests:
+          - in: "c"
+            out: Coffee
+          - in: "t"
+            out: Tea
+          - in: "W"
+            out: Water
+          - in: "w"
+            out: Water
+          - in: "x"
+            out: Unknown choice
+            hidden: true
+        hints:
+          - "`switch (choice) { case 'c': ... break; ... default: ... }`"
+          - "Stack `case 'w':` and `case 'W':` on top of each other to share code."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              char choice{};
+              std::cin >> choice;
+              switch (choice) {
+              case 'c':
+                  std::cout << "Coffee\n";
+                  break;
+              case 't':
+                  std::cout << "Tea\n";
+                  break;
+              case 'w':
+              case 'W':
+                  std::cout << "Water\n";
+                  break;
+              default:
+                  std::cout << "Unknown choice\n";
+                  break;
+              }
+              return 0;
+          }
+    cards:
+      - front: What does `break` do inside a `switch`?
+        back: It leaves the switch. Without it, execution **falls through** into the next case's code.
+      - front: What does `default:` do in a `switch`?
+        back: It runs when no `case` matches — like a final `else`.
+      - front: What types can a `switch` use?
+        back: Integer-like types — `int`, `char`, `bool`, enumerations. Not `std::string` or `double`.
+
+  - type: lesson
+    id: c4-traps
+    title: The conditional operator, bad input and classic traps
+    minutes: 20
+    objectives:
+      - Use `condition ? a : b` for simple choices between two values
+      - Detect when `std::cin` failed to read a number
+      - Recognise the classic `if` bugs before they bite
+    body: |
+      ## The conditional operator `?:`
+
+      When you just need to pick one of two **values**, there's a compact
+      form: `condition ? valueIfTrue : valueIfFalse`.
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          int items{1};
+          std::cout << "You have " << items << (items == 1 ? " item" : " items") << '\n';
+
+          int a{8};
+          int b{3};
+          int larger = (a > b) ? a : b;
+          std::cout << larger << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      You have 1 item
+      8
+      ```
+
+      It's an *expression* — it produces a value — so it can go inside a
+      `std::cout` or an initialisation, where an `if` can't. Keep it for
+      short, simple choices; for anything bigger, `if` is clearer. And put it
+      in parentheses when printing it.
+
+      {{check ternary}}
+
+      ## Reacting to bad input
+
+      If the user types letters when your program reads a number, the read
+      **fails**. You can test it — a read used as a condition is true only if
+      it succeeded:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int age{};
+          if (std::cin >> age) {
+              std::cout << "You are " << age << '\n';
+          } else {
+              std::cout << "That's not a number!\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      twelve
+      ```
+
+      ```output
+      That's not a number!
+      ```
+
+      The other kind of bad input is a number that makes no sense — an age of
+      `-5`. That's just an `if`: check the range and report the problem. Good
+      programs **never trust input**.
+
+      ## The classic traps
+
+      Every one of these compiles. Learn to see them:
+
+      **1. Assignment instead of comparison**
+
+      ```cpp ub
+      #include <iostream>
+
+      int main() {
+          int lives{0};
+          if (lives = 3) {           // assigns 3, which counts as true!
+              std::cout << "Still alive, lives = " << lives << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      `lives = 3` stores 3 and produces 3, and any non-zero number counts as
+      `true`. The compiler warns — another reason to read warnings.
+
+      **2. A stray semicolon**
+
+      ```cpp static
+      if (x > 10);          // the ; is the (empty) body of the if
+      {
+          std::cout << "Always printed!\n";
+      }
+      ```
+
+      **3. Missing braces**
+
+      ```cpp static
+      if (x > 10)
+          std::cout << "Big\n";
+          std::cout << "Very big\n";   // NOT part of the if, despite the indent
+      ```
+
+      **4. Exact comparison of doubles** — use a tolerance.
+
+      **5. `else if` in the wrong order** — the general case swallows the specific one.
+
+      {{check traps}}
+
+      {{task validate}}
+    checks:
+      - id: ternary
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int t{-4};
+              std::cout << (t < 0 ? "freezing" : "fine") << ' ' << (t % 2 == 0 ? t / 2 : t) << '\n';
+              return 0;
+          }
+        answer: |
+          freezing -2
+        why: "−4 < 0, so the first gives `freezing`. −4 is even, so the second gives −4 / 2 = −2."
+      - id: traps
+        type: output
+        warnings: true
+        prompt: What does this print? It compiles, with a warning.
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{2};
+              if (x > 5)
+                  std::cout << "big ";
+                  std::cout << "huge ";
+              std::cout << "end\n";
+              return 0;
+          }
+        answer: |
+          huge end
+        why: "Without braces, only the first statement belongs to the `if`. `huge` is printed regardless of the indentation. Always use braces."
+    tasks:
+      - id: validate
+        title: Validate a percentage
+        prompt: |
+          Read a whole number. Print:
+
+          - `not a number` if the read fails,
+          - `out of range` if it isn't between 0 and 100 (inclusive),
+          - otherwise `ok: ` followed by the number and `%`, e.g. `ok: 45%`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+              int value{};
+
+              return 0;
+          }
+        tests:
+          - in: "45"
+            out: "ok: 45%"
+          - in: "abc"
+            out: not a number
+          - in: "101"
+            out: out of range
+          - in: "-1"
+            out: out of range
+          - in: "0"
+            out: "ok: 0%"
+            hidden: true
+        hints:
+          - "`if (!(std::cin >> value))` is true when the read failed."
+          - "Then `else if (value < 0 || value > 100)`."
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int value{};
+              if (!(std::cin >> value)) {
+                  std::cout << "not a number\n";
+              } else if (value < 0 || value > 100) {
+                  std::cout << "out of range\n";
+              } else {
+                  std::cout << "ok: " << value << "%\n";
+              }
+              return 0;
+          }
+    cards:
+      - front: What does `cond ? a : b` produce?
+        back: The value `a` if `cond` is true, otherwise `b`. It's an expression, so it can go inside `std::cout` or an initialisation.
+      - front: How do you check whether `std::cin >> n` succeeded?
+        back: "Use the read as a condition: `if (std::cin >> n) { ok } else { failed }`."
+      - front: "Why does `if (x = 5)` always run its block?"
+        back: "`x = 5` assigns 5 and produces 5, which is non-zero, so it counts as true. You meant `==`."
+      - front: What does a `;` right after `if (...)` do?
+        back: It ends the if with an empty statement, so the following block always runs.
+
+  - type: quiz
+    id: c4-quiz2
+    title: "Quiz: logic and switch"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              bool a{true};
+              bool b{false};
+              std::cout << (a && b) << (a || b) << (!a || b) << (!(a && b)) << '\n';
+              return 0;
+          }
+        answer: |
+          0101
+        why: "true && false = false; true || false = true; false || false = false; !(false) = true."
+      - type: mcq
+        prompt: Which condition is true when `c` is a lowercase letter?
+        options:
+          - "`c >= 'a' || c <= 'z'`"
+          - "`c >= 'a' && c <= 'z'`"
+          - "`'a' <= c <= 'z'`"
+          - "`c == 'a' && c == 'z'`"
+        answer: 1
+        why: "Both limits must hold. `||` would accept everything, and the chained form is always true."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{3};
+              switch (n) {
+              case 1:
+                  std::cout << "a";
+                  break;
+              case 3:
+                  std::cout << "b";
+                  break;
+              case 4:
+                  std::cout << "c";
+                  break;
+              default:
+                  std::cout << "d";
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          b
+        why: Execution jumps to `case 3`, prints `b`, and `break` leaves the switch.
+      - type: fill
+        prompt: Complete it so `status` is `"adult"` for ages 18 and over, otherwise `"minor"`.
+        code: |
+          std::string status = (age >= 18) ___ "adult" ___ "minor";
+        blanks:
+          - ['?']
+          - [':']
+        why: "The conditional operator: `condition ? ifTrue : ifFalse`."
+      - type: tf
+        prompt: "In `x != 0 && 100 / x > 2`, the division is never done when `x` is 0."
+        answer: true
+        why: "Short-circuit: `x != 0` is false, so `&&` doesn't evaluate its right side."
+      - type: spot
+        prompt: Which line makes this program print `Correct!` whatever the guess is?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int secret{7};
+              int guess{};
+              std::cin >> guess;
+              if (guess = secret) {
+                  std::cout << "Correct!\n";
+              }
+              return 0;
+          }
+        answer: 7
+        why: "`guess = secret` assigns 7 (which counts as true). It should be `guess == secret`."
+
+  - type: challenge
+    id: c4-ch-grade
+    title: Grade calculator
+    difficulty: 1
+    tags: [if, validation]
+    prompt: |
+      Read a score. Print `Invalid` if it's not a number or not between 0 and
+      100. Otherwise print the grade letter and a message:
+
+      | Score | Output |
+      |---|---|
+      | 90–100 | `A - Excellent` |
+      | 75–89 | `B - Good` |
+      | 60–74 | `C - Pass` |
+      | 0–59 | `F - Fail` |
+    starter: |
+      #include <iostream>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "95"
+        out: A - Excellent
+      - in: "75"
+        out: B - Good
+      - in: "74"
+        out: C - Pass
+      - in: "12"
+        out: F - Fail
+      - in: "101"
+        out: Invalid
+      - in: "hello"
+        out: Invalid
+        hidden: true
+      - in: "0"
+        out: F - Fail
+        hidden: true
+      - in: "-3"
+        out: Invalid
+        hidden: true
+    hints:
+      - Check for invalid input first, then go from the top grade down.
+      - "`if (!(std::cin >> score) || score < 0 || score > 100)` handles every invalid case at once."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          int score{};
+          if (!(std::cin >> score) || score < 0 || score > 100) {
+              std::cout << "Invalid\n";
+          } else if (score >= 90) {
+              std::cout << "A - Excellent\n";
+          } else if (score >= 75) {
+              std::cout << "B - Good\n";
+          } else if (score >= 60) {
+              std::cout << "C - Pass\n";
+          } else {
+              std::cout << "F - Fail\n";
+          }
+          return 0;
+      }
+    explain: |
+      Short-circuit evaluation makes the first condition safe: if the read
+      fails, the range checks aren't even looked at.
+
+  - type: challenge
+    id: c4-ch-triangle
+    title: What kind of triangle?
+    difficulty: 2
+    tags: [logic]
+    prompt: |
+      Read three side lengths (whole numbers). Three lengths only make a
+      triangle if every one is positive and each side is **shorter than the
+      sum of the other two**. Print:
+
+      - `not a triangle`, or else
+      - `equilateral` (all three equal),
+      - `isosceles` (exactly two equal),
+      - `scalene` (all different).
+    starter: |
+      #include <iostream>
+
+      int main() {
+          int a{};
+          int b{};
+          int c{};
+          std::cin >> a >> b >> c;
+
+          return 0;
+      }
+    tests:
+      - in: "3 3 3"
+        out: equilateral
+      - in: "3 4 5"
+        out: scalene
+      - in: "5 5 8"
+        out: isosceles
+      - in: "1 2 3"
+        out: not a triangle
+      - in: "8 5 5"
+        out: isosceles
+        hidden: true
+      - in: "0 4 4"
+        out: not a triangle
+        hidden: true
+      - in: "2 9 3"
+        out: not a triangle
+        hidden: true
+    hints:
+      - "Valid: `a > 0 && b > 0 && c > 0 && a < b + c && b < a + c && c < a + b`."
+      - "After ruling out non-triangles, check equilateral before isosceles."
+      - "Isosceles: `a == b || b == c || a == c`."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          int a{};
+          int b{};
+          int c{};
+          std::cin >> a >> b >> c;
+
+          bool positive = a > 0 && b > 0 && c > 0;
+          bool closes = a < b + c && b < a + c && c < a + b;
+
+          if (!positive || !closes) {
+              std::cout << "not a triangle\n";
+          } else if (a == b && b == c) {
+              std::cout << "equilateral\n";
+          } else if (a == b || b == c || a == c) {
+              std::cout << "isosceles\n";
+          } else {
+              std::cout << "scalene\n";
+          }
+          return 0;
+      }
+    explain: |
+      Naming the parts of a complicated condition with `bool` variables
+      (`positive`, `closes`) makes the `if` read almost like English.
+
+  - type: challenge
+    id: c4-ch-calc
+    title: Pocket calculator
+    difficulty: 2
+    tags: [switch, validation]
+    prompt: |
+      Read a calculation like `7 * 6`: a number, an operator character and a
+      number (decimals allowed). Print the result. Support `+ - * /`.
+
+      - Division by zero prints `Error: division by zero`.
+      - Any other operator prints `Error: unknown operator`.
+
+      Results are printed normally with `std::cout` (so `7 / 2` prints `3.5`).
+    starter: |
+      #include <iostream>
+
+      int main() {
+          double a{};
+          char op{};
+          double b{};
+          std::cin >> a >> op >> b;
+
+          return 0;
+      }
+    tests:
+      - in: "7 * 6"
+        out: "42"
+      - in: "7 / 2"
+        out: "3.5"
+      - in: "1.5 + 2.25"
+        out: "3.75"
+      - in: "10 - 25"
+        out: "-15"
+      - in: "4 / 0"
+        out: "Error: division by zero"
+      - in: "2 ^ 3"
+        out: "Error: unknown operator"
+        hidden: true
+    hints:
+      - "`switch (op)` with `case '+':` etc."
+      - "Inside `case '/':`, use an `if` to check `b == 0` before dividing. (Comparing a double with exactly 0 is fine here — it was typed, not calculated.)"
+    solution: |
+      #include <iostream>
+
+      int main() {
+          double a{};
+          char op{};
+          double b{};
+          std::cin >> a >> op >> b;
+
+          switch (op) {
+          case '+':
+              std::cout << a + b << '\n';
+              break;
+          case '-':
+              std::cout << a - b << '\n';
+              break;
+          case '*':
+              std::cout << a * b << '\n';
+              break;
+          case '/':
+              if (b == 0) {
+                  std::cout << "Error: division by zero\n";
+              } else {
+                  std::cout << a / b << '\n';
+              }
+              break;
+          default:
+              std::cout << "Error: unknown operator\n";
+              break;
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c4-ch-rps
+    title: Rock, paper, scissors
+    difficulty: 1
+    tags: [logic]
+    prompt: |
+      Read two characters — player 1's and player 2's choice: `R` (rock), `P`
+      (paper) or `S` (scissors). Rock beats scissors, scissors beat paper,
+      paper beats rock. Print `Player 1 wins`, `Player 2 wins` or `Draw`.
+    starter: |
+      #include <iostream>
+
+      int main() {
+          char p1{};
+          char p2{};
+          std::cin >> p1 >> p2;
+
+          return 0;
+      }
+    tests:
+      - in: "R S"
+        out: Player 1 wins
+      - in: "R P"
+        out: Player 2 wins
+      - in: "P P"
+        out: Draw
+      - in: "S P"
+        out: Player 1 wins
+        hidden: true
+      - in: "S R"
+        out: Player 2 wins
+        hidden: true
+    hints:
+      - Handle the draw first.
+      - "Player 1 wins in exactly three situations: `(p1 == 'R' && p2 == 'S') || (p1 == 'S' && p2 == 'P') || (p1 == 'P' && p2 == 'R')`. Otherwise player 2 wins."
+    solution: |
+      #include <iostream>
+
+      int main() {
+          char p1{};
+          char p2{};
+          std::cin >> p1 >> p2;
+
+          bool p1Wins = (p1 == 'R' && p2 == 'S') ||
+                        (p1 == 'S' && p2 == 'P') ||
+                        (p1 == 'P' && p2 == 'R');
+          if (p1 == p2) {
+              std::cout << "Draw\n";
+          } else if (p1Wins) {
+              std::cout << "Player 1 wins\n";
+          } else {
+              std::cout << "Player 2 wins\n";
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c4-ch-clock
+    title: 24-hour to 12-hour clock
+    difficulty: 2
+    tags: [if, formatting]
+    prompt: |
+      Read a time in 24-hour format as two whole numbers, hours and minutes
+      (e.g. `13 5`). Print it in 12-hour format with `AM`/`PM`, minutes always
+      as two digits:
+
+      | Input | Output |
+      |---|---|
+      | `13 5` | `1:05 PM` |
+      | `0 30` | `12:30 AM` |
+      | `12 0` | `12:00 PM` |
+      | `9 45` | `9:45 AM` |
+
+      If the hours aren't 0–23 or the minutes 0–59, print `Invalid time`.
+    starter: |
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          int h{};
+          int m{};
+          std::cin >> h >> m;
+
+          return 0;
+      }
+    tests:
+      - in: "13 5"
+        out: "1:05 PM"
+      - in: "0 30"
+        out: "12:30 AM"
+      - in: "12 0"
+        out: "12:00 PM"
+      - in: "9 45"
+        out: "9:45 AM"
+      - in: "24 0"
+        out: Invalid time
+      - in: "23 59"
+        out: "11:59 PM"
+        hidden: true
+      - in: "7 60"
+        out: Invalid time
+        hidden: true
+    hints:
+      - "AM if `h < 12`, otherwise PM."
+      - "The 12-hour number is `h % 12`, except that 0 must become 12."
+      - "Two-digit minutes: `std::setfill('0') << std::setw(2) << m`."
+    solution: |
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          int h{};
+          int m{};
+          std::cin >> h >> m;
+
+          if (h < 0 || h > 23 || m < 0 || m > 59) {
+              std::cout << "Invalid time\n";
+          } else {
+              int hour12 = h % 12;
+              if (hour12 == 0) {
+                  hour12 = 12;
+              }
+              std::cout << hour12 << ':' << std::setfill('0') << std::setw(2) << m
+                        << (h < 12 ? " AM" : " PM") << '\n';
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c4-ch-shipping
+    title: Shipping costs
+    difficulty: 3
+    tags: [logic, business rules]
+    prompt: |
+      A shop's shipping rules. Read the order total (decimal), the parcel
+      weight in kg (decimal) and whether it's express (`1` or `0`). Then:
+
+      1. Base cost: **4.99** up to 2 kg, **7.99** up to 10 kg, and **7.99 plus 1.50 per kg over 10** above that (partial kilograms count as a whole kilogram).
+      2. Orders of **50 or more** ship free — but only if they're not express and weigh at most 10 kg.
+      3. Express **doubles** the cost (after the free-shipping rule).
+      4. Parcels over **30 kg** can't be shipped: print `Too heavy` and nothing else.
+
+      Print the cost with 2 decimals: `Shipping: 7.99` (or `Shipping: 0.00`).
+    starter: |
+      #include <cmath>
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          double total{};
+          double weight{};
+          bool express{};
+          std::cin >> total >> weight >> express;
+
+          return 0;
+      }
+    tests:
+      - in: "20 1.5 0"
+        out: "Shipping: 4.99"
+      - in: "60 1.5 0"
+        out: "Shipping: 0.00"
+      - in: "60 1.5 1"
+        out: "Shipping: 9.98"
+      - in: "20 12.2 0"
+        out: "Shipping: 12.49"
+      - in: "80 40 0"
+        out: Too heavy
+      - in: "100 10 0"
+        out: "Shipping: 0.00"
+        hidden: true
+      - in: "100 11 0"
+        out: "Shipping: 9.49"
+        hidden: true
+      - in: "5 2 1"
+        out: "Shipping: 9.98"
+        hidden: true
+    hints:
+      - Deal with `Too heavy` first and stop there.
+      - "Extra kilograms over 10, rounded up: `std::ceil(weight - 10)`."
+      - Compute the base cost, then set it to 0 if free shipping applies, then double it if express.
+    solution: |
+      #include <cmath>
+      #include <iomanip>
+      #include <iostream>
+
+      int main() {
+          double total{};
+          double weight{};
+          bool express{};
+          std::cin >> total >> weight >> express;
+
+          if (weight > 30) {
+              std::cout << "Too heavy\n";
+              return 0;
+          }
+
+          double cost{};
+          if (weight <= 2) {
+              cost = 4.99;
+          } else if (weight <= 10) {
+              cost = 7.99;
+          } else {
+              cost = 7.99 + 1.50 * std::ceil(weight - 10);
+          }
+
+          bool freeShipping = total >= 50 && !express && weight <= 10;
+          if (freeShipping) {
+              cost = 0;
+          }
+          if (express) {
+              cost *= 2;
+          }
+
+          std::cout << std::fixed << std::setprecision(2) << "Shipping: " << cost << '\n';
+          return 0;
+      }
+    explain: |
+      Real-world rules are rarely one neat condition. The trick is to handle
+      them in a clear order, one rule per step, and name the tricky ones
+      (`freeShipping`). Note the early `return 0;` for the `Too heavy` case:
+      once there's nothing more to do, leaving `main` is the simplest code.
+
+  - type: review
+    id: c4-review
+    title: "Chapter 4 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      if (a > b) {
+          // ...
+      } else if (a == b) {
+          // ...
+      } else {
+          // ...
+      }
+
+      switch (ch) {
+      case 'a':
+      case 'A':
+          // ...
+          break;
+      default:
+          // ...
+      }
+
+      int biggest = (a > b) ? a : b;
+
+      if (x >= 1 && x <= 10) { }       // in range
+      if (x < 1 || x > 10) { }         // out of range
+      if (n != 0 && total / n > 5) { } // short-circuit guard
+      if (std::cin >> n) { }           // read succeeded
+      if (std::abs(a - b) < 1e-9) { }  // doubles "equal"
+      ```
+
+      ## Key ideas
+
+      - Comparisons produce `bool`. `==` compares; `=` assigns.
+      - An `if`/`else if`/`else` chain runs the **first** true branch only — order matters.
+      - Variables declared in a block die at its `}` (scope).
+      - `&&` needs both, `||` needs one, `!` flips. `&&` binds tighter than `||`.
+      - Short-circuit evaluation lets the left side guard the right.
+      - `switch` jumps to a matching `case` and runs until `break`. Integer-like values only.
+      - Always use braces. Watch for `=` vs `==`, stray `;`, and `1 <= x <= 10`.
+      - Never trust input: check that reads succeed and values make sense.
+    questions:
+      - type: output
+        prompt: "Mixing chapters. Input: `7 2`"
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{};
+              int b{};
+              std::cin >> a >> b;
+              double r = (b != 0) ? static_cast<double>(a) / b : 0.0;
+              std::cout << (r > 3 ? "big " : "small ") << r << '\n';
+              return 0;
+          }
+        stdin: "7 2"
+        answer: |
+          big 3.5
+        why: "b isn't 0, so r = 7.0 / 2 = 3.5, which is > 3."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string w{"level"};
+              char first = 'l';
+              if (w.length() > 4 && first == 'l') {
+                  std::cout << "yes " << w.length() % 3 << '\n';
+              } else {
+                  std::cout << "no\n";
+              }
+              return 0;
+          }
+        answer: |
+          yes 2
+        why: "Both conditions hold (5 > 4, and first is 'l'); 5 % 3 = 2."
+      - type: mcq
+        prompt: Which would you choose to test a `std::string` command against `"start"`, `"stop"` and `"pause"`?
+        options:
+          - "A `switch` on the string"
+          - "An `if` / `else if` / `else` chain"
+          - A ternary operator for each
+          - "`std::cin` with a condition"
+        answer: 1
+        why: "`switch` doesn't work on strings; an `if` chain with `==` does."
+
+  - type: exam
+    id: c4-exam
+    title: "Chapter 4 exam"
+    minutes: 30
+    pick: 14
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{10};
+              if (x > 5) {
+                  std::cout << "A";
+              }
+              if (x > 8) {
+                  std::cout << "B";
+              } else if (x > 2) {
+                  std::cout << "C";
+              } else {
+                  std::cout << "D";
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          AB
+        why: "The first `if` is separate (prints A). In the chain, 10 > 8 is true (prints B) and the rest is skipped."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{3};
+              int b{7};
+              bool r = (a > 5 || b > 5) && !(a == b);
+              std::cout << std::boolalpha << r << '\n';
+              return 0;
+          }
+        answer: |
+          true
+        why: "(false || true) is true; a == b is false, so !(false) is true; true && true is true."
+      - type: mcq
+        prompt: What's printed by `if (1 <= 50 <= 10) std::cout << "in";`?
+        options:
+          - Nothing — 50 is not between 1 and 10
+          - "`in` — `1 <= 50` is true (1), and `1 <= 10` is true"
+          - A compile error
+          - Undefined behaviour
+        answer: 1
+        why: The chain is evaluated left to right, comparing a bool (1) with 10. Always write `x >= 1 && x <= 10`.
+      - type: output
+        warnings: true
+        code: |
+          #include <iostream>
+
+          int main() {
+              char c{'b'};
+              switch (c) {
+              case 'a':
+                  std::cout << 1;
+              case 'b':
+                  std::cout << 2;
+              case 'c':
+                  std::cout << 3;
+                  break;
+              case 'd':
+                  std::cout << 4;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          23
+        why: "Jumps to `case 'b'`, prints 2, falls through (no break) to print 3, then breaks."
+      - type: spot
+        prompt: This should print `Even` for even numbers, but prints it for every number. Which line is the bug?
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              if (n % 2 == 0);
+              {
+                  std::cout << "Even\n";
+              }
+              return 0;
+          }
+        answer: 6
+        why: "The `;` after the condition is the whole body of the `if`. The block after it always runs."
+      - type: mcq
+        prompt: Which condition safely checks that the average `total / count` is at least 10?
+        options:
+          - "`total / count >= 10 && count != 0`"
+          - "`count != 0 && total / count >= 10`"
+          - "`count != 0 || total / count >= 10`"
+          - "`total / count >= 10`"
+        answer: 1
+        why: "The guard must come first so short-circuiting skips the division when count is 0."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{};
+              int y{5};
+              if (x) {
+                  y = 1;
+              } else if (!y) {
+                  y = 2;
+              } else {
+                  y = 3;
+              }
+              std::cout << y << '\n';
+              return 0;
+          }
+        answer: |
+          3
+        why: "x is 0 (false). y is 5, so !y is false. The else runs: y = 3."
+      - type: tf
+        prompt: "`switch` can be used with a `std::string`."
+        answer: false
+        why: Only integer-like types (int, char, bool, enums).
+      - type: output
+        prompt: "The Input box contains `x`."
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{42};
+              if (std::cin >> n) {
+                  std::cout << "read " << n << '\n';
+              } else {
+                  std::cout << "failed " << n << '\n';
+              }
+              return 0;
+          }
+        stdin: "x"
+        answer: |
+          failed 0
+        why: "Reading `x` into an int fails, and a failed read sets the variable to 0."
+      - type: mcq
+        prompt: "Which is the same as `!(a > 5 && b < 3)`?"
+        options:
+          - "`a <= 5 && b >= 3`"
+          - "`a <= 5 || b >= 3`"
+          - "`a < 5 || b > 3`"
+          - "`!a > 5 && !b < 3`"
+        answer: 1
+        why: "De Morgan: not(A and B) = (not A) or (not B). Not (a > 5) is a <= 5; not (b < 3) is b >= 3."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int score{75};
+              std::string medal = score >= 90 ? "gold" : score >= 70 ? "silver" : "none";
+              std::cout << medal << '\n';
+              return 0;
+          }
+        answer: |
+          silver
+        why: "Nested conditionals read like an else-if chain: not ≥ 90, but ≥ 70 → silver. (Readable only for very short cases like this.)"
+      - type: mcq
+        prompt: Why is `if (x == 0.3)` risky when `x` was calculated as `0.1 + 0.2`?
+        options:
+          - Because doubles can't be compared at all
+          - Because of tiny rounding errors, `x` isn't exactly 0.3
+          - Because `==` doesn't work with decimals
+          - It isn't risky
+        answer: 1
+        why: Use a tolerance with doubles that come from calculations.
+      - type: fill
+        prompt: Complete the range check so it prints `ok` for 1–5 inclusive.
+        code: |
+          #include <iostream>
+
+          int main() {
+              int stars{4};
+              if (stars >= 1 ___ stars <= 5) {
+                  std::cout << "ok\n";
+              }
+              return 0;
+          }
+        blanks:
+          - ['&&', and]
+        output: |
+          ok
+        why: "Both limits must hold: `&&`. (C++ also accepts the word `and`.)"
+      - type: code
+        prompt: |
+          Read three whole numbers and print the **largest**, without using
+          `std::max`. For input `4 9 2` print `9`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "4 9 2"
+            out: "9"
+          - in: "9 4 2"
+            out: "9"
+          - in: "-5 -1 -9"
+            out: "-1"
+          - in: "3 3 3"
+            out: "3"
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int a{};
+              int b{};
+              int c{};
+              std::cin >> a >> b >> c;
+              int largest{a};
+              if (b > largest) {
+                  largest = b;
+              }
+              if (c > largest) {
+                  largest = c;
+              }
+              std::cout << largest << '\n';
+              return 0;
+          }
+      - type: code
+        prompt: |
+          A cinema's ticket price depends on age and day. Read an age (whole
+          number) and a day letter (`M T W H F S U` for Monday–Sunday):
+
+          - Under 3: free (`0`).
+          - 3–12: `6`. 65 and over: `7`. Everyone else: `10`.
+          - On Wednesday (`W`), every price that isn't free is `5`.
+
+          Print `Price: ` and the price. For input `30 W` print `Price: 5`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "30 W"
+            out: "Price: 5"
+          - in: "30 F"
+            out: "Price: 10"
+          - in: "2 W"
+            out: "Price: 0"
+          - in: "8 S"
+            out: "Price: 6"
+          - in: "70 M"
+            out: "Price: 7"
+          - in: "65 U"
+            out: "Price: 7"
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int age{};
+              char day{};
+              std::cin >> age >> day;
+              int price{};
+              if (age < 3) {
+                  price = 0;
+              } else if (day == 'W') {
+                  price = 5;
+              } else if (age <= 12) {
+                  price = 6;
+              } else if (age >= 65) {
+                  price = 7;
+              } else {
+                  price = 10;
+              }
+              std::cout << "Price: " << price << '\n';
+              return 0;
+          }

@@ -45,14 +45,15 @@ function jobs(course) {
       source: s.code,
       stdin: s.stdin,
       expect: s.error ? 'compile-error' : 'run',
-      output: s.ub || s.norun ? undefined : s.output,
+      output: s.norun ? undefined : (s.ub ? s.output : s.output),
       ub: s.ub || s.norun
     });
   });
 
   const questionJobs = (q) => {
     if (q.type === 'output') {
-      list.push({ where: q.id, std: std(q), source: q.code, stdin: q.stdin, expect: 'run', output: q.answer });
+      // warnings: true marks a question whose code is meant to draw a warning.
+      list.push({ where: q.id, std: std(q), source: q.code, stdin: q.stdin, expect: 'run', output: q.answer, ub: q._raw.warnings === true, keepOutput: true });
     }
     if (q.type === 'fill' && isProgram(q.code)) {
       const filled = q.code.split('___').map((part, i, all) => part + (i < all.length - 1 ? q.blanks[i][0] : '')).join('');
@@ -62,7 +63,7 @@ function jobs(course) {
       list.push({ where: q.id + ' (ordered)', std: std(q), source: q.lines.join('\n'), stdin: q.stdin, expect: 'run', output: q.output === null ? undefined : q.output });
     }
     if ((q.type === 'mcq' || q.type === 'tf') && q.code && isProgram(q.code) && q._raw.compiles !== false) {
-      list.push({ where: q.id + ' (code)', std: std(q), source: q.code, stdin: q.stdin, expect: q._raw.compiles === 'error' ? 'compile-error' : 'compile' });
+      list.push({ where: q.id + ' (code)', std: std(q), source: q.code, stdin: q.stdin, expect: q._raw.compiles === 'error' ? 'compile-error' : 'compile', ub: q._raw.warnings === true });
     }
     if (q.type === 'code') taskJobs(q.task, q.id);
   };

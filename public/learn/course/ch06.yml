@@ -1,0 +1,2523 @@
+id: ch06
+number: 6
+part: p1
+title: Functions
+blurb: Name a piece of work once, use it everywhere — the single most important tool for writing programs that stay understandable.
+hours: 6
+goals:
+  - Define and call functions with parameters and return values
+  - Explain what happens to control flow and local variables during a call
+  - Choose between passing by value, by reference and by `const` reference
+  - Use declarations to organise a program, and overload functions
+  - Write recursive functions with a correct base case
+  - Break a problem into small, well-named, testable functions
+
+items:
+  - type: lesson
+    id: c6-intro
+    title: "Functions: naming a piece of work"
+    minutes: 18
+    objectives:
+      - Explain why programs are split into functions
+      - Define a function with no parameters and call it
+      - Trace how execution jumps into a function and back
+    body: |
+      Your programs so far live entirely inside `main`. That works for 20
+      lines. Real programs have thousands — and they'd be impossible to read,
+      fix or reuse as one giant block. **Functions** let you give a name to a
+      piece of work, write it once, and use it wherever you need it.
+
+      You've already used functions: `std::sqrt(16.0)`, `std::max(a, b)`,
+      `word.length()`. And `main` itself is one. Now you'll write your own.
+
+      ## Defining and calling
+
+      ```cpp
+      #include <iostream>
+
+      void printLine() {
+          std::cout << "--------------------\n";
+      }
+
+      int main() {
+          printLine();
+          std::cout << "  Welcome!\n";
+          printLine();
+          std::cout << "  Menu\n";
+          printLine();
+          return 0;
+      }
+      ```
+
+      ```output
+      --------------------
+        Welcome!
+      --------------------
+        Menu
+      --------------------
+      ```
+
+      - `void printLine() { ... }` **defines** a function called `printLine`. `void` means it doesn't give back a value; the empty `()` means it takes no inputs.
+      - `printLine();` **calls** it: execution jumps into the function, runs its body, and when it reaches the end, **returns** to exactly where it was called from.
+
+      If the line style changes, you now change it in **one** place instead of
+      three. That's the first big reason for functions: **don't repeat
+      yourself** (programmers say *DRY*).
+
+      ## Following the flow
+
+      ```cpp
+      #include <iostream>
+
+      void second() {
+          std::cout << "  in second\n";
+      }
+
+      void first() {
+          std::cout << " start first\n";
+          second();
+          std::cout << " end first\n";
+      }
+
+      int main() {
+          std::cout << "main begins\n";
+          first();
+          std::cout << "main ends\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      main begins
+       start first
+        in second
+       end first
+      main ends
+      ```
+
+      Each call is a detour: `main` calls `first`, which calls `second`; when
+      `second` finishes, control goes back into `first`, right after the call,
+      and when `first` finishes, back into `main`.
+
+      {{check flow}}
+
+      ## Why functions matter so much
+
+      1. **Reuse** — write once, call anywhere.
+      2. **Readability** — `printReceipt();` says *what* happens; the details live elsewhere.
+      3. **Testing** — a small function can be checked on its own.
+      4. **Thinking** — big problems become small named steps. This is called **abstraction**, and it's the core skill of programming.
+
+      > [!remember]
+      > A function must be **defined (or declared) before** the code that calls
+      > it — the compiler reads top to bottom. For now, put your functions above
+      > `main`. Lesson 6.4 shows the alternative.
+
+      {{task banner}}
+    checks:
+      - id: flow
+        type: output
+        code: |
+          #include <iostream>
+
+          void b() {
+              std::cout << "B";
+          }
+
+          void a() {
+              std::cout << "A";
+              b();
+              std::cout << "a";
+          }
+
+          int main() {
+              a();
+              b();
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          ABaB
+        why: "`a` prints A, calls `b` (B), then prints a. Back in main, `b` is called again (B)."
+      - id: why
+        type: mcq
+        prompt: Which is **not** a benefit of splitting code into functions?
+        options:
+          - Code can be reused without copying it
+          - Each piece can be tested on its own
+          - The program automatically runs faster
+          - The main flow of the program becomes easier to read
+        answer: 2
+        why: Functions are about organisation, reuse and clarity. They don't make code faster by themselves (calls even cost a tiny bit — usually optimised away).
+    tasks:
+      - id: banner
+        title: A reusable separator
+        prompt: |
+          Write a function `void printStars()` that prints a line of exactly 10
+          stars followed by a newline. Don't write `main` — the checker calls
+          your function.
+        starter: |
+          #include <iostream>
+
+          void printStars() {
+
+          }
+        harness: |
+          CHECK(OUTPUT(printStars()), "**********\n");
+          CHECK(OUTPUT(printStars(); printStars()), "**********\n**********\n");
+        hints:
+          - "The body is one statement: `std::cout << \"**********\\n\";`"
+        solution: |
+          #include <iostream>
+
+          void printStars() {
+              std::cout << "**********\n";
+          }
+    cards:
+      - front: What happens when a function is called?
+        back: Execution jumps into the function, runs its body, then returns to just after the call.
+      - front: What does `void` mean as a function's return type?
+        back: The function doesn't give back a value.
+      - front: What is **DRY**?
+        back: "\"Don't Repeat Yourself\" — write a piece of logic once (e.g. in a function) and reuse it, instead of copying it."
+      - front: What is **abstraction** in programming?
+        back: Hiding the details of a task behind a name, so you can think about *what* it does without *how*.
+
+  - type: lesson
+    id: c6-params
+    title: Parameters and return values
+    minutes: 22
+    objectives:
+      - Give a function inputs with parameters
+      - Give back a result with a return type and `return`
+      - Use a function's result inside expressions
+      - Write functions that answer yes/no questions
+    body: |
+      A function becomes truly useful when it takes **inputs** and gives back
+      an **output** — like a machine: values go in, a result comes out.
+
+      ```cpp
+      #include <iostream>
+
+      int square(int x) {
+          return x * x;
+      }
+
+      int main() {
+          std::cout << square(4) << '\n';
+          int n{7};
+          int result = square(n);
+          std::cout << result << '\n';
+          std::cout << square(2) + square(3) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      16
+      49
+      13
+      ```
+
+      - `int square(int x)` — the **return type** (`int`) is what the function gives back; `x` is a **parameter**, a local variable that receives the input.
+      - `square(4)` — the value `4` is the **argument**. It's copied into `x`.
+      - `return x * x;` — computes the result and hands it back. The call `square(4)` is then *replaced* by that value, so it can be printed, stored or used in bigger expressions.
+
+      ## Several parameters
+
+      Separate parameters with commas — each with its own type. Arguments are
+      matched to parameters **by position**:
+
+      ```cpp
+      #include <iostream>
+
+      double rectangleArea(double width, double height) {
+          return width * height;
+      }
+
+      void greet(std::string name, int times) {
+          for (int i{0}; i < times; ++i) {
+              std::cout << "Hi, " << name << "!\n";
+          }
+      }
+
+      int main() {
+          std::cout << rectangleArea(2.5, 4) << '\n';
+          greet("Ada", 2);
+          return 0;
+      }
+      ```
+
+      ```output
+      10
+      Hi, Ada!
+      Hi, Ada!
+      ```
+
+      (`std::string` works here because `<iostream>` happens to bring it in —
+      but always `#include <string>` yourself when you use it.)
+
+      ## `return` ends the function
+
+      `return` exits the function **immediately**, even from inside a loop. A
+      function can have several `return`s — the first one reached wins:
+
+      ```cpp
+      #include <iostream>
+
+      int sign(int x) {
+          if (x > 0) {
+              return 1;
+          }
+          if (x < 0) {
+              return -1;
+          }
+          return 0;
+      }
+
+      int main() {
+          std::cout << sign(-8) << sign(0) << sign(3) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      -101
+      ```
+
+      > [!mistake] Forgetting to return
+      > If a non-`void` function can reach its end without a `return`, the
+      > result is undefined behaviour. The compiler warns: *control reaches end
+      > of non-void function*. Make sure **every** path returns a value.
+
+      ## Functions that answer questions
+
+      A function returning `bool` reads beautifully in conditions. Name it
+      like a question:
+
+      ```cpp
+      #include <iostream>
+
+      bool isEven(int n) {
+          return n % 2 == 0;
+      }
+
+      int main() {
+          for (int i{1}; i <= 6; ++i) {
+              if (isEven(i)) {
+                  std::cout << i << ' ';
+              }
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      2 4 6
+      ```
+
+      Notice `return n % 2 == 0;` — the comparison already *is* a `bool`, so
+      there's no need for `if (...) return true; else return false;`.
+
+      {{check trace-return}}
+
+      {{check params-args}}
+
+      {{task max3}}
+
+      {{task is-vowel}}
+    checks:
+      - id: trace-return
+        type: output
+        code: |
+          #include <iostream>
+
+          int twice(int x) {
+              return 2 * x;
+          }
+
+          int addOne(int x) {
+              return x + 1;
+          }
+
+          int main() {
+              std::cout << twice(addOne(3)) << ' ' << addOne(twice(3)) << '\n';
+              return 0;
+          }
+        answer: |
+          8 7
+        why: "Inner calls happen first: addOne(3) = 4, twice(4) = 8. twice(3) = 6, addOne(6) = 7."
+      - id: params-args
+        type: mcq
+        prompt: "In `double area(double r) { ... }` called as `area(2.5)`, what are `r` and `2.5`?"
+        options:
+          - "`r` is the argument, `2.5` is the parameter"
+          - "`r` is the parameter, `2.5` is the argument"
+          - Both are parameters
+          - Both are return values
+        answer: 1
+        why: "The parameter is the variable in the function's definition; the argument is the value passed in the call."
+      - id: early-return
+        type: output
+        code: |
+          #include <iostream>
+
+          int firstMultiple(int k) {
+              for (int i{10}; i < 100; ++i) {
+                  if (i % k == 0) {
+                      return i;
+                  }
+              }
+              return -1;
+          }
+
+          int main() {
+              std::cout << firstMultiple(7) << ' ' << firstMultiple(200) << '\n';
+              return 0;
+          }
+        answer: |
+          14 -1
+        why: "`return` leaves the function immediately, from inside the loop: 14 is the first multiple of 7 from 10. No multiple of 200 is below 100, so the final `return -1` runs."
+    tasks:
+      - id: max3
+        title: Largest of three
+        prompt: |
+          Write `int max3(int a, int b, int c)` that returns the largest of its
+          three arguments.
+        starter: |
+          int max3(int a, int b, int c) {
+              return 0;
+          }
+        harness: |
+          CHECK(max3(1, 2, 3), 3);
+          CHECK(max3(3, 2, 1), 3);
+          CHECK(max3(2, 3, 1), 3);
+          CHECK(max3(-5, -2, -9), -2);
+          CHECK(max3(4, 4, 4), 4);
+        hints:
+          - "Keep a `largest` variable that starts as `a`, and update it with `b` and `c`."
+        solution: |
+          int max3(int a, int b, int c) {
+              int largest{a};
+              if (b > largest) {
+                  largest = b;
+              }
+              if (c > largest) {
+                  largest = c;
+              }
+              return largest;
+          }
+      - id: is-vowel
+        title: Is it a vowel?
+        prompt: |
+          Write `bool isVowel(char c)` that returns `true` for the vowels a, e,
+          i, o, u — lowercase **or** uppercase — and `false` otherwise.
+        starter: |
+          bool isVowel(char c) {
+              return false;
+          }
+        harness: |
+          CHECK(isVowel('a'), true);
+          CHECK(isVowel('E'), true);
+          CHECK(isVowel('u'), true);
+          CHECK(isVowel('b'), false);
+          CHECK(isVowel('Y'), false);
+          CHECK(isVowel('O'), true);
+          CHECK(isVowel('!'), false);
+        hints:
+          - "A `switch` with stacked cases works well, or one long `||` condition."
+        solution: |
+          bool isVowel(char c) {
+              switch (c) {
+              case 'a': case 'e': case 'i': case 'o': case 'u':
+              case 'A': case 'E': case 'I': case 'O': case 'U':
+                  return true;
+              default:
+                  return false;
+              }
+          }
+    cards:
+      - front: What's the difference between a **parameter** and an **argument**?
+        back: A parameter is the variable in the function definition (`int x`); an argument is the value passed in a call (`square(4)`).
+      - front: What does `return` do?
+        back: Ends the function immediately and hands its value back to the caller, where the call is replaced by that value.
+      - front: What happens if a non-void function reaches its end without `return`?
+        back: Undefined behaviour. The compiler warns "control reaches end of non-void function".
+      - front: "Why write `return n % 2 == 0;` instead of an if/else returning true/false?"
+        back: The comparison is already a `bool` — returning it directly is shorter and clearer.
+
+  - type: lesson
+    id: c6-scope
+    title: Local variables and pass by value
+    minutes: 16
+    objectives:
+      - Explain that each call gets its own local variables
+      - Predict that changing a by-value parameter doesn't affect the caller
+      - Explain why global variables are best avoided
+    body: |
+      Variables declared inside a function — including its parameters — are
+      **local**: they are created when the function is called and destroyed
+      when it returns. Every call gets **fresh copies**. Two functions can
+      both have a variable called `x`; they're completely separate.
+
+      ## Parameters are copies
+
+      By default, arguments are passed **by value**: the parameter receives a
+      **copy**. Changing the copy doesn't touch the original:
+
+      ```cpp
+      #include <iostream>
+
+      void tryToChange(int n) {
+          n = 100;
+          std::cout << "inside: " << n << '\n';
+      }
+
+      int main() {
+          int n{5};
+          tryToChange(n);
+          std::cout << "outside: " << n << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      inside: 100
+      outside: 5
+      ```
+
+      `main`'s `n` and `tryToChange`'s `n` share a name, but they are two
+      different boxes. This is a *good* default: calling a function can't
+      mess up your variables behind your back. (When you do want a function
+      to change the caller's variable, you'll use a reference — lesson 6.5.)
+
+      ## The call stack
+
+      Each active call has its own **frame** on the **call stack** — a pile of
+      the calls in progress, with their local variables. Calling pushes a
+      frame; returning pops it. That's how the computer remembers where to go
+      back to, and why local variables disappear after a return.
+
+      ## Global variables
+
+      A variable declared **outside** every function is **global**: every
+      function can see and change it.
+
+      ```cpp
+      #include <iostream>
+
+      int counter{0};   // global
+
+      void tick() {
+          ++counter;
+      }
+
+      int main() {
+          tick();
+          tick();
+          std::cout << counter << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      2
+      ```
+
+      It works — but in a big program, *any* function could have changed
+      `counter`, so when it holds a wrong value you have to suspect them all.
+      Prefer passing values in as parameters and getting results back with
+      `return`. **Global constants** (`constexpr double pi{3.14159};`) are fine:
+      nobody can change them.
+
+      {{check copies}}
+
+      {{check locals}}
+    checks:
+      - id: copies
+        type: output
+        code: |
+          #include <iostream>
+
+          int doubleIt(int x) {
+              x = x * 2;
+              return x;
+          }
+
+          int main() {
+              int x{3};
+              int y = doubleIt(x);
+              std::cout << x << ' ' << y << '\n';
+              return 0;
+          }
+        answer: |
+          3 6
+        why: "`doubleIt` changes its own copy of `x` and returns 6; `main`'s `x` is still 3."
+      - id: locals
+        type: mcq
+        prompt: What happens to a function's local variables when it returns?
+        options:
+          - They keep their values for the next call
+          - They are destroyed; the next call gets fresh ones
+          - They become global
+          - They are copied into main
+        answer: 1
+        why: Locals live only for the duration of one call. (Chapter 11 shows `static` locals, the exception.)
+    cards:
+      - front: What does **pass by value** mean?
+        back: The parameter receives a copy of the argument. Changing the parameter doesn't affect the caller's variable.
+      - front: What is the **call stack**?
+        back: The pile of calls currently in progress, each with its own frame of local variables. Calls push frames; returns pop them.
+      - front: Why avoid (non-constant) global variables?
+        back: Any function can change them, so bugs are hard to trace. Pass values as parameters and return results instead.
+
+  - type: lesson
+    id: c6-declare
+    title: Declarations and program structure
+    minutes: 12
+    objectives:
+      - Explain the difference between a declaration and a definition
+      - Use forward declarations so functions can appear in any order
+    body: |
+      The compiler reads top to bottom, and it must know about a function
+      before a call to it. This fails:
+
+      ```cpp error
+      #include <iostream>
+
+      int main() {
+          std::cout << cube(3) << '\n';
+          return 0;
+      }
+
+      int cube(int x) {
+          return x * x * x;
+      }
+      ```
+
+      You could move `cube` above `main`. Or you can **declare** it first:
+
+      ```cpp
+      #include <iostream>
+
+      int cube(int x);   // declaration (a "prototype"): name, parameters, return type
+
+      int main() {
+          std::cout << cube(3) << '\n';
+          return 0;
+      }
+
+      int cube(int x) {  // definition: the actual body
+          return x * x * x;
+      }
+      ```
+
+      ```output
+      27
+      ```
+
+      - A **declaration** tells the compiler a function *exists* and how to call it. It ends with `;` instead of a body.
+      - A **definition** provides the body. There must be exactly **one** definition.
+
+      With declarations at the top, `main` can come first and read like a
+      table of contents, with the details below. In Chapter 17 you'll put
+      declarations in **header files** (`.h`) so other files can call your
+      functions — the same idea on a bigger scale.
+
+      > [!tip]
+      > Parameter names are optional in a declaration (`int cube(int);`), but
+      > keeping them documents what each parameter means.
+
+      {{check declare}}
+    checks:
+      - id: declare
+        type: mcq
+        prompt: Which line is a **declaration** but not a definition?
+        options:
+          - "`int add(int a, int b) { return a + b; }`"
+          - "`int add(int a, int b);`"
+          - "`add(2, 3);`"
+          - "`int result = add(2, 3);`"
+        answer: 1
+        why: "It gives the name, parameters and return type, ending in `;` — no body."
+    cards:
+      - front: Declaration vs definition of a function?
+        back: "A declaration states the name, parameters and return type, ending in `;`. A definition includes the body. Exactly one definition is allowed."
+      - front: Why might you get "was not declared in this scope" for a function you did write?
+        back: It's defined *below* the call. Move it above, or add a declaration (prototype) above the call.
+
+  - type: quiz
+    id: c6-quiz1
+    title: "Quiz: writing functions"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int f(int a, int b) {
+              return a * 10 + b;
+          }
+
+          int main() {
+              std::cout << f(3, 4) << ' ' << f(4, 3) << '\n';
+              return 0;
+          }
+        answer: |
+          34 43
+        why: Arguments match parameters by position.
+      - type: output
+        warnings: true
+        code: |
+          #include <iostream>
+
+          void change(int x) {
+              x = 0;
+          }
+
+          int main() {
+              int v{9};
+              change(v);
+              std::cout << v << '\n';
+              return 0;
+          }
+        answer: |
+          9
+        why: Pass by value — `change` modifies its own copy.
+      - type: mcq
+        prompt: What's the best name for a function that checks whether a year is a leap year?
+        options:
+          - "`leap`"
+          - "`doYear`"
+          - "`isLeapYear`"
+          - "`function1`"
+        answer: 2
+        why: A function returning `bool` should read like a yes/no question.
+      - type: spot
+        prompt: Which line causes the "control reaches end of non-void function" warning?
+        code: |
+          #include <iostream>
+
+          int grade(int score) {
+              if (score >= 50) {
+                  return 1;
+              }
+          }
+
+          int main() {
+              std::cout << grade(80) << '\n';
+              return 0;
+          }
+        answer: 7
+        why: "When `score < 50`, execution reaches the closing brace on line 7 without returning a value. Add `return 0;` before it."
+      - type: fill
+        prompt: Complete the function so it returns the average of two doubles.
+        code: |
+          ___ average(double a, double b) {
+              ___ (a + b) / 2;
+          }
+        blanks:
+          - [double]
+          - [return]
+        why: The return type is `double`, and `return` gives the value back.
+
+  - type: lesson
+    id: c6-ref
+    title: Passing by reference
+    minutes: 22
+    objectives:
+      - Let a function change the caller's variable with a reference parameter `&`
+      - Pass large values efficiently with `const &`
+      - Choose between by value, by reference and by const reference
+    body: |
+      Sometimes you *want* a function to change the caller's variable. Mark
+      the parameter with `&` — it becomes a **reference**: not a copy, but
+      another name for the caller's variable itself.
+
+      ```cpp
+      #include <iostream>
+
+      void addBonus(int& score) {
+          score += 50;
+      }
+
+      int main() {
+          int points{100};
+          addBonus(points);
+          std::cout << points << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      150
+      ```
+
+      Inside `addBonus`, `score` *is* `points` — same box, two names. The
+      classic example is swapping, which is impossible with copies:
+
+      ```cpp
+      #include <iostream>
+
+      void swapValues(int& a, int& b) {
+          int temp{a};
+          a = b;
+          b = temp;
+      }
+
+      int main() {
+          int x{1};
+          int y{2};
+          swapValues(x, y);
+          std::cout << x << ' ' << y << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      2 1
+      ```
+
+      A reference parameter needs a real variable as its argument:
+      `addBonus(5)` doesn't compile — there's no variable for `5` to be
+      another name of.
+
+      {{check ref-output}}
+
+      ## `const &`: no copy, no changes
+
+      Passing by value **copies**. For an `int` that's nothing, but a
+      `std::string` holding a whole book would be copied on every call. A
+      **const reference** avoids the copy *and* promises not to change the
+      argument:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int countSpaces(const std::string& text) {
+          int count{0};
+          for (int i{0}; i < static_cast<int>(text.length()); ++i) {
+              if (text[i] == ' ') {
+                  ++count;
+              }
+          }
+          return count;
+      }
+
+      int main() {
+          std::string sentence{"the quick brown fox"};
+          std::cout << countSpaces(sentence) << '\n';
+          std::cout << countSpaces("works with literals too") << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      3
+      3
+      ```
+
+      (`text[i]` is the character at position `i` — Chapter 8 covers strings
+      in depth.) Unlike `&`, a `const &` parameter happily accepts literals
+      and temporary values.
+
+      ## Which to choose
+
+      | Parameter | Use when |
+      |---|---|
+      | `int x` (by value) | Small, cheap-to-copy types — `int`, `double`, `char`, `bool` — that you only read |
+      | `const std::string& s` | Bigger types (strings, and later vectors and objects) that you only read |
+      | `int& x` | The function must **change** the caller's variable |
+
+      > [!pro]
+      > Prefer **returning** a result over changing a reference parameter:
+      > `int total = sum(a, b);` is clearer than `sum(a, b, total);`. Use `&`
+      > output parameters when you genuinely need to change something in place
+      > (like swapping or sorting).
+
+      {{check which-pass}}
+
+      {{task swap-task}}
+
+      {{task clamp}}
+    checks:
+      - id: ref-output
+        type: output
+        code: |
+          #include <iostream>
+
+          void bump(int& a, int b) {
+              ++a;
+              ++b;
+          }
+
+          int main() {
+              int x{1};
+              int y{1};
+              bump(x, y);
+              std::cout << x << ' ' << y << '\n';
+              return 0;
+          }
+        answer: |
+          2 1
+        why: "`a` is a reference to `x`, so `x` changes. `b` is a copy of `y`, so `y` doesn't."
+      - id: which-pass
+        type: mcq
+        prompt: "A function prints a long `std::string` it's given and doesn't change it. Best parameter?"
+        options:
+          - "`std::string text`"
+          - "`std::string& text`"
+          - "`const std::string& text`"
+          - "`std::string text&`"
+        answer: 2
+        why: "`const &` avoids copying the string and documents (and enforces) that it isn't changed."
+    tasks:
+      - id: swap-task
+        title: Sort two
+        prompt: |
+          Write `void sortTwo(int& a, int& b)` that swaps the two values if
+          necessary, so that afterwards `a <= b`.
+        starter: |
+          void sortTwo(int& a, int& b) {
+
+          }
+        harness: |
+          int x{5};
+          int y{2};
+          sortTwo(x, y);
+          CHECK(x, 2);
+          CHECK(y, 5);
+          int p{1};
+          int q{9};
+          sortTwo(p, q);
+          CHECK(p, 1);
+          CHECK(q, 9);
+          int s{-3};
+          int t{-3};
+          sortTwo(s, t);
+          CHECK(s, -3);
+        hints:
+          - "`if (a > b)` then swap them with a temporary variable."
+        solution: |
+          void sortTwo(int& a, int& b) {
+              if (a > b) {
+                  int temp{a};
+                  a = b;
+                  b = temp;
+              }
+          }
+      - id: clamp
+        title: Keep it in range
+        prompt: |
+          Write `int clampValue(int value, int low, int high)` that returns
+          `low` if `value` is below `low`, `high` if it's above `high`, and
+          `value` otherwise.
+        starter: |
+          int clampValue(int value, int low, int high) {
+              return value;
+          }
+        harness: |
+          CHECK(clampValue(5, 0, 10), 5);
+          CHECK(clampValue(-3, 0, 10), 0);
+          CHECK(clampValue(42, 0, 10), 10);
+          CHECK(clampValue(0, 0, 10), 0);
+          CHECK(clampValue(10, 0, 10), 10);
+        hints:
+          - Two `if`s with early `return`s, then `return value;`.
+        solution: |
+          int clampValue(int value, int low, int high) {
+              if (value < low) {
+                  return low;
+              }
+              if (value > high) {
+                  return high;
+              }
+              return value;
+          }
+    cards:
+      - front: What is a **reference parameter** (`int& x`)?
+        back: Another name for the caller's variable itself — changes inside the function change the caller's variable.
+      - front: When should a parameter be `const std::string&`?
+        back: When the function only reads a string (or other big object) — it avoids a copy and promises not to change it.
+      - front: Why can't you call `void f(int& x)` as `f(5)`?
+        back: A non-const reference must refer to a real variable; `5` isn't one. (A `const int&` would accept it.)
+
+  - type: lesson
+    id: c6-overload
+    title: Overloading and default arguments
+    minutes: 12
+    objectives:
+      - Write several functions with the same name and different parameters
+      - Give parameters default values
+    body: |
+      ## Overloading
+
+      Several functions may share a name if their **parameter lists differ**
+      (in number or types). The compiler picks the one that matches the
+      arguments:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int add(int a, int b) {
+          return a + b;
+      }
+
+      double add(double a, double b) {
+          return a + b;
+      }
+
+      std::string add(const std::string& a, const std::string& b) {
+          return a + b;
+      }
+
+      int main() {
+          std::cout << add(2, 3) << '\n';
+          std::cout << add(2.5, 0.25) << '\n';
+          std::cout << add(std::string{"C"}, std::string{"++"}) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      5
+      2.75
+      C++
+      ```
+
+      That's why `std::abs` works on both `int`s and `double`s. The return
+      type alone isn't enough to tell overloads apart — the parameters must
+      differ. And if a call matches two overloads equally well (say
+      `add(2, 3.5)`: int+double), the compiler reports it as **ambiguous**.
+
+      ## Default arguments
+
+      A parameter can have a **default value**, used when the caller leaves
+      it out. Defaults must come at the **end** of the parameter list:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      void printLine(int length = 20, char symbol = '-') {
+          std::cout << std::string(length, symbol) << '\n';
+      }
+
+      int main() {
+          printLine();
+          printLine(5);
+          printLine(8, '=');
+          return 0;
+      }
+      ```
+
+      ```output
+      --------------------
+      -----
+      ========
+      ```
+
+      {{check overload}}
+    checks:
+      - id: overload
+        type: output
+        code: |
+          #include <iostream>
+
+          void show(int x) {
+              std::cout << "int " << x << '\n';
+          }
+
+          void show(double x) {
+              std::cout << "double " << x << '\n';
+          }
+
+          void show(char x) {
+              std::cout << "char " << x << '\n';
+          }
+
+          int main() {
+              show(3);
+              show(3.0);
+              show('3');
+              return 0;
+          }
+        answer: |
+          int 3
+          double 3
+          char 3
+        why: "Each call picks the overload matching its argument's type: `3` is int, `3.0` double, `'3'` char."
+      - id: defaults
+        type: mcq
+        prompt: Which declaration is **not** allowed?
+        options:
+          - "`void f(int a, int b = 2);`"
+          - "`void f(int a = 1, int b = 2);`"
+          - "`void f(int a = 1, int b);`"
+          - "`void f(int a, int b, int c = 3);`"
+        answer: 2
+        why: Default arguments must be at the end — a parameter without a default can't follow one with a default.
+    cards:
+      - front: What is **function overloading**?
+        back: Several functions with the same name but different parameter lists; the compiler picks the one matching the arguments.
+      - front: Where can default arguments go?
+        back: At the end of the parameter list, e.g. `void f(int a, int b = 2);`.
+
+  - type: lesson
+    id: c6-recursion
+    title: Recursion
+    minutes: 24
+    objectives:
+      - Write a function that calls itself, with a base case
+      - Trace a recursive call with the call stack
+      - Recognise when recursion is elegant and when a loop is better
+    body: |
+      A function can call **itself**. This is **recursion**, and it's a
+      powerful way to solve problems that contain smaller copies of
+      themselves.
+
+      Think of a countdown from `n`: print `n`, then do a countdown from
+      `n - 1`. And a countdown from 0? Just print *Liftoff!*.
+
+      ```cpp
+      #include <iostream>
+
+      void countdown(int n) {
+          if (n == 0) {                 // base case: stop
+              std::cout << "Liftoff!\n";
+              return;
+          }
+          std::cout << n << '\n';
+          countdown(n - 1);             // recursive case: a smaller problem
+      }
+
+      int main() {
+          countdown(3);
+          return 0;
+      }
+      ```
+
+      ```output
+      3
+      2
+      1
+      Liftoff!
+      ```
+
+      Every recursive function needs two parts:
+
+      1. A **base case** that stops without recursing.
+      2. A **recursive case** that calls itself on a **smaller** problem — one step closer to the base case.
+
+      ## Recursion that returns values
+
+      The factorial n! = n × (n−1)!, and 0! = 1. That definition *is* the code:
+
+      ```cpp
+      #include <iostream>
+
+      long long factorial(int n) {
+          if (n <= 1) {
+              return 1;
+          }
+          return n * factorial(n - 1);
+      }
+
+      int main() {
+          std::cout << factorial(5) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      120
+      ```
+
+      Trace `factorial(4)`. Each call waits on the stack for the one it made:
+
+      ```text
+      factorial(4) = 4 * factorial(3)
+                         factorial(3) = 3 * factorial(2)
+                                            factorial(2) = 2 * factorial(1)
+                                                               factorial(1) = 1
+                                            factorial(2) = 2 * 1 = 2
+                         factorial(3) = 3 * 2 = 6
+      factorial(4) = 4 * 6 = 24
+      ```
+
+      ## When recursion goes wrong
+
+      Without a base case — or if the recursive case doesn't get closer to it
+      — the function calls itself forever. Each call adds a frame to the call
+      stack, which has limited space, so the program crashes with a **stack
+      overflow** (usually a *segmentation fault*).
+
+      ## Recursion or loop?
+
+      Anything recursive can be written with a loop, and vice versa. For
+      factorial, a loop is just as clear. Recursion shines when a problem
+      naturally **branches** — exploring mazes, trees, all combinations of
+      something (you'll see these in Chapter 18) — where a loop version needs
+      a lot of bookkeeping.
+
+      > [!warning] Exponential recursion
+      > Fibonacci written as `fib(n) = fib(n-1) + fib(n-2)` is beautiful — and
+      > terribly slow: `fib(40)` makes over 300 million calls, recomputing the
+      > same values again and again. A loop takes 40 steps. Elegant isn't
+      > always efficient.
+
+      {{check rec-output}}
+
+      {{check base}}
+
+      {{task power}}
+
+      {{task digits-rec}}
+    checks:
+      - id: rec-output
+        type: output
+        code: |
+          #include <iostream>
+
+          int sumTo(int n) {
+              if (n == 0) {
+                  return 0;
+              }
+              return n + sumTo(n - 1);
+          }
+
+          int main() {
+              std::cout << sumTo(4) << '\n';
+              return 0;
+          }
+        answer: |
+          10
+        why: "4 + 3 + 2 + 1 + 0 = 10."
+      - id: base
+        type: mcq
+        prompt: What happens if a recursive function has no base case?
+        options:
+          - It returns 0
+          - It calls itself until the call stack runs out of space and the program crashes
+          - The compiler refuses to compile it
+          - It turns into a loop automatically
+        answer: 1
+        why: Each call adds a stack frame; without a stopping point, the stack overflows.
+      - id: order-rec
+        type: output
+        code: |
+          #include <iostream>
+
+          void show(int n) {
+              if (n == 0) {
+                  return;
+              }
+              show(n - 1);
+              std::cout << n;
+          }
+
+          int main() {
+              show(3);
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          123
+        why: "The print comes *after* the recursive call, so the deepest call (n = 1) prints first, as the calls unwind."
+    tasks:
+      - id: power
+        title: Power, recursively
+        prompt: |
+          Write a **recursive** `long long power(long long base, int exponent)`
+          that returns base to the power exponent (exponent ≥ 0). Use: x⁰ = 1,
+          and xⁿ = x × xⁿ⁻¹.
+        starter: |
+          long long power(long long base, int exponent) {
+              return 0;
+          }
+        harness: |
+          CHECK(power(2, 10), 1024LL);
+          CHECK(power(5, 0), 1LL);
+          CHECK(power(3, 4), 81LL);
+          CHECK(power(-2, 3), -8LL);
+          CHECK(power(10, 18), 1000000000000000000LL);
+        hints:
+          - "Base case: `if (exponent == 0) return 1;`"
+          - "Recursive case: `return base * power(base, exponent - 1);`"
+        solution: |
+          long long power(long long base, int exponent) {
+              if (exponent == 0) {
+                  return 1;
+              }
+              return base * power(base, exponent - 1);
+          }
+      - id: digits-rec
+        title: Count digits, recursively
+        prompt: |
+          Write a **recursive** `int countDigits(int n)` for `n >= 0`. A number
+          below 10 has one digit; otherwise it has one more digit than `n / 10`.
+        starter: |
+          int countDigits(int n) {
+              return 0;
+          }
+        harness: |
+          CHECK(countDigits(0), 1);
+          CHECK(countDigits(7), 1);
+          CHECK(countDigits(10), 2);
+          CHECK(countDigits(98765), 5);
+          CHECK(countDigits(2000000000), 10);
+        hints:
+          - "`if (n < 10) return 1;` — then `return 1 + countDigits(n / 10);`"
+        solution: |
+          int countDigits(int n) {
+              if (n < 10) {
+                  return 1;
+              }
+              return 1 + countDigits(n / 10);
+          }
+    cards:
+      - front: What two parts does every recursive function need?
+        back: A **base case** that stops, and a **recursive case** that calls itself on a smaller problem, closer to the base case.
+      - front: What is a **stack overflow**?
+        back: A crash when too many nested calls (e.g. recursion with no base case) exhaust the call stack's space.
+      - front: Why is naive recursive Fibonacci slow?
+        back: It recomputes the same values over and over — the number of calls grows exponentially. A loop needs only n steps.
+
+  - type: lesson
+    id: c6-design
+    title: Designing and testing functions
+    minutes: 20
+    objectives:
+      - Break a problem into small functions, top-down
+      - Write functions that do one thing, with clear names
+      - Check assumptions with `assert` and test functions on their own
+    body: |
+      Knowing the syntax of functions is the easy part. The skill is
+      **deciding what the functions should be**.
+
+      ## Top-down design
+
+      Describe the whole task in a few steps, as if each step already
+      existed. Then write each step. Here's a program that reads numbers and
+      reports statistics, designed top-down:
+
+      ```cpp
+      #include <iostream>
+
+      bool isPrime(int n) {
+          if (n < 2) {
+              return false;
+          }
+          for (int d{2}; d * d <= n; ++d) {
+              if (n % d == 0) {
+                  return false;
+              }
+          }
+          return true;
+      }
+
+      int digitSum(int n) {
+          int sum{0};
+          while (n > 0) {
+              sum += n % 10;
+              n /= 10;
+          }
+          return sum;
+      }
+
+      void report(int n) {
+          std::cout << n << ": digit sum " << digitSum(n)
+                    << (isPrime(n) ? ", prime" : ", not prime") << '\n';
+      }
+
+      int main() {
+          int n{};
+          while (std::cin >> n) {
+              report(n);
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      13 42 97
+      ```
+
+      ```output
+      13: digit sum 4, prime
+      42: digit sum 6, not prime
+      97: digit sum 16, prime
+      ```
+
+      `main` reads like a summary; each function does one understandable job.
+
+      ## Rules of thumb for good functions
+
+      1. **One job.** If you need "and" to describe it (*reads the input and sorts it and prints it*), split it.
+      2. **Short.** If it doesn't fit on your screen, it's probably doing too much.
+      3. **Name it for what it does:** verbs for actions (`printReport`, `readScores`), questions for `bool`s (`isValid`, `hasWon`).
+      4. **Inputs in, results out.** Take what you need as parameters, give results with `return`. Avoid globals.
+      5. **Keep input/output separate from calculation.** A function that *computes* a total is easy to test; one that computes it *and* prints it isn't.
+
+      ## Testing with `assert`
+
+      `assert(condition);` from `<cassert>` stops the program with a message
+      if the condition is false. It's a quick way to check a function does
+      what you think:
+
+      ```cpp
+      #include <cassert>
+      #include <iostream>
+
+      int digitSum(int n) {
+          int sum{0};
+          while (n > 0) {
+              sum += n % 10;
+              n /= 10;
+          }
+          return sum;
+      }
+
+      int main() {
+          assert(digitSum(0) == 0);
+          assert(digitSum(7) == 7);
+          assert(digitSum(123) == 6);
+          assert(digitSum(1000) == 1);
+          std::cout << "All tests passed\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      All tests passed
+      ```
+
+      Change one expected value and run it again to see a failed assertion.
+      This is exactly how the checker in this course tests your functions:
+      call them with chosen inputs, compare with the expected results. Always
+      include **edge cases**: 0, 1, negative numbers, the largest values.
+
+      {{check one-job}}
+
+      {{task decompose}}
+    checks:
+      - id: one-job
+        type: mcq
+        prompt: "Which function is designed best?"
+        options:
+          - "`void process()` — reads a number, checks if it's prime, and prints the answer"
+          - "`bool isPrime(int n)` — returns whether `n` is prime"
+          - "`int x(int a)` — returns whether `a` is prime as 1 or 0"
+          - "`void primeAndPrintAndCount(int n)`"
+        answer: 1
+        why: "One job, a clear question-like name, input as a parameter, result as a return value — and easy to test."
+    tasks:
+      - id: decompose
+        title: Next prime
+        prompt: |
+          Write **two** functions:
+
+          - `bool isPrime(int n)` — whether `n` is prime.
+          - `int nextPrime(int n)` — the smallest prime **greater than** `n`. Use `isPrime`!
+        starter: |
+          bool isPrime(int n) {
+              return false;
+          }
+
+          int nextPrime(int n) {
+              return 0;
+          }
+        harness: |
+          CHECK(isPrime(2), true);
+          CHECK(isPrime(1), false);
+          CHECK(isPrime(21), false);
+          CHECK(isPrime(97), true);
+          CHECK(nextPrime(1), 2);
+          CHECK(nextPrime(2), 3);
+          CHECK(nextPrime(13), 17);
+          CHECK(nextPrime(100), 101);
+          CHECK(nextPrime(-5), 2);
+        hints:
+          - "`nextPrime`: start at `n + 1` and keep going up until `isPrime` says yes."
+        solution: |
+          bool isPrime(int n) {
+              if (n < 2) {
+                  return false;
+              }
+              for (int d{2}; d * d <= n; ++d) {
+                  if (n % d == 0) {
+                      return false;
+                  }
+              }
+              return true;
+          }
+
+          int nextPrime(int n) {
+              int candidate = n + 1;
+              while (!isPrime(candidate)) {
+                  ++candidate;
+              }
+              return candidate;
+          }
+    cards:
+      - front: What is **top-down design**?
+        back: Describing a task as a few high-level steps (as if they existed), then writing each step as a function.
+      - front: Name three rules of thumb for good functions.
+        back: Do one job; keep it short; name it for what it does; take inputs as parameters and return results; separate computing from input/output.
+      - front: What does `assert(cond);` do?
+        back: Stops the program with an error message if `cond` is false. From `<cassert>` — handy for quick tests.
+
+  - type: quiz
+    id: c6-quiz2
+    title: "Quiz: references, overloading, recursion"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          void f(int& a, int b) {
+              a = a + b;
+              b = a + b;
+          }
+
+          int main() {
+              int x{2};
+              int y{3};
+              f(x, y);
+              std::cout << x << ' ' << y << '\n';
+              return 0;
+          }
+        answer: |
+          5 3
+        why: "`a` refers to `x`, so x becomes 5. `b` is a copy, so `y` stays 3."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int mystery(int n) {
+              if (n < 10) {
+                  return n;
+              }
+              return mystery(n / 10) + n % 10;
+          }
+
+          int main() {
+              std::cout << mystery(4321) << '\n';
+              return 0;
+          }
+        answer: |
+          10
+        why: "It's a recursive digit sum: 4 + 3 + 2 + 1 = 10."
+      - type: mcq
+        prompt: "Given `void g(int x);` and `void g(double x);`, which call is ambiguous?"
+        options:
+          - "`g(5)`"
+          - "`g(5.0)`"
+          - "`g(5.0f)` (a float)"
+          - None of them
+        answer: 3
+        why: "`5` matches `int` exactly, `5.0` matches `double` exactly, and a `float` is promoted to `double` (a better match than converting to int). None is ambiguous."
+      - type: tf
+        prompt: A reference parameter `int& x` can be called with a literal, like `f(10)`.
+        answer: false
+        why: "A non-const reference must bind to a variable. `const int&` would accept a literal."
+      - type: order
+        prompt: Arrange a recursive function that returns the sum of 1..n.
+        lines:
+          - "int sum(int n) {"
+          - "    if (n == 0) {"
+          - "        return 0;"
+          - "    }"
+          - "    return n + sum(n - 1);"
+          - "}"
+        why: The base case comes first; the recursive case reduces n towards it.
+
+  - type: challenge
+    id: c6-ch-palindrome
+    title: Palindrome numbers
+    difficulty: 2
+    tags: [functions]
+    prompt: |
+      A **palindrome** reads the same forwards and backwards: 121, 7, 12321.
+      Write:
+
+      - `int reverseNumber(int n)` — the digits of `n` (n ≥ 0) reversed (1200 → 21).
+      - `bool isPalindrome(int n)` — whether `n` (n ≥ 0) is a palindrome. Use `reverseNumber`.
+    starter: |
+      int reverseNumber(int n) {
+          return 0;
+      }
+
+      bool isPalindrome(int n) {
+          return false;
+      }
+    harness: |
+      CHECK(reverseNumber(1234), 4321);
+      CHECK(reverseNumber(1200), 21);
+      CHECK(reverseNumber(0), 0);
+      CHECK(isPalindrome(121), true);
+      CHECK(isPalindrome(123), false);
+      CHECK(isPalindrome(7), true);
+      CHECK(isPalindrome(0), true);
+      CHECK(isPalindrome(1221), true);
+      CHECK(isPalindrome(10), false);
+    hints:
+      - "Reverse with the digit loop: `result = result * 10 + n % 10; n /= 10;`"
+      - "`isPalindrome(n)` is simply `reverseNumber(n) == n`."
+    solution: |
+      int reverseNumber(int n) {
+          int result{0};
+          while (n > 0) {
+              result = result * 10 + n % 10;
+              n /= 10;
+          }
+          return result;
+      }
+
+      bool isPalindrome(int n) {
+          return reverseNumber(n) == n;
+      }
+
+  - type: challenge
+    id: c6-ch-binary
+    title: To binary
+    difficulty: 2
+    tags: [functions, strings, recursion]
+    prompt: |
+      Computers store numbers in **binary** (base 2): 5 is `101`, 10 is
+      `1010`. Write `std::string toBinary(int n)` for n ≥ 0 that returns the
+      binary digits as a string (`toBinary(0)` is `"0"`).
+
+      Method: the last binary digit is `n % 2`; the rest are the binary
+      digits of `n / 2`.
+    starter: |
+      #include <string>
+
+      std::string toBinary(int n) {
+          return "";
+      }
+    harness: |
+      CHECK(toBinary(0), "0");
+      CHECK(toBinary(1), "1");
+      CHECK(toBinary(5), "101");
+      CHECK(toBinary(10), "1010");
+      CHECK(toBinary(255), "11111111");
+      CHECK(toBinary(1024), "10000000000");
+    hints:
+      - "Recursive version: if `n < 2`, return `std::to_string(n)`; otherwise return `toBinary(n / 2) + std::to_string(n % 2)`."
+      - "Loop version: build the string backwards — `result = char('0' + n % 2) + result;` — while `n > 0`, and special-case 0."
+    solution: |
+      #include <string>
+
+      std::string toBinary(int n) {
+          if (n < 2) {
+              return std::to_string(n);
+          }
+          return toBinary(n / 2) + std::to_string(n % 2);
+      }
+    explain: |
+      `std::to_string(n)` turns a number into a string (Chapter 8). The
+      recursive version mirrors the definition exactly: the binary digits of
+      `n` are the binary digits of `n / 2`, followed by `n % 2`.
+
+  - type: challenge
+    id: c6-ch-hanoi
+    title: Towers of Hanoi
+    difficulty: 3
+    tags: [recursion]
+    prompt: |
+      Three pegs, A, B and C. On peg A sit `n` discs, largest at the bottom.
+      Move them all to peg C, one disc at a time, never putting a larger
+      disc on a smaller one.
+
+      Read `n` and print every move as `Move disc D from X to Y`, then the
+      total number of moves. For input `2`:
+
+      ```text
+      Move disc 1 from A to B
+      Move disc 2 from A to C
+      Move disc 1 from B to C
+      Moves: 3
+      ```
+
+      (Your moves must match exactly — use the classic recursive method.)
+    starter: |
+      #include <iostream>
+
+      int main() {
+          int n{};
+          std::cin >> n;
+
+          return 0;
+      }
+    tests:
+      - in: "1"
+        out: |
+          Move disc 1 from A to C
+          Moves: 1
+      - in: "2"
+        out: |
+          Move disc 1 from A to B
+          Move disc 2 from A to C
+          Move disc 1 from B to C
+          Moves: 3
+      - in: "3"
+        out: |
+          Move disc 1 from A to C
+          Move disc 2 from A to B
+          Move disc 1 from C to B
+          Move disc 3 from A to C
+          Move disc 1 from B to A
+          Move disc 2 from B to C
+          Move disc 1 from A to C
+          Moves: 7
+    hints:
+      - "To move `n` discs from X to Y using Z: move `n-1` discs from X to Z (using Y), move disc `n` from X to Y, then move `n-1` discs from Z to Y (using X)."
+      - "Write `void hanoi(int n, char from, char to, char via, int& moves)`. Base case: `n == 0` does nothing."
+    solution: |
+      #include <iostream>
+
+      void hanoi(int n, char from, char to, char via, int& moves) {
+          if (n == 0) {
+              return;
+          }
+          hanoi(n - 1, from, via, to, moves);
+          std::cout << "Move disc " << n << " from " << from << " to " << to << '\n';
+          ++moves;
+          hanoi(n - 1, via, to, from, moves);
+      }
+
+      int main() {
+          int n{};
+          std::cin >> n;
+          int moves{0};
+          hanoi(n, 'A', 'C', 'B', moves);
+          std::cout << "Moves: " << moves << '\n';
+          return 0;
+      }
+    explain: |
+      The recursion trusts itself: "to move n discs, move n−1 out of the way,
+      move the big one, move the n−1 back on top". It takes 2ⁿ − 1 moves —
+      for 64 discs, the legend says, the world ends before the monks finish.
+
+  - type: challenge
+    id: c6-ch-roman
+    title: Roman numerals
+    difficulty: 3
+    tags: [functions, strings]
+    prompt: |
+      Write `std::string toRoman(int n)` for 1 ≤ n ≤ 3999. Roman numerals use
+      M=1000, D=500, C=100, L=50, X=10, V=5, I=1, and six subtractive pairs:
+      CM=900, CD=400, XC=90, XL=40, IX=9, IV=4.
+
+      Examples: 3 → `III`, 9 → `IX`, 14 → `XIV`, 1994 → `MCMXCIV`.
+    starter: |
+      #include <string>
+
+      std::string toRoman(int n) {
+          return "";
+      }
+    harness: |
+      CHECK(toRoman(1), "I");
+      CHECK(toRoman(3), "III");
+      CHECK(toRoman(4), "IV");
+      CHECK(toRoman(9), "IX");
+      CHECK(toRoman(14), "XIV");
+      CHECK(toRoman(40), "XL");
+      CHECK(toRoman(1994), "MCMXCIV");
+      CHECK(toRoman(2024), "MMXXIV");
+      CHECK(toRoman(3999), "MMMCMXCIX");
+    hints:
+      - "Treat the 13 symbols (including the pairs) as coins, largest first: 1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1."
+      - "For each, while `n` is at least its value, append the symbol and subtract. (A helper function for one symbol keeps it short.)"
+    solution: |
+      #include <string>
+
+      void take(int& n, int value, const std::string& symbol, std::string& out) {
+          while (n >= value) {
+              out += symbol;
+              n -= value;
+          }
+      }
+
+      std::string toRoman(int n) {
+          std::string out{};
+          take(n, 1000, "M", out);
+          take(n, 900, "CM", out);
+          take(n, 500, "D", out);
+          take(n, 400, "CD", out);
+          take(n, 100, "C", out);
+          take(n, 90, "XC", out);
+          take(n, 50, "L", out);
+          take(n, 40, "XL", out);
+          take(n, 10, "X", out);
+          take(n, 9, "IX", out);
+          take(n, 5, "V", out);
+          take(n, 4, "IV", out);
+          take(n, 1, "I", out);
+          return out;
+      }
+    explain: |
+      It's the "making change" algorithm from Chapter 3 with symbols instead
+      of coins. With arrays (next chapter) the 13 calls become a loop over a
+      table of values and symbols.
+
+  - type: challenge
+    id: c6-ch-change
+    title: Coins, the function way
+    difficulty: 1
+    tags: [functions, references]
+    prompt: |
+      Write `int coins(int& cents, int coin)` that returns how many of `coin`
+      fit in `cents`, and **reduces** `cents` to what's left. For example,
+      with `cents = 87`, `coins(cents, 20)` returns 4 and leaves `cents` at 7.
+    starter: |
+      int coins(int& cents, int coin) {
+          return 0;
+      }
+    harness: |
+      int c{87};
+      CHECK(coins(c, 20), 4);
+      CHECK(c, 7);
+      CHECK(coins(c, 5), 1);
+      CHECK(c, 2);
+      CHECK(coins(c, 10), 0);
+      CHECK(c, 2);
+      int d{100};
+      CHECK(coins(d, 100), 1);
+      CHECK(d, 0);
+    hints:
+      - "`int count = cents / coin;` then `cents %= coin;` then return `count`."
+    solution: |
+      int coins(int& cents, int coin) {
+          int count = cents / coin;
+          cents %= coin;
+          return count;
+      }
+
+  - type: challenge
+    id: c6-ch-dates
+    title: Day of the year
+    difficulty: 3
+    tags: [functions, design]
+    prompt: |
+      Write three functions:
+
+      - `bool isLeap(int year)`
+      - `int daysInMonth(int month, int year)` — 28/29 for February, 30 for April, June, September, November, 31 otherwise.
+      - `int dayOfYear(int day, int month, int year)` — 1 for 1 January, 365 (or 366) for 31 December.
+
+      Build each on the one before.
+    starter: |
+      bool isLeap(int year) {
+          return false;
+      }
+
+      int daysInMonth(int month, int year) {
+          return 0;
+      }
+
+      int dayOfYear(int day, int month, int year) {
+          return 0;
+      }
+    harness: |
+      CHECK(isLeap(2024), true);
+      CHECK(isLeap(1900), false);
+      CHECK(daysInMonth(2, 2024), 29);
+      CHECK(daysInMonth(2, 2023), 28);
+      CHECK(daysInMonth(4, 2023), 30);
+      CHECK(daysInMonth(12, 2023), 31);
+      CHECK(dayOfYear(1, 1, 2023), 1);
+      CHECK(dayOfYear(1, 3, 2023), 60);
+      CHECK(dayOfYear(1, 3, 2024), 61);
+      CHECK(dayOfYear(31, 12, 2023), 365);
+      CHECK(dayOfYear(31, 12, 2000), 366);
+    hints:
+      - "`daysInMonth`: a `switch` on the month, calling `isLeap` for February."
+      - "`dayOfYear`: add up `daysInMonth` for every month before `month`, then add `day`."
+    solution: |
+      bool isLeap(int year) {
+          return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+      }
+
+      int daysInMonth(int month, int year) {
+          switch (month) {
+          case 2:
+              return isLeap(year) ? 29 : 28;
+          case 4:
+          case 6:
+          case 9:
+          case 11:
+              return 30;
+          default:
+              return 31;
+          }
+      }
+
+      int dayOfYear(int day, int month, int year) {
+          int total{day};
+          for (int m{1}; m < month; ++m) {
+              total += daysInMonth(m, year);
+          }
+          return total;
+      }
+    explain: |
+      Each function is tiny and testable on its own, and each one makes the
+      next one easy. That's decomposition working as intended.
+
+  - type: review
+    id: c6-review
+    title: "Chapter 6 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      int square(int x);                          // declaration (prototype)
+
+      int square(int x) {                         // definition
+          return x * x;
+      }
+
+      void greet(const std::string& name);       // read-only, no copy
+      void addBonus(int& score);                 // changes the caller's variable
+      void line(int length = 20, char c = '-');  // default arguments
+      double add(double a, double b);            // overload of add(int, int)
+
+      long long factorial(int n) {               // recursion
+          if (n <= 1) { return 1; }              // base case
+          return n * factorial(n - 1);           // smaller problem
+      }
+      ```
+
+      ## Key ideas
+
+      - A call jumps into the function; `return` jumps back with a value.
+      - Parameters are local variables. By value = a copy; `&` = the caller's own variable; `const &` = no copy, read-only.
+      - Every path of a non-void function must `return`.
+      - Declare (or define) a function before calling it.
+      - Overloads differ in their parameters, not their return type.
+      - Recursion needs a base case and a step towards it; too deep ⇒ stack overflow.
+      - Good functions do one job, have honest names, and keep computation separate from I/O.
+    questions:
+      - type: output
+        prompt: "Interleaving: loops, strings and functions."
+        code: |
+          #include <iostream>
+          #include <string>
+
+          std::string repeat(const std::string& s, int times) {
+              std::string out{};
+              for (int i{0}; i < times; ++i) {
+                  out += s;
+              }
+              return out;
+          }
+
+          int main() {
+              std::string r = repeat("ab", 3);
+              std::cout << r << ' ' << r.length() << '\n';
+              return 0;
+          }
+        answer: |
+          ababab 6
+        why: "The loop appends \"ab\" three times."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int f(int n) {
+              if (n <= 0) {
+                  return 0;
+              }
+              return (n % 2 == 0 ? n : 0) + f(n - 1);
+          }
+
+          int main() {
+              std::cout << f(6) << '\n';
+              return 0;
+          }
+        answer: |
+          12
+        why: "It sums the even numbers up to 6: 6 + 4 + 2 = 12."
+      - type: mcq
+        prompt: Which is the best signature for a function that computes the average of two `int`s?
+        options:
+          - "`void average(int a, int b)`"
+          - "`int average(int& a, int& b)`"
+          - "`double average(int a, int b)`"
+          - "`double average()` using global variables"
+        answer: 2
+        why: Inputs by value (they're small and only read), and a `double` result returned.
+
+  - type: exam
+    id: c6-exam
+    title: "Chapter 6 exam"
+    minutes: 35
+    pick: 14
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          int triple(int x) {
+              return 3 * x;
+          }
+
+          int main() {
+              int a{2};
+              a = triple(a) + triple(1);
+              std::cout << a << '\n';
+              return 0;
+          }
+        answer: |
+          9
+        why: "triple(2) = 6, triple(1) = 3."
+      - type: output
+        code: |
+          #include <iostream>
+
+          void update(int a, int& b) {
+              a *= 2;
+              b *= 2;
+          }
+
+          int main() {
+              int x{3};
+              int y{4};
+              update(x, y);
+              update(y, x);
+              std::cout << x << ' ' << y << '\n';
+              return 0;
+          }
+        answer: |
+          6 8
+        why: "First call: only y doubles (8). Second call: b refers to x, so x doubles (6)."
+      - type: mcq
+        prompt: Which statement about `return` is true?
+        options:
+          - A function can only have one `return`
+          - "`return` in a loop only ends the loop"
+          - "`return` ends the function immediately"
+          - "`void` functions must end with `return 0;`"
+        answer: 2
+        why: "`return` leaves the whole function at once, wherever it is."
+      - type: spot
+        prompt: Which line prevents this program from compiling?
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << half(10) << '\n';
+              return 0;
+          }
+
+          int half(int n) {
+              return n / 2;
+          }
+        answer: 4
+        why: "`half` is used before it's declared. Add `int half(int n);` above `main`, or move the function up."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int count{0};
+
+          int next() {
+              ++count;
+              return count * 10;
+          }
+
+          int main() {
+              int a = next();
+              int b = next();
+              std::cout << a << ' ' << b << ' ' << count << '\n';
+              return 0;
+          }
+        answer: |
+          10 20 2
+        why: "Each call increments the global `count` — one reason globals make code harder to reason about."
+      - type: output
+        code: |
+          #include <iostream>
+
+          void pattern(int n) {
+              if (n == 0) {
+                  return;
+              }
+              std::cout << n;
+              pattern(n - 1);
+              std::cout << n;
+          }
+
+          int main() {
+              pattern(3);
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          321123
+        why: "Each call prints n before and after the recursive call: 3, 2, 1, (base), 1, 2, 3."
+      - type: mcq
+        prompt: What's the best parameter type for a function that counts words in a (possibly huge) `std::string` without changing it?
+        options:
+          - "`std::string text`"
+          - "`std::string& text`"
+          - "`const std::string& text`"
+          - "`int text`"
+        answer: 2
+        why: No copy, and a promise not to modify.
+      - type: tf
+        prompt: Two overloads can differ only in their return type.
+        answer: false
+        why: The parameter lists must differ; the compiler can't choose by return type.
+      - type: output
+        code: |
+          #include <iostream>
+
+          int area(int w, int h = 1) {
+              return w * h;
+          }
+
+          int main() {
+              std::cout << area(5) << ' ' << area(5, 2) << '\n';
+              return 0;
+          }
+        answer: |
+          5 10
+        why: "In `area(5)`, h takes its default value 1."
+      - type: mcq
+        prompt: "`int f(int n) { return n * f(n - 1); }` — what's wrong?"
+        options:
+          - Nothing
+          - It has no base case, so it recurses until the stack overflows
+          - Recursive functions must be void
+          - "`n - 1` should be `n + 1`"
+        answer: 1
+        why: Without a base case, the recursion never stops.
+      - type: fill
+        prompt: Complete the function so `swapInts(a, b)` swaps the caller's variables.
+        code: |
+          void swapInts(int___ a, int___ b) {
+              int t{a};
+              a = b;
+              b = t;
+          }
+        blanks:
+          - ['&']
+          - ['&']
+        why: Reference parameters let the function change the caller's variables.
+      - type: output
+        code: |
+          #include <iostream>
+
+          int gcd(int a, int b) {
+              return b == 0 ? a : gcd(b, a % b);
+          }
+
+          int main() {
+              std::cout << gcd(84, 36) << '\n';
+              return 0;
+          }
+        answer: |
+          12
+        why: "gcd(84, 36) → gcd(36, 12) → gcd(12, 0) = 12."
+      - type: code
+        prompt: |
+          Write `int countDivisors(int n)` returning how many positive
+          divisors `n` (≥ 1) has. `countDivisors(12)` is 6 (1, 2, 3, 4, 6, 12).
+        starter: |
+          int countDivisors(int n) {
+              return 0;
+          }
+        harness: |
+          CHECK(countDivisors(1), 1);
+          CHECK(countDivisors(12), 6);
+          CHECK(countDivisors(13), 2);
+          CHECK(countDivisors(36), 9);
+          CHECK(countDivisors(100), 9);
+        solution: |
+          int countDivisors(int n) {
+              int count{0};
+              for (int d{1}; d <= n; ++d) {
+                  if (n % d == 0) {
+                      ++count;
+                  }
+              }
+              return count;
+          }
+      - type: code
+        prompt: |
+          Write `double average(int a, int b, int c)` returning the exact
+          average, and `bool allPositive(int a, int b, int c)`.
+        starter: |
+          double average(int a, int b, int c) {
+              return 0;
+          }
+
+          bool allPositive(int a, int b, int c) {
+              return false;
+          }
+        harness: |
+          CHECK(average(1, 2, 4), 7.0 / 3);
+          CHECK(average(2, 2, 2), 2.0);
+          CHECK(average(-1, 0, 2), 1.0 / 3);
+          CHECK(allPositive(1, 2, 3), true);
+          CHECK(allPositive(1, 0, 3), false);
+          CHECK(allPositive(-1, 2, 3), false);
+        solution: |
+          double average(int a, int b, int c) {
+              return static_cast<double>(a + b + c) / 3;
+          }
+
+          bool allPositive(int a, int b, int c) {
+              return a > 0 && b > 0 && c > 0;
+          }
+
+  - type: exam
+    id: c6-part-exam
+    title: "Part I exam: First Steps"
+    minutes: 50
+    pick: 20
+    body: |
+      This exam covers **all of Part I** — Chapters 0 to 6. It doesn't gate
+      anything; it's here to show you (and prove to yourself) that the
+      foundations are solid before you move on to working with data. Aim for
+      80% or more.
+    questions:
+      - type: mcq
+        prompt: What does the compiler do?
+        options:
+          - Runs the source code line by line
+          - Translates source code into machine code, reporting errors if the rules are broken
+          - Fixes logic errors
+          - Makes the code faster to type
+        answer: 1
+        why: It checks and translates. Logic errors are invisible to it.
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              std::cout << "a\tb\\n" << '\n';
+              return 0;
+          }
+        answer: "a\tb\\n"
+        why: "`\\t` is a tab; `\\\\n` is a backslash followed by the letter n (not a newline)."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{7};
+              double y = x / 2;
+              double z = x / 2.0;
+              std::cout << y << ' ' << z << '\n';
+              return 0;
+          }
+        answer: |
+          3 3.5
+        why: "x / 2 is integer division before being stored."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"code"};
+              s += "!";
+              std::cout << s << s.length() << '\n';
+              return 0;
+          }
+        answer: |
+          code!5
+        why: "The string becomes `code!` with 5 characters."
+      - type: mcq
+        prompt: "What's the value of `17 % 5 + 17 / 5`?"
+        options:
+          - "5"
+          - "3"
+          - "2"
+          - "5.4"
+        answer: 0
+        why: "17 % 5 = 2, 17 / 5 = 3 — total 5."
+      - type: output
+        code: |
+          #include <iomanip>
+          #include <iostream>
+
+          int main() {
+              std::cout << std::fixed << std::setprecision(2) << 10.0 / 4 << ' ' << 1.0 / 3 << '\n';
+              return 0;
+          }
+        answer: |
+          2.50 0.33
+        why: "Fixed with two decimals."
+      - type: mcq
+        prompt: "Which condition checks that `c` is a digit character?"
+        options:
+          - "`c >= 0 && c <= 9`"
+          - "`c >= '0' && c <= '9'`"
+          - "`'0' <= c <= '9'`"
+          - "`c == '0' || c == '9'`"
+        answer: 1
+        why: "Compare with the digit *characters*, and join both limits with `&&`."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{4};
+              switch (n % 3) {
+              case 0:
+                  std::cout << "zero";
+                  break;
+              case 1:
+                  std::cout << "one";
+                  break;
+              default:
+                  std::cout << "two";
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          one
+        why: "4 % 3 = 1."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int total{0};
+              for (int i{1}; i <= 4; ++i) {
+                  for (int j{1}; j <= i; ++j) {
+                      total += j;
+                  }
+              }
+              std::cout << total << '\n';
+              return 0;
+          }
+        answer: |
+          20
+        why: "1 + (1+2) + (1+2+3) + (1+2+3+4) = 1 + 3 + 6 + 10 = 20."
+      - type: output
+        prompt: "The Input box contains `3 4 5 end 6`."
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{};
+              int product{1};
+              while (std::cin >> x) {
+                  product *= x;
+              }
+              std::cout << product << '\n';
+              return 0;
+          }
+        stdin: "3 4 5 end 6"
+        answer: |
+          60
+        why: "The read of `end` fails and ends the loop: 3 × 4 × 5 = 60."
+      - type: spot
+        prompt: Which line is the logic error? The program should print whether a number is between 1 and 100.
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              if (n >= 1 || n <= 100) {
+                  std::cout << "in range\n";
+              }
+              return 0;
+          }
+        answer: 6
+        why: "`||` accepts every number. It should be `&&`."
+      - type: output
+        code: |
+          #include <iostream>
+
+          void f(int& a) {
+              a = a * a;
+          }
+
+          int main() {
+              int v{3};
+              f(v);
+              f(v);
+              std::cout << v << '\n';
+              return 0;
+          }
+        answer: |
+          81
+        why: "3 → 9 → 81, because `a` refers to `v`."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int f(int n) {
+              if (n < 2) {
+                  return n;
+              }
+              return f(n - 1) + f(n - 2);
+          }
+
+          int main() {
+              std::cout << f(7) << '\n';
+              return 0;
+          }
+        answer: |
+          13
+        why: "It's Fibonacci: 0, 1, 1, 2, 3, 5, 8, 13 — f(7) = 13."
+      - type: mcq
+        prompt: What happens when you read an uninitialised local `int`?
+        options:
+          - You get 0
+          - Undefined behaviour
+          - A compile error
+          - You get the maximum int
+        answer: 1
+        why: Always initialise.
+      - type: tf
+        prompt: "`int n{2.9};` compiles and makes `n` equal to 2."
+        answer: false
+        why: Brace initialisation rejects narrowing conversions.
+      - type: mcq
+        prompt: Which loop runs exactly 10 times?
+        options:
+          - "`for (int i{0}; i <= 10; ++i)`"
+          - "`for (int i{1}; i < 10; ++i)`"
+          - "`for (int i{0}; i < 10; ++i)`"
+          - "`for (int i{10}; i > 1; --i)`"
+        answer: 2
+        why: "i = 0 … 9: ten iterations."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{5};
+              int b{a++};
+              int c{++a};
+              std::cout << a << b << c << '\n';
+              return 0;
+          }
+        answer: |
+          757
+        why: "b gets 5 (then a is 6); ++a makes a 7 and c gets 7."
+      - type: mcq
+        prompt: "Which is **not** a good reason to write a function?"
+        options:
+          - The same code is needed in several places
+          - A block of code does one clear job that deserves a name
+          - To make every variable global
+          - To test a piece of logic on its own
+        answer: 2
+        why: Globals are best avoided; functions should communicate through parameters and return values.
+      - type: output
+        code: |
+          #include <cmath>
+          #include <iostream>
+
+          int main() {
+              std::cout << std::floor(-1.5) << ' ' << std::abs(-2) + std::sqrt(9.0) << '\n';
+              return 0;
+          }
+        answer: |
+          -2 5
+        why: "floor goes down to −2; |−2| + 3 = 5."
+      - type: code
+        prompt: |
+          Read whole numbers until the input ends and print the **second
+          largest distinct** value. If there isn't one (fewer than two distinct
+          values), print `none`. For input `4 9 2 9 7`, print `7`.
+        starter: |
+          #include <iostream>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "4 9 2 9 7"
+            out: "7"
+          - in: "5 5 5"
+            out: none
+          - in: "1 2"
+            out: "1"
+          - in: ""
+            out: none
+          - in: "-3 -8 -1"
+            out: "-3"
+        solution: |
+          #include <iostream>
+
+          int main() {
+              int x{};
+              bool haveFirst{false};
+              bool haveSecond{false};
+              int first{0};
+              int second{0};
+              while (std::cin >> x) {
+                  if (!haveFirst || x > first) {
+                      if (haveFirst) {
+                          second = first;
+                          haveSecond = true;
+                      }
+                      first = x;
+                      haveFirst = true;
+                  } else if (x < first && (!haveSecond || x > second)) {
+                      second = x;
+                      haveSecond = true;
+                  }
+              }
+              if (haveSecond) {
+                  std::cout << second << '\n';
+              } else {
+                  std::cout << "none\n";
+              }
+              return 0;
+          }
+      - type: code
+        prompt: |
+          Write `int sumOfSquaresOfDigits(int n)` for n ≥ 0 and
+          `bool isHappy(int n)`: a number is **happy** if repeatedly replacing
+          it with the sum of the squares of its digits eventually reaches 1
+          (19 → 82 → 68 → 100 → 1). Unhappy numbers end up in a loop that
+          always passes through 4.
+        starter: |
+          int sumOfSquaresOfDigits(int n) {
+              return 0;
+          }
+
+          bool isHappy(int n) {
+              return false;
+          }
+        harness: |
+          CHECK(sumOfSquaresOfDigits(19), 82);
+          CHECK(sumOfSquaresOfDigits(0), 0);
+          CHECK(isHappy(19), true);
+          CHECK(isHappy(1), true);
+          CHECK(isHappy(7), true);
+          CHECK(isHappy(4), false);
+          CHECK(isHappy(2), false);
+          CHECK(isHappy(100), true);
+        solution: |
+          int sumOfSquaresOfDigits(int n) {
+              int sum{0};
+              while (n > 0) {
+                  int d = n % 10;
+                  sum += d * d;
+                  n /= 10;
+              }
+              return sum;
+          }
+
+          bool isHappy(int n) {
+              while (n != 1 && n != 4) {
+                  n = sumOfSquaresOfDigits(n);
+              }
+              return n == 1;
+          }
