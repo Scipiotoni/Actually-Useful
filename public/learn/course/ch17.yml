@@ -1,0 +1,2031 @@
+id: ch17
+number: 17
+part: p5
+title: Professional C++
+blurb: The skills around the code — splitting programs into files, namespaces, reading and writing files, debugging, testing, style, and setting up C++ on your own computer.
+hours: 6
+goals:
+  - Explain how C++ is built — preprocessing, compiling and linking — and fix linker errors
+  - Split a program into headers and source files with include guards
+  - Organise code with namespaces
+  - Read and write files, and write functions that work with any stream
+  - Debug systematically, and test your code with good edge cases
+  - Write code that others can read, and set up a C++ toolchain on your own computer
+
+items:
+  - type: lesson
+    id: c17-build
+    title: How a C++ program is built
+    minutes: 18
+    objectives:
+      - Name the three stages — preprocess, compile, link — and what each does
+      - Tell a declaration from a definition
+      - Recognise and fix "undefined reference" and "multiple definition" errors
+    body: |
+      So far you've pressed **Run** and things happened. Real projects have
+      hundreds of files, and to work on them you need to know what the
+      compiler actually does. Turning `main.cpp` into a program takes **three
+      stages**:
+
+      1. **Preprocessing.** Every line starting with `#` is handled first. `#include <vector>` is replaced by the *entire text* of the vector header. The result is one big file called a **translation unit**.
+      2. **Compiling.** Each translation unit is checked and turned into machine code — an **object file** (`main.o`). This is where syntax and type errors come from.
+      3. **Linking.** The **linker** joins all the object files and libraries into one executable, connecting each use of a function to the place where it's defined.
+
+      ```text
+      main.cpp  --preprocess-->  translation unit  --compile-->  main.o  --\
+      shapes.cpp --preprocess--> translation unit  --compile-->  shapes.o --+--link-->  program
+                                                     standard library  ----/
+      ```
+
+      Each `.cpp` file is compiled **separately** — the compiler looking at
+      `main.cpp` knows nothing about `shapes.cpp`. That's what makes big
+      projects possible: change one file, recompile only that file, relink.
+
+      ## Declarations and definitions
+
+      A **declaration** tells the compiler a name exists and what its type is.
+      A **definition** is the declaration *plus* the actual thing — the body
+      of a function, the storage for a variable.
+
+      ```cpp static
+      int square(int x);                   // declaration: "square exists"
+      int square(int x) { return x * x; }  // definition: here it is
+      ```
+
+      The compiler only needs a **declaration** to compile a call. The linker
+      then needs to find exactly **one definition**. Forget the definition and
+      compiling succeeds but **linking fails**:
+
+      ```cpp error
+      #include <iostream>
+
+      int square(int x);   // declared, but never defined
+
+      int main() {
+          std::cout << square(4) << '\n';
+          return 0;
+      }
+      ```
+
+      Read the message: `undefined reference to 'square(int)'`. It doesn't
+      have a line number because it isn't about a line — the linker is saying
+      "someone called this, and nobody provided it". Typical causes: a typo
+      between declaration and definition (`squre`), different parameter types
+      (`int square(double)`), or forgetting to compile the `.cpp` file that
+      contains it.
+
+      ## The One Definition Rule
+
+      Define the same function twice in one program and the linker complains
+      the other way round: `multiple definition of 'square(int)'`. The **One
+      Definition Rule (ODR)** says: *any number of declarations, exactly one
+      definition*. You'll see in the next lesson how that shapes what goes in
+      header files.
+
+      > [!remember]
+      > Compiler errors have line numbers and are about **your code's
+      > syntax and types**. Linker errors mention `undefined reference` or
+      > `multiple definition` and are about **which files provide what**.
+
+      {{check stages}}
+    checks:
+      - id: stages
+        type: order
+        prompt: Put the stages of building a program in order.
+        lines:
+          - "The preprocessor pastes in #include files"
+          - "The compiler turns each translation unit into an object file"
+          - "The linker joins the object files and libraries into an executable"
+        why: "Preprocess → compile (per file) → link (all together)."
+      - id: which-error
+        type: mcq
+        prompt: "`undefined reference to 'average(std::vector<int> const&)'` — which stage failed, and what's the likely cause?"
+        options:
+          - "Compiling; a missing semicolon"
+          - "Linking; `average` was declared (and called) but its definition wasn't found"
+          - "Preprocessing; a missing #include"
+          - "Running; a crash inside average"
+        answer: 1
+        why: "Undefined references come from the linker."
+    cards:
+      - front: What are the three stages of building a C++ program?
+        back: Preprocessing (handle `#` lines), compiling (each .cpp → object file), linking (object files + libraries → executable).
+      - front: Declaration vs **definition**?
+        back: "A declaration says a name exists and its type (`int f(int);`). A definition also provides it (the body, the storage)."
+      - front: What does `undefined reference to` mean?
+        back: A linker error — something was declared and used, but no definition was found in any linked file.
+      - front: What is the **One Definition Rule**?
+        back: Things may be declared many times but defined exactly once in the program (with exceptions for inline functions and templates, which may be defined identically in each file).
+
+  - type: lesson
+    id: c17-files
+    title: Headers and source files
+    minutes: 22
+    objectives:
+      - Split a program into a header (`.h`) and a source file (`.cpp`)
+      - Protect headers with include guards or `#pragma once`
+      - Decide what belongs in a header and what in a source file
+    body: |
+      Here's the standard way to split a program. The **header** holds
+      declarations — the *interface*. The **source file** holds definitions —
+      the *implementation*. Other files `#include` the header to use it.
+
+      **geometry.h**
+
+      ```cpp static
+      #pragma once
+
+      #include <string>
+
+      struct Rect {
+          double width{};
+          double height{};
+      };
+
+      double area(const Rect& r);
+      double perimeter(const Rect& r);
+      std::string describe(const Rect& r);
+      ```
+
+      **geometry.cpp**
+
+      ```cpp static
+      #include "geometry.h"
+
+      double area(const Rect& r) { return r.width * r.height; }
+
+      double perimeter(const Rect& r) { return 2 * (r.width + r.height); }
+
+      std::string describe(const Rect& r) {
+          return std::to_string(r.width) + " x " + std::to_string(r.height);
+      }
+      ```
+
+      **main.cpp**
+
+      ```cpp static
+      #include <iostream>
+      #include "geometry.h"
+
+      int main() {
+          Rect r{3, 4};
+          std::cout << area(r) << ' ' << perimeter(r) << '\n';
+          return 0;
+      }
+      ```
+
+      Build both source files together (headers are never compiled on their
+      own — they're pasted into the `.cpp` files that include them):
+
+      ```text
+      g++ -std=c++20 -Wall -Wextra main.cpp geometry.cpp -o app
+      ```
+
+      - `#include "geometry.h"` with **quotes** looks for your own files first (next to the `.cpp`); `<...>` is for system and library headers.
+      - Each `.cpp` includes what **it** uses. `geometry.cpp` includes its own header first — a good habit that proves the header is self-contained.
+
+      ## Include guards
+
+      If a header gets included twice into the same translation unit (easy,
+      once headers include other headers), `struct Rect` would be defined twice
+      — an error. **`#pragma once`** at the top prevents that. The older,
+      fully standard way is an **include guard**:
+
+      ```cpp static
+      #ifndef GEOMETRY_H
+      #define GEOMETRY_H
+
+      // ... the header's contents ...
+
+      #endif
+      ```
+
+      The first time, `GEOMETRY_H` isn't defined, so the contents are kept and
+      the macro gets defined; the second time, everything is skipped. Every
+      header you write should have one or the other.
+
+      ## What goes where
+
+      | In the header (.h)                         | In the source file (.cpp)          |
+      |--------------------------------------------|------------------------------------|
+      | Function declarations                      | Function definitions (bodies)      |
+      | Class definitions (members, declarations)  | Member function definitions        |
+      | Templates — *entirely*                     | Helpers used only in this file     |
+      | `inline` functions and `constexpr` values  | Global variables' definitions      |
+      | Small member functions defined in the class|                                    |
+
+      Why can class definitions and templates go in headers when the ODR says
+      "one definition"? Because the rule has exceptions for exactly these:
+      **classes, templates and `inline` functions** may be defined in every
+      file that includes them, as long as every copy is identical. An ordinary
+      function body in a header, included by two `.cpp` files, would give a
+      **multiple definition** link error — unless you mark it `inline`.
+
+      Member functions defined outside the class use the class name:
+
+      ```cpp static
+      // counter.h
+      class Counter {
+      public:
+          void add(int n);
+          int total() const { return total_; }   // short: fine in the class
+      private:
+          int total_{0};
+      };
+
+      // counter.cpp
+      #include "counter.h"
+      void Counter::add(int n) { total_ += n; }
+      ```
+
+      > [!tip]
+      > The main editor of this site supports several files for C++ projects:
+      > create `geometry.h`, `geometry.cpp` and `main.cpp` there and they're
+      > compiled together, exactly like the command above.
+
+      {{check header}}
+    checks:
+      - id: header
+        type: mcq
+        prompt: "`int twice(int x) { return 2 * x; }` is written in `util.h`, which is included by `a.cpp` and `b.cpp`. What happens?"
+        options:
+          - Works fine
+          - "Linker error: multiple definition of `twice(int)` — declare it in the header and define it in util.cpp, or mark it `inline`"
+          - Compiler error in util.h
+          - The second definition is silently ignored
+        answer: 1
+        why: "Each .cpp gets its own copy of the body. Only inline functions, classes and templates may be repeated."
+      - id: guard
+        type: tf
+        prompt: "`#pragma once` or an include guard stops a header being processed twice within one translation unit."
+        answer: true
+        why: "That's exactly their job. (They don't stop each .cpp file including it once.)"
+    cards:
+      - front: What goes in a header file?
+        back: Declarations, class definitions, templates, inline/constexpr items — the interface. Function bodies (other than inline/templates) go in .cpp files.
+      - front: What is an **include guard**?
+        back: "`#ifndef X_H / #define X_H / ... / #endif` (or `#pragma once`) so a header's contents are only included once per translation unit."
+      - front: "`#include \"x.h\"` vs `#include <x>`?"
+        back: Quotes search your project's files first; angle brackets are for system/library headers.
+      - front: How do you compile a program made of several .cpp files?
+        back: "List them all: `g++ -std=c++20 -Wall -Wextra main.cpp geometry.cpp -o app` (or use a build system like CMake)."
+
+  - type: lesson
+    id: c17-namespaces
+    title: Namespaces
+    minutes: 16
+    objectives:
+      - Define and use your own namespaces
+      - Tell a `using` declaration from a `using` directive
+      - Hide file-private helpers in an unnamed namespace
+    body: |
+      Two libraries both define a function `load()`. Put them in one program
+      and the names collide. **Namespaces** give names a surname — that's what
+      the `std::` in `std::cout` is.
+
+      ```cpp
+      #include <iostream>
+
+      namespace audio {
+      int volume() { return 7; }
+      }
+
+      namespace video {
+      int volume() { return 3; }
+      }
+
+      namespace game::ui {    // nested namespace (C++17 shorthand)
+      int scale() { return 2; }
+      }
+
+      int main() {
+          std::cout << audio::volume() << video::volume() << game::ui::scale() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      732
+      ```
+
+      The contents of a namespace are usually not indented. A namespace can
+      be reopened in many files — `std` is spread over hundreds of headers.
+
+      ## Shortening names
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      namespace company::project::strings {
+      std::string shout(const std::string& s) { return s + "!"; }
+      }
+
+      int main() {
+          namespace cps = company::project::strings;   // namespace alias
+          using std::cout;                               // using declaration: one name
+          cout << cps::shout("hi") << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      hi!
+      ```
+
+      - A **using declaration** (`using std::cout;`) brings in **one** name.
+      - A **using directive** (`using namespace std;`) brings in **every** name in `std` — hundreds of them, including ones like `count`, `distance`, `size` that may clash with yours.
+
+      > [!warning]
+      > **Never** put `using namespace` in a header file: it leaks into every
+      > file that includes it. In a `.cpp` file, prefer using declarations
+      > inside functions. This course writes `std::` everywhere — it's what
+      > professional code does.
+
+      ## Unnamed namespaces: file-private helpers
+
+      A helper that only one `.cpp` file needs shouldn't be visible to the
+      linker at all (otherwise another file's helper with the same name would
+      clash). Put it in an **unnamed namespace**:
+
+      ```cpp static
+      // report.cpp
+      namespace {
+      std::string pad(const std::string& s, int width) { ... }   // private to this file
+      }
+
+      std::string report(...) { ... pad(...) ... }                // visible to other files
+      ```
+
+      This gives the helper **internal linkage** — like a `private` section
+      for a file. (Older code uses `static` on the function for the same
+      effect.)
+
+      {{check ns-output}}
+
+      {{task namespace}}
+    checks:
+      - id: ns-output
+        type: output
+        code: |
+          #include <iostream>
+
+          int value() { return 1; }
+
+          namespace outer {
+          int value() { return 2; }
+
+          namespace inner {
+          int value() { return 3; }
+          int test() { return value() * 100 + outer::value() * 10 + ::value(); }
+          }
+          }
+
+          int main() {
+              std::cout << outer::inner::test() << '\n';
+              return 0;
+          }
+        answer: |
+          321
+        why: "Unqualified `value()` finds the innermost one (3); `outer::value()` is 2; `::value()` means the global one (1)."
+    tasks:
+      - id: namespace
+        title: A units library
+        prompt: |
+          Create a namespace `units` containing a nested namespace `length`
+          with two functions:
+
+          - `double cmToInches(double cm)` — divide by 2.54
+          - `double inchesToCm(double in)` — multiply by 2.54
+
+          and, directly in `units`, a constant `inline constexpr double kmPerMile = 1.609344;`
+        starter: |
+          // Write the units namespace here.
+        starter_broken: true
+        harness: |
+          CHECK(units::length::inchesToCm(10), 25.4);
+          CHECK(units::length::cmToInches(5.08), 2.0);
+          CHECK(units::kmPerMile * 10, 16.09344);
+        hints:
+          - "`namespace units { inline constexpr double kmPerMile = 1.609344; namespace length { ... } }` — or `namespace units::length { ... }` for the nested part."
+        solution: |
+          namespace units {
+
+          inline constexpr double kmPerMile = 1.609344;
+
+          namespace length {
+          double cmToInches(double cm) { return cm / 2.54; }
+          double inchesToCm(double in) { return in * 2.54; }
+          }
+
+          }
+    cards:
+      - front: What problem do **namespaces** solve?
+        back: Name collisions — the same name in different libraries. `audio::volume` and `video::volume` can coexist.
+      - front: "`using std::cout;` vs `using namespace std;`?"
+        back: The first (using declaration) imports one name; the second (using directive) imports everything in `std` — risky, and never in headers.
+      - front: What does an **unnamed namespace** do?
+        back: Makes its contents private to the current .cpp file (internal linkage), so they can't clash with other files.
+      - front: What does `::value()` mean?
+        back: The `value` in the global namespace (not any namespace you're inside).
+
+  - type: quiz
+    id: c17-quiz1
+    title: "Quiz: building and organising"
+    questions:
+      - type: mcq
+        prompt: "Which file should contain `void Player::heal(int amount) { health_ += amount; }`?"
+        options:
+          - "player.h"
+          - "player.cpp"
+          - "main.cpp"
+          - Any of them, it doesn't matter
+        answer: 1
+        why: "Member function bodies go in the class's .cpp file (unless they're short enough to write inside the class)."
+      - type: mcq
+        prompt: "You changed only `shapes.cpp`. What must be recompiled?"
+        options:
+          - Every file in the project
+          - "`shapes.cpp` only — then relink"
+          - Only the header files
+          - Nothing; just relink
+        answer: 1
+        why: "Separate compilation: only the changed translation unit is rebuilt. (Changing a header forces every file that includes it to rebuild.)"
+      - type: spot
+        prompt: "This program fails to build. Which line is the problem?"
+        code: |
+          #include <iostream>
+
+          int add(int a, int b);
+
+          int main() {
+              std::cout << add(2, 3) << '\n';
+              return 0;
+          }
+
+          int add(double a, double b) {
+              return static_cast<int>(a + b);
+          }
+        answer: 10
+        why: "`add(double, double)` is a different function (an overload), so `add(int, int)` is still undefined: a linker error. The definition must match the declaration."
+      - type: tf
+        prompt: "Templates must be fully defined in headers, not just declared."
+        answer: true
+        why: "The compiler needs the body to instantiate them for each type."
+      - type: output
+        code: |
+          #include <iostream>
+
+          namespace a {
+          int x{1};
+          namespace b {
+          int x{2};
+          }
+          }
+
+          int main() {
+              using a::b::x;
+              std::cout << x << a::x << '\n';
+              return 0;
+          }
+        answer: |
+          21
+        why: "The using declaration brings `a::b::x` (2) in as `x`; `a::x` is 1."
+
+  - type: lesson
+    id: c17-files-io
+    title: Reading and writing files
+    minutes: 24
+    objectives:
+      - Write to a file with `std::ofstream` and read it back with `std::ifstream`
+      - Check that a file opened, and read line by line or value by value
+      - Write functions that take `std::istream&` / `std::ostream&` so they work with files, the console and strings
+    body: |
+      Programs that forget everything when they close are limited. Files
+      make data last. The good news: files are **streams**, so everything you
+      know about `std::cin` and `std::cout` still works.
+
+      ```cpp
+      #include <fstream>
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          {
+              std::ofstream out{"scores.txt"};        // create (or overwrite) the file
+              out << "Ada 92\n";
+              out << "Linus 85\n";
+              out << "Grace 97\n";
+          }                                           // out is closed here (RAII)
+
+          std::ifstream in{"scores.txt"};
+          if (!in) {
+              std::cerr << "Could not open scores.txt\n";
+              return 1;
+          }
+
+          std::string name{};
+          int score{};
+          int total{0};
+          while (in >> name >> score) {
+              std::cout << name << " scored " << score << '\n';
+              total += score;
+          }
+          std::cout << "Total: " << total << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Ada scored 92
+      Linus scored 85
+      Grace scored 97
+      Total: 274
+      ```
+
+      - `std::ofstream` (**o**utput **f**ile stream) writes; `std::ifstream` reads. Both live in `<fstream>`.
+      - A file stream closes itself in its destructor — RAII again. The inner `{ }` block makes sure the file is closed (and fully written) before we read it.
+      - **Always check** that the file opened: `if (!in)`. Missing files and wrong paths are the #1 file bug.
+      - `while (in >> name >> score)` is the reading loop you know from `cin`: it stops at the end of the file or at bad input.
+
+      Opening an `ofstream` erases the existing file. To add to the end
+      instead, open in **append** mode: `std::ofstream log{"log.txt", std::ios::app};`
+
+      ## Line by line
+
+      For text where spaces matter, read whole lines with `std::getline`:
+
+      ```cpp
+      #include <fstream>
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          {
+              std::ofstream out{"notes.txt"};
+              out << "buy milk\ncall mum\n\nfinish chapter 17\n";
+          }
+          std::ifstream in{"notes.txt"};
+          std::string line{};
+          int number{0};
+          while (std::getline(in, line)) {
+              if (line.empty()) {
+                  continue;
+              }
+              ++number;
+              std::cout << number << ". " << line << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      1. buy milk
+      2. call mum
+      3. finish chapter 17
+      ```
+
+      ## The professional trick: take any stream
+
+      A function that reads from `std::ifstream` only works with files. A
+      function that reads from **`std::istream&`** works with files,
+      `std::cin` *and* strings (`std::istringstream`) — because they're all
+      derived from `std::istream`. Polymorphism from Chapter 12, in the
+      standard library!
+
+      ```cpp
+      #include <iostream>
+      #include <sstream>
+      #include <string>
+
+      int sumNumbers(std::istream& in) {
+          int total{0};
+          int x{};
+          while (in >> x) {
+              total += x;
+          }
+          return total;
+      }
+
+      void writeTable(std::ostream& out, int rows) {
+          for (int i{1}; i <= rows; ++i) {
+              out << i << " squared is " << i * i << '\n';
+          }
+      }
+
+      int main() {
+          std::istringstream text{"4 8 15 16 23 42"};
+          std::cout << sumNumbers(text) << '\n';   // from a string
+          writeTable(std::cout, 3);                 // to the console
+          std::ostringstream buffer{};
+          writeTable(buffer, 2);                    // to a string
+          std::cout << buffer.str().size() << " characters\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      108
+      1 squared is 1
+      2 squared is 4
+      3 squared is 9
+      30 characters
+      ```
+
+      The same `sumNumbers` works with `std::ifstream` and `std::cin`
+      unchanged — and it's easy to **test**, because tests can feed it a
+      string. Design your I/O code this way.
+
+      {{check stream-output}}
+
+      {{task word-count}}
+
+      {{task csv-total}}
+    checks:
+      - id: stream-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <sstream>
+          #include <string>
+
+          int main() {
+              std::istringstream in{"red,green,,blue"};
+              std::string part{};
+              int n{0};
+              while (std::getline(in, part, ',')) {
+                  std::cout << '[' << part << ']';
+                  ++n;
+              }
+              std::cout << ' ' << n << '\n';
+              return 0;
+          }
+        answer: |
+          [red][green][][blue] 4
+        why: "`getline` with a third argument splits at that character instead of '\\n'; the empty field between the two commas is kept."
+      - id: open-check
+        type: mcq
+        prompt: "How should you check that `std::ifstream in{\"data.txt\"};` succeeded?"
+        options:
+          - "`if (in == nullptr)`"
+          - "`if (!in) { /* report the error */ }`"
+          - "It always succeeds"
+          - "`if (in.size() == 0)`"
+        answer: 1
+        why: "A stream converts to false when it's in a failed state — including when the file couldn't be opened."
+    tasks:
+      - id: word-count
+        title: Count lines, words and characters
+        prompt: |
+          Like the Unix `wc` tool. Write `Counts countText(std::istream& in)`
+          returning a `Counts` with the number of **lines**, **words**
+          (separated by whitespace) and **characters** (not counting the
+          newline at the end of each line).
+        starter: |
+          #include <istream>
+          #include <sstream>
+          #include <string>
+
+          struct Counts {
+              int lines{0};
+              int words{0};
+              int chars{0};
+          };
+
+          Counts countText(std::istream& in) {
+              Counts c{};
+              return c;
+          }
+        harness_pre: |
+          bool operator==(const Counts& a, const Counts& b) { return a.lines == b.lines && a.words == b.words && a.chars == b.chars; }
+          std::ostream& operator<<(std::ostream& o, const Counts& c) { return o << "{lines " << c.lines << ", words " << c.words << ", chars " << c.chars << "}"; }
+        harness: |
+          std::istringstream a{"hello world\nthis is  C++\n"};
+          CHECK(countText(a), (Counts{2, 5, 23}));
+          std::istringstream b{""};
+          CHECK(countText(b), (Counts{0, 0, 0}));
+          std::istringstream c{"one\n\n   \nlast line"};
+          CHECK(countText(c), (Counts{4, 3, 15}));
+        hints:
+          - "Read line by line with `std::getline(in, line)`: each one adds a line and `line.size()` characters."
+          - "Count words in each line with an `std::istringstream words{line};` and a `while (words >> w)` loop."
+        solution: |
+          #include <istream>
+          #include <sstream>
+          #include <string>
+
+          struct Counts {
+              int lines{0};
+              int words{0};
+              int chars{0};
+          };
+
+          Counts countText(std::istream& in) {
+              Counts c{};
+              std::string line{};
+              while (std::getline(in, line)) {
+                  ++c.lines;
+                  c.chars += static_cast<int>(line.size());
+                  std::istringstream words{line};
+                  std::string w{};
+                  while (words >> w) {
+                      ++c.words;
+                  }
+              }
+              return c;
+          }
+      - id: csv-total
+        title: Totals from a CSV file
+        prompt: |
+          A CSV file has a header line, then rows like `apples,3,0.50`
+          (item, quantity, unit price). Write
+          `double csvTotal(std::istream& in)` that skips the header and returns
+          the sum of quantity × price over all rows. Ignore empty lines.
+        starter: |
+          #include <istream>
+          #include <sstream>
+          #include <string>
+
+          double csvTotal(std::istream& in) {
+              return 0.0;
+          }
+        harness: |
+          std::istringstream shop{"item,qty,price\napples,3,0.50\nbread,1,2.25\n\nmilk,2,1.10\n"};
+          CHECK(csvTotal(shop), 5.95);
+          std::istringstream empty{"item,qty,price\n"};
+          CHECK(csvTotal(empty), 0.0);
+        hints:
+          - "`std::getline(in, line);` once to skip the header, then loop over the remaining lines."
+          - "Split a line with an `std::istringstream row{line};` and `std::getline(row, field, ',')` three times; convert with `std::stoi` and `std::stod`."
+        solution: |
+          #include <istream>
+          #include <sstream>
+          #include <string>
+
+          double csvTotal(std::istream& in) {
+              std::string line{};
+              std::getline(in, line);   // header
+              double total{0.0};
+              while (std::getline(in, line)) {
+                  if (line.empty()) {
+                      continue;
+                  }
+                  std::istringstream row{line};
+                  std::string item{};
+                  std::string qty{};
+                  std::string price{};
+                  std::getline(row, item, ',');
+                  std::getline(row, qty, ',');
+                  std::getline(row, price, ',');
+                  total += std::stoi(qty) * std::stod(price);
+              }
+              return total;
+          }
+    cards:
+      - front: How do you write to and read from a file?
+        back: "`std::ofstream out{\"f.txt\"}; out << ...;` and `std::ifstream in{\"f.txt\"}; in >> ...;` (header `<fstream>`)."
+      - front: How do you append to a file instead of overwriting it?
+        back: "`std::ofstream out{\"log.txt\", std::ios::app};`"
+      - front: Why write functions taking `std::istream&` rather than `std::ifstream&`?
+        back: They then work with files, `std::cin` and `std::istringstream` alike — and are easy to test with strings.
+      - front: How do you split a string on commas?
+        back: "`std::istringstream s{line}; while (std::getline(s, field, ',')) { ... }`"
+
+  - type: lesson
+    id: c17-debugging
+    title: Debugging like a professional
+    minutes: 24
+    objectives:
+      - Follow a systematic process instead of guessing
+      - Use `std::cerr` tracing and `assert` to find where things go wrong
+      - Know what debuggers and sanitizers do, and when to reach for them
+    body: |
+      Every programmer spends a large share of their time debugging — the
+      difference between a beginner and an expert is not having fewer bugs,
+      it's finding them **fast and calmly**. The secret is a **method**:
+
+      1. **Reproduce.** Find an input that reliably shows the bug. Make it as small as possible.
+      2. **Read.** The error message, the whole of it. The wrong output — *exactly* how is it wrong? Off by one? Negative? Always zero?
+      3. **Locate.** Narrow down *where* the program's state first becomes wrong. Check the middle: is the data correct at that point? Then search the half that's wrong (binary search, applied to your code).
+      4. **Hypothesise and test.** "I think `i` goes one past the end." Then *check* — don't just change code and hope.
+      5. **Fix the cause, not the symptom** — and add a test so it never comes back.
+
+      ## Tracing with `std::cerr`
+
+      The quickest tool: print what the program is doing. Use `std::cerr` —
+      the error stream — so debug output doesn't mix with real output (the
+      checker here only looks at `std::cout`):
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int findMax(const std::vector<int>& v) {
+          int best{0};
+          for (int x : v) {
+              std::cerr << "[debug] x=" << x << " best=" << best << '\n';
+              if (x > best) {
+                  best = x;
+              }
+          }
+          return best;
+      }
+
+      int main() {
+          std::cout << findMax({-5, -2, -9}) << '\n';   // should be -2!
+          return 0;
+      }
+      ```
+
+      ```output
+      0
+      ```
+
+      Run it and read the trace: `best` starts at `0` and no negative number
+      beats it. The bug is the starting value — it should be `v[0]` (or
+      `std::numeric_limits<int>::min()`). The trace turned a mystery into an
+      obvious fix.
+
+      ## `assert`: executable assumptions
+
+      `assert(condition)` from `<cassert>` stops the program **immediately**
+      with a message if the condition is false. Use it to state things that
+      *must* be true if your code is correct:
+
+      ```cpp
+      #include <cassert>
+      #include <iostream>
+      #include <vector>
+
+      double average(const std::vector<int>& v) {
+          assert(!v.empty() && "average of an empty vector");
+          int sum{0};
+          for (int x : v) {
+              sum += x;
+          }
+          return static_cast<double>(sum) / static_cast<double>(v.size());
+      }
+
+      int main() {
+          std::cout << average({2, 4}) << std::endl;
+          std::cout << average({}) << std::endl;   // stops here, with the message
+          return 0;
+      }
+      ```
+
+      ```output
+      3
+      ```
+
+      Run it: the second call fails the assertion, naming the file, line and
+      condition. Crashing *at the assertion* is far better than a wrong result
+      much later.
+
+      > [!note]
+      > Why `std::endl` here? `std::cout` collects output in a **buffer** and
+      > writes it out in chunks. When a program aborts, whatever is still in
+      > the buffer is lost — so a crashing program can seem to print less than
+      > it did. `std::endl` flushes the buffer. `std::cerr` is never buffered,
+      > which is one more reason debug traces belong there. (Asserts are for **programmer mistakes**; bad user input
+      should get a proper error message or exception. Release builds often
+      disable asserts with `-DNDEBUG`.)
+
+      ## Power tools
+
+      - **A debugger** (gdb, lldb, or the one built into VS Code / Visual Studio / CLion) lets you pause the program at a **breakpoint**, **step** line by line, and **watch** variables change. Compile with `-g` so it can map machine code back to your lines. When print-debugging needs more than a few prints, switch to the debugger.
+      - **Sanitizers** make the compiler add checks to your program. Compile with `-fsanitize=address,undefined` and out-of-bounds accesses, use-after-free, leaks, signed overflow and more are reported *at the exact line* they happen, instead of causing mysterious crashes elsewhere. They're one of the best bug-finding tools that exist — use them whenever you test.
+      - **Warnings** are free bug reports. Compile with `-Wall -Wextra` (this site does) and treat every warning as an error to fix.
+      - **The rubber duck.** Explain the code, line by line, out loud, to a rubber duck (or a friend). You'll very often hear yourself say the bug.
+
+      > [!mistake]
+      > Changing things randomly until it works. Even when it "works", you
+      > don't know why — and the bug often still hides. Every change should
+      > test a hypothesis.
+
+      {{check method}}
+
+      {{task fix-bugs}}
+    checks:
+      - id: method
+        type: order
+        prompt: Put the debugging steps in order.
+        lines:
+          - "Reproduce the bug with a small input"
+          - "Read the error or the wrong output carefully"
+          - "Narrow down where the state first goes wrong"
+          - "Form a hypothesis and test it"
+          - "Fix the cause and add a test"
+        why: "Reproduce → read → locate → hypothesise → fix and protect."
+      - id: cerr
+        type: mcq
+        prompt: "Why print debugging output to `std::cerr` rather than `std::cout`?"
+        options:
+          - "It's faster"
+          - "It keeps debug messages separate from the program's real output"
+          - "`std::cout` can't print variables"
+          - "It's required by the standard"
+        answer: 1
+        why: "Output checkers, pipes and files only see std::cout; std::cerr goes to the terminal separately."
+    tasks:
+      - id: fix-bugs
+        title: "Debugging practice: statistics"
+        prompt: |
+          These functions each contain **one bug**. Find and fix them —
+          don't rewrite from scratch. Use the failed checks, and `std::cerr`
+          tracing if needed.
+
+          - `sumOf` — sum of all elements
+          - `mean` — average (as a decimal)
+          - `countAbove` — how many elements are strictly greater than `limit`
+          - `lastIndexOf` — index of the last element equal to `x`, or -1
+        starter: |
+          #include <vector>
+
+          int sumOf(const std::vector<int>& v) {
+              int total{0};
+              for (std::size_t i{1}; i < v.size(); ++i) {
+                  total += v[i];
+              }
+              return total;
+          }
+
+          double mean(const std::vector<int>& v) {
+              return sumOf(v) / static_cast<int>(v.size());
+          }
+
+          int countAbove(const std::vector<int>& v, int limit) {
+              int n{0};
+              for (int x : v) {
+                  if (x >= limit) {
+                      ++n;
+                  }
+              }
+              return n;
+          }
+
+          int lastIndexOf(const std::vector<int>& v, int x) {
+              int found{-1};
+              for (std::size_t i{0}; i < v.size(); ++i) {
+                  if (v[i] == x) {
+                      found = static_cast<int>(i);
+                      break;
+                  }
+              }
+              return found;
+          }
+        harness: |
+          std::vector<int> v{4, 7, 2, 7, 5};
+          CHECK(sumOf(v), 25);
+          CHECK(mean(std::vector<int>{1, 2}), 1.5);
+          CHECK(countAbove(v, 5), 2);
+          CHECK(lastIndexOf(v, 7), 3);
+          CHECK(lastIndexOf(v, 9), -1);
+        hints:
+          - "`sumOf` skips something; `mean` does integer division."
+          - "`countAbove` says *strictly* greater; `lastIndexOf` stops too early."
+        solution: |
+          #include <vector>
+
+          int sumOf(const std::vector<int>& v) {
+              int total{0};
+              for (std::size_t i{0}; i < v.size(); ++i) {
+                  total += v[i];
+              }
+              return total;
+          }
+
+          double mean(const std::vector<int>& v) {
+              return static_cast<double>(sumOf(v)) / static_cast<double>(v.size());
+          }
+
+          int countAbove(const std::vector<int>& v, int limit) {
+              int n{0};
+              for (int x : v) {
+                  if (x > limit) {
+                      ++n;
+                  }
+              }
+              return n;
+          }
+
+          int lastIndexOf(const std::vector<int>& v, int x) {
+              int found{-1};
+              for (std::size_t i{0}; i < v.size(); ++i) {
+                  if (v[i] == x) {
+                      found = static_cast<int>(i);
+                  }
+              }
+              return found;
+          }
+        explain: |
+          Four classic bugs: a loop starting at 1 (off-by-one), integer
+          division, `>=` instead of `>` (a boundary error), and an early
+          `break` that turns "last" into "first". Learn to recognise these
+          shapes — you'll meet them again and again.
+    cards:
+      - front: What are the steps of systematic debugging?
+        back: Reproduce (small input) → read the message/output → locate where state goes wrong → hypothesise and test → fix the cause and add a test.
+      - front: What does `assert(cond)` do?
+        back: Stops the program with the file, line and condition if `cond` is false (from `<cassert>`; disabled by `-DNDEBUG`). For programmer errors, not user input.
+      - front: What do `-fsanitize=address,undefined` do?
+        back: Add runtime checks that report memory errors (out of bounds, use-after-free, leaks) and undefined behaviour at the exact line.
+      - front: What does compiling with `-g` do?
+        back: Adds debug information so a debugger can show your source lines and variables.
+
+  - type: lesson
+    id: c17-testing
+    title: Testing your code
+    minutes: 20
+    objectives:
+      - Explain what automated tests are and why professionals write them
+      - Choose good test cases, especially edge cases
+      - Work test-first: write the tests, then the code
+    body: |
+      Every exercise in this course has been checked by **automated tests** —
+      small pieces of code that call your function with known inputs and
+      compare the result with the expected answer. Professionals write these
+      for their own code, for three reasons:
+
+      - **Confidence.** Tests prove the code works — for the cases you tested.
+      - **Safety to change.** Refactor, optimise, add features; if the tests still pass, you didn't break anything.
+      - **Documentation.** Tests show exactly how the code is meant to be used.
+
+      ## A test framework in 20 lines
+
+      Real projects use frameworks like **GoogleTest**, **Catch2** or
+      **doctest**, but the core idea is tiny:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int failures{0};
+
+      void expectEqual(int actual, int expected, const std::string& what) {
+          if (actual != expected) {
+              std::cout << "FAIL " << what << ": got " << actual << ", expected " << expected << '\n';
+              ++failures;
+          }
+      }
+
+      int digitSum(int n) {
+          int sum{0};
+          while (n > 0) {
+              sum += n % 10;
+              n /= 10;
+          }
+          return sum;
+      }
+
+      int main() {
+          expectEqual(digitSum(123), 6, "digitSum(123)");
+          expectEqual(digitSum(0), 0, "digitSum(0)");
+          expectEqual(digitSum(9), 9, "digitSum(9)");
+          expectEqual(digitSum(-45), 9, "digitSum(-45)");
+          std::cout << (failures == 0 ? "All tests passed\n" : "Some tests failed\n");
+          return failures == 0 ? 0 : 1;
+      }
+      ```
+
+      ```output
+      FAIL digitSum(-45): got 0, expected 9
+      Some tests failed
+      ```
+
+      The test found a real bug: negative numbers. That's the point — you
+      *thought* about a case, and the computer checked it for you.
+
+      ## Choosing test cases
+
+      Most bugs live at the **edges**. For any function, think about:
+
+      | Category | Examples |
+      |---|---|
+      | Typical values | a normal list, a normal word |
+      | Empty / zero | empty vector, empty string, `0` |
+      | One | a single element, a one-letter word |
+      | Boundaries | the exact limit (`>=` vs `>`), first and last positions |
+      | Negatives and extremes | `-1`, very large numbers, `INT_MAX` |
+      | Duplicates and order | repeated values, already sorted, reverse sorted |
+      | Invalid input | what *should* happen? an exception? a special value? |
+
+      ## Test-first
+
+      **Test-driven development (TDD)** flips the order: write a failing test
+      for the next bit of behaviour, write the simplest code that passes it,
+      then tidy the code — "red, green, refactor". Even if you don't do it
+      strictly, writing a few tests *before* coding forces you to decide
+      exactly what the function should do. You've been doing this all course:
+      the checks came first.
+
+      {{check edge-cases}}
+
+      {{task leap}}
+    checks:
+      - id: edge-cases
+        type: mcq
+        prompt: "You're testing `int maxOf(const std::vector<int>& v)`. Which test cases are most likely to catch bugs? (Choose all that apply.)"
+        options:
+          - "All negative numbers, like {-5, -2, -9}"
+          - "A single element"
+          - "The maximum at the very last position"
+          - "{1, 2, 3} and {1, 2, 4} — two typical cases"
+        answer: [0, 1, 2]
+        why: "Negatives catch a `best{0}` start; one element and last-position catch loop-bound bugs. Two near-identical typical cases add little."
+    tasks:
+      - id: leap
+        title: "Test-first: calendar functions"
+        prompt: |
+          The tests are already written — read them first, then make them pass:
+
+          - `bool isLeapYear(int year)` — divisible by 4, except centuries, which must be divisible by 400
+          - `int daysInMonth(int year, int month)` — month 1–12
+          - `int dayOfYear(int year, int month, int day)` — 1 for January 1st
+        starter: |
+          bool isLeapYear(int year) {
+              return false;
+          }
+
+          int daysInMonth(int year, int month) {
+              return 31;
+          }
+
+          int dayOfYear(int year, int month, int day) {
+              return day;
+          }
+        harness: |
+          CHECK(isLeapYear(2024), true);
+          CHECK(isLeapYear(2023), false);
+          CHECK(isLeapYear(1900), false);
+          CHECK(isLeapYear(2000), true);
+          CHECK(daysInMonth(2023, 2), 28);
+          CHECK(daysInMonth(2024, 2), 29);
+          CHECK(daysInMonth(2024, 4), 30);
+          CHECK(daysInMonth(2024, 12), 31);
+          CHECK(dayOfYear(2024, 1, 1), 1);
+          CHECK(dayOfYear(2023, 3, 1), 60);
+          CHECK(dayOfYear(2024, 3, 1), 61);
+          CHECK(dayOfYear(2024, 12, 31), 366);
+        hints:
+          - "`isLeapYear`: `(year % 4 == 0 && year % 100 != 0) || year % 400 == 0`."
+          - "`daysInMonth`: February depends on the leap year; April, June, September and November have 30."
+          - "`dayOfYear`: add `daysInMonth` for every month before `month`, then add `day`."
+        solution: |
+          bool isLeapYear(int year) {
+              return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+          }
+
+          int daysInMonth(int year, int month) {
+              if (month == 2) {
+                  return isLeapYear(year) ? 29 : 28;
+              }
+              if (month == 4 || month == 6 || month == 9 || month == 11) {
+                  return 30;
+              }
+              return 31;
+          }
+
+          int dayOfYear(int year, int month, int day) {
+              int total{day};
+              for (int m{1}; m < month; ++m) {
+                  total += daysInMonth(year, m);
+              }
+              return total;
+          }
+    cards:
+      - front: Why write automated tests?
+        back: Confidence that code works, safety to change it later, and documentation of how it's used.
+      - front: Where do bugs usually hide?
+        back: "At the edges: empty/zero, one element, boundaries (`>` vs `>=`), first/last positions, negatives and extremes, duplicates."
+      - front: What is **test-driven development**?
+        back: "Write a failing test, write the simplest code to pass it, then refactor — \"red, green, refactor\"."
+      - front: Name three C++ test frameworks.
+        back: GoogleTest, Catch2, doctest.
+
+  - type: quiz
+    id: c17-quiz2
+    title: "Quiz: files, debugging and testing"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <sstream>
+          #include <string>
+
+          int main() {
+              std::istringstream in{"3 apples\n10 pears\nlots of plums\n2 figs"};
+              int total{0};
+              std::string line{};
+              while (std::getline(in, line)) {
+                  std::istringstream row{line};
+                  int n{};
+                  if (row >> n) {
+                      total += n;
+                  }
+              }
+              std::cout << total << '\n';
+              return 0;
+          }
+        answer: |
+          15
+        why: "\"lots of plums\" fails to read an int and is skipped: 3 + 10 + 2."
+      - type: mcq
+        prompt: "A function works for `{3, 1, 2}` but returns garbage for `{}`. What kind of test was missing?"
+        options:
+          - A performance test
+          - An edge case — the empty input
+          - A typical case
+          - A test with larger numbers
+        answer: 1
+        why: "Empty input is the most common edge case to forget."
+      - type: tf
+        prompt: "`assert` is the right way to handle a user typing letters when a number was expected."
+        answer: false
+        why: "Asserts are for programmer errors. Bad user input is expected and needs a friendly message or retry."
+      - type: mcq
+        prompt: "Your program sometimes crashes somewhere after writing past the end of an array. What's the fastest way to find the bad line?"
+        options:
+          - Add `std::cout` everywhere
+          - "Recompile with `-fsanitize=address` and run it — it reports the exact out-of-bounds access"
+          - Rewrite the program
+          - Increase the array size
+        answer: 1
+        why: "AddressSanitizer catches the access where it happens, not where the damage shows up."
+      - type: spot
+        prompt: "This function should return the number of lines in the stream but always returns one too many for a non-empty text. Which line is the bug?"
+        code: |
+          #include <istream>
+          #include <string>
+
+          int countLines(std::istream& in) {
+              int n{1};
+              std::string line{};
+              while (std::getline(in, line)) {
+                  ++n;
+              }
+              return n;
+          }
+        answer: 5
+        why: "The count should start at 0; each successful getline is one line."
+
+  - type: lesson
+    id: c17-style
+    title: Writing code others can read
+    minutes: 18
+    objectives:
+      - Apply the most important style rules for readable, safe C++
+      - Review code for common problems
+      - Know the C++ Core Guidelines and the tools that enforce style
+    body: |
+      *"Any fool can write code that a computer can understand. Good
+      programmers write code that humans can understand."* — Martin Fowler
+
+      Code is read far more often than it's written — by teammates, and by
+      you in six months. Here are the habits that matter most, most of which
+      you've been practising all along:
+
+      **Names**
+      - Say what things *are*: `studentCount`, not `n2`; `isValid()`, not `check()`.
+      - Functions are verbs (`loadScores`), variables and classes are nouns (`score`, `GradeBook`).
+      - Pick one naming style and keep to it (this course: `camelCase` functions and variables, `PascalCase` types, trailing `_` for private members).
+
+      **Functions**
+      - One function, one job. If you need "and" to describe it, split it.
+      - Short: if it doesn't fit on a screen, it's probably doing too much.
+      - Few parameters; related ones belong in a struct.
+
+      **Safety**
+      - Initialise every variable (`int x{0};`).
+      - `const` everything that doesn't change — variables, references, member functions.
+      - No raw `new`/`delete` — use containers and smart pointers (RAII).
+      - Prefer standard algorithms and containers to hand-written loops and arrays.
+      - No magic numbers: `constexpr int maxPlayers{4};` instead of a bare `4`.
+
+      **Tools**
+      - Compile with warnings on (`-Wall -Wextra -Wpedantic`), and fix all of them. Many teams add `-Werror`.
+      - **clang-format** formats code automatically — no more arguments about braces.
+      - **clang-tidy** and **cppcheck** find bugs and style problems statically.
+      - The **C++ Core Guidelines** (by Bjarne Stroustrup and Herb Sutter) are the reference for modern C++ style — free online, and worth browsing now that you know enough to understand them.
+
+      ## Before and after
+
+      ```cpp static
+      // Before
+      double f(std::vector<double> v, int t) {
+          double r = 0;
+          for (int i = 0; i < v.size(); i++) if (v[i] > t) r = r + v[i] * 0.21;
+          return r;
+      }
+      ```
+
+      ```cpp static
+      // After
+      constexpr double vatRate{0.21};
+
+      double vatOnItemsAbove(const std::vector<double>& prices, double threshold) {
+          double vat{0.0};
+          for (double price : prices) {
+              if (price > threshold) {
+                  vat += price * vatRate;
+              }
+          }
+          return vat;
+      }
+      ```
+
+      Same behaviour. But the second version says what it does, avoids a copy
+      of the vector, has no signed/unsigned comparison, and the rate has a
+      name you can find and change in one place.
+
+      ## Code review
+
+      In teams, every change is **reviewed** by someone else before it's
+      merged. Reviewing code is a skill — you'll practise it in the next
+      questions. Look for: bugs, unclear names, missing edge cases, copies
+      where a reference would do, missing `const`, duplicated code, and
+      functions doing too much. Be kind and specific: comment on the code,
+      never the person.
+
+      {{check review1}}
+
+      {{check review2}}
+    checks:
+      - id: review1
+        type: mcq
+        prompt: |
+          Review this function. Which comments are valid? (Choose all that apply.)
+
+          ```cpp static
+          int cnt(std::vector<std::string> w, char c) {
+              int n = 0;
+              for (int i = 0; i < w.size(); i++)
+                  if (w[i][0] == c) n++;
+              return n;
+          }
+          ```
+        options:
+          - "The vector is copied — take it by `const std::vector<std::string>&`"
+          - "`w[i][0]` is undefined behaviour for an empty string"
+          - "The name `cnt` doesn't say what's counted — e.g. `countStartingWith`"
+          - "`int i` compared with `w.size()` mixes signed and unsigned — use a range-for"
+        answer: [0, 1, 2, 3]
+        why: "All four are real problems. A good review catches the bug (empty strings) as well as the style issues."
+      - id: review2
+        type: mcq
+        prompt: "Which change most improves this code: `if (age >= 18 && age < 65 && hasId && !banned) { ... }` repeated in five places?"
+        options:
+          - Add a comment above each copy
+          - "Extract `bool canEnter(const Visitor& v)` and call it everywhere"
+          - Shorten the variable names
+          - Put it all on one line
+        answer: 1
+        why: "Duplicated logic should be a named function: one place to read, test and change."
+    cards:
+      - front: Name five habits of readable, safe C++.
+        back: Descriptive names; small single-purpose functions; initialise everything; const by default; RAII instead of raw new/delete (also: no magic numbers, standard algorithms, warnings on).
+      - front: What are **clang-format** and **clang-tidy**?
+        back: clang-format automatically formats code; clang-tidy statically finds bugs and style problems.
+      - front: What are the **C++ Core Guidelines**?
+        back: The reference guide to modern C++ style and safety, by Stroustrup and Sutter — free online.
+      - front: What is a **magic number**, and the fix?
+        back: "An unexplained literal like `0.21` in code. Give it a name: `constexpr double vatRate{0.21};`."
+
+  - type: lesson
+    id: c17-setup
+    title: C++ on your own computer
+    minutes: 16
+    objectives:
+      - Install a compiler and an editor on your operating system
+      - Compile and run programs from the command line with good flags
+      - Understand what a build system like CMake does
+    body: |
+      This site compiles your code on a server, which is perfect for
+      learning. For your own projects you'll want C++ on your computer. It
+      takes about half an hour, once.
+
+      ## 1. A compiler
+
+      | System | Easiest option |
+      |---|---|
+      | **Windows** | Install **Visual Studio Community** (free) with the "Desktop development with C++" workload — compiler, editor and debugger in one. Or install **MSYS2** and run `pacman -S mingw-w64-ucrt-x86_64-gcc` to get g++. |
+      | **macOS** | In the Terminal: `xcode-select --install` — installs Apple's clang (use it as `clang++` or `g++`). |
+      | **Linux** | `sudo apt install g++ gdb cmake` (Debian/Ubuntu) or your distribution's equivalent. |
+
+      Check it works: `g++ --version` (or `clang++ --version`).
+
+      ## 2. An editor
+
+      - **VS Code** with Microsoft's "C/C++" extension (or "clangd") — light, free, everywhere.
+      - **Visual Studio** (Windows) — the full IDE, with the best debugger.
+      - **CLion** — a powerful IDE, free for students and non-commercial use.
+
+      ## 3. Compile from the command line
+
+      ```text
+      g++ -std=c++20 -Wall -Wextra -Wpedantic -g main.cpp -o hello
+      ./hello
+      ```
+
+      | Flag | Meaning |
+      |---|---|
+      | `-std=c++20` | Use the C++20 standard |
+      | `-Wall -Wextra -Wpedantic` | Turn on the useful warnings |
+      | `-g` | Include debug information |
+      | `-O2` | Optimise (for finished programs) |
+      | `-fsanitize=address,undefined` | Catch memory errors and UB while testing |
+      | `-o hello` | Name of the program to produce |
+
+      On Windows the program is `hello.exe`, run as `hello`.
+
+      ## 4. Build systems: CMake
+
+      Typing every file into a `g++` command stops working around ten files.
+      A **build system** knows your files, their dependencies and your flags,
+      and rebuilds only what changed. The industry standard is **CMake**. A
+      complete project needs one small file, `CMakeLists.txt`:
+
+      ```text
+      cmake_minimum_required(VERSION 3.20)
+      project(GradeBook CXX)
+
+      set(CMAKE_CXX_STANDARD 20)
+      set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+      add_executable(gradebook main.cpp student.cpp report.cpp)
+      target_compile_options(gradebook PRIVATE -Wall -Wextra -Wpedantic)
+      ```
+
+      Then build with:
+
+      ```text
+      cmake -S . -B build
+      cmake --build build
+      ```
+
+      VS Code, Visual Studio and CLion all open CMake projects directly.
+      Libraries are usually added with a package manager such as **vcpkg** or
+      **Conan** — a topic for when you need them.
+
+      > [!tip]
+      > Keep using this site's **Playground** and the main editor for quick
+      > experiments — even professionals keep an online compiler (like
+      > Compiler Explorer, godbolt.org) open for trying things out.
+
+      {{check flags}}
+    checks:
+      - id: flags
+        type: fill
+        prompt: "Complete the command: C++20, all the useful warnings, debug info, output named `game`."
+        code: |
+          g++ -std=___ -Wall -Wextra ___ main.cpp -o ___
+        blanks:
+          - [c++20]
+          - [-g]
+          - [game]
+        why: "`g++ -std=c++20 -Wall -Wextra -g main.cpp -o game`."
+      - id: cmake
+        type: mcq
+        prompt: "What does CMake do?"
+        options:
+          - It's a compiler
+          - "It describes a project's files and settings and generates the build, rebuilding only what changed"
+          - It formats code
+          - It's a debugger
+        answer: 1
+        why: "CMake is a build system generator; the actual compiling is still done by g++, clang or MSVC."
+    cards:
+      - front: A good command to compile `main.cpp` while learning?
+        back: "`g++ -std=c++20 -Wall -Wextra -Wpedantic -g main.cpp -o app` (add `-fsanitize=address,undefined` when testing)."
+      - front: What is CMake?
+        back: The standard C++ build system (generator); a `CMakeLists.txt` lists targets, sources and settings.
+      - front: What does `-O2` do?
+        back: Turns on optimisations — faster programs, slower compiles, harder debugging. For finished builds.
+
+  - type: challenge
+    id: c17-ch-inventory
+    title: A saved inventory
+    difficulty: 2
+    tags: [files, streams]
+    prompt: |
+      Write two functions that save and load an inventory, so that loading
+      what was saved gives back the same data:
+
+      - `void save(std::ostream& out, const std::map<std::string, int>& items)` — one line per item: `name quantity`
+      - `std::map<std::string, int> load(std::istream& in)` — the reverse. If a name appears twice, add the quantities. Skip lines that don't have a valid quantity.
+
+      Names have no spaces. The checks also save to a real file and load it back.
+    starter: |
+      #include <istream>
+      #include <map>
+      #include <ostream>
+      #include <string>
+
+      void save(std::ostream& out, const std::map<std::string, int>& items) {
+      }
+
+      std::map<std::string, int> load(std::istream& in) {
+          return {};
+      }
+    harness: |
+      std::map<std::string, int> inv{{"potion", 3}, {"arrow", 40}, {"key", 1}};
+      std::ostringstream out{};
+      save(out, inv);
+      CHECK(out.str(), "arrow 40\nkey 1\npotion 3\n");
+      std::istringstream in{out.str()};
+      CHECK(load(in), inv);
+      std::istringstream messy{"gem 2\nbroken line\ngem 5\n\ncoin x\ncoin 10\n"};
+      CHECK(load(messy), (std::map<std::string, int>{{"coin", 10}, {"gem", 7}}));
+      {
+          std::ofstream file{"inventory.txt"};
+          save(file, inv);
+      }
+      std::ifstream file{"inventory.txt"};
+      CHECK(load(file), inv);
+    harness_pre: |
+      #include <fstream>
+    hints:
+      - "`save`: a range-for over the map with structured bindings: `for (const auto& [name, qty] : items) out << name << ' ' << qty << '\\n';`"
+      - "`load`: read line by line; parse each with an `std::istringstream`; only add when `row >> name >> qty` succeeds."
+    solution: |
+      #include <istream>
+      #include <map>
+      #include <ostream>
+      #include <sstream>
+      #include <string>
+
+      void save(std::ostream& out, const std::map<std::string, int>& items) {
+          for (const auto& [name, qty] : items) {
+              out << name << ' ' << qty << '\n';
+          }
+      }
+
+      std::map<std::string, int> load(std::istream& in) {
+          std::map<std::string, int> items{};
+          std::string line{};
+          while (std::getline(in, line)) {
+              std::istringstream row{line};
+              std::string name{};
+              int qty{};
+              if (row >> name >> qty) {
+                  items[name] += qty;
+              }
+          }
+          return items;
+      }
+    explain: |
+      Reading line by line and parsing each line separately is the robust
+      way to handle messy files: one bad line can't derail the rest (with a
+      plain `while (in >> name >> qty)` loop, "broken line" would stop
+      everything).
+
+  - type: challenge
+    id: c17-ch-log
+    title: Log analyzer
+    difficulty: 2
+    tags: [streams, maps, parsing]
+    prompt: |
+      Your program reads a server log from standard input. Each line is
+      `HH:MM LEVEL message...` where LEVEL is `INFO`, `WARN` or `ERROR`.
+      Print:
+
+      ```text
+      INFO: 3
+      WARN: 1
+      ERROR: 2
+      First error at 09:14: disk full
+      Busiest hour: 09
+      ```
+
+      - counts for the three levels, in that order (0 if none)
+      - the first error's time and message — or `No errors` if there are none
+      - the hour (`HH`) with the most lines; on a tie, the earliest hour
+    starter: |
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          08:55 INFO server started
+          09:02 INFO user login
+          09:14 ERROR disk full
+          09:20 WARN slow response
+          10:01 ERROR disk full again
+          10:30 INFO user logout
+        out: |
+          INFO: 3
+          WARN: 1
+          ERROR: 2
+          First error at 09:14: disk full
+          Busiest hour: 09
+      - in: |
+          23:59 INFO quiet night
+        out: |
+          INFO: 1
+          WARN: 0
+          ERROR: 0
+          No errors
+          Busiest hour: 23
+      - in: |
+          14:00 WARN a
+          15:00 WARN b
+          15:10 ERROR cable unplugged by the cat
+          14:30 INFO c
+        out: |
+          INFO: 1
+          WARN: 2
+          ERROR: 1
+          First error at 15:10: cable unplugged by the cat
+          Busiest hour: 14
+        hidden: true
+    hints:
+      - "Read each line with `std::getline`, then `std::istringstream row{line}; row >> time >> level;` and `std::getline(row >> std::ws, message);` for the rest."
+      - "A `std::map<std::string, int>` for levels and another for hours (`time.substr(0, 2)`). The map of hours is sorted, so the first maximum you meet is the earliest."
+    solution: |
+      #include <iostream>
+      #include <map>
+      #include <sstream>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> levels{};
+          std::map<std::string, int> hours{};
+          std::string firstError{};
+          std::string line{};
+          while (std::getline(std::cin, line)) {
+              std::istringstream row{line};
+              std::string time{};
+              std::string level{};
+              if (!(row >> time >> level)) {
+                  continue;
+              }
+              std::string message{};
+              std::getline(row >> std::ws, message);
+              ++levels[level];
+              ++hours[time.substr(0, 2)];
+              if (level == "ERROR" && firstError.empty()) {
+                  firstError = time + ": " + message;
+              }
+          }
+          std::cout << "INFO: " << levels["INFO"] << '\n';
+          std::cout << "WARN: " << levels["WARN"] << '\n';
+          std::cout << "ERROR: " << levels["ERROR"] << '\n';
+          if (firstError.empty()) {
+              std::cout << "No errors\n";
+          } else {
+              std::cout << "First error at " << firstError << '\n';
+          }
+          std::string busiest{};
+          int most{0};
+          for (const auto& [hour, count] : hours) {
+              if (count > most) {
+                  most = count;
+                  busiest = hour;
+              }
+          }
+          std::cout << "Busiest hour: " << busiest << '\n';
+          return 0;
+      }
+
+  - type: challenge
+    id: c17-ch-debug-hard
+    title: "Debugging challenge: the broken bank statement"
+    difficulty: 3
+    tags: [debugging]
+    prompt: |
+      `statement` formats a list of transactions (positive = deposit,
+      negative = withdrawal) as a bank statement with a running balance. It
+      has **four bugs**. Fix them without rewriting the function.
+
+      Expected for `statement(100, {50, -30, -200})`:
+
+      ```text
+      Opening: 100
+      +50 -> 150
+      -30 -> 120
+      -200 -> -80 OVERDRAWN
+      Closing: -80
+      ```
+    starter: |
+      #include <sstream>
+      #include <string>
+      #include <vector>
+
+      std::string statement(int opening, const std::vector<int>& moves) {
+          std::ostringstream out{};
+          out << "Opening: " << opening << '\n';
+          int balance{0};
+          for (std::size_t i{0}; i + 1 < moves.size(); ++i) {
+              int m = moves[i];
+              balance += m;
+              out << (m > 0 ? "+" : "-") << m << " -> " << balance;
+              if (balance <= 0) {
+                  out << " OVERDRAWN";
+              }
+              out << '\n';
+          }
+          out << "Closing: " << balance << '\n';
+          return out.str();
+      }
+    harness: |
+      CHECK(statement(100, {50, -30, -200}), "Opening: 100\n+50 -> 150\n-30 -> 120\n-200 -> -80 OVERDRAWN\nClosing: -80\n");
+      CHECK(statement(0, {}), "Opening: 0\nClosing: 0\n");
+      CHECK(statement(10, {-10}), "Opening: 10\n-10 -> 0\nClosing: 0\n");
+    hints:
+      - "What does `balance` start at? How many transactions does the loop visit?"
+      - "Printing `\"-\"` and then `m` for a negative `m` prints two minus signs. And is a balance of exactly 0 overdrawn?"
+    solution: |
+      #include <sstream>
+      #include <string>
+      #include <vector>
+
+      std::string statement(int opening, const std::vector<int>& moves) {
+          std::ostringstream out{};
+          out << "Opening: " << opening << '\n';
+          int balance{opening};
+          for (std::size_t i{0}; i < moves.size(); ++i) {
+              int m = moves[i];
+              balance += m;
+              out << (m > 0 ? "+" : "") << m << " -> " << balance;
+              if (balance < 0) {
+                  out << " OVERDRAWN";
+              }
+              out << '\n';
+          }
+          out << "Closing: " << balance << '\n';
+          return out.str();
+      }
+    explain: |
+      The four bugs: `balance` must start at `opening`; the loop condition
+      `i + 1 < size` skips the last transaction; a negative number already
+      prints its own `-`; and a zero balance isn't overdrawn (`<`, not `<=`).
+      Notice how each check exposed a different bug — that's why several
+      varied tests beat one big one.
+
+  - type: review
+    id: c17-review
+    title: "Chapter 17 review"
+    body: |
+      ## Cheat sheet
+
+      ```text
+      Build:  preprocess (#include) → compile each .cpp → link
+      Linker errors: "undefined reference" (no definition), "multiple definition" (two)
+      Header: #pragma once, declarations, classes, templates, inline
+      Source: #include "own.h" first, then function bodies
+      g++ -std=c++20 -Wall -Wextra -g a.cpp b.cpp -o app
+      ```
+
+      ```cpp static
+      namespace game::ui { void draw(); }        // nested namespace
+      namespace { int helper(); }                // private to this file
+      using std::cout;                           // one name — never `using namespace` in headers
+
+      std::ofstream out{"f.txt"};                // write (std::ios::app to append)
+      std::ifstream in{"f.txt"};  if (!in) { }   // read; always check
+      while (std::getline(in, line)) { }         // line by line
+      std::getline(row, field, ',');             // split on commas
+      int parse(std::istream& in);               // works with files, cin, strings
+
+      assert(!v.empty() && "message");           // <cassert>
+      std::cerr << "[debug] x=" << x << '\n';    // tracing
+      ```
+
+      ## Key ideas
+
+      - Each `.cpp` is compiled separately; the linker connects them. ODR: one definition.
+      - Headers are the interface; source files the implementation.
+      - Namespaces prevent name clashes.
+      - Design I/O functions around `std::istream&` / `std::ostream&`.
+      - Debug with a method: reproduce, read, locate, hypothesise, fix + test.
+      - Test the edges. Warnings on, sanitizers when testing.
+      - Readable code: good names, small functions, const, RAII, no magic numbers.
+    questions:
+      - type: output
+        prompt: "Interleaving: streams, maps and structured bindings."
+        code: |
+          #include <iostream>
+          #include <map>
+          #include <sstream>
+          #include <string>
+
+          int main() {
+              std::istringstream in{"b 2\na 1\nb 3\nc x\n"};
+              std::map<std::string, int> m{};
+              std::string line{};
+              while (std::getline(in, line)) {
+                  std::istringstream row{line};
+                  std::string k{};
+                  int v{};
+                  if (row >> k >> v) {
+                      m[k] += v;
+                  }
+              }
+              for (const auto& [k, v] : m) {
+                  std::cout << k << v << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          a1 b5
+        why: "\"c x\" fails to parse and is skipped; the map is sorted by key."
+      - type: mcq
+        prompt: "Which belongs in a header file?"
+        options:
+          - "`int counter{0};` (a global variable definition)"
+          - "`double area(const Rect& r);`"
+          - "`using namespace std;`"
+          - "`int main() { ... }`"
+        answer: 1
+        why: "Declarations go in headers. Global definitions and main belong in .cpp files, and `using namespace` never goes in a header."
+      - type: tf
+        prompt: "Debug output written to `std::cerr` doesn't count as program output in this course's checker."
+        answer: true
+        why: "Checkers compare std::cout only."
+
+  - type: exam
+    id: c17-exam
+    title: "Chapter 17 exam"
+    minutes: 35
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: "`main.cpp` calls `score()`, declared in `game.h`. You build with `g++ main.cpp -o app` and get `undefined reference to 'score()'`. Fix?"
+        options:
+          - "Add `#include \"game.h\"` twice"
+          - "Also compile the file that defines it: `g++ main.cpp game.cpp -o app`"
+          - "Add `using namespace std;`"
+          - "Declare `score` again in main.cpp"
+        answer: 1
+        why: "The definition lives in game.cpp, which wasn't compiled or linked."
+      - type: order
+        prompt: "Order an include guard for `player.h`."
+        lines:
+          - "#ifndef PLAYER_H"
+          - "#define PLAYER_H"
+          - "class Player { /* ... */ };"
+          - "#endif"
+        why: "If not yet defined → define it → contents → end."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <sstream>
+          #include <string>
+
+          int main() {
+              std::ostringstream out{};
+              for (int i{3}; i > 0; --i) {
+                  out << i << (i > 1 ? "," : "");
+              }
+              std::string s = out.str();
+              std::cout << s << ' ' << s.size() << '\n';
+              return 0;
+          }
+        answer: |
+          3,2,1 5
+        why: "An ostringstream builds a string: \"3,2,1\" has 5 characters."
+      - type: tf
+        prompt: "An unnamed namespace makes its contents visible only inside the file where it's written."
+        answer: true
+        why: "It gives them internal linkage."
+      - type: mcq
+        prompt: "Which test case would reveal that `isPrime(int n)` wrongly returns `true` for 1?"
+        options:
+          - "isPrime(7)"
+          - "isPrime(1)"
+          - "isPrime(100)"
+          - "isPrime(13)"
+        answer: 1
+        why: "Test the boundaries: 0, 1 and 2 are where prime checks usually go wrong."
+      - type: spot
+        prompt: "This should print the sum of the numbers in a file, but for a file containing `1 2 3` it prints 3. Which line is the bug?"
+        code: |
+          #include <fstream>
+          #include <iostream>
+
+          int main() {
+              std::ifstream in{"numbers.txt"};
+              if (!in) {
+                  std::cerr << "cannot open\n";
+                  return 1;
+              }
+              int sum{0};
+              int x{};
+              while (in >> x) {
+                  sum = x;
+              }
+              std::cout << sum << '\n';
+              return 0;
+          }
+        answer: 13
+        why: "`sum = x` overwrites the total each time, so only the last number survives. It should be `sum += x`."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <sstream>
+          #include <string>
+
+          int main() {
+              std::istringstream in{"name=Ada\nage=36\ninvalid\ncity=London"};
+              std::string line{};
+              while (std::getline(in, line)) {
+                  auto eq = line.find('=');
+                  if (eq == std::string::npos) {
+                      continue;
+                  }
+                  std::cout << line.substr(eq + 1) << '/';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          Ada/36/London/
+        why: "Lines without '=' are skipped; the rest print the part after '='."
+      - type: mcq
+        prompt: "Which is the best design for a function that parses a config?"
+        options:
+          - "`Config parse(const std::string& fileName)` — opens the file itself"
+          - "`Config parse(std::istream& in)` — the caller opens whatever stream"
+          - "`Config parse()` — reads std::cin"
+          - "`void parse()` — sets global variables"
+        answer: 1
+        why: "Taking a stream makes it work with files, cin and strings — and easy to test."
+      - type: fill
+        prompt: "Open `log.txt` to add to its end, not overwrite it."
+        code: |
+          std::ofstream log{"log.txt", std::ios::___};
+        blanks:
+          - [app]
+        why: "`std::ios::app` = append mode."
+      - type: mcq
+        prompt: "Why is `using namespace std;` in a header a bad idea?"
+        options:
+          - "It makes compilation fail"
+          - "It forces every file that includes the header to import all of std, risking name clashes they didn't choose"
+          - "It's slower at runtime"
+          - "It's fine"
+        answer: 1
+        why: "Headers are pasted into other files — the directive comes along."
+      - type: code
+        prompt: |
+          Write `std::vector<std::string> splitOn(const std::string& text, char sep)`
+          splitting `text` at every `sep` (keeping empty fields), and
+          `std::string joinWith(const std::vector<std::string>& parts, const std::string& sep)`
+          that reverses it.
+        starter: |
+          #include <sstream>
+          #include <string>
+          #include <vector>
+
+          std::vector<std::string> splitOn(const std::string& text, char sep) {
+              return {};
+          }
+
+          std::string joinWith(const std::vector<std::string>& parts, const std::string& sep) {
+              return "";
+          }
+        harness: |
+          CHECK(splitOn("a,b,,c", ','), (std::vector<std::string>{"a", "b", "", "c"}));
+          CHECK(splitOn("one", ','), (std::vector<std::string>{"one"}));
+          CHECK(joinWith({"x", "y", "z"}, " - "), "x - y - z");
+          CHECK(joinWith({}, ","), "");
+          CHECK(joinWith(splitOn("2024-01-31", '-'), "/"), "2024/01/31");
+        solution: |
+          #include <sstream>
+          #include <string>
+          #include <vector>
+
+          std::vector<std::string> splitOn(const std::string& text, char sep) {
+              std::vector<std::string> parts{};
+              std::istringstream in{text};
+              std::string field{};
+              while (std::getline(in, field, sep)) {
+                  parts.push_back(field);
+              }
+              return parts;
+          }
+
+          std::string joinWith(const std::vector<std::string>& parts, const std::string& sep) {
+              std::string out{};
+              for (std::size_t i{0}; i < parts.size(); ++i) {
+                  if (i > 0) {
+                      out += sep;
+                  }
+                  out += parts[i];
+              }
+              return out;
+          }
+      - type: mcq
+        prompt: "Which compile flags would you add while *testing* to catch out-of-bounds accesses and undefined behaviour?"
+        options:
+          - "-O3"
+          - "-fsanitize=address,undefined"
+          - "-DNDEBUG"
+          - "-std=c++98"
+        answer: 1
+        why: "Sanitizers add runtime checks. (-DNDEBUG does the opposite: it disables asserts.)"
