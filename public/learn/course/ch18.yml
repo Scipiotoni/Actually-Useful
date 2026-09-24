@@ -1,0 +1,2649 @@
+id: ch18
+number: 18
+part: p5
+title: Problem Solving and Algorithms
+blurb: Think like a programmer — a method for unfamiliar problems, Big-O, searching, sorting, backtracking, classic patterns, dynamic programming and graphs.
+hours: 9
+goals:
+  - Attack an unfamiliar problem with a method instead of staring at a blank screen
+  - Estimate the running time of code with Big-O, and choose data structures accordingly
+  - Implement binary search, selection sort, insertion sort and merge sort
+  - Solve problems by recursion and backtracking
+  - Recognise and apply hashing, two pointers, sliding windows and prefix sums
+  - Solve problems with dynamic programming, and explore graphs with BFS and DFS
+
+items:
+  - type: lesson
+    id: c18-method
+    title: How to solve a problem you've never seen
+    minutes: 22
+    objectives:
+      - Apply a four-step method — understand, plan, build, look back
+      - Work examples by hand before writing code
+      - List edge cases before you start
+    body: |
+      Up to now, each exercise came right after the lesson that explained the
+      tool it needed. Real problems don't come with a lesson attached. This
+      chapter is about the skill that makes someone a programmer: **turning
+      a problem you've never seen into code**.
+
+      The mathematician George Pólya described a method in *How to Solve It*
+      (1945) that still works perfectly for programming:
+
+      1. **Understand the problem.** What exactly goes in and comes out? Work **two or three examples by hand**. List the **edge cases**.
+      2. **Make a plan.** How did *you* solve the examples by hand? Write the steps in plain words (pseudocode). Have you seen a similar problem? Can you solve a simpler version first?
+      3. **Carry out the plan.** Now write code — in small pieces, running as you go.
+      4. **Look back.** Test the examples and edge cases. Could it be simpler? Faster?
+
+      Most beginners skip straight to step 3, and get stuck there. The
+      thinking happens in steps 1 and 2.
+
+      ## A worked example: run-length encoding
+
+      *Compress a string by replacing each run of repeated characters with
+      the character and the run's length: `"aaabccdddd"` → `"a3b1c2d4"`.*
+
+      **Understand.** By hand: `aaa` → `a3`, `b` → `b1`, `cc` → `c2`,
+      `dddd` → `d4`. Edge cases: the empty string (→ `""`), one character
+      (`"x"` → `"x1"`), a run of 10 or more (`"zzzzzzzzzzzz"` → `"z12"`).
+
+      **Plan.** What did I do by hand? I looked at a character, counted how
+      many times it repeats, wrote it with the count, and jumped past the run.
+
+      ```text
+      i = 0
+      while i < length:
+          count how many characters from i equal s[i]  -> run
+          append s[i] and run
+          i = i + run
+      ```
+
+      **Build.**
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      std::string encode(const std::string& s) {
+          std::string out{};
+          std::size_t i{0};
+          while (i < s.size()) {
+              std::size_t run{1};
+              while (i + run < s.size() && s[i + run] == s[i]) {
+                  ++run;
+              }
+              out += s[i];
+              out += std::to_string(run);
+              i += run;
+          }
+          return out;
+      }
+
+      int main() {
+          std::cout << encode("aaabccdddd") << '\n';
+          std::cout << encode("x") << '\n';
+          std::cout << '[' << encode("") << "]\n";
+          std::cout << encode("zzzzzzzzzzzz") << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      a3b1c2d4
+      x1
+      []
+      z12
+      ```
+
+      **Look back.** All four cases pass. Could it be simpler? This version is
+      clear. Is it efficient? Each character is looked at a constant number of
+      times, so it's as fast as possible — the next lesson makes that precise.
+
+      > [!tip] When you're stuck
+      > - Solve it **by hand** on paper, slowly, and watch what you do.
+      > - Solve a **smaller** or **simpler** version (a fixed size, no edge cases) first.
+      > - Work **backwards** from the desired output.
+      > - Ask: *what would I need to know at each step?* That's often the variable you're missing.
+      > - Take a break. Seriously — the solution often arrives in the shower.
+
+      {{task decode}}
+    tasks:
+      - id: decode
+        title: Run-length decoding
+        prompt: |
+          The reverse: `decode("a3b1c2d4")` returns `"aaabccdddd"`. Counts can
+          have **several digits** (`"z12"` is twelve z's). Follow the method:
+          work the examples by hand, write the plan, then code.
+        starter: |
+          #include <string>
+
+          std::string decode(const std::string& s) {
+              return s;
+          }
+        harness: |
+          CHECK(decode("a3b1c2d4"), "aaabccdddd");
+          CHECK(decode(""), "");
+          CHECK(decode("x1"), "x");
+          CHECK(decode("z12"), "zzzzzzzzzzzz");
+          CHECK(decode("a2b10c1"), "aabbbbbbbbbbc");
+        hints:
+          - "By hand: read a letter, then read *all* the digits after it to build the number, then write the letter that many times."
+          - "Build the number digit by digit: `count = count * 10 + (s[i] - '0');` while `s[i]` is a digit (`std::isdigit` from `<cctype>`, cast the char to `unsigned char` first)."
+          - "`out.append(count, letter)` appends `count` copies of `letter`."
+        solution: |
+          #include <cctype>
+          #include <string>
+
+          std::string decode(const std::string& s) {
+              std::string out{};
+              std::size_t i{0};
+              while (i < s.size()) {
+                  char letter{s[i]};
+                  ++i;
+                  std::size_t count{0};
+                  while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) {
+                      count = count * 10 + static_cast<std::size_t>(s[i] - '0');
+                      ++i;
+                  }
+                  out.append(count, letter);
+              }
+              return out;
+          }
+    cards:
+      - front: What are Pólya's four steps?
+        back: Understand the problem (examples by hand, edge cases) → make a plan (pseudocode) → carry out the plan → look back (test, simplify).
+      - front: Name three things to try when stuck on a problem.
+        back: Solve it by hand and watch yourself; solve a simpler/smaller version; work backwards from the output (also: ask what you need to know at each step; take a break).
+
+  - type: lesson
+    id: c18-complexity
+    title: "Big-O: how fast is fast enough?"
+    minutes: 26
+    objectives:
+      - Estimate the Big-O running time of loops and functions
+      - Predict whether an algorithm is fast enough for a given input size
+      - Know the complexity of common container operations
+    body: |
+      Two programs can give the same answer and differ in speed by a factor
+      of a million. **Big-O notation** describes how the running time *grows*
+      as the input size `n` grows — ignoring constant factors and small
+      details.
+
+      ## Counting steps
+
+      ```cpp static
+      // O(1): constant — doesn't depend on n
+      int first = v[0];
+
+      // O(n): linear — one pass
+      for (int x : v) { total += x; }
+
+      // O(n²): quadratic — a loop inside a loop, both over n
+      for (std::size_t i{0}; i < v.size(); ++i)
+          for (std::size_t j{0}; j < v.size(); ++j) { ... }
+
+      // O(log n): logarithmic — the problem halves each step
+      while (n > 1) { n /= 2; }
+
+      // O(n log n): e.g. good sorting — std::sort
+      std::sort(v.begin(), v.end());
+      ```
+
+      Rules of thumb: **sequential** steps add (the biggest term wins:
+      O(n) + O(n²) = O(n²)); **nested** loops multiply; constants don't count
+      (two passes over the data are still O(n)).
+
+      ## Why it matters
+
+      A computer does roughly **10⁸–10⁹ simple operations per second**. So:
+
+      | n | log n | n | n log n | n² | 2ⁿ |
+      |---|---|---|---|---|---|
+      | 10 | 3 | 10 | 33 | 100 | 1,024 |
+      | 1,000 | 10 | 1,000 | 10,000 | 1,000,000 | way too many |
+      | 1,000,000 | 20 | 10⁶ | 2×10⁷ | 10¹² — hours | — |
+
+      With a million items, an O(n log n) algorithm finishes in a blink and
+      an O(n²) one takes hours. **No amount of clever micro-optimisation
+      saves the wrong algorithm.** That's why choosing the right approach —
+      and the right container — matters more than anything else for speed.
+
+      ## Containers, revisited
+
+      | Operation | `vector` | `set` / `map` | `unordered_set` / `unordered_map` |
+      |---|---|---|---|
+      | Access by index | O(1) | — | — |
+      | Add at the end | O(1)* | — | — |
+      | Insert/erase in the middle | O(n) | O(log n) | O(1)* |
+      | Find a value | O(n) (O(log n) if sorted, binary search) | O(log n) | O(1)* |
+
+      *\* on average ("amortised")*
+
+      So "is `x` in this collection?" asked many times means: put the
+      collection in a set, not a vector.
+
+      {{check big-o}}
+
+      {{task duplicates}}
+    checks:
+      - id: big-o
+        type: mcq
+        prompt: |
+          What is the complexity of this function, for a vector of size n?
+
+          ```cpp static
+          int countPairs(const std::vector<int>& v) {
+              int n{0};
+              for (std::size_t i{0}; i < v.size(); ++i)
+                  for (std::size_t j{i + 1}; j < v.size(); ++j)
+                      if (v[i] + v[j] == 0) ++n;
+              return n;
+          }
+          ```
+        options:
+          - O(n)
+          - O(n log n)
+          - "O(n²)"
+          - O(2ⁿ)
+        answer: 2
+        why: "About n²/2 pairs are checked — constants don't count, so O(n²)."
+      - id: halving
+        type: output
+        prompt: "How many times does the loop run for n = 1000?"
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{1000};
+              int steps{0};
+              while (n > 1) {
+                  n /= 2;
+                  ++steps;
+              }
+              std::cout << steps << '\n';
+              return 0;
+          }
+        answer: |
+          9
+        why: "1000 → 500 → 250 → 125 → 62 → 31 → 15 → 7 → 3 → 1: nine halvings. That's log₂ n rounded down — O(log n)."
+    tasks:
+      - id: duplicates
+        title: "Correct but too slow"
+        prompt: |
+          The starter is **correct**: it compares every pair. Run it — the last
+          checks use 300,000 numbers, and O(n²) means about 45 billion
+          comparisons. It will time out.
+
+          Rewrite `hasDuplicate` to be O(n) (or O(n log n)).
+        starter: |
+          #include <vector>
+
+          bool hasDuplicate(const std::vector<int>& v) {
+              for (std::size_t i{0}; i < v.size(); ++i) {
+                  for (std::size_t j{i + 1}; j < v.size(); ++j) {
+                      if (v[i] == v[j]) {
+                          return true;
+                      }
+                  }
+              }
+              return false;
+          }
+        harness: |
+          CHECK(hasDuplicate({1, 2, 3}), false);
+          CHECK(hasDuplicate({4, 1, 4}), true);
+          CHECK(hasDuplicate({}), false);
+          std::vector<int> big{};
+          for (int i{0}; i < 300000; ++i) {
+              big.push_back(i * 7 % 300007);
+          }
+          CHECK(hasDuplicate(big), false);
+          big.push_back(49);
+          CHECK(hasDuplicate(big), true);
+        hints:
+          - "Remember what you've seen: an `std::unordered_set<int>` answers \"seen before?\" in O(1)."
+          - "`if (!seen.insert(x).second) return true;` — `insert` returns a pair whose `.second` is false when the value was already there."
+        solution: |
+          #include <unordered_set>
+          #include <vector>
+
+          bool hasDuplicate(const std::vector<int>& v) {
+              std::unordered_set<int> seen{};
+              for (int x : v) {
+                  if (!seen.insert(x).second) {
+                      return true;
+                  }
+              }
+              return false;
+          }
+        explain: |
+          Another O(n log n) solution: copy the vector, sort it, and check
+          neighbours — duplicates end up next to each other. Both finish in
+          milliseconds; the original would take many seconds. Same answer,
+          different algorithm.
+    cards:
+      - front: What does Big-O describe?
+        back: How an algorithm's running time (or memory) grows with the input size n, ignoring constant factors.
+      - front: Order these from fastest to slowest growth — O(n²), O(1), O(n log n), O(log n), O(n), O(2ⁿ).
+        back: O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(2ⁿ).
+      - front: About how many simple operations does a computer do per second?
+        back: Roughly 10⁸ to 10⁹ — so n² with n = 10⁶ (10¹² steps) is far too slow.
+      - front: "Complexity of \"find\" in vector, set and unordered_set?"
+        back: O(n) (O(log n) if sorted + binary search), O(log n), O(1) on average.
+
+  - type: lesson
+    id: c18-searching
+    title: Binary search
+    minutes: 24
+    objectives:
+      - Implement binary search, and explain why it's O(log n)
+      - Use `std::lower_bound` and `std::upper_bound`
+      - Apply "binary search on the answer"
+    body: |
+      Remember *Guess the Number* from Chapter 5? The best strategy was to
+      guess the middle and halve the range each time — at most 7 guesses for
+      1 to 100. That strategy, on a **sorted** vector, is **binary search**:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int binarySearch(const std::vector<int>& v, int target) {
+          int lo{0};
+          int hi{static_cast<int>(v.size()) - 1};
+          int step{0};
+          while (lo <= hi) {
+              int mid{lo + (hi - lo) / 2};
+              ++step;
+              std::cout << "step " << step << ": look at index " << mid << " (" << v[mid] << ")\n";
+              if (v[mid] == target) {
+                  return mid;
+              }
+              if (v[mid] < target) {
+                  lo = mid + 1;     // target is in the right half
+              } else {
+                  hi = mid - 1;     // target is in the left half
+              }
+          }
+          return -1;                // range is empty: not there
+      }
+
+      int main() {
+          std::vector<int> v{2, 5, 8, 12, 16, 23, 38, 56, 72, 91};
+          int index{binarySearch(v, 23)};
+          std::cout << "found at " << index << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      step 1: look at index 4 (16)
+      step 2: look at index 7 (56)
+      step 3: look at index 5 (23)
+      found at 5
+      ```
+
+      Each step halves the range, so a million sorted items need at most
+      **20** steps (2²⁰ ≈ 10⁶), where a linear search might need a million.
+      That's O(log n).
+
+      - The range `[lo, hi]` always contains the target if it's present — that's the loop's **invariant**.
+      - `lo + (hi - lo) / 2` instead of `(lo + hi) / 2` avoids overflow when indices are huge.
+      - Binary search is famously easy to get *almost* right. Off-by-one errors (`<` vs `<=`, `mid` vs `mid + 1`) cause infinite loops or missed elements — test with the target first, last, missing, and with an empty vector.
+
+      ## The standard versions
+
+      `<algorithm>` has them ready-made, working on iterators:
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{10, 20, 20, 20, 30, 40};
+          std::cout << std::boolalpha << std::binary_search(v.begin(), v.end(), 30) << '\n';
+          auto first = std::lower_bound(v.begin(), v.end(), 20);   // first element >= 20
+          auto after = std::upper_bound(v.begin(), v.end(), 20);   // first element > 20
+          std::cout << first - v.begin() << ' ' << after - v.begin() << ' ' << after - first << '\n';
+          auto spot = std::lower_bound(v.begin(), v.end(), 25);
+          std::cout << spot - v.begin() << '\n';                    // where 25 would be inserted
+          return 0;
+      }
+      ```
+
+      ```output
+      true
+      1 4 3
+      4
+      ```
+
+      `upper_bound - lower_bound` counts the copies of a value in O(log n).
+
+      ## Binary search on the answer
+
+      Binary search works on anything **monotonic** — any yes/no question
+      that switches from "no" to "yes" once. *What's the largest `r` with
+      `r * r <= n`?* The answer to "is `r * r <= n`?" is yes, yes, yes… then no
+      forever — so binary search for the switching point, without any array
+      at all. This trick solves a surprising number of problems.
+
+      {{check bs-steps}}
+
+      {{task lower-bound}}
+
+      {{task isqrt}}
+    checks:
+      - id: bs-steps
+        type: mcq
+        prompt: "At most how many steps does binary search need for a sorted vector of 1,000,000 elements?"
+        options:
+          - "About 20"
+          - "About 1,000"
+          - "About 500,000"
+          - "1,000,000"
+        answer: 0
+        why: "2²⁰ = 1,048,576, so 20 halvings reduce a million to one."
+      - id: bs-sorted
+        type: tf
+        prompt: "Binary search works on any vector, sorted or not."
+        answer: false
+        why: "It relies on order to discard half the range. On unsorted data it gives wrong answers."
+    tasks:
+      - id: lower-bound
+        title: Your own lower_bound
+        prompt: |
+          Write `int firstAtLeast(const std::vector<int>& v, int x)` for a sorted
+          `v`: the index of the first element `>= x`, or `v.size()` if there's
+          none. It must be O(log n) — use a binary search over `[lo, hi)` (see
+          the hints if the boundaries get confusing).
+        starter: |
+          #include <vector>
+
+          int firstAtLeast(const std::vector<int>& v, int x) {
+              return 0;
+          }
+        harness: |
+          std::vector<int> v{10, 20, 20, 20, 30, 40};
+          CHECK(firstAtLeast(v, 20), 1);
+          CHECK(firstAtLeast(v, 25), 4);
+          CHECK(firstAtLeast(v, 5), 0);
+          CHECK(firstAtLeast(v, 40), 5);
+          CHECK(firstAtLeast(v, 99), 6);
+          CHECK(firstAtLeast({}, 1), 0);
+        hints:
+          - "Keep a half-open range: `lo = 0`, `hi = size`. The answer is always in `[lo, hi]`. Loop while `lo < hi`."
+          - "`mid = lo + (hi - lo) / 2`. If `v[mid] < x`, the answer is after mid: `lo = mid + 1`. Otherwise mid might be the answer: `hi = mid`. Return `lo`."
+        solution: |
+          #include <vector>
+
+          int firstAtLeast(const std::vector<int>& v, int x) {
+              int lo{0};
+              int hi{static_cast<int>(v.size())};
+              while (lo < hi) {
+                  int mid{lo + (hi - lo) / 2};
+                  if (v[static_cast<std::size_t>(mid)] < x) {
+                      lo = mid + 1;
+                  } else {
+                      hi = mid;
+                  }
+              }
+              return lo;
+          }
+      - id: isqrt
+        title: Binary search on the answer
+        prompt: |
+          Write `long long isqrt(long long n)` for `0 <= n <= 10^18`: the
+          largest `r` with `r * r <= n`. Don't use floating point (it's
+          inexact for huge numbers). Search the answer between 0 and
+          1,000,000,000 (whose square is exactly 10^18).
+        starter: |
+          long long isqrt(long long n) {
+              return 0;
+          }
+        harness: |
+          CHECK(isqrt(0), 0);
+          CHECK(isqrt(1), 1);
+          CHECK(isqrt(15), 3);
+          CHECK(isqrt(16), 4);
+          CHECK(isqrt(999999999999LL), 999999);
+          CHECK(isqrt(1000000000000000000LL), 1000000000);
+          CHECK(isqrt(999999999999999999LL), 999999999);
+        hints:
+          - "`lo = 0`, `hi = 1000000000`. The question \"is `mid * mid <= n`?\" is yes up to the answer and no after it."
+          - "Loop while `lo < hi` with `mid = lo + (hi - lo + 1) / 2` (rounding up); if `mid * mid <= n` then `lo = mid`, else `hi = mid - 1`. Return `lo`."
+        solution: |
+          long long isqrt(long long n) {
+              long long lo{0};
+              long long hi{1000000000};
+              while (lo < hi) {
+                  long long mid{lo + (hi - lo + 1) / 2};
+                  if (mid * mid <= n) {
+                      lo = mid;
+                  } else {
+                      hi = mid - 1;
+                  }
+              }
+              return lo;
+          }
+        explain: |
+          Why `+ 1` in `mid`? With `lo = mid` in the "yes" branch, rounding down
+          could leave `mid == lo` forever when `hi = lo + 1` — an infinite loop.
+          Rounding up guarantees progress. This is the classic binary-search
+          pitfall: whenever one branch assigns `lo = mid`, round `mid` up.
+    cards:
+      - front: How does binary search work, and what does it require?
+        back: On sorted data, compare with the middle element and discard the half that can't contain the target. O(log n).
+      - front: "`std::lower_bound` vs `std::upper_bound`?"
+        back: lower_bound → first element >= value; upper_bound → first element > value. Their difference counts copies of value.
+      - front: What is "binary search on the answer"?
+        back: Binary searching a range of possible answers using a yes/no test that is monotonic (switches once), e.g. largest r with r·r ≤ n.
+      - front: Why write `lo + (hi - lo) / 2`?
+        back: It avoids the overflow `lo + hi` can cause with huge indices.
+
+  - type: lesson
+    id: c18-sorting
+    title: Sorting algorithms
+    minutes: 28
+    objectives:
+      - Explain and implement selection sort and insertion sort
+      - Explain merge sort's divide-and-conquer strategy and why it's O(n log n)
+      - Know what a stable sort is, and which sort to use in practice
+    body: |
+      You'll use `std::sort` for real work. But sorting algorithms are the
+      classic training ground for algorithmic thinking — loops, invariants,
+      recursion and complexity all in one — and interviewers love them.
+
+      ## Selection sort — O(n²)
+
+      Find the smallest element, swap it to the front; repeat for the rest.
+
+      ```cpp
+      #include <iostream>
+      #include <utility>
+      #include <vector>
+
+      void print(const std::vector<int>& v) {
+          for (int x : v) {
+              std::cout << x << ' ';
+          }
+          std::cout << '\n';
+      }
+
+      void selectionSort(std::vector<int>& v) {
+          for (std::size_t i{0}; i + 1 < v.size(); ++i) {
+              std::size_t smallest{i};
+              for (std::size_t j{i + 1}; j < v.size(); ++j) {
+                  if (v[j] < v[smallest]) {
+                      smallest = j;
+                  }
+              }
+              std::swap(v[i], v[smallest]);
+              print(v);
+          }
+      }
+
+      int main() {
+          std::vector<int> v{5, 2, 9, 1, 6};
+          selectionSort(v);
+          return 0;
+      }
+      ```
+
+      ```output
+      1 2 9 5 6
+      1 2 9 5 6
+      1 2 5 9 6
+      1 2 5 6 9
+      ```
+
+      **Invariant:** after pass `i`, the first `i + 1` elements are the
+      smallest ones, in order. The inner loop scans the rest each time:
+      n + (n−1) + … + 1 ≈ n²/2 comparisons. O(n²).
+
+      ## Insertion sort — O(n²), but good on nearly-sorted data
+
+      How you sort playing cards in your hand: take the next card and slide
+      it left past every bigger card until it's in place.
+
+      ```text
+      [5] 2 9 1 6     start: the first card alone is "sorted"
+      [2 5] 9 1 6     2 slides left past 5
+      [2 5 9] 1 6     9 stays
+      [1 2 5 9] 6     1 slides all the way to the front
+      [1 2 5 6 9]     6 slides past 9
+      ```
+
+      On an already-sorted input each card stays put — O(n). That makes
+      insertion sort excellent for small or nearly-sorted data (real
+      `std::sort` implementations use it for small pieces). You'll write it
+      below.
+
+      ## Merge sort — O(n log n)
+
+      **Divide and conquer:** split the vector in half, sort each half
+      (recursively!), then **merge** the two sorted halves by repeatedly
+      taking the smaller front element.
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      std::vector<int> merge(const std::vector<int>& a, const std::vector<int>& b) {
+          std::vector<int> out{};
+          std::size_t i{0};
+          std::size_t j{0};
+          while (i < a.size() && j < b.size()) {
+              if (b[j] < a[i]) {
+                  out.push_back(b[j++]);
+              } else {
+                  out.push_back(a[i++]);   // on ties take from a: keeps the sort stable
+              }
+          }
+          while (i < a.size()) {
+              out.push_back(a[i++]);
+          }
+          while (j < b.size()) {
+              out.push_back(b[j++]);
+          }
+          return out;
+      }
+
+      std::vector<int> mergeSort(std::vector<int> v) {
+          if (v.size() <= 1) {
+              return v;                                     // base case: already sorted
+          }
+          auto middle = v.begin() + static_cast<std::ptrdiff_t>(v.size() / 2);
+          std::vector<int> left(v.begin(), middle);
+          std::vector<int> right(middle, v.end());
+          return merge(mergeSort(left), mergeSort(right));
+      }
+
+      int main() {
+          for (int x : mergeSort({38, 27, 43, 3, 9, 82, 10})) {
+              std::cout << x << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      3 9 10 27 38 43 82
+      ```
+
+      Why O(n log n)? Halving gives **log n levels** of recursion, and on each
+      level all the merges together touch all **n** elements.
+
+      ```text
+      [38 27 43 3 9 82 10]
+      [38 27 43] [3 9 82 10]              split …
+      [38] [27 43] [3 9] [82 10]
+      [38] [27] [43] [3] [9] [82] [10]    … until single elements
+      [38] [27 43] [3 9] [10 82]          merge …
+      [27 38 43] [3 9 10 82]
+      [3 9 10 27 38 43 82]                … back up
+      ```
+
+      ## In practice
+
+      - Use **`std::sort`** — O(n log n), heavily optimised (introsort: quicksort + heapsort + insertion sort).
+      - A sort is **stable** if equal elements keep their original order. `std::sort` isn't; **`std::stable_sort`** is (it's a merge sort). Stability matters when sorting by one key after another — e.g. by name, then stably by grade, gives students grouped by grade and alphabetical within each grade.
+
+      {{check selection-trace}}
+
+      {{task insertion}}
+    checks:
+      - id: selection-trace
+        type: output
+        prompt: "How many swaps actually change something (swap two *different* positions)?"
+        code: |
+          #include <iostream>
+          #include <utility>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{3, 1, 2, 4};
+              int swaps{0};
+              for (std::size_t i{0}; i + 1 < v.size(); ++i) {
+                  std::size_t smallest{i};
+                  for (std::size_t j{i + 1}; j < v.size(); ++j) {
+                      if (v[j] < v[smallest]) {
+                          smallest = j;
+                      }
+                  }
+                  if (smallest != i) {
+                      std::swap(v[i], v[smallest]);
+                      ++swaps;
+                  }
+              }
+              std::cout << swaps << '\n';
+              return 0;
+          }
+        answer: |
+          2
+        why: "Pass 0: swap 3 and 1 → 1 3 2 4. Pass 1: swap 3 and 2 → 1 2 3 4. Pass 2: 3 is in place."
+      - id: stable
+        type: mcq
+        prompt: "What does it mean for a sort to be **stable**?"
+        options:
+          - It never crashes
+          - Equal elements keep their original relative order
+          - It always takes the same time
+          - It sorts in place without extra memory
+        answer: 1
+        why: "Stable sorts preserve the order of equal keys — useful for multi-key sorting."
+    tasks:
+      - id: insertion
+        title: Insertion sort
+        prompt: |
+          Write `void insertionSort(std::vector<int>& v)` that sorts in place
+          using insertion sort: for each element from the second on, slide it
+          left while the element before it is bigger.
+        starter: |
+          #include <vector>
+
+          void insertionSort(std::vector<int>& v) {
+          }
+        harness: |
+          std::vector<int> a{5, 2, 9, 1, 6};
+          insertionSort(a);
+          CHECK(a, (std::vector<int>{1, 2, 5, 6, 9}));
+          std::vector<int> b{};
+          insertionSort(b);
+          CHECK(b, std::vector<int>{});
+          std::vector<int> c{3, 3, -1, 0, 3};
+          insertionSort(c);
+          CHECK(c, (std::vector<int>{-1, 0, 3, 3, 3}));
+          std::vector<int> d{4, 3, 2, 1};
+          insertionSort(d);
+          CHECK(d, (std::vector<int>{1, 2, 3, 4}));
+        hints:
+          - "Outer loop `i` from 1 to size−1. Save `int card = v[i];` and let `j = i`."
+          - "While `j > 0 && v[j - 1] > card`: shift `v[j] = v[j - 1]` and `--j`. Then `v[j] = card`. (Use `std::size_t` for i and j — the `j > 0` check keeps it from going below zero.)"
+        solution: |
+          #include <vector>
+
+          void insertionSort(std::vector<int>& v) {
+              for (std::size_t i{1}; i < v.size(); ++i) {
+                  int card{v[i]};
+                  std::size_t j{i};
+                  while (j > 0 && v[j - 1] > card) {
+                      v[j] = v[j - 1];
+                      --j;
+                  }
+                  v[j] = card;
+              }
+          }
+    cards:
+      - front: How does selection sort work, and its complexity?
+        back: Repeatedly find the smallest remaining element and swap it into place. O(n²) always.
+      - front: How does insertion sort work, and when is it good?
+        back: Take each element and slide it left into place among the sorted ones. O(n²) worst, O(n) on nearly-sorted data — great for small inputs.
+      - front: How does merge sort work, and why O(n log n)?
+        back: Split in half, sort each half recursively, merge the sorted halves. log n levels × n work per level.
+      - front: "`std::sort` vs `std::stable_sort`?"
+        back: Both O(n log n); stable_sort keeps equal elements in their original order, sort doesn't guarantee it.
+
+  - type: quiz
+    id: c18-quiz1
+    title: "Quiz: complexity, searching and sorting"
+    questions:
+      - type: mcq
+        prompt: "`for (i < n) { for (j < 10) { ... } }` — complexity?"
+        options:
+          - "O(n²)"
+          - O(n)
+          - O(10ⁿ)
+          - O(log n)
+        answer: 1
+        why: "The inner loop is a constant 10 steps: 10n is O(n)."
+      - type: mcq
+        prompt: "Inserting n elements one by one at the **front** of a vector costs…"
+        options:
+          - O(n) in total
+          - "O(n²) in total — each insert shifts everything"
+          - O(n log n) in total
+          - O(1) in total
+        answer: 1
+        why: "Insert at the front is O(size); summed over n inserts, O(n²). Use push_back (then reverse), or a deque."
+      - type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{1, 3, 3, 3, 5, 8};
+              auto lo = std::lower_bound(v.begin(), v.end(), 3);
+              auto hi = std::upper_bound(v.begin(), v.end(), 3);
+              auto none = std::lower_bound(v.begin(), v.end(), 6);
+              std::cout << (lo - v.begin()) << (hi - v.begin()) << (none - v.begin()) << '\n';
+              return 0;
+          }
+        answer: |
+          145
+        why: "First 3 is at index 1; first element > 3 is 5 at index 4; 6 would go before 8, at index 5."
+      - type: tf
+        prompt: "Merge sort is O(n log n) even on the worst possible input."
+        answer: true
+        why: "It always splits evenly, whatever the data."
+      - type: mcq
+        prompt: "You have 10⁶ numbers and must answer 10⁶ \"is x present?\" queries. Best plan?"
+        options:
+          - "Linear search for each query: 10¹² steps"
+          - "Sort once (n log n), then binary search each query (log n) — or put them in an unordered_set"
+          - "Sort the vector before every query"
+          - "It's impossible"
+        answer: 1
+        why: "Preprocess once, then answer each query quickly: about 2×10⁷ steps instead of 10¹²."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int lo{0};
+              int hi{15};
+              int target{11};
+              while (lo < hi) {
+                  int mid{lo + (hi - lo) / 2};
+                  std::cout << mid << ' ';
+                  if (mid < target) {
+                      lo = mid + 1;
+                  } else {
+                      hi = mid;
+                  }
+              }
+              std::cout << "-> " << lo << '\n';
+              return 0;
+          }
+        answer: |
+          7 11 9 10 -> 11
+        why: "[0,15): mid 7 < 11 → [8,15); mid 11 → [8,11); mid 9 → [10,11); mid 10 → [11,11). Done at 11."
+
+  - type: lesson
+    id: c18-recursion
+    title: Recursion and backtracking
+    minutes: 26
+    objectives:
+      - Solve problems by reducing them to smaller copies of themselves
+      - Generate all subsets and permutations
+      - Use backtracking — choose, explore, un-choose — and prune dead ends
+    body: |
+      Chapter 6 introduced recursion. Its real power shows when a problem
+      **branches**: to explore every possibility, make one choice, solve the
+      rest recursively, then **undo** the choice and try the next. This is
+      **backtracking**, and it solves puzzles, games and search problems of
+      every kind.
+
+      ## All subsets
+
+      For each item there are two choices: take it or leave it.
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      void subsets(const std::vector<int>& items, std::size_t index, std::vector<int>& chosen) {
+          if (index == items.size()) {             // every item decided: print one subset
+              std::cout << '{';
+              for (std::size_t i{0}; i < chosen.size(); ++i) {
+                  std::cout << (i > 0 ? "," : "") << chosen[i];
+              }
+              std::cout << "} ";
+              return;
+          }
+          chosen.push_back(items[index]);          // choose: take it
+          subsets(items, index + 1, chosen);       // explore
+          chosen.pop_back();                       // un-choose
+          subsets(items, index + 1, chosen);       // explore without it
+      }
+
+      int main() {
+          std::vector<int> chosen{};
+          subsets({1, 2, 3}, 0, chosen);
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      {1,2,3} {1,2} {1,3} {1} {2,3} {2} {3} {}
+      ```
+
+      The calls form a **tree** of decisions, 2 branches per item: n items
+      give 2ⁿ subsets. Exponential — fine for 20 items (a million subsets),
+      hopeless for 60.
+
+      ```text
+                          {}
+                take 1 /      \ leave 1
+                    {1}        {}
+                   /   \      /   \
+               {1,2}  {1}  {2}    {}      … and so on for 3
+      ```
+
+      ## All permutations
+
+      Put each remaining letter in the current position, recurse for the
+      next position, then swap it back:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <utility>
+
+      void permutations(std::string& s, std::size_t pos) {
+          if (pos == s.size()) {
+              std::cout << s << ' ';
+              return;
+          }
+          for (std::size_t i{pos}; i < s.size(); ++i) {
+              std::swap(s[pos], s[i]);     // choose which letter goes at pos
+              permutations(s, pos + 1);    // explore
+              std::swap(s[pos], s[i]);     // un-choose
+          }
+      }
+
+      int main() {
+          std::string word{"abc"};
+          permutations(word, 0);
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      abc acb bac bca cba cab
+      ```
+
+      n letters give n! permutations (10 letters: 3,628,800).
+
+      ## Pruning
+
+      Backtracking gets fast when you **stop exploring branches that can't
+      work**. Looking for subsets that add up to 10? If the current sum is
+      already over 10 (and all numbers are positive), there's no point going
+      deeper — return immediately. Good pruning turns impossible searches
+      into instant ones; it's how Sudoku solvers and chess engines work.
+
+      > [!remember]
+      > The backtracking template: **if done, record the answer. Otherwise,
+      > for each choice: make it, recurse, undo it.**
+
+      {{check perm-count}}
+
+      {{task binary-strings}}
+
+      {{task subset-sum}}
+    checks:
+      - id: perm-count
+        type: output
+        code: |
+          #include <iostream>
+
+          int calls{0};
+
+          void explore(int depth, int branches) {
+              ++calls;
+              if (depth == 0) {
+                  return;
+              }
+              for (int i{0}; i < branches; ++i) {
+                  explore(depth - 1, branches);
+              }
+          }
+
+          int main() {
+              explore(3, 2);
+              std::cout << calls << '\n';
+              return 0;
+          }
+        answer: |
+          15
+        why: "A tree of depth 3 with 2 branches: 1 + 2 + 4 + 8 = 15 calls."
+    tasks:
+      - id: binary-strings
+        title: All binary strings
+        prompt: |
+          Write `std::vector<std::string> binaryStrings(int n)` returning every
+          string of `n` characters `'0'`/`'1'`, in increasing order
+          (`"00"`, `"01"`, `"10"`, `"11"` for n = 2). For n = 0, return one
+          empty string. Use recursion with a helper function.
+        starter: |
+          #include <string>
+          #include <vector>
+
+          std::vector<std::string> binaryStrings(int n) {
+              return {};
+          }
+        harness: |
+          CHECK(binaryStrings(2), (std::vector<std::string>{"00", "01", "10", "11"}));
+          CHECK(binaryStrings(1), (std::vector<std::string>{"0", "1"}));
+          CHECK(binaryStrings(0), (std::vector<std::string>{""}));
+          CHECK(binaryStrings(3).size(), 8);
+          CHECK(binaryStrings(3)[5], "101");
+          CHECK(binaryStrings(10).size(), 1024);
+        hints:
+          - "Helper: `void build(int n, std::string& current, std::vector<std::string>& out)`. If `current.size() == n`, push it and return."
+          - "Otherwise: push_back '0', recurse, pop_back; then the same with '1'. Try '0' first to get increasing order."
+        solution: |
+          #include <string>
+          #include <vector>
+
+          void build(std::size_t n, std::string& current, std::vector<std::string>& out) {
+              if (current.size() == n) {
+                  out.push_back(current);
+                  return;
+              }
+              for (char c : {'0', '1'}) {
+                  current.push_back(c);
+                  build(n, current, out);
+                  current.pop_back();
+              }
+          }
+
+          std::vector<std::string> binaryStrings(int n) {
+              std::vector<std::string> out{};
+              std::string current{};
+              build(static_cast<std::size_t>(n), current, out);
+              return out;
+          }
+      - id: subset-sum
+        title: Counting subsets with a given sum
+        prompt: |
+          Write `int countSubsets(const std::vector<int>& v, int target)`: how
+          many subsets (choices of positions) of the **positive** numbers `v`
+          add up to `target`? The empty subset has sum 0. Use backtracking
+          and prune branches whose sum already exceeds `target`.
+        starter: |
+          #include <vector>
+
+          int countSubsets(const std::vector<int>& v, int target) {
+              return 0;
+          }
+        harness: |
+          CHECK(countSubsets({1, 2, 3}, 3), 2);
+          CHECK(countSubsets({2, 4, 6, 10}, 16), 2);
+          CHECK(countSubsets({5, 5, 5}, 10), 3);
+          CHECK(countSubsets({1, 2}, 0), 1);
+          CHECK(countSubsets({7}, 3), 0);
+          std::vector<int> many(24, 1);
+          CHECK(countSubsets(many, 2), 276);
+        hints:
+          - "Helper `count(v, index, sum, target)`: if `sum > target` return 0 (prune); if `index == v.size()` return `sum == target ? 1 : 0`."
+          - "Otherwise return `count(v, index + 1, sum + v[index], target) + count(v, index + 1, sum, target)`."
+        solution: |
+          #include <vector>
+
+          int count(const std::vector<int>& v, std::size_t index, int sum, int target) {
+              if (sum > target) {
+                  return 0;
+              }
+              if (index == v.size()) {
+                  return sum == target ? 1 : 0;
+              }
+              return count(v, index + 1, sum + v[index], target) + count(v, index + 1, sum, target);
+          }
+
+          int countSubsets(const std::vector<int>& v, int target) {
+              return count(v, 0, 0, target);
+          }
+        explain: |
+          The last check has 24 ones: 2²⁴ ≈ 16.7 million subsets in total, but
+          pruning cuts every branch as soon as the sum passes 2, so only a
+          tiny fraction is explored. (There are C(24, 2) = 276 ways to pick two
+          of the ones.)
+    cards:
+      - front: What is **backtracking**?
+        back: "Exploring all possibilities recursively: make a choice, recurse, undo the choice, try the next. Template: if done → record; else for each choice → choose, explore, un-choose."
+      - front: How many subsets and permutations do n items have?
+        back: 2ⁿ subsets and n! permutations — so exhaustive search only works for small n.
+      - front: What is **pruning**?
+        back: Abandoning a branch of the search as soon as it can't lead to a valid answer.
+
+  - type: lesson
+    id: c18-patterns
+    title: "Classic patterns: hashing, two pointers, windows, prefix sums"
+    minutes: 28
+    objectives:
+      - Use a hash map to remember what you've seen
+      - Use two pointers on sorted data
+      - Maintain a sliding window instead of recomputing
+      - Answer range-sum queries in O(1) with prefix sums
+    body: |
+      Most programming problems are variations on a handful of **patterns**.
+      Recognising the pattern is often 90% of the solution. Here are four of
+      the most useful — each turns an O(n²) brute force into O(n).
+
+      ## 1. Hashing: remember what you've seen
+
+      *Find two positions whose values add up to `target`.* Brute force tries
+      every pair: O(n²). Instead, walk once and ask: *have I already seen the
+      number that would complete this one?*
+
+      ```cpp
+      #include <iostream>
+      #include <unordered_map>
+      #include <utility>
+      #include <vector>
+
+      std::pair<int, int> twoSum(const std::vector<int>& v, int target) {
+          std::unordered_map<int, int> seenAt{};          // value -> index
+          for (int i{0}; i < static_cast<int>(v.size()); ++i) {
+              int need{target - v[i]};
+              auto it = seenAt.find(need);
+              if (it != seenAt.end()) {
+                  return {it->second, i};
+              }
+              seenAt[v[i]] = i;
+          }
+          return {-1, -1};
+      }
+
+      int main() {
+          auto [a, b] = twoSum({3, 9, 14, 5, 11}, 16);
+          std::cout << a << ' ' << b << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      3 4
+      ```
+
+      Frequency maps (`++count[x]`) and "seen" sets are the same pattern.
+
+      ## 2. Two pointers
+
+      On **sorted** data, start one pointer at each end and move them
+      towards each other:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      bool hasPairWithSum(const std::vector<int>& sorted, int target) {
+          int lo{0};
+          int hi{static_cast<int>(sorted.size()) - 1};
+          while (lo < hi) {
+              int sum{sorted[lo] + sorted[hi]};
+              if (sum == target) {
+                  return true;
+              }
+              if (sum < target) {
+                  ++lo;       // need bigger: move the left pointer right
+              } else {
+                  --hi;       // need smaller: move the right pointer left
+              }
+          }
+          return false;
+      }
+
+      int main() {
+          std::vector<int> v{1, 3, 4, 6, 8, 11};
+          std::cout << std::boolalpha << hasPairWithSum(v, 10) << ' ' << hasPairWithSum(v, 2) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      true false
+      ```
+
+      Each step discards one element for good, so it's O(n). Two pointers
+      also reverse arrays, check palindromes and merge sorted lists (that's
+      what `merge` in merge sort does).
+
+      ## 3. Sliding window
+
+      *Largest sum of `k` consecutive elements.* Recomputing each window is
+      O(n·k). Instead, **slide**: add the element entering the window,
+      subtract the one leaving.
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <vector>
+
+      int maxWindowSum(const std::vector<int>& v, std::size_t k) {
+          int window{0};
+          for (std::size_t i{0}; i < k; ++i) {
+              window += v[i];
+          }
+          int best{window};
+          for (std::size_t i{k}; i < v.size(); ++i) {
+              window += v[i] - v[i - k];
+              best = std::max(best, window);
+          }
+          return best;
+      }
+
+      int main() {
+          std::cout << maxWindowSum({4, 2, 12, 1, 7, 8, 3}, 3) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      20
+      ```
+
+      Windows can also grow and shrink: extend the right edge while the
+      window is valid, shrink the left edge when it isn't. You'll use that
+      below.
+
+      ## 4. Prefix sums
+
+      *Answer many "sum of elements from a to b" questions.* Precompute
+      `prefix[i]` = sum of the first `i` elements. Then any range sum is one
+      subtraction:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{3, 1, 4, 1, 5, 9, 2, 6};
+          std::vector<int> prefix(v.size() + 1, 0);
+          for (std::size_t i{0}; i < v.size(); ++i) {
+              prefix[i + 1] = prefix[i] + v[i];
+          }
+          // sum of v[a] .. v[b-1] is prefix[b] - prefix[a]
+          std::cout << prefix[5] - prefix[2] << ' ' << prefix[8] - prefix[0] << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      10 31
+      ```
+
+      O(n) preparation, then O(1) per question.
+
+      {{check pattern-match}}
+
+      {{task longest-unique}}
+
+      {{task range-sums}}
+    checks:
+      - id: pattern-match
+        type: mcq
+        prompt: "\"Find the longest stretch of consecutive days where the temperature stayed within 5 degrees\" — which pattern fits best?"
+        options:
+          - Prefix sums
+          - A sliding window that grows and shrinks
+          - Binary search
+          - Sorting first
+        answer: 1
+        why: "Consecutive stretch + a validity condition = variable-size sliding window."
+    tasks:
+      - id: longest-unique
+        title: Longest run without repeats
+        prompt: |
+          Write `int longestUnique(const std::string& s)`: the length of the
+          longest stretch of consecutive characters with **no repeated
+          character**. `"abcabcbb"` → 3 (`"abc"`), `"pwwkew"` → 3 (`"wke"`).
+          Aim for O(n) with a sliding window.
+        starter: |
+          #include <string>
+
+          int longestUnique(const std::string& s) {
+              return 0;
+          }
+        harness: |
+          CHECK(longestUnique("abcabcbb"), 3);
+          CHECK(longestUnique("bbbb"), 1);
+          CHECK(longestUnique("pwwkew"), 3);
+          CHECK(longestUnique(""), 0);
+          CHECK(longestUnique("abcdef"), 6);
+          CHECK(longestUnique("abba"), 2);
+        hints:
+          - "Window `[left, right]`. Keep `std::unordered_map<char, std::size_t> lastSeen` — where each character was last seen."
+          - "For each `right`: if `s[right]` was last seen at or after `left`, move `left` to one past that position. Then record the position and update the best length `right - left + 1`."
+        solution: |
+          #include <algorithm>
+          #include <string>
+          #include <unordered_map>
+
+          int longestUnique(const std::string& s) {
+              std::unordered_map<char, std::size_t> lastSeen{};
+              std::size_t left{0};
+              std::size_t best{0};
+              for (std::size_t right{0}; right < s.size(); ++right) {
+                  auto it = lastSeen.find(s[right]);
+                  if (it != lastSeen.end() && it->second >= left) {
+                      left = it->second + 1;
+                  }
+                  lastSeen[s[right]] = right;
+                  best = std::max(best, right - left + 1);
+              }
+              return static_cast<int>(best);
+          }
+      - id: range-sums
+        title: Many range queries
+        prompt: |
+          Write `std::vector<long long> rangeSums(const std::vector<int>& v, const std::vector<std::pair<int, int>>& queries)`.
+          Each query `{a, b}` asks for `v[a] + … + v[b]` (**inclusive**). The
+          last check has 200,000 numbers and 200,000 queries — summing each
+          range with a loop would time out. Use prefix sums.
+        starter: |
+          #include <utility>
+          #include <vector>
+
+          std::vector<long long> rangeSums(const std::vector<int>& v, const std::vector<std::pair<int, int>>& queries) {
+              return {};
+          }
+        harness: |
+          std::vector<int> v{3, 1, 4, 1, 5, 9, 2, 6};
+          CHECK(rangeSums(v, {{0, 0}, {2, 4}, {0, 7}, {7, 7}}), (std::vector<long long>{3, 10, 31, 6}));
+          std::vector<int> big(200000);
+          for (std::size_t i{0}; i < big.size(); ++i) {
+              big[i] = static_cast<int>(i % 10);
+          }
+          std::vector<std::pair<int, int>> qs(200000, {0, 199999});
+          qs[5] = {10, 19};
+          auto result = rangeSums(big, qs);
+          CHECK(result.size(), 200000);
+          CHECK(result[0], 900000);
+          CHECK(result[5], 45);
+        hints:
+          - "Build `std::vector<long long> prefix(v.size() + 1, 0)` with `prefix[i + 1] = prefix[i] + v[i]`."
+          - "Inclusive `[a, b]` is `prefix[b + 1] - prefix[a]`."
+        solution: |
+          #include <utility>
+          #include <vector>
+
+          std::vector<long long> rangeSums(const std::vector<int>& v, const std::vector<std::pair<int, int>>& queries) {
+              std::vector<long long> prefix(v.size() + 1, 0);
+              for (std::size_t i{0}; i < v.size(); ++i) {
+                  prefix[i + 1] = prefix[i] + v[i];
+              }
+              std::vector<long long> out{};
+              out.reserve(queries.size());
+              for (const auto& [a, b] : queries) {
+                  out.push_back(prefix[static_cast<std::size_t>(b) + 1] - prefix[static_cast<std::size_t>(a)]);
+              }
+              return out;
+          }
+    cards:
+      - front: "Pattern: \"have I seen the complement before?\""
+        back: Hashing — store seen values (and positions) in an unordered_set/map as you walk once. O(n).
+      - front: When do **two pointers** apply?
+        back: Usually on sorted data (or both ends of a sequence) — move pointers inward, discarding one element per step. O(n).
+      - front: What is a **sliding window**?
+        back: A range over consecutive elements updated incrementally (add entering, remove leaving; grow/shrink by a condition) instead of recomputed.
+      - front: What are **prefix sums** for?
+        back: "O(1) range sums after O(n) preparation: sum(a..b−1) = prefix[b] − prefix[a]."
+
+  - type: quiz
+    id: c18-quiz2
+    title: "Quiz: recursion and patterns"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          void combos(const std::string& prefix, int remaining) {
+              if (remaining == 0) {
+                  std::cout << prefix << ' ';
+                  return;
+              }
+              for (char c : std::string{"xy"}) {
+                  if (!prefix.empty() && prefix.back() == c) {
+                      continue;
+                  }
+                  combos(prefix + c, remaining - 1);
+              }
+          }
+
+          int main() {
+              combos("", 3);
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          xyx yxy
+        why: "Strings of length 3 over x/y with no two equal neighbours: pruning skips repeats."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{2, -1, 3, -4, 5};
+              std::vector<int> prefix(v.size() + 1, 0);
+              for (std::size_t i{0}; i < v.size(); ++i) {
+                  prefix[i + 1] = prefix[i] + v[i];
+              }
+              for (int p : prefix) {
+                  std::cout << p << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          0 2 1 4 0 5
+        why: "Running totals: 0, 2, 2−1, 1+3, 4−4, 0+5."
+      - type: mcq
+        prompt: "\"Do any two numbers in this unsorted list differ by exactly 7?\" — the O(n) approach?"
+        options:
+          - "Compare every pair"
+          - "Put numbers in an unordered_set; for each x, check whether x + 7 is in it"
+          - "Binary search without sorting"
+          - "Prefix sums"
+        answer: 1
+        why: "Hashing: each lookup is O(1) on average."
+      - type: tf
+        prompt: "Generating all permutations of 15 items is fast enough to do in an instant."
+        answer: false
+        why: "15! ≈ 1.3 × 10¹² — hours or days."
+
+  - type: lesson
+    id: c18-dp
+    title: Dynamic programming
+    minutes: 28
+    objectives:
+      - Recognise overlapping subproblems and cache their answers (memoisation)
+      - Build solutions bottom-up in a table
+      - Solve counting and optimisation problems with DP
+    body: |
+      In Chapter 6 you saw that recursive Fibonacci is catastrophically slow:
+      `fib(40)` makes hundreds of millions of calls because it recomputes
+      the same values again and again. **Dynamic programming (DP)** fixes
+      this with one idea: **solve each subproblem once, and remember the
+      answer.**
+
+      ## Memoisation: top-down
+
+      Keep the recursion, add a cache:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      long long fib(int n, std::vector<long long>& memo) {
+          if (n <= 1) {
+              return n;
+          }
+          long long& cached = memo[static_cast<std::size_t>(n)];
+          if (cached == -1) {
+              cached = fib(n - 1, memo) + fib(n - 2, memo);
+          }
+          return cached;
+      }
+
+      int main() {
+          std::vector<long long> memo(91, -1);
+          std::cout << fib(90, memo) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      2880067194370816120
+      ```
+
+      Each `fib(k)` is now computed once: 90 steps instead of more than the
+      number of atoms in… well, a very large number.
+
+      ## Tabulation: bottom-up
+
+      Or skip recursion: fill a table from the smallest subproblems up.
+      *In how many ways can you climb n stairs taking 1 or 2 steps at a time?*
+      The last move was either 1 step (from stair n−1) or 2 (from n−2), so
+      `ways[n] = ways[n-1] + ways[n-2]`:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      long long climbWays(int n) {
+          std::vector<long long> ways(static_cast<std::size_t>(n) + 2, 0);
+          ways[0] = 1;                       // one way to climb nothing: do nothing
+          ways[1] = 1;
+          for (std::size_t i{2}; i <= static_cast<std::size_t>(n); ++i) {
+              ways[i] = ways[i - 1] + ways[i - 2];
+          }
+          return ways[static_cast<std::size_t>(n)];
+      }
+
+      int main() {
+          std::cout << climbWays(4) << ' ' << climbWays(10) << ' ' << climbWays(45) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      5 89 1836311903
+      ```
+
+      ## A real optimisation problem: fewest coins
+
+      *Coins of 1, 5 and 12. Pay 16 with the fewest coins.* The greedy idea —
+      always take the biggest coin that fits — gives 12 + 1 + 1 + 1 + 1: five
+      coins. But 5 + 5 + 5 + 1 is four! Greedy fails; DP doesn't:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int minCoins(const std::vector<int>& coins, int amount) {
+          const int impossible{amount + 1};
+          std::vector<int> best(static_cast<std::size_t>(amount) + 1, impossible);
+          best[0] = 0;
+          for (int a{1}; a <= amount; ++a) {
+              for (int c : coins) {
+                  if (c <= a && best[static_cast<std::size_t>(a - c)] + 1 < best[static_cast<std::size_t>(a)]) {
+                      best[static_cast<std::size_t>(a)] = best[static_cast<std::size_t>(a - c)] + 1;
+                  }
+              }
+          }
+          return best[static_cast<std::size_t>(amount)] == impossible ? -1 : best[static_cast<std::size_t>(amount)];
+      }
+
+      int main() {
+          std::cout << minCoins({1, 5, 12}, 16) << ' ' << minCoins({4, 6}, 7) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      4 -1
+      ```
+
+      `best[a]` = fewest coins to pay exactly `a`. To pay `a`, the last coin is
+      some `c`, after paying `a − c` optimally: `best[a] = min over c of best[a − c] + 1`.
+
+      ## How to design a DP
+
+      1. **Define the subproblem** in words: "`best[a]` = the fewest coins to pay `a`".
+      2. **Find the recurrence**: how does a subproblem's answer come from smaller ones? (Think about the *last* decision.)
+      3. **Base cases**: `best[0] = 0`.
+      4. **Order**: compute smaller subproblems first.
+
+      DP is the most feared topic in programming interviews, and it becomes
+      natural with practice. The tasks below are classics.
+
+      {{check dp-table}}
+
+      {{task coin-ways}}
+
+      {{task grid-paths}}
+    checks:
+      - id: dp-table
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> t(7, 0);
+              t[0] = 1;
+              for (std::size_t i{1}; i < t.size(); ++i) {
+                  t[i] = t[i - 1];
+                  if (i >= 3) {
+                      t[i] += t[i - 3];
+                  }
+              }
+              std::cout << t[6] << '\n';
+              return 0;
+          }
+        answer: |
+          6
+        why: "t[i] = t[i−1] + t[i−3]: the table fills as 1, 1, 1, 2, 3, 4, 6. (It counts ways to write i as an ordered sum of 1s and 3s.)"
+    tasks:
+      - id: coin-ways
+        title: Counting ways to pay
+        prompt: |
+          Write `long long countWays(const std::vector<int>& coins, int amount)`:
+          in how many **different combinations** (order doesn't matter) can you
+          pay `amount` with unlimited coins of the given values? With coins
+          {1, 2, 5}, amount 5 has 4 ways: 5, 2+2+1, 2+1+1+1, 1+1+1+1+1.
+        starter: |
+          #include <vector>
+
+          long long countWays(const std::vector<int>& coins, int amount) {
+              return 0;
+          }
+        harness: |
+          CHECK(countWays({1, 2, 5}, 5), 4);
+          CHECK(countWays({1, 2, 5}, 11), 11);
+          CHECK(countWays({2}, 3), 0);
+          CHECK(countWays({2, 5, 3, 6}, 10), 5);
+          CHECK(countWays({1, 5, 10, 25}, 100), 242);
+          CHECK(countWays({7}, 0), 1);
+        hints:
+          - "`ways[a]` = number of combinations paying `a`. `ways[0] = 1`."
+          - "To count combinations (not orders), loop over **coins in the outer loop**: `for (int c : coins) for (int a = c; a <= amount; ++a) ways[a] += ways[a - c];`"
+        solution: |
+          #include <vector>
+
+          long long countWays(const std::vector<int>& coins, int amount) {
+              std::vector<long long> ways(static_cast<std::size_t>(amount) + 1, 0);
+              ways[0] = 1;
+              for (int c : coins) {
+                  for (int a{c}; a <= amount; ++a) {
+                      ways[static_cast<std::size_t>(a)] += ways[static_cast<std::size_t>(a - c)];
+                  }
+              }
+              return ways[static_cast<std::size_t>(amount)];
+          }
+        explain: |
+          Why coins outside? Processing one coin type at a time means each
+          combination is built in one fixed coin order, so it's counted once.
+          Swap the loops and you'd count 2+1 and 1+2 separately — that counts
+          *orderings*, a different (also valid) problem.
+      - id: grid-paths
+        title: Paths through a grid
+        prompt: |
+          A grid of `.` (open) and `#` (wall). Starting at the top-left, moving
+          only **right** or **down**, how many paths reach the bottom-right?
+          Write `long long gridPaths(const std::vector<std::string>& grid)`
+          (0 if the start or end is a wall).
+        starter: |
+          #include <string>
+          #include <vector>
+
+          long long gridPaths(const std::vector<std::string>& grid) {
+              return 0;
+          }
+        harness: |
+          CHECK(gridPaths({"...", "...", "..."}), 6);
+          CHECK(gridPaths({"...", ".#.", "..."}), 2);
+          CHECK(gridPaths({"#.", ".."}), 0);
+          CHECK(gridPaths({"."}), 1);
+          CHECK(gridPaths({".#", "#."}), 0);
+          CHECK(gridPaths(std::vector<std::string>(17, std::string(17, '.'))), 601080390);
+        hints:
+          - "`paths[r][c]` = number of ways to reach cell (r, c). You arrive either from above or from the left."
+          - "`paths[0][0] = 1` if open. For each open cell: `paths[r][c] += paths[r-1][c]` (if r > 0) `+ paths[r][c-1]` (if c > 0). Walls stay 0."
+        solution: |
+          #include <string>
+          #include <vector>
+
+          long long gridPaths(const std::vector<std::string>& grid) {
+              std::size_t rows{grid.size()};
+              std::size_t cols{grid[0].size()};
+              std::vector<std::vector<long long>> paths(rows, std::vector<long long>(cols, 0));
+              for (std::size_t r{0}; r < rows; ++r) {
+                  for (std::size_t c{0}; c < cols; ++c) {
+                      if (grid[r][c] == '#') {
+                          continue;
+                      }
+                      if (r == 0 && c == 0) {
+                          paths[r][c] = 1;
+                          continue;
+                      }
+                      if (r > 0) {
+                          paths[r][c] += paths[r - 1][c];
+                      }
+                      if (c > 0) {
+                          paths[r][c] += paths[r][c - 1];
+                      }
+                  }
+              }
+              return paths[rows - 1][cols - 1];
+          }
+    cards:
+      - front: What is **dynamic programming**?
+        back: Solving a problem by combining answers to overlapping subproblems, computing each subproblem only once (memoisation or a table).
+      - front: Memoisation vs tabulation?
+        back: Memoisation = top-down recursion with a cache. Tabulation = bottom-up loop filling a table from the smallest subproblems.
+      - front: The four steps of designing a DP?
+        back: Define the subproblem in words; find the recurrence (think about the last decision); set base cases; compute in the right order.
+      - front: Why does greedy fail for coins {1, 5, 12} paying 16?
+        back: Greedy takes 12 + 1+1+1+1 (5 coins), but 5+5+5+1 uses 4. Only DP (or search) finds the optimum in general.
+
+  - type: lesson
+    id: c18-graphs
+    title: Grids and graphs
+    minutes: 28
+    objectives:
+      - Represent a graph with adjacency lists
+      - Find shortest paths in unweighted graphs with breadth-first search
+      - Explore connected regions with depth-first search (flood fill)
+    body: |
+      A **graph** is a set of **nodes** (vertices) connected by **edges**:
+      cities and roads, people and friendships, web pages and links, rooms
+      and doors. Huge numbers of problems become easy once you see them as
+      graphs — including every maze and grid puzzle.
+
+      ## Representing a graph
+
+      Number the nodes `0 … n−1` and give each node a list of its
+      neighbours — an **adjacency list**:
+
+      ```cpp static
+      std::vector<std::vector<int>> adj(n);
+      adj[a].push_back(b);    // edge a — b
+      adj[b].push_back(a);    // (both directions: undirected graph)
+      ```
+
+      ## Breadth-first search (BFS)
+
+      BFS explores in **rings**: first the start, then everything 1 edge
+      away, then 2 edges away… using a **queue**. The first time it reaches a
+      node is by a shortest path — so BFS gives shortest distances in
+      unweighted graphs.
+
+      ```cpp
+      #include <iostream>
+      #include <queue>
+      #include <vector>
+
+      int main() {
+          int n{6};
+          std::vector<std::vector<int>> adj(static_cast<std::size_t>(n));
+          auto connect = [&adj](int a, int b) {
+              adj[static_cast<std::size_t>(a)].push_back(b);
+              adj[static_cast<std::size_t>(b)].push_back(a);
+          };
+          connect(0, 1);
+          connect(0, 2);
+          connect(1, 3);
+          connect(2, 3);
+          connect(3, 4);          // node 5 has no edges
+
+          std::vector<int> dist(static_cast<std::size_t>(n), -1);   // -1 = not reached
+          std::queue<int> q{};
+          dist[0] = 0;
+          q.push(0);
+          while (!q.empty()) {
+              int u{q.front()};
+              q.pop();
+              for (int w : adj[static_cast<std::size_t>(u)]) {
+                  if (dist[static_cast<std::size_t>(w)] == -1) {
+                      dist[static_cast<std::size_t>(w)] = dist[static_cast<std::size_t>(u)] + 1;
+                      q.push(w);
+                  }
+              }
+          }
+          for (int i{0}; i < n; ++i) {
+              std::cout << i << ':' << dist[static_cast<std::size_t>(i)] << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      0:0 1:1 2:1 3:2 4:3 5:-1
+      ```
+
+      ```text
+          1
+         / \
+        0   3 — 4        5
+         \ /
+          2
+      ```
+
+      BFS is O(nodes + edges): every node enters the queue once, every edge
+      is looked at once (twice when undirected).
+
+      ## Grids are graphs
+
+      In a grid, each cell is a node and its neighbours are the cells up,
+      down, left and right. You don't build an adjacency list — you compute
+      neighbours on the fly with direction arrays:
+
+      ```cpp static
+      const int dr[4]{-1, 1, 0, 0};
+      const int dc[4]{0, 0, -1, 1};
+      for (int d{0}; d < 4; ++d) {
+          int nr{r + dr[d]};
+          int nc{c + dc[d]};
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] != '#') {
+              // (nr, nc) is a neighbour
+          }
+      }
+      ```
+
+      ## Depth-first search (DFS) and flood fill
+
+      DFS goes as **deep** as possible before backing up — recursion does it
+      naturally. It's perfect for "explore everything connected to here",
+      called **flood fill** (the paint bucket in image editors):
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      void fill(std::vector<std::string>& grid, int r, int c, char from, char to) {
+          if (r < 0 || c < 0 || r >= static_cast<int>(grid.size()) ||
+              c >= static_cast<int>(grid[0].size())) {
+              return;                                          // outside
+          }
+          char& cell = grid[static_cast<std::size_t>(r)][static_cast<std::size_t>(c)];
+          if (cell != from) {
+              return;                                          // wall, or already filled
+          }
+          cell = to;
+          fill(grid, r + 1, c, from, to);
+          fill(grid, r - 1, c, from, to);
+          fill(grid, r, c + 1, from, to);
+          fill(grid, r, c - 1, from, to);
+      }
+
+      int main() {
+          std::vector<std::string> picture{
+              "..##....",
+              "..#..#..",
+              "###..#..",
+              ".....###",
+          };
+          fill(picture, 0, 0, '.', 'o');
+          for (const auto& row : picture) {
+              std::cout << row << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      oo##....
+      oo#..#..
+      ###..#..
+      .....###
+      ```
+
+      The fill stopped at the walls: the region at the top left is closed
+      off. (For very large grids, deep recursion can overflow the stack —
+      then use an explicit stack or BFS.)
+
+      > [!remember]
+      > **BFS** (queue) → shortest paths, levels, "minimum number of moves".
+      > **DFS** (recursion/stack) → reachability, counting regions, exploring
+      > everything.
+
+      {{check bfs-order}}
+
+      {{task islands}}
+    checks:
+      - id: bfs-order
+        type: output
+        code: |
+          #include <iostream>
+          #include <queue>
+          #include <vector>
+
+          int main() {
+              std::vector<std::vector<int>> adj{{1, 2}, {3}, {3, 4}, {}, {}};
+              std::vector<bool> seen(adj.size(), false);
+              std::queue<int> q{};
+              q.push(0);
+              seen[0] = true;
+              while (!q.empty()) {
+                  int u{q.front()};
+                  q.pop();
+                  std::cout << u << ' ';
+                  for (int w : adj[static_cast<std::size_t>(u)]) {
+                      if (!seen[static_cast<std::size_t>(w)]) {
+                          seen[static_cast<std::size_t>(w)] = true;
+                          q.push(w);
+                      }
+                  }
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          0 1 2 3 4
+        why: "Directed edges 0→1, 0→2, 1→3, 2→3, 2→4. BFS visits by distance: 0; then 1, 2; then 3 (from 1) and 4 (from 2)."
+    tasks:
+      - id: islands
+        title: Counting islands
+        prompt: |
+          A map uses `#` for land and `.` for water. Land cells connected up,
+          down, left or right form one **island**. Write
+          `int countIslands(std::vector<std::string> grid)` (taken by value so
+          you may modify it).
+        starter: |
+          #include <string>
+          #include <vector>
+
+          int countIslands(std::vector<std::string> grid) {
+              return 0;
+          }
+        harness: |
+          CHECK(countIslands({"##..", "#..#", "...#", "#..."}), 3);
+          CHECK(countIslands({"....", "...."}), 0);
+          CHECK(countIslands({"###", "#.#", "###"}), 1);
+          CHECK(countIslands({"#.#.#", ".#.#.", "#.#.#"}), 8);
+          CHECK(countIslands({"#"}), 1);
+        hints:
+          - "Scan every cell. When you find land (`#`) that hasn't been visited, that's a new island: count it, then flood-fill it (turn all its connected land into `.` or another mark) so you don't count it again."
+          - "Reuse the `fill` function from the lesson, with `from = '#'` and `to = '.'`."
+        solution: |
+          #include <string>
+          #include <vector>
+
+          void sink(std::vector<std::string>& grid, int r, int c) {
+              if (r < 0 || c < 0 || r >= static_cast<int>(grid.size()) ||
+                  c >= static_cast<int>(grid[0].size())) {
+                  return;
+              }
+              char& cell = grid[static_cast<std::size_t>(r)][static_cast<std::size_t>(c)];
+              if (cell != '#') {
+                  return;
+              }
+              cell = '.';
+              sink(grid, r + 1, c);
+              sink(grid, r - 1, c);
+              sink(grid, r, c + 1);
+              sink(grid, r, c - 1);
+          }
+
+          int countIslands(std::vector<std::string> grid) {
+              int islands{0};
+              for (std::size_t r{0}; r < grid.size(); ++r) {
+                  for (std::size_t c{0}; c < grid[r].size(); ++c) {
+                      if (grid[r][c] == '#') {
+                          ++islands;
+                          sink(grid, static_cast<int>(r), static_cast<int>(c));
+                      }
+                  }
+              }
+              return islands;
+          }
+    cards:
+      - front: What is an **adjacency list**?
+        back: "A graph representation: for each node, a list of its neighbours — `std::vector<std::vector<int>> adj(n);`."
+      - front: What does **BFS** compute, and with what data structure?
+        back: Shortest distances (number of edges) from a start node in an unweighted graph, using a queue. O(V + E).
+      - front: What is DFS good for?
+        back: Exploring everything reachable — flood fill, counting connected regions, detecting cycles. Uses recursion or a stack.
+      - front: How do you find a grid cell's neighbours?
+        back: "Direction arrays `dr{-1,1,0,0}`, `dc{0,0,-1,1}`, plus a bounds and wall check."
+
+  - type: challenge
+    id: c18-ch-anagrams
+    title: Anagram groups
+    difficulty: 2
+    tags: [hashing, sorting]
+    prompt: |
+      Words are **anagrams** if they use the same letters (`listen`,
+      `silent`, `enlist`). Write
+      `std::vector<std::vector<std::string>> groupAnagrams(const std::vector<std::string>& words)`.
+      Each group lists its words in input order; groups are ordered by the
+      position of their first word.
+    starter: |
+      #include <string>
+      #include <vector>
+
+      std::vector<std::vector<std::string>> groupAnagrams(const std::vector<std::string>& words) {
+          return {};
+      }
+    harness: |
+      using Groups = std::vector<std::vector<std::string>>;
+      CHECK(groupAnagrams({"listen", "google", "silent", "elgoog", "enlist", "cat"}),
+            (Groups{{"listen", "silent", "enlist"}, {"google", "elgoog"}, {"cat"}}));
+      CHECK(groupAnagrams({}), Groups{});
+      CHECK(groupAnagrams({"ab", "ba", "ab"}), (Groups{{"ab", "ba", "ab"}}));
+      CHECK(groupAnagrams({"a", "b", "a"}), (Groups{{"a", "a"}, {"b"}}));
+    hints:
+      - "Two words are anagrams exactly when their **sorted letters** are equal: `\"listen\"` and `\"silent\"` both sort to `\"eilnst\"`. Use that as a key."
+      - "Map each key to its group's index: `std::unordered_map<std::string, std::size_t>`. New key → append a new group."
+    solution: |
+      #include <algorithm>
+      #include <string>
+      #include <unordered_map>
+      #include <vector>
+
+      std::vector<std::vector<std::string>> groupAnagrams(const std::vector<std::string>& words) {
+          std::vector<std::vector<std::string>> groups{};
+          std::unordered_map<std::string, std::size_t> groupOf{};
+          for (const auto& w : words) {
+              std::string key{w};
+              std::sort(key.begin(), key.end());
+              auto it = groupOf.find(key);
+              if (it == groupOf.end()) {
+                  groupOf[key] = groups.size();
+                  groups.push_back({w});
+              } else {
+                  groups[it->second].push_back(w);
+              }
+          }
+          return groups;
+      }
+    explain: |
+      The key idea — a **canonical form** (sorted letters) that is equal
+      exactly when two things are "the same" — is a powerful general trick.
+
+  - type: challenge
+    id: c18-ch-inversions
+    title: Counting inversions
+    difficulty: 3
+    tags: [merge sort, divide and conquer]
+    prompt: |
+      An **inversion** is a pair of positions `i < j` with `v[i] > v[j]` — a
+      measure of how unsorted a list is. Write
+      `long long countInversions(std::vector<int> v)`.
+
+      The last check has 200,000 numbers in reverse order (almost 20 billion
+      inversions) — checking every pair would time out. Adapt merge sort:
+      while merging, when you take an element from the **right** half, it
+      forms an inversion with every element still waiting in the left half.
+    starter: |
+      #include <vector>
+
+      long long countInversions(std::vector<int> v) {
+          return 0;
+      }
+    harness: |
+      CHECK(countInversions({1, 2, 3}), 0);
+      CHECK(countInversions({3, 2, 1}), 3);
+      CHECK(countInversions({2, 4, 1, 3, 5}), 3);
+      CHECK(countInversions({}), 0);
+      CHECK(countInversions({5, 5, 5}), 0);
+      std::vector<int> big(200000);
+      for (std::size_t i{0}; i < big.size(); ++i) {
+          big[i] = static_cast<int>(big.size() - i);
+      }
+      CHECK(countInversions(big), 19999900000LL);
+    hints:
+      - "Write a recursive `long long sortCount(std::vector<int>& v, std::size_t lo, std::size_t hi)` for the range `[lo, hi)`, which sorts it and returns its inversions."
+      - "Inversions = left half's + right half's + those across the halves, counted during the merge: taking `right[j]` while `left` still has `left.size() - i` elements adds that many."
+      - "On equal values take from the left first — equal values aren't inversions."
+    solution: |
+      #include <vector>
+
+      long long sortCount(std::vector<int>& v, std::size_t lo, std::size_t hi) {
+          if (hi - lo <= 1) {
+              return 0;
+          }
+          std::size_t mid{lo + (hi - lo) / 2};
+          long long count{sortCount(v, lo, mid) + sortCount(v, mid, hi)};
+          std::vector<int> merged{};
+          merged.reserve(hi - lo);
+          std::size_t i{lo};
+          std::size_t j{mid};
+          while (i < mid && j < hi) {
+              if (v[j] < v[i]) {
+                  merged.push_back(v[j++]);
+                  count += static_cast<long long>(mid - i);
+              } else {
+                  merged.push_back(v[i++]);
+              }
+          }
+          while (i < mid) {
+              merged.push_back(v[i++]);
+          }
+          while (j < hi) {
+              merged.push_back(v[j++]);
+          }
+          for (std::size_t k{0}; k < merged.size(); ++k) {
+              v[lo + k] = merged[k];
+          }
+          return count;
+      }
+
+      long long countInversions(std::vector<int> v) {
+          return sortCount(v, 0, v.size());
+      }
+
+  - type: challenge
+    id: c18-ch-maze
+    title: Escape the maze
+    difficulty: 3
+    tags: [BFS, grids]
+    prompt: |
+      Read a maze from standard input: a line with `ROWS COLS`, then ROWS
+      lines of the grid. `S` is the start, `E` the exit, `#` walls, `.`
+      open floor. Moving up, down, left or right, print the **fewest moves**
+      from S to E as `Shortest path: N moves`, or `No way out` if E can't be
+      reached.
+    starter: |
+      #include <iostream>
+      #include <queue>
+      #include <string>
+      #include <vector>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          5 7
+          S.#....
+          .##.##.
+          ...#...
+          .#...#.
+          ...#..E
+        out: |
+          Shortest path: 10 moves
+      - in: |
+          3 3
+          S#E
+          .#.
+          .#.
+        out: |
+          No way out
+      - in: |
+          1 2
+          SE
+        out: |
+          Shortest path: 1 moves
+        hidden: true
+      - in: |
+          4 6
+          S.....
+          ####..
+          ......
+          E#####
+        out: |
+          Shortest path: 11 moves
+        hidden: true
+    hints:
+      - "Read the grid, find S and E. BFS from S over `(row, col)` pairs with a `dist` grid initialised to -1."
+      - "`std::queue<std::pair<int, int>>`; for each cell popped, try the 4 neighbours that are inside, not `#`, and not yet reached."
+    solution: |
+      #include <iostream>
+      #include <queue>
+      #include <string>
+      #include <utility>
+      #include <vector>
+
+      int main() {
+          int rows{};
+          int cols{};
+          std::cin >> rows >> cols;
+          std::vector<std::string> grid(static_cast<std::size_t>(rows));
+          for (auto& row : grid) {
+              std::cin >> row;
+          }
+          std::pair<int, int> start{};
+          std::pair<int, int> exit{};
+          for (int r{0}; r < rows; ++r) {
+              for (int c{0}; c < cols; ++c) {
+                  char cell{grid[static_cast<std::size_t>(r)][static_cast<std::size_t>(c)]};
+                  if (cell == 'S') {
+                      start = {r, c};
+                  } else if (cell == 'E') {
+                      exit = {r, c};
+                  }
+              }
+          }
+          std::vector<std::vector<int>> dist(static_cast<std::size_t>(rows),
+                                             std::vector<int>(static_cast<std::size_t>(cols), -1));
+          const int dr[4]{-1, 1, 0, 0};
+          const int dc[4]{0, 0, -1, 1};
+          std::queue<std::pair<int, int>> q{};
+          dist[static_cast<std::size_t>(start.first)][static_cast<std::size_t>(start.second)] = 0;
+          q.push(start);
+          while (!q.empty()) {
+              auto [r, c] = q.front();
+              q.pop();
+              for (int d{0}; d < 4; ++d) {
+                  int nr{r + dr[d]};
+                  int nc{c + dc[d]};
+                  if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) {
+                      continue;
+                  }
+                  auto ur = static_cast<std::size_t>(nr);
+                  auto uc = static_cast<std::size_t>(nc);
+                  if (grid[ur][uc] == '#' || dist[ur][uc] != -1) {
+                      continue;
+                  }
+                  dist[ur][uc] = dist[static_cast<std::size_t>(r)][static_cast<std::size_t>(c)] + 1;
+                  q.push({nr, nc});
+              }
+          }
+          int answer{dist[static_cast<std::size_t>(exit.first)][static_cast<std::size_t>(exit.second)]};
+          if (answer == -1) {
+              std::cout << "No way out\n";
+          } else {
+              std::cout << "Shortest path: " << answer << " moves\n";
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c18-ch-queens
+    title: The N-Queens puzzle
+    difficulty: 3
+    tags: [backtracking]
+    prompt: |
+      Place `n` chess queens on an `n × n` board so that no two attack each
+      other (no two share a row, column or diagonal). Write
+      `int countQueens(int n)` returning how many ways there are. The
+      classic 8 × 8 board has 92.
+    starter: |
+      int countQueens(int n) {
+          return 0;
+      }
+    harness: |
+      CHECK(countQueens(1), 1);
+      CHECK(countQueens(2), 0);
+      CHECK(countQueens(3), 0);
+      CHECK(countQueens(4), 2);
+      CHECK(countQueens(6), 4);
+      CHECK(countQueens(8), 92);
+      CHECK(countQueens(10), 724);
+    hints:
+      - "Place one queen per row, row by row. For row `r`, try every column; recurse to row `r + 1` if the square is safe."
+      - "Track used columns and both diagonals in `std::vector<bool>`s: on one diagonal `r + c` is constant, on the other `r - c + n - 1` is. Mark before recursing, unmark after."
+    solution: |
+      #include <vector>
+
+      int place(int row, int n, std::vector<bool>& cols, std::vector<bool>& diag1, std::vector<bool>& diag2) {
+          if (row == n) {
+              return 1;
+          }
+          int count{0};
+          for (int c{0}; c < n; ++c) {
+              auto d1 = static_cast<std::size_t>(row + c);
+              auto d2 = static_cast<std::size_t>(row - c + n - 1);
+              auto col = static_cast<std::size_t>(c);
+              if (cols[col] || diag1[d1] || diag2[d2]) {
+                  continue;
+              }
+              cols[col] = diag1[d1] = diag2[d2] = true;
+              count += place(row + 1, n, cols, diag1, diag2);
+              cols[col] = diag1[d1] = diag2[d2] = false;
+          }
+          return count;
+      }
+
+      int countQueens(int n) {
+          std::vector<bool> cols(static_cast<std::size_t>(n), false);
+          std::vector<bool> diag1(static_cast<std::size_t>(2 * n), false);
+          std::vector<bool> diag2(static_cast<std::size_t>(2 * n), false);
+          return place(0, n, cols, diag1, diag2);
+      }
+    explain: |
+      Without pruning, there are 10¹⁰ ways to put one queen in each row of a
+      10 × 10 board. Checking columns and diagonals *before* recursing cuts
+      the search to a few tens of thousands of steps.
+
+  - type: challenge
+    id: c18-ch-lis
+    title: Longest increasing subsequence
+    difficulty: 3
+    tags: [dynamic programming]
+    prompt: |
+      A **subsequence** keeps some elements in their original order (not
+      necessarily adjacent). Write
+      `int longestIncreasing(const std::vector<int>& v)`: the length of the
+      longest **strictly increasing** subsequence. For
+      `{10, 9, 2, 5, 3, 7, 101, 18}` it's 4 (e.g. 2, 3, 7, 18).
+    starter: |
+      #include <vector>
+
+      int longestIncreasing(const std::vector<int>& v) {
+          return 0;
+      }
+    harness: |
+      CHECK(longestIncreasing({10, 9, 2, 5, 3, 7, 101, 18}), 4);
+      CHECK(longestIncreasing({}), 0);
+      CHECK(longestIncreasing({5, 4, 3}), 1);
+      CHECK(longestIncreasing({1, 2, 3, 4}), 4);
+      CHECK(longestIncreasing({3, 3, 3}), 1);
+      CHECK(longestIncreasing({0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15}), 6);
+    hints:
+      - "Subproblem: `best[i]` = length of the longest increasing subsequence that **ends at** position i."
+      - "`best[i] = 1 + max(best[j])` over all `j < i` with `v[j] < v[i]` (or just 1). The answer is the largest `best[i]`. O(n²)."
+    solution: |
+      #include <algorithm>
+      #include <vector>
+
+      int longestIncreasing(const std::vector<int>& v) {
+          std::vector<int> best(v.size(), 1);
+          int answer{0};
+          for (std::size_t i{0}; i < v.size(); ++i) {
+              for (std::size_t j{0}; j < i; ++j) {
+                  if (v[j] < v[i]) {
+                      best[i] = std::max(best[i], best[j] + 1);
+                  }
+              }
+              answer = std::max(answer, best[i]);
+          }
+          return answer;
+      }
+    explain: |
+      This O(n²) DP is the classic solution. There's also a beautiful
+      O(n log n) version: keep, for each length, the smallest possible tail
+      value, and place each element with `std::lower_bound` — binary search
+      meets dynamic programming. Try it once this one works!
+
+  - type: review
+    id: c18-review
+    title: "Chapter 18 review"
+    body: |
+      ## Cheat sheet
+
+      ```text
+      Method:   understand (examples, edge cases) → plan (pseudocode) → build → look back
+      Big-O:    O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(2ⁿ); ~10⁸–10⁹ steps/second
+      Search:   binary search on sorted data, O(log n); lower_bound / upper_bound
+      Sorting:  selection & insertion O(n²); merge sort O(n log n); use std::sort / stable_sort
+      Backtrack: if done → record; for each choice → choose, recurse, un-choose; prune early
+      Patterns: hashing (seen?), two pointers (sorted), sliding window (consecutive), prefix sums (ranges)
+      DP:       subproblem in words → recurrence (last decision) → base cases → order
+      Graphs:   adjacency lists; BFS + queue = shortest path; DFS/flood fill = regions
+      ```
+
+      ## Which tool for which problem?
+
+      | The problem says… | Think… |
+      |---|---|
+      | "sorted", "find position", "smallest x such that…" | binary search |
+      | "all combinations / arrangements", small n | backtracking |
+      | "pair/complement", "seen before", "count occurrences" | hashing |
+      | "consecutive", "subarray", "substring" | sliding window, prefix sums |
+      | "number of ways", "minimum cost", "best", with overlapping choices | dynamic programming |
+      | "fewest moves/steps", "maze", "network" | BFS |
+      | "connected", "regions", "reachable" | DFS / flood fill |
+    questions:
+      - type: output
+        prompt: "Interleaving: recursion, strings and vectors."
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          int ways(const std::string& s, std::size_t i, std::vector<int>& memo) {
+              if (i == s.size()) {
+                  return 1;
+              }
+              if (memo[i] != -1) {
+                  return memo[i];
+              }
+              int total{ways(s, i + 1, memo)};
+              if (i + 1 < s.size() && s[i] == s[i + 1]) {
+                  total += ways(s, i + 2, memo);
+              }
+              memo[i] = total;
+              return total;
+          }
+
+          int main() {
+              std::string s{"aabaa"};
+              std::vector<int> memo(s.size(), -1);
+              std::cout << ways(s, 0, memo) << '\n';
+              return 0;
+          }
+        answer: |
+          4
+        why: "Split \"aabaa\" into pieces of 1 letter or a pair of equal letters: a·a·b·a·a, aa·b·a·a, a·a·b·aa, aa·b·aa → 4."
+      - type: mcq
+        prompt: "\"What's the minimum number of knight moves from one square to another on a chessboard?\" — best approach?"
+        options:
+          - Binary search
+          - "BFS over squares"
+          - Sorting
+          - Prefix sums
+        answer: 1
+        why: "Minimum number of moves in an unweighted graph = BFS."
+      - type: mcq
+        prompt: "Which complexity is merge sort's?"
+        options:
+          - "O(n²)"
+          - O(n log n)
+          - O(log n)
+          - O(n)
+        answer: 1
+        why: "log n levels, O(n) merging per level."
+
+  - type: exam
+    id: c18-exam
+    title: "Chapter 18 exam"
+    minutes: 45
+    pick: 12
+    questions:
+      - type: mcq
+        prompt: "Code does `std::sort` on n items, then a loop over them with a binary search inside. Overall complexity?"
+        options:
+          - "O(n)"
+          - "O(n log n)"
+          - "O(n²)"
+          - "O(log n)"
+        answer: 1
+        why: "n log n (sort) + n × log n (searches) = O(n log n)."
+      - type: mcq
+        prompt: "An algorithm is O(n²) and takes 1 second for n = 10,000. About how long for n = 100,000?"
+        options:
+          - 10 seconds
+          - 100 seconds
+          - 2 seconds
+          - 1,000 seconds
+        answer: 1
+        why: "10× the input → 10² = 100× the time."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{1, 4, 6, 9, 13, 20};
+              int lo{0};
+              int hi{static_cast<int>(v.size()) - 1};
+              int looks{0};
+              int target{13};
+              while (lo <= hi) {
+                  int mid{lo + (hi - lo) / 2};
+                  ++looks;
+                  if (v[static_cast<std::size_t>(mid)] == target) {
+                      break;
+                  }
+                  if (v[static_cast<std::size_t>(mid)] < target) {
+                      lo = mid + 1;
+                  } else {
+                      hi = mid - 1;
+                  }
+              }
+              std::cout << looks << '\n';
+              return 0;
+          }
+        answer: |
+          2
+        why: "mid = 2 (6) < 13 → lo = 3; mid = 4 (13) found. Two looks."
+      - type: tf
+        prompt: "BFS finds the shortest path (fewest edges) in an unweighted graph."
+        answer: true
+        why: "It explores in order of distance from the start."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int count(int n) {
+              if (n < 0) {
+                  return 0;
+              }
+              if (n == 0) {
+                  return 1;
+              }
+              return count(n - 1) + count(n - 3);
+          }
+
+          int main() {
+              std::cout << count(5) << '\n';
+              return 0;
+          }
+        answer: |
+          4
+        why: "Ways to write 5 as an ordered sum of 1s and 3s: 1+1+1+1+1, 1+1+3, 1+3+1, 3+1+1."
+      - type: mcq
+        prompt: "\"Longest substring with at most 2 distinct characters\" — which pattern?"
+        options:
+          - Binary search
+          - Sliding window
+          - BFS
+          - Backtracking
+        answer: 1
+        why: "A consecutive stretch with a validity condition: grow right, shrink left."
+      - type: mcq
+        prompt: "What is essential in every backtracking step, after exploring a choice?"
+        options:
+          - Sorting the input
+          - Undoing the choice before trying the next
+          - Returning immediately
+          - Printing the state
+        answer: 1
+        why: "Choose → explore → un-choose, so the next branch starts from a clean state."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{2, 7, 1, 8, 2, 8};
+              int window{0};
+              int best{0};
+              for (std::size_t i{0}; i < v.size(); ++i) {
+                  window += v[i];
+                  if (i >= 2) {
+                      window -= v[i - 2];
+                  }
+                  if (window > best) {
+                      best = window;
+                  }
+              }
+              std::cout << best << '\n';
+              return 0;
+          }
+        answer: |
+          10
+        why: "Sums of 2 consecutive elements: 9, 8, 9, 10, 10 → best 10."
+      - type: mcq
+        prompt: "`fib(n)` with plain recursion is exponential. With memoisation it becomes…"
+        options:
+          - Still exponential
+          - "O(n) — each value computed once"
+          - "O(log n)"
+          - "O(n²)"
+        answer: 1
+        why: "n subproblems, O(1) work each once cached."
+      - type: spot
+        prompt: "This binary search sometimes loops forever. Which line causes it?"
+        code: |
+          #include <vector>
+
+          int lastAtMost(const std::vector<int>& v, int x) {
+              int lo{-1};
+              int hi{static_cast<int>(v.size()) - 1};
+              while (lo < hi) {
+                  int mid{lo + (hi - lo) / 2};
+                  if (v[static_cast<std::size_t>(mid)] <= x) {
+                      lo = mid;
+                  } else {
+                      hi = mid - 1;
+                  }
+              }
+              return lo;
+          }
+        answer: 7
+        why: "Since one branch does `lo = mid`, mid must round **up**: `lo + (hi - lo + 1) / 2`. With hi = lo + 1, rounding down gives mid = lo and nothing changes. (It can also read v[-1].)"
+      - type: mcq
+        prompt: "Which problem is best solved by dynamic programming?"
+        options:
+          - "Find whether 42 is in a sorted list"
+          - "Minimum cost to climb stairs where each step has a cost and you may skip one"
+          - "Print all permutations of a word"
+          - "Reverse a string"
+        answer: 1
+        why: "Overlapping subproblems with an optimal choice at each step — the classic DP shape."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <unordered_map>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{4, 1, 4, 2, 1, 4};
+              std::unordered_map<int, int> count{};
+              int pairs{0};
+              for (int x : v) {
+                  pairs += count[x];
+                  ++count[x];
+              }
+              std::cout << pairs << '\n';
+              return 0;
+          }
+        answer: |
+          4
+        why: "Counts equal pairs in one pass: the 4s make 3 pairs, the 1s make 1."
+      - type: code
+        prompt: |
+          Write `int maxProfit(const std::vector<int>& prices)`: given a
+          stock's price on each day, the best profit from buying on one day
+          and selling on a **later** day (0 if no profit is possible). Aim for
+          O(n): track the lowest price so far.
+        starter: |
+          #include <vector>
+
+          int maxProfit(const std::vector<int>& prices) {
+              return 0;
+          }
+        harness: |
+          CHECK(maxProfit({7, 1, 5, 3, 6, 4}), 5);
+          CHECK(maxProfit({7, 6, 4, 3, 1}), 0);
+          CHECK(maxProfit({}), 0);
+          CHECK(maxProfit({2, 4, 1, 3}), 2);
+          CHECK(maxProfit({3, 8, 1, 9}), 8);
+        solution: |
+          #include <algorithm>
+          #include <vector>
+
+          int maxProfit(const std::vector<int>& prices) {
+              int best{0};
+              if (prices.empty()) {
+                  return best;
+              }
+              int lowest{prices[0]};
+              for (int p : prices) {
+                  best = std::max(best, p - lowest);
+                  lowest = std::min(lowest, p);
+              }
+              return best;
+          }
+      - type: code
+        prompt: |
+          Write `int shortestHops(int n, const std::vector<std::pair<int, int>>& edges, int from, int to)`:
+          the fewest edges between `from` and `to` in an undirected graph with
+          nodes `0 … n−1`, or -1 if unreachable.
+        starter: |
+          #include <queue>
+          #include <utility>
+          #include <vector>
+
+          int shortestHops(int n, const std::vector<std::pair<int, int>>& edges, int from, int to) {
+              return -1;
+          }
+        harness: |
+          std::vector<std::pair<int, int>> e{{0, 1}, {1, 2}, {2, 3}, {0, 4}, {4, 3}};
+          CHECK(shortestHops(6, e, 0, 3), 2);
+          CHECK(shortestHops(6, e, 1, 4), 2);
+          CHECK(shortestHops(6, e, 2, 2), 0);
+          CHECK(shortestHops(6, e, 0, 5), -1);
+        solution: |
+          #include <queue>
+          #include <utility>
+          #include <vector>
+
+          int shortestHops(int n, const std::vector<std::pair<int, int>>& edges, int from, int to) {
+              std::vector<std::vector<int>> adj(static_cast<std::size_t>(n));
+              for (const auto& [a, b] : edges) {
+                  adj[static_cast<std::size_t>(a)].push_back(b);
+                  adj[static_cast<std::size_t>(b)].push_back(a);
+              }
+              std::vector<int> dist(static_cast<std::size_t>(n), -1);
+              std::queue<int> q{};
+              dist[static_cast<std::size_t>(from)] = 0;
+              q.push(from);
+              while (!q.empty()) {
+                  int u{q.front()};
+                  q.pop();
+                  for (int w : adj[static_cast<std::size_t>(u)]) {
+                      if (dist[static_cast<std::size_t>(w)] == -1) {
+                          dist[static_cast<std::size_t>(w)] = dist[static_cast<std::size_t>(u)] + 1;
+                          q.push(w);
+                      }
+                  }
+              }
+              return dist[static_cast<std::size_t>(to)];
+          }
