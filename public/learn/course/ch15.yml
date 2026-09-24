@@ -1,0 +1,1925 @@
+id: ch15
+number: 15
+part: p4
+title: Resources, Moves and Errors
+blurb: Modern C++'s answers to the hardest problems — who owns what, how to avoid needless copies, and what to do when things go wrong.
+hours: 6.5
+goals:
+  - Own heap objects with `std::unique_ptr`, and share them with `std::shared_ptr` when truly needed
+  - Explain the difference between copying and moving, and use `std::move`
+  - Apply the rule of zero, and the rule of three/five when a class manages a resource
+  - Report and handle errors with exceptions, safely thanks to RAII
+  - Express "maybe a value" with `std::optional`
+
+items:
+  - type: lesson
+    id: c15-unique
+    title: "std::unique_ptr: automatic ownership"
+    minutes: 24
+    objectives:
+      - Create heap objects with `std::make_unique`
+      - Explain why a `unique_ptr` can be moved but not copied
+      - Store polymorphic objects safely in a vector of `unique_ptr`
+    body: |
+      In Chapter 10, heap objects came with three ways to fail: leaks,
+      dangling pointers and double deletes. In Chapter 11 you learned RAII:
+      let an object's destructor release its resource. Put the two together
+      and you get a **smart pointer** — an object that owns a heap object and
+      deletes it automatically.
+
+      **`std::unique_ptr`** (from `<memory>`) is the one you'll use 95% of the
+      time. It's the **only owner** of its object:
+
+      ```cpp
+      #include <iostream>
+      #include <memory>
+      #include <string>
+
+      struct Monster {
+          explicit Monster(const std::string& n) : name{n} { std::cout << name << " spawns\n"; }
+          ~Monster() { std::cout << name << " vanishes\n"; }
+          std::string name;
+      };
+
+      int main() {
+          auto boss = std::make_unique<Monster>("Dragon");
+          std::cout << "Fighting " << boss->name << '\n';
+          {
+              auto minion = std::make_unique<Monster>("Goblin");
+          }   // minion's destructor deletes the Goblin here
+          std::cout << "Boss battle over\n";
+          return 0;
+      }   // and the Dragon here — no delete anywhere
+      ```
+
+      ```output
+      Dragon spawns
+      Fighting Dragon
+      Goblin spawns
+      Goblin vanishes
+      Boss battle over
+      Dragon vanishes
+      ```
+
+      - `std::make_unique<Monster>("Dragon")` creates a `Monster` on the heap (passing the arguments to its constructor) and returns a `std::unique_ptr<Monster>` owning it.
+      - Use it like a pointer: `boss->name`, `*boss`. `boss.get()` gives a plain pointer for code that only *uses* the object.
+      - When the `unique_ptr` is destroyed, it deletes its object. Exactly once, always, even with early returns or exceptions.
+
+      ## One owner: move, don't copy
+
+      Copying a `unique_ptr` would create two owners — so it's forbidden.
+      Ownership can be **transferred** with `std::move`:
+
+      ```cpp
+      #include <iostream>
+      #include <memory>
+      #include <utility>
+
+      int main() {
+          auto a = std::make_unique<int>(42);
+          // auto b = a;              // error: can't copy a unique_ptr
+          auto b = std::move(a);       // b owns it now; a is empty (nullptr)
+          std::cout << (a == nullptr) << ' ' << *b << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1 42
+      ```
+
+      ## Polymorphism without the pain
+
+      Chapter 12 used vectors of raw pointers to objects owned elsewhere. With
+      `unique_ptr`, the vector can **own** its polymorphic objects, and
+      cleanup is automatic:
+
+      ```cpp
+      #include <iostream>
+      #include <memory>
+      #include <vector>
+
+      class Shape {
+      public:
+          virtual ~Shape() = default;
+          virtual double area() const = 0;
+      };
+
+      class Square : public Shape {
+      public:
+          explicit Square(double s) : s_{s} {}
+          double area() const override { return s_ * s_; }
+      private:
+          double s_;
+      };
+
+      class Circle : public Shape {
+      public:
+          explicit Circle(double r) : r_{r} {}
+          double area() const override { return 3.14159 * r_ * r_; }
+      private:
+          double r_;
+      };
+
+      int main() {
+          std::vector<std::unique_ptr<Shape>> shapes{};
+          shapes.push_back(std::make_unique<Square>(2));
+          shapes.push_back(std::make_unique<Circle>(1));
+          double total{0};
+          for (const auto& s : shapes) {
+              total += s->area();
+          }
+          std::cout << total << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      7.14159
+      ```
+
+      ## Passing smart pointers around
+
+      | You want the function to… | Parameter |
+      |---|---|
+      | just use the object | `const Shape&` (or `const Shape*` if it may be null) |
+      | take ownership | `std::unique_ptr<Shape>` by value (the caller writes `std::move(p)`) |
+
+      Don't pass `const std::unique_ptr<T>&` just to use the object — it
+      needlessly ties the function to one kind of ownership.
+
+      > [!remember]
+      > In modern C++, `new` and `delete` almost never appear. Use
+      > `std::make_unique` for single objects and containers for many.
+
+      {{check unique-output}}
+
+      {{task factory}}
+    checks:
+      - id: unique-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <memory>
+          #include <utility>
+          #include <vector>
+
+          int main() {
+              std::vector<std::unique_ptr<int>> v{};
+              v.push_back(std::make_unique<int>(1));
+              auto p = std::make_unique<int>(2);
+              v.push_back(std::move(p));
+              *v[0] += 10;
+              std::cout << *v[0] << ' ' << *v[1] << ' ' << (p == nullptr) << '\n';
+              return 0;
+          }
+        answer: |
+          11 2 1
+        why: "Moving `p` into the vector transfers ownership and leaves `p` null."
+      - id: copy-unique
+        type: mcq
+        prompt: "Why doesn't `auto b = a;` compile when `a` is a `std::unique_ptr`?"
+        options:
+          - "unique_ptr can't be stored in variables"
+          - "A unique_ptr is the only owner; a copy would make two owners (and a double delete)"
+          - "You must write `new` first"
+          - It does compile
+        answer: 1
+        why: "Copying is deleted. Transfer ownership with `std::move(a)` instead."
+    tasks:
+      - id: factory
+        title: A shape factory
+        prompt: |
+          Using the starter's `Shape`, `Square` and `Circle`, write
+          `std::unique_ptr<Shape> makeShape(const std::string& kind, double size)`
+          returning a `Square` for `"square"`, a `Circle` for `"circle"`, and
+          `nullptr` for anything else.
+        starter: |
+          #include <memory>
+          #include <string>
+
+          class Shape {
+          public:
+              virtual ~Shape() = default;
+              virtual double area() const = 0;
+          };
+
+          class Square : public Shape {
+          public:
+              explicit Square(double s) : s_{s} {}
+              double area() const override { return s_ * s_; }
+          private:
+              double s_;
+          };
+
+          class Circle : public Shape {
+          public:
+              explicit Circle(double r) : r_{r} {}
+              double area() const override { return 3.0 * r_ * r_; }
+          private:
+              double r_;
+          };
+
+          std::unique_ptr<Shape> makeShape(const std::string& kind, double size) {
+              return nullptr;
+          }
+        harness: |
+          auto a = makeShape("square", 3);
+          auto b = makeShape("circle", 2);
+          auto c = makeShape("hexagon", 1);
+          CHECK(a != nullptr, true);
+          CHECK(a->area(), 9.0);
+          CHECK(b->area(), 12.0);
+          CHECK(c == nullptr, true);
+        hints:
+          - "`if (kind == \"square\") return std::make_unique<Square>(size);` — a `unique_ptr<Square>` converts to `unique_ptr<Shape>` automatically."
+        solution: |
+          #include <memory>
+          #include <string>
+
+          class Shape {
+          public:
+              virtual ~Shape() = default;
+              virtual double area() const = 0;
+          };
+
+          class Square : public Shape {
+          public:
+              explicit Square(double s) : s_{s} {}
+              double area() const override { return s_ * s_; }
+          private:
+              double s_;
+          };
+
+          class Circle : public Shape {
+          public:
+              explicit Circle(double r) : r_{r} {}
+              double area() const override { return 3.0 * r_ * r_; }
+          private:
+              double r_;
+          };
+
+          std::unique_ptr<Shape> makeShape(const std::string& kind, double size) {
+              if (kind == "square") {
+                  return std::make_unique<Square>(size);
+              }
+              if (kind == "circle") {
+                  return std::make_unique<Circle>(size);
+              }
+              return nullptr;
+          }
+    cards:
+      - front: What is `std::unique_ptr`?
+        back: A smart pointer that is the sole owner of a heap object and deletes it automatically when destroyed.
+      - front: How do you create an object owned by a unique_ptr?
+        back: "`auto p = std::make_unique<T>(constructor args);`"
+      - front: How do you transfer ownership of a unique_ptr?
+        back: "`auto q = std::move(p);` — p becomes nullptr. Copying is not allowed."
+      - front: How should a function that only *uses* an object take it?
+        back: By reference (`const T&`) or raw pointer if it may be null — not by `unique_ptr`.
+
+  - type: lesson
+    id: c15-shared
+    title: std::shared_ptr and weak_ptr
+    minutes: 16
+    objectives:
+      - Share ownership of an object with `std::shared_ptr`
+      - Explain reference counting and the cycle problem
+      - Break cycles with `std::weak_ptr`
+    body: |
+      Sometimes an object genuinely has **several owners**, and should live as
+      long as **any** of them needs it — a texture used by many sprites, a
+      document open in several windows. That's **`std::shared_ptr`**:
+
+      ```cpp
+      #include <iostream>
+      #include <memory>
+      #include <string>
+
+      int main() {
+          auto logo = std::make_shared<std::string>("logo.png");
+          std::cout << logo.use_count() << '\n';
+          {
+              auto copy = logo;          // copying is allowed: a second owner
+              std::cout << logo.use_count() << '\n';
+          }
+          std::cout << logo.use_count() << ' ' << *logo << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1
+      2
+      1 logo.png
+      ```
+
+      Each `shared_ptr` to the object increases a **reference count**; each one
+      destroyed decreases it; when it reaches zero, the object is deleted.
+
+      ## The cost, and the cycle trap
+
+      Reference counting isn't free, and "who owns this?" becomes "everyone,
+      sort of" — harder to reason about. Worse: if A owns B with a
+      `shared_ptr` and B owns A with a `shared_ptr`, neither count ever reaches
+      zero — a **leak**.
+
+      **`std::weak_ptr`** is a non-owning observer of a shared object. It
+      doesn't increase the count; to use the object you `lock()` it, which
+      gives a `shared_ptr` (empty if the object is already gone):
+
+      ```cpp
+      #include <iostream>
+      #include <memory>
+
+      int main() {
+          std::weak_ptr<int> watcher{};
+          {
+              auto owner = std::make_shared<int>(7);
+              watcher = owner;
+              if (auto p = watcher.lock()) {
+                  std::cout << "alive: " << *p << '\n';
+              }
+          }
+          std::cout << "expired: " << watcher.expired() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      alive: 7
+      expired: 1
+      ```
+
+      Use `weak_ptr` for back-references (a child pointing to its parent) and
+      caches, to break cycles.
+
+      > [!pro] Default to `unique_ptr`
+      > Start with `std::unique_ptr`. Reach for `shared_ptr` only when
+      > ownership is truly shared — it's easy to turn a `unique_ptr` into a
+      > `shared_ptr` later, but not the other way round.
+
+      {{check shared-count}}
+    checks:
+      - id: shared-count
+        type: output
+        code: |
+          #include <iostream>
+          #include <memory>
+          #include <vector>
+
+          int main() {
+              auto p = std::make_shared<int>(5);
+              std::vector<std::shared_ptr<int>> owners{p, p, p};
+              std::cout << p.use_count() << ' ';
+              owners.pop_back();
+              *owners[0] += 1;
+              std::cout << p.use_count() << ' ' << *p << '\n';
+              return 0;
+          }
+        answer: |
+          4 3 6
+        why: "p plus three copies in the vector: 4 owners; after pop_back, 3. All share one int, now 6."
+      - id: which-ptr
+        type: mcq
+        prompt: "A `Tree` node owns its children, and each child needs to refer back to its parent. What should the child's pointer to the parent be?"
+        options:
+          - "`std::shared_ptr<Node>` — to keep the parent alive"
+          - "`std::unique_ptr<Node>`"
+          - "A non-owning pointer: `Node*` or `std::weak_ptr<Node>` — the parent already owns the child"
+          - "`std::vector<Node>`"
+        answer: 2
+        why: "An owning back-pointer would create a cycle. The parent owns; the child just observes."
+    cards:
+      - front: What does `std::shared_ptr` do?
+        back: Shares ownership of a heap object by reference counting; the object is deleted when the last shared_ptr to it goes away.
+      - front: What problem does `std::weak_ptr` solve?
+        back: Reference cycles (A owns B, B owns A → leak). A weak_ptr observes without owning; `lock()` gives temporary access.
+      - front: "unique_ptr or shared_ptr by default?"
+        back: "`std::unique_ptr`. Use shared_ptr only for truly shared ownership."
+
+  - type: lesson
+    id: c15-move
+    title: Copying versus moving
+    minutes: 24
+    objectives:
+      - Explain why copying can be expensive and moving cheap
+      - Use `std::move` to transfer a resource, and know what's left behind
+      - Recognise when C++ moves automatically
+    body: |
+      Copying a `std::string` of a million characters copies a million
+      characters. Often you don't need a copy at all — you're **done** with
+      the original and just want to hand its contents over. That's a
+      **move**: the new object takes over the old one's resources (for a
+      string, just its internal pointer), leaving the old one empty but valid.
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <utility>
+      #include <vector>
+
+      int main() {
+          std::string big(1'000'000, 'x');
+          std::vector<std::string> store{};
+
+          store.push_back(big);              // copy: big is unchanged
+          store.push_back(std::move(big));   // move: big's buffer is handed over
+
+          std::cout << store[0].size() << ' ' << store[1].size() << ' ' << big.size() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1000000 1000000 0
+      ```
+
+      `std::move(big)` doesn't move anything by itself — it's a **cast** that
+      says "I'm done with `big`, you may steal its contents". `push_back` then
+      picks its *moving* version. After a move, the object is in a **valid but
+      unspecified** state: you may assign it a new value or destroy it, but
+      don't rely on what it contains (here, the standard string happens to be
+      empty).
+
+      ## Temporaries move automatically
+
+      A value that has no name — the result of a function call, `a + b`, a
+      literal — is a **temporary** (an *rvalue*). Nobody can use it
+      afterwards, so C++ moves from it automatically, no `std::move` needed:
+
+      ```cpp static
+      std::vector<std::string> names{};
+      names.push_back(std::string{"Ada"} + " Lovelace");   // temporary: moved
+      std::string s = makeReport();                         // result moved (or built in place)
+      ```
+
+      Returning a local variable from a function also moves it (or, better,
+      builds it directly in the caller's variable — *return value
+      optimisation*). So **never** write `return std::move(local);` — it can
+      only make things worse.
+
+      ## Moves in your own code
+
+      Take a parameter **by value** and move it into place when a function
+      will keep its own copy anyway — callers passing temporaries pay nothing:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <utility>
+
+      class Person {
+      public:
+          explicit Person(std::string name) : name_{std::move(name)} {}
+          const std::string& name() const { return name_; }
+      private:
+          std::string name_;
+      };
+
+      int main() {
+          std::string n{"Grace Hopper"};
+          Person a{n};                    // n copied into the parameter, then moved into the member
+          Person b{"Katherine Johnson"};  // built straight into the parameter, then moved
+          std::cout << a.name() << ", " << b.name() << ", " << n << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Grace Hopper, Katherine Johnson, Grace Hopper
+      ```
+
+      {{check moved-from}}
+
+      {{check when-move}}
+    checks:
+      - id: moved-from
+        type: output
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <utility>
+          #include <vector>
+
+          int main() {
+              std::vector<int> a{1, 2, 3};
+              std::vector<int> b = std::move(a);
+              a = {9};
+              std::cout << b.size() << ' ' << a.size() << ' ' << a[0] << '\n';
+              return 0;
+          }
+        answer: |
+          3 1 9
+        why: "b took a's elements. A moved-from object can safely be given a new value."
+      - id: when-move
+        type: mcq
+        prompt: "When should you write `std::move(x)`?"
+        options:
+          - On every return statement
+          - When you're finished with `x` and want its contents transferred instead of copied
+          - To make `x` constant
+          - To delete `x`
+        answer: 1
+        why: "It's a promise that you won't rely on x's contents afterwards. Don't use it on returned locals."
+    cards:
+      - front: What is a **move**?
+        back: Transferring an object's resources (e.g. a string's buffer) to another object instead of copying them. The source is left valid but unspecified.
+      - front: What does `std::move(x)` actually do?
+        back: It's a cast marking `x` as "may be moved from" — the move itself happens in the constructor/assignment that receives it.
+      - front: Should you write `return std::move(local);`?
+        back: No — returning a local already moves it (or elides the copy entirely); `std::move` can prevent that optimisation.
+
+  - type: quiz
+    id: c15-quiz1
+    title: "Quiz: smart pointers and moves"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <memory>
+
+          struct T {
+              T() { std::cout << 'c'; }
+              ~T() { std::cout << 'd'; }
+          };
+
+          int main() {
+              auto a = std::make_unique<T>();
+              auto b = std::make_unique<T>();
+              a = std::move(b);
+              std::cout << '|';
+              return 0;
+          }
+        answer: |
+          ccd|d
+        why: "Two objects are created. When `a` takes over `b`'s object, `a`'s old object is deleted (d). The remaining one is deleted at the end of main."
+      - type: mcq
+        prompt: "Which creates a `std::unique_ptr<Player>` correctly?"
+        options:
+          - "`std::unique_ptr<Player> p = Player{};`"
+          - "`auto p = std::make_unique<Player>(\"Ada\");`"
+          - "`auto p = new Player{\"Ada\"};`"
+          - "`std::unique_ptr<Player> p = std::make_shared<Player>();`"
+        answer: 1
+        why: "`std::make_unique<T>(args)` is the standard way."
+      - type: tf
+        prompt: "After `auto q = std::move(p);` for a `unique_ptr p`, `p` is `nullptr`."
+        answer: true
+        why: "Ownership moved to q, leaving p empty."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <memory>
+
+          int main() {
+              auto s = std::make_shared<int>(1);
+              auto t = s;
+              *t = 2;
+              std::weak_ptr<int> w = s;
+              std::cout << *s << ' ' << s.use_count() << '\n';
+              return 0;
+          }
+        answer: |
+          2 2
+        why: "s and t share one int; a weak_ptr doesn't count as an owner."
+
+  - type: lesson
+    id: c15-rules
+    title: The rules of zero, three and five
+    minutes: 24
+    objectives:
+      - Name the special member functions the compiler can generate
+      - Follow the rule of zero by building classes from self-managing members
+      - Implement the rule of five for a class that owns a raw resource
+    body: |
+      A class has up to five **special member functions** that deal with
+      copying, moving and destroying — and the compiler writes them for you
+      if you don't:
+
+      | Function | Signature | Runs when |
+      |---|---|---|
+      | destructor | `~T()` | the object dies |
+      | copy constructor | `T(const T&)` | `T b = a;` |
+      | copy assignment | `T& operator=(const T&)` | `b = a;` |
+      | move constructor | `T(T&&)` | `T b = std::move(a);` |
+      | move assignment | `T& operator=(T&&)` | `b = std::move(a);` |
+
+      (`T&&` is an **rvalue reference** — a reference that binds to temporaries
+      and moved-from values.) The generated versions simply copy, move or
+      destroy each member in turn.
+
+      ## The rule of zero
+
+      If every member manages itself — `std::string`, `std::vector`,
+      `std::unique_ptr`, numbers — the generated versions are exactly right.
+      **Write none of the five.** This is the **rule of zero**, and it covers
+      almost every class you'll write:
+
+      ```cpp static
+      class Playlist {
+          std::string name_;
+          std::vector<Song> songs_;
+          std::unique_ptr<Artwork> cover_;   // makes Playlist move-only — correctly
+      };                                     // no destructor, no copy/move code needed
+      ```
+
+      ## The rule of three / five
+
+      Only a class that **directly** manages a raw resource (a pointer from
+      `new`, a file handle from a C library…) needs custom versions — and then
+      it needs **all** of them: if you write a destructor to free the
+      resource, the generated copy would share it and double-free it
+      (Chapter 11's `IntBuffer`). That's the **rule of three** (destructor,
+      copy constructor, copy assignment), or **five** adding the two moves.
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <utility>
+
+      class Buffer {
+      public:
+          explicit Buffer(int size) : size_{size}, data_{new int[size]{}} {}
+          ~Buffer() { delete[] data_; }
+
+          Buffer(const Buffer& other) : size_{other.size_}, data_{new int[other.size_]} {
+              std::copy(other.data_, other.data_ + size_, data_);      // deep copy
+          }
+          Buffer& operator=(const Buffer& other) {
+              Buffer copy{other};          // copy first (safe even if other is *this)...
+              swap(copy);                  // ...then swap in; the old data dies with copy
+              return *this;
+          }
+
+          Buffer(Buffer&& other) noexcept
+              : size_{std::exchange(other.size_, 0)}, data_{std::exchange(other.data_, nullptr)} {}
+          Buffer& operator=(Buffer&& other) noexcept {
+              swap(other);                 // other now holds our old data and frees it
+              return *this;
+          }
+
+          void swap(Buffer& other) noexcept {
+              std::swap(size_, other.size_);
+              std::swap(data_, other.data_);
+          }
+
+          int& operator[](int i) { return data_[i]; }
+          int size() const { return size_; }
+
+      private:
+          int size_;
+          int* data_;
+      };
+
+      int main() {
+          Buffer a{3};
+          a[0] = 7;
+          Buffer b = a;                 // deep copy
+          b[0] = 99;
+          Buffer c = std::move(a);      // steal a's array
+          std::cout << b[0] << ' ' << c[0] << ' ' << a.size() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      99 7 0
+      ```
+
+      Things to notice:
+
+      - The copy constructor allocates **new** memory and copies the elements — a *deep* copy.
+      - Copy assignment uses the **copy-and-swap** idiom: correct even for `a = a`, and if the copy throws, `*this` is untouched.
+      - The moves just **steal** the pointer (`std::exchange` sets the source's member and returns the old value), leaving the source empty. They're marked `noexcept` — they can't fail — which lets `std::vector` use them when it grows.
+
+      > [!remember]
+      > Rule of zero first. If you ever need the rule of five, ask whether a
+      > `std::vector` or `std::unique_ptr` member would do the job instead.
+
+      {{check rules}}
+    checks:
+      - id: rules
+        type: mcq
+        prompt: "Your class's members are a `std::string`, a `std::vector<int>` and an `int`. Which special member functions should you write?"
+        options:
+          - All five
+          - Just the destructor
+          - None — the rule of zero
+          - Only the copy constructor
+        answer: 2
+        why: "Every member manages itself; the generated functions are correct."
+      - id: deep
+        type: mcq
+        prompt: "A class holds `int* data_` from `new int[n]` and has a destructor that deletes it, but no copy constructor. What happens when an object is copied?"
+        options:
+          - The array is copied
+          - Both objects point to the same array, which is deleted twice
+          - It doesn't compile
+          - The copy gets a null pointer
+        answer: 1
+        why: "The generated copy constructor copies the pointer (a shallow copy) — hence the rule of three."
+    cards:
+      - front: Name the five special member functions.
+        back: Destructor, copy constructor, copy assignment, move constructor, move assignment.
+      - front: What is the **rule of zero**?
+        back: If all members manage their own resources, write none of the special member functions — the generated ones are correct.
+      - front: What is the **rule of three/five**?
+        back: A class that directly manages a resource needs a destructor and correct copy operations (and move operations) — all together.
+      - front: What is a **deep copy**?
+        back: Copying the resource a pointer refers to (new memory, copied contents), not just the pointer.
+
+  - type: lesson
+    id: c15-exceptions
+    title: Exceptions
+    minutes: 26
+    objectives:
+      - Throw an exception when something can't be done
+      - Catch exceptions with `try` / `catch` by const reference
+      - Explain stack unwinding, and why RAII makes exceptions safe
+      - Choose between exceptions and other ways of reporting errors
+    body: |
+      Some errors can't be handled where they're detected. A function asked
+      to open a file that doesn't exist, or to build a `Date` for 31 February,
+      can't sensibly continue — and can't know what the caller wants done
+      about it. It needs to **report** the problem to someone who does know.
+
+      C++'s mechanism for that is the **exception**:
+
+      ```cpp
+      #include <iostream>
+      #include <stdexcept>
+      #include <string>
+
+      double divide(double a, double b) {
+          if (b == 0) {
+              throw std::invalid_argument{"division by zero"};
+          }
+          return a / b;
+      }
+
+      int main() {
+          try {
+              std::cout << divide(10, 4) << '\n';
+              std::cout << divide(1, 0) << '\n';
+              std::cout << "never printed\n";
+          } catch (const std::invalid_argument& e) {
+              std::cout << "Error: " << e.what() << '\n';
+          }
+          std::cout << "program continues\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      2.5
+      Error: division by zero
+      program continues
+      ```
+
+      - `throw` creates an exception object and **immediately** leaves the function — and every function above it — until a matching `catch` is found.
+      - `try { ... }` marks code whose exceptions you want to handle; `catch (const Type& e)` handles exceptions of that type (or derived from it). Always catch by **const reference**.
+      - `e.what()` returns the message.
+      - If nothing catches an exception, the program terminates (you've seen `terminate called after throwing…` when using `.at()` out of range).
+
+      ## Standard exception types
+
+      `<stdexcept>` has a hierarchy, all derived from `std::exception`:
+
+      | Type | For |
+      |---|---|
+      | `std::invalid_argument` | a bad argument (e.g. `std::stoi("abc")`) |
+      | `std::out_of_range` | an index or value outside the allowed range (`.at()`) |
+      | `std::runtime_error` | errors only detectable while running (a missing file) |
+      | `std::logic_error` | bugs — a broken precondition |
+
+      Catching `const std::exception&` catches all of them. Order matters:
+      put specific `catch` blocks before general ones.
+
+      ## Stack unwinding: why RAII matters
+
+      As an exception flies up through functions, every local object in
+      between is **destroyed properly** — destructors run. This is **stack
+      unwinding**, and it's why RAII is so important: a `std::vector`,
+      `std::unique_ptr` or file object releases its resource even when an
+      exception passes through. Raw `new`/`delete` would leak:
+
+      ```cpp
+      #include <iostream>
+      #include <memory>
+      #include <stdexcept>
+
+      struct Resource {
+          Resource() { std::cout << "acquire\n"; }
+          ~Resource() { std::cout << "release\n"; }
+      };
+
+      void risky() {
+          auto r = std::make_unique<Resource>();
+          throw std::runtime_error{"something failed"};
+      }   // r's destructor still runs during unwinding
+
+      int main() {
+          try {
+              risky();
+          } catch (const std::exception& e) {
+              std::cout << "caught: " << e.what() << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      acquire
+      release
+      caught: something failed
+      ```
+
+      ## When to use exceptions
+
+      - Use them for **exceptional** situations a function can't handle locally: a constructor that can't build a valid object (it has no return value!), a failed resource, a violated precondition.
+      - Don't use them for ordinary control flow — "not found" in a search is normal; return `std::optional` or an end iterator instead.
+      - A function that promises never to throw can be marked **`noexcept`** (like the moves in the previous lesson).
+
+      {{check exc-output}}
+
+      {{task parse-age}}
+    checks:
+      - id: exc-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <stdexcept>
+
+          int check(int x) {
+              if (x < 0) {
+                  throw std::out_of_range{"negative"};
+              }
+              return x * 2;
+          }
+
+          int main() {
+              int total{0};
+              for (int v : {3, -1, 5}) {
+                  try {
+                      total += check(v);
+                  } catch (const std::exception& e) {
+                      std::cout << "skip " << e.what() << '\n';
+                  }
+              }
+              std::cout << total << '\n';
+              return 0;
+          }
+        answer: |
+          skip negative
+          16
+        why: "−1 throws and is caught inside the loop, so the loop continues: 6 + 10 = 16."
+      - id: catch-ref
+        type: mcq
+        prompt: How should you catch exceptions?
+        options:
+          - "`catch (std::exception e)` — by value"
+          - "`catch (const std::exception& e)` — by const reference"
+          - "`catch (std::exception* e)` — by pointer"
+          - "`catch (...)` always"
+        answer: 1
+        why: "By const reference: no copying, and no slicing of derived exception types."
+    tasks:
+      - id: parse-age
+        title: Validate with exceptions
+        prompt: |
+          Write `int parseAge(const std::string& text)` that converts `text` to
+          an int with `std::stoi` and returns it, but throws
+          `std::out_of_range` if the age isn't between 0 and 150. (`std::stoi`
+          itself throws `std::invalid_argument` for text that isn't a number.)
+          Then write `std::string describe(const std::string& text)` that
+          returns `"age N"`, `"out of range"` or `"not a number"`, catching the
+          exceptions.
+        starter: |
+          #include <stdexcept>
+          #include <string>
+
+          int parseAge(const std::string& text) {
+              return 0;
+          }
+
+          std::string describe(const std::string& text) {
+              return "";
+          }
+        harness: |
+          CHECK(parseAge("42"), 42);
+          CHECK_THROWS(parseAge("200"));
+          CHECK_THROWS(parseAge("abc"));
+          CHECK(describe("42"), "age 42");
+          CHECK(describe("-3"), "out of range");
+          CHECK(describe("old"), "not a number");
+        hints:
+          - "`int age = std::stoi(text); if (age < 0 || age > 150) throw std::out_of_range{\"age\"}; return age;`"
+          - "In `describe`, catch `std::out_of_range` and `std::invalid_argument` in separate `catch` blocks."
+        solution: |
+          #include <stdexcept>
+          #include <string>
+
+          int parseAge(const std::string& text) {
+              int age = std::stoi(text);
+              if (age < 0 || age > 150) {
+                  throw std::out_of_range{"age out of range"};
+              }
+              return age;
+          }
+
+          std::string describe(const std::string& text) {
+              try {
+                  return "age " + std::to_string(parseAge(text));
+              } catch (const std::out_of_range&) {
+                  return "out of range";
+              } catch (const std::invalid_argument&) {
+                  return "not a number";
+              }
+          }
+    cards:
+      - front: What does `throw` do?
+        back: Creates an exception and leaves the current function (and callers) immediately until a matching `catch` handles it.
+      - front: What is **stack unwinding**?
+        back: As an exception propagates, all local objects in the abandoned scopes are destroyed — their destructors run.
+      - front: Why do exceptions and RAII go together?
+        back: RAII objects release their resources in destructors, which run during unwinding — so nothing leaks when an exception passes through.
+      - front: When should you *not* use exceptions?
+        back: For normal, expected outcomes like "not found" — return `std::optional`, a flag, or an end iterator instead.
+
+  - type: lesson
+    id: c15-optional
+    title: "Maybe a value: std::optional"
+    minutes: 16
+    objectives:
+      - Return "a value or nothing" with `std::optional`
+      - Check and read an optional safely
+      - Know when `std::variant` and `std::string_view` are useful
+    body: |
+      A function that searches may find nothing. So far you've signalled that
+      with `-1`, `nullptr`, `npos` or an end iterator — each a special value
+      the caller must remember to check. **`std::optional<T>`** (C++17,
+      `<optional>`) says it in the type: *either a `T`, or nothing*.
+
+      ```cpp
+      #include <iostream>
+      #include <optional>
+      #include <string>
+      #include <vector>
+
+      std::optional<int> findIndex(const std::vector<std::string>& v, const std::string& target) {
+          for (std::size_t i{0}; i < v.size(); ++i) {
+              if (v[i] == target) {
+                  return static_cast<int>(i);
+              }
+          }
+          return std::nullopt;   // nothing
+      }
+
+      int main() {
+          std::vector<std::string> fruits{"apple", "pear", "plum"};
+          auto where = findIndex(fruits, "pear");
+          if (where) {
+              std::cout << "pear at " << *where << '\n';
+          }
+          auto missing = findIndex(fruits, "kiwi");
+          std::cout << missing.has_value() << ' ' << missing.value_or(-1) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      pear at 1
+      0 -1
+      ```
+
+      - Return a `T` to give a value; return `std::nullopt` (or `{}`) for nothing.
+      - An optional converts to `bool`: `if (opt)` checks for a value.
+      - `*opt` reads the value (undefined behaviour if empty — check first!); `opt.value()` throws if empty; `opt.value_or(fallback)` gives a default.
+
+      An optional of a small type costs just a little extra memory — no heap
+      allocation — and it's impossible to forget that "nothing" is possible,
+      because the type says so.
+
+      > [!deep] Two more modern types
+      > - **`std::variant<A, B, C>`** (`<variant>`) holds exactly one of several types — a type-safe union. For example `std::variant<int, std::string>` is "a number or a name". Read it with `std::get_if` or `std::visit`.
+      > - **`std::string_view`** (`<string_view>`) is a cheap, non-owning *view* of characters owned by someone else — a string literal or a `std::string`. It's the modern choice for read-only text parameters (instead of `const std::string&`) when callers might pass literals. Like a reference, it must not outlive the text it views.
+
+      {{check optional-output}}
+
+      {{task parse-int}}
+    checks:
+      - id: optional-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <optional>
+
+          std::optional<int> half(int x) {
+              if (x % 2 != 0) {
+                  return std::nullopt;
+              }
+              return x / 2;
+          }
+
+          int main() {
+              int total{0};
+              for (int x : {8, 3, 10}) {
+                  total += half(x).value_or(100);
+              }
+              std::cout << total << '\n';
+              return 0;
+          }
+        answer: |
+          109
+        why: "4 + 100 (3 is odd) + 5 = 109."
+    tasks:
+      - id: parse-int
+        title: Parse without exceptions
+        prompt: |
+          Write `std::optional<int> parseInt(const std::string& s)` returning
+          the number if `s` is an optional `-` followed by one or more digits
+          (and nothing else), and `std::nullopt` otherwise. Values fit in an
+          `int`.
+        starter: |
+          #include <cctype>
+          #include <optional>
+          #include <string>
+
+          std::optional<int> parseInt(const std::string& s) {
+              return std::nullopt;
+          }
+        harness: |
+          CHECK(parseInt("42").value_or(-999), 42);
+          CHECK(parseInt("-17").value_or(-999), -17);
+          CHECK(parseInt("0").value_or(-999), 0);
+          CHECK(parseInt("").has_value(), false);
+          CHECK(parseInt("-").has_value(), false);
+          CHECK(parseInt("12a").has_value(), false);
+          CHECK(parseInt(" 5").has_value(), false);
+        hints:
+          - "Skip a leading `-` (remembering it), make sure at least one character is left, and that every remaining character is a digit."
+          - "Build the value with `value = value * 10 + (c - '0')`."
+        solution: |
+          #include <cctype>
+          #include <optional>
+          #include <string>
+
+          std::optional<int> parseInt(const std::string& s) {
+              std::size_t i{0};
+              bool negative{false};
+              if (i < s.size() && s[i] == '-') {
+                  negative = true;
+                  ++i;
+              }
+              if (i == s.size()) {
+                  return std::nullopt;
+              }
+              int value{0};
+              for (; i < s.size(); ++i) {
+                  if (!std::isdigit(static_cast<unsigned char>(s[i]))) {
+                      return std::nullopt;
+                  }
+                  value = value * 10 + (s[i] - '0');
+              }
+              return negative ? -value : value;
+          }
+    cards:
+      - front: What is `std::optional<T>`?
+        back: A value that is either a `T` or empty (`std::nullopt`) — a type-safe "maybe".
+      - front: How do you read an optional safely?
+        back: "`if (opt) { use *opt; }`, or `opt.value_or(fallback)`. `*opt` on an empty optional is undefined behaviour."
+      - front: What is `std::string_view`?
+        back: A cheap non-owning view of characters owned elsewhere — good for read-only text parameters; must not outlive the text.
+
+  - type: quiz
+    id: c15-quiz2
+    title: "Quiz: rules, exceptions and optional"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <stdexcept>
+
+          struct Noisy {
+              char c;
+              ~Noisy() { std::cout << c; }
+          };
+
+          void f() {
+              Noisy a{'a'};
+              Noisy b{'b'};
+              throw std::runtime_error{"x"};
+          }
+
+          int main() {
+              try {
+                  f();
+              } catch (const std::exception&) {
+                  std::cout << '!';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          ba!
+        why: "During unwinding, b and a are destroyed (reverse order) before the catch block runs."
+      - type: mcq
+        prompt: "Which is the most fitting return type for `findUser(name)`, where no such user is a normal outcome?"
+        options:
+          - "`User` — throw if missing"
+          - "`std::optional<User>`"
+          - "`int` — return -1"
+          - "`void`"
+        answer: 1
+        why: "Absence is expected, so make it part of the type rather than an exception or a magic value."
+      - type: tf
+        prompt: "A class holding only a `std::vector<int>` and a `std::string` needs a hand-written copy constructor."
+        answer: false
+        why: "Rule of zero: the members copy themselves correctly."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <stdexcept>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{1, 2, 3};
+              try {
+                  std::cout << v.at(1);
+                  std::cout << v.at(5);
+              } catch (const std::out_of_range&) {
+                  std::cout << 'X';
+              } catch (const std::exception&) {
+                  std::cout << 'Y';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          2X
+        why: "`at(5)` throws `std::out_of_range`, caught by the first, more specific handler."
+
+  - type: challenge
+    id: c15-ch-bst
+    title: A binary search tree
+    difficulty: 3
+    tags: [unique_ptr, recursion, trees]
+    prompt: |
+      A **binary search tree** stores values in nodes; each node's left
+      subtree holds smaller values and its right subtree larger ones. Write
+      `class IntSet` backed by such a tree, with nodes owned through
+      `std::unique_ptr` (no `new` or `delete` anywhere):
+
+      - `bool insert(int v)` — adds `v`; returns `false` if it was already there.
+      - `bool contains(int v) const`
+      - `int size() const`
+      - `std::vector<int> sorted() const` — all values in ascending order (an *in-order* traversal: left subtree, node, right subtree).
+    starter: |
+      #include <memory>
+      #include <vector>
+
+      class IntSet {
+      public:
+          bool insert(int v) {
+              return false;
+          }
+
+          bool contains(int v) const {
+              return false;
+          }
+
+          int size() const {
+              return 0;
+          }
+
+          std::vector<int> sorted() const {
+              return {};
+          }
+
+      private:
+          struct Node {
+              int value;
+              std::unique_ptr<Node> left;
+              std::unique_ptr<Node> right;
+          };
+          std::unique_ptr<Node> root_{};
+          int size_{0};
+      };
+    harness: |
+      IntSet s{};
+      CHECK(s.insert(5), true);
+      CHECK(s.insert(2), true);
+      CHECK(s.insert(8), true);
+      CHECK(s.insert(5), false);
+      CHECK(s.insert(1), true);
+      CHECK(s.insert(9), true);
+      CHECK(s.size(), 5);
+      CHECK(s.contains(8), true);
+      CHECK(s.contains(7), false);
+      CHECK(s.sorted(), (std::vector<int>{1, 2, 5, 8, 9}));
+      IntSet empty{};
+      CHECK(empty.sorted(), (std::vector<int>{}));
+      CHECK(empty.contains(0), false);
+    hints:
+      - "Insert without recursion: walk a `std::unique_ptr<Node>* slot = &root_;` down — `slot = v < (*slot)->value ? &(*slot)->left : &(*slot)->right;` — until `*slot` is empty, then `*slot = std::make_unique<Node>(Node{v, nullptr, nullptr});`."
+      - "`contains` walks with a plain `const Node* n = root_.get();`."
+      - "`sorted` is easiest as a recursive private helper `void collect(const Node* n, std::vector<int>& out) const`."
+    solution: |
+      #include <memory>
+      #include <vector>
+
+      class IntSet {
+      public:
+          bool insert(int v) {
+              std::unique_ptr<Node>* slot = &root_;
+              while (*slot) {
+                  if (v == (*slot)->value) {
+                      return false;
+                  }
+                  slot = v < (*slot)->value ? &(*slot)->left : &(*slot)->right;
+              }
+              *slot = std::make_unique<Node>(Node{v, nullptr, nullptr});
+              ++size_;
+              return true;
+          }
+
+          bool contains(int v) const {
+              const Node* n = root_.get();
+              while (n != nullptr) {
+                  if (v == n->value) {
+                      return true;
+                  }
+                  n = v < n->value ? n->left.get() : n->right.get();
+              }
+              return false;
+          }
+
+          int size() const {
+              return size_;
+          }
+
+          std::vector<int> sorted() const {
+              std::vector<int> out{};
+              collect(root_.get(), out);
+              return out;
+          }
+
+      private:
+          struct Node {
+              int value;
+              std::unique_ptr<Node> left;
+              std::unique_ptr<Node> right;
+          };
+
+          static void collect(const Node* n, std::vector<int>& out) {
+              if (n == nullptr) {
+                  return;
+              }
+              collect(n->left.get(), out);
+              out.push_back(n->value);
+              collect(n->right.get(), out);
+          }
+
+          std::unique_ptr<Node> root_{};
+          int size_{0};
+      };
+    explain: |
+      Each node owns its children, so destroying the root destroys the whole
+      tree — no destructor needed (rule of zero!). Searching takes about
+      log₂(n) steps when the tree is balanced; `std::set` is a (self-balancing)
+      tree just like this one.
+
+  - type: challenge
+    id: c15-ch-buffer
+    title: Rule of five
+    difficulty: 3
+    tags: [rule of five, move semantics]
+    prompt: |
+      Complete `class IntArray`, which owns a heap array through a raw
+      pointer, by implementing all five special member functions correctly:
+      copies must be **deep** and independent; moves must steal the array
+      and leave the source with size 0 and no array. (Yes — in real code
+      you'd use `std::vector`. This is to understand what it does for you.)
+    starter: |
+      #include <algorithm>
+      #include <utility>
+
+      class IntArray {
+      public:
+          explicit IntArray(int size) : size_{size}, data_{new int[size]{}} {}
+
+          // TODO: destructor, copy constructor, copy assignment,
+          //       move constructor, move assignment
+
+          int& operator[](int i) { return data_[i]; }
+          int size() const { return size_; }
+          bool hasData() const { return data_ != nullptr; }
+
+      private:
+          int size_;
+          int* data_;
+      };
+    harness: |
+      IntArray a{3};
+      a[0] = 1; a[1] = 2; a[2] = 3;
+      IntArray b{a};
+      b[0] = 100;
+      CHECK(a[0], 1);
+      CHECK(b[0], 100);
+      CHECK(b.size(), 3);
+      IntArray c{1};
+      c = a;
+      c[1] = 50;
+      CHECK(a[1], 2);
+      CHECK(c.size(), 3);
+      c = c;
+      CHECK(c[1], 50);
+      IntArray d{std::move(a)};
+      CHECK(d[2], 3);
+      CHECK(a.size(), 0);
+      CHECK(a.hasData(), false);
+      IntArray e{2};
+      e = std::move(d);
+      CHECK(e.size(), 3);
+      CHECK(e[0], 1);
+      CHECK(d.hasData(), true);
+    hints:
+      - "Copy constructor: allocate `new int[other.size_]` and `std::copy` the elements."
+      - "Copy assignment with copy-and-swap: `IntArray tmp{other}; swap(tmp); return *this;` (write a `swap` member)."
+      - "Move constructor: `size_{std::exchange(other.size_, 0)}, data_{std::exchange(other.data_, nullptr)}`. Move assignment: swap with `other` — the checker expects the moved-from object to receive your old array."
+    solution: |
+      #include <algorithm>
+      #include <utility>
+
+      class IntArray {
+      public:
+          explicit IntArray(int size) : size_{size}, data_{new int[size]{}} {}
+
+          ~IntArray() { delete[] data_; }
+
+          IntArray(const IntArray& other) : size_{other.size_}, data_{new int[other.size_]} {
+              std::copy(other.data_, other.data_ + size_, data_);
+          }
+
+          IntArray& operator=(const IntArray& other) {
+              IntArray copy{other};
+              swap(copy);
+              return *this;
+          }
+
+          IntArray(IntArray&& other) noexcept
+              : size_{std::exchange(other.size_, 0)}, data_{std::exchange(other.data_, nullptr)} {}
+
+          IntArray& operator=(IntArray&& other) noexcept {
+              swap(other);
+              return *this;
+          }
+
+          void swap(IntArray& other) noexcept {
+              std::swap(size_, other.size_);
+              std::swap(data_, other.data_);
+          }
+
+          int& operator[](int i) { return data_[i]; }
+          int size() const { return size_; }
+          bool hasData() const { return data_ != nullptr; }
+
+      private:
+          int size_;
+          int* data_;
+      };
+
+  - type: challenge
+    id: c15-ch-config
+    title: Config file reader
+    difficulty: 2
+    tags: [exceptions, optional, parsing]
+    prompt: |
+      Read lines of a configuration file. Blank lines and lines starting with
+      `#` are ignored. Every other line must look like `key=value` (key and
+      value trimmed of spaces; the key non-empty). The last lines of input are
+      queries of the form `? key`.
+
+      - For a malformed line, print `Line N: bad syntax` (N counts every line from 1) and continue.
+      - For a query, print `key = value`, or `key is not set`.
+
+      Implement parsing as a function that returns `std::optional<std::pair<std::string, std::string>>`.
+    starter: |
+      #include <iostream>
+      #include <map>
+      #include <optional>
+      #include <string>
+      #include <utility>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          # settings
+          name = Ada
+          level=3
+
+          oops
+          =nokey
+          ? name
+          ? level
+          ? colour
+        out: |
+          Line 5: bad syntax
+          Line 6: bad syntax
+          name = Ada
+          level = 3
+          colour is not set
+      - in: |
+          a = 1
+          a = 2
+          ? a
+        out: |
+          a = 2
+      - in: ""
+        out: ""
+    hints:
+      - "Write `std::string trim(const std::string&)` (Chapter 8) and `std::optional<std::pair<std::string, std::string>> parseLine(const std::string&)`."
+      - "In `main`, count lines; check for a leading `?` first, then comments/blank lines, then `parseLine`."
+    solution: |
+      #include <iostream>
+      #include <map>
+      #include <optional>
+      #include <string>
+      #include <utility>
+
+      std::string trim(const std::string& s) {
+          std::size_t first = s.find_first_not_of(" \t");
+          if (first == std::string::npos) {
+              return "";
+          }
+          std::size_t last = s.find_last_not_of(" \t");
+          return s.substr(first, last - first + 1);
+      }
+
+      std::optional<std::pair<std::string, std::string>> parseLine(const std::string& line) {
+          std::size_t eq = line.find('=');
+          if (eq == std::string::npos) {
+              return std::nullopt;
+          }
+          std::string key = trim(line.substr(0, eq));
+          if (key.empty()) {
+              return std::nullopt;
+          }
+          return std::make_pair(key, trim(line.substr(eq + 1)));
+      }
+
+      int main() {
+          std::map<std::string, std::string> settings{};
+          std::string line{};
+          int number{0};
+          while (std::getline(std::cin, line)) {
+              ++number;
+              std::string t = trim(line);
+              if (!t.empty() && t[0] == '?') {
+                  std::string key = trim(t.substr(1));
+                  auto it = settings.find(key);
+                  if (it != settings.end()) {
+                      std::cout << key << " = " << it->second << '\n';
+                  } else {
+                      std::cout << key << " is not set\n";
+                  }
+                  continue;
+              }
+              if (t.empty() || t[0] == '#') {
+                  continue;
+              }
+              auto entry = parseLine(t);
+              if (!entry) {
+                  std::cout << "Line " << number << ": bad syntax\n";
+                  continue;
+              }
+              settings[entry->first] = entry->second;
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c15-ch-safe-account
+    title: Exceptions for invariants
+    difficulty: 2
+    tags: [exceptions, classes]
+    prompt: |
+      Rewrite the bank account with **exceptions** instead of `bool` results:
+
+      - `explicit Account(double initial)` throws `std::invalid_argument` for a negative initial balance.
+      - `void deposit(double)` throws `std::invalid_argument` for amounts ≤ 0.
+      - `void withdraw(double)` throws `std::invalid_argument` for amounts ≤ 0, and `std::runtime_error` if the balance is too low.
+      - `double balance() const`.
+
+      A failed operation must leave the balance unchanged.
+    starter: |
+      #include <stdexcept>
+
+      class Account {
+      public:
+          explicit Account(double initial) : balance_{initial} {}
+
+          void deposit(double amount) {
+          }
+
+          void withdraw(double amount) {
+          }
+
+          double balance() const { return balance_; }
+
+      private:
+          double balance_{0.0};
+      };
+    harness: |
+      CHECK_THROWS(Account{-1});
+      Account a{100};
+      a.deposit(50);
+      CHECK(a.balance(), 150.0);
+      CHECK_THROWS(a.deposit(0));
+      CHECK_THROWS(a.withdraw(-5));
+      CHECK_THROWS(a.withdraw(500));
+      CHECK(a.balance(), 150.0);
+      a.withdraw(150);
+      CHECK(a.balance(), 0.0);
+      bool wasRuntime{false};
+      try { a.withdraw(1); } catch (const std::runtime_error&) { wasRuntime = true; } catch (...) {}
+      CHECK(wasRuntime, true);
+    hints:
+      - "Check first, throw, and only change `balance_` when every check has passed."
+      - "In the constructor, validate in the body: `if (initial < 0) throw std::invalid_argument{\"negative\"};`"
+    solution: |
+      #include <stdexcept>
+
+      class Account {
+      public:
+          explicit Account(double initial) : balance_{initial} {
+              if (initial < 0) {
+                  throw std::invalid_argument{"negative initial balance"};
+              }
+          }
+
+          void deposit(double amount) {
+              if (amount <= 0) {
+                  throw std::invalid_argument{"deposit must be positive"};
+              }
+              balance_ += amount;
+          }
+
+          void withdraw(double amount) {
+              if (amount <= 0) {
+                  throw std::invalid_argument{"withdrawal must be positive"};
+              }
+              if (amount > balance_) {
+                  throw std::runtime_error{"insufficient funds"};
+              }
+              balance_ -= amount;
+          }
+
+          double balance() const { return balance_; }
+
+      private:
+          double balance_{0.0};
+      };
+    explain: |
+      A constructor that throws means **no object is created** — so an
+      invalid `Account` can never exist. That's the strongest way to guarantee
+      an invariant.
+
+  - type: review
+    id: c15-review
+    title: "Chapter 15 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      #include <memory>
+      auto p = std::make_unique<T>(args);        // sole owner, auto delete
+      auto q = std::move(p);                      // transfer; p is null
+      std::vector<std::unique_ptr<Base>> things;  // owning polymorphic container
+      auto s = std::make_shared<T>(args);        // shared ownership, s.use_count()
+      std::weak_ptr<T> w = s;  if (auto locked = w.lock()) { }
+
+      v.push_back(std::move(bigString));          // move instead of copy
+      explicit Person(std::string n) : name_{std::move(n)} {}
+
+      // Rule of five (only when directly managing a raw resource):
+      ~T();  T(const T&);  T& operator=(const T&);  T(T&&) noexcept;  T& operator=(T&&) noexcept;
+
+      #include <stdexcept>
+      throw std::invalid_argument{"message"};
+      try { ... } catch (const std::out_of_range& e) { e.what(); } catch (const std::exception& e) { }
+
+      #include <optional>
+      std::optional<int> f();   return std::nullopt;   if (opt) *opt;   opt.value_or(0);
+      ```
+
+      ## Key ideas
+
+      - Smart pointers are RAII for heap objects. Default to `unique_ptr`; `shared_ptr` only for real shared ownership; `weak_ptr` to break cycles.
+      - Moving transfers resources; the source stays valid but unspecified. Temporaries and returned locals move automatically.
+      - Rule of zero for almost every class; rule of five only for classes that manage a raw resource themselves.
+      - Exceptions report errors a function can't handle; RAII keeps unwinding safe. Catch by const reference, specific types first.
+      - `std::optional` makes "maybe no value" explicit in the type.
+    questions:
+      - type: output
+        prompt: "Interleaving: polymorphism, unique_ptr and algorithms."
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <memory>
+          #include <vector>
+
+          struct Task {
+              virtual ~Task() = default;
+              virtual int cost() const = 0;
+          };
+
+          struct Small : Task {
+              int cost() const override { return 1; }
+          };
+
+          struct Big : Task {
+              int cost() const override { return 10; }
+          };
+
+          int main() {
+              std::vector<std::unique_ptr<Task>> tasks{};
+              tasks.push_back(std::make_unique<Big>());
+              tasks.push_back(std::make_unique<Small>());
+              tasks.push_back(std::make_unique<Big>());
+              auto big = std::count_if(tasks.begin(), tasks.end(),
+                                       [](const std::unique_ptr<Task>& t) { return t->cost() > 5; });
+              std::cout << big << ' ' << tasks[1]->cost() << '\n';
+              return 0;
+          }
+        answer: |
+          2 1
+        why: "Two Big tasks; the second element is Small."
+      - type: mcq
+        prompt: "A function will store the string it's given in a member. Best parameter?"
+        options:
+          - "`const std::string&` and copy it"
+          - "`std::string` by value, then `std::move` it into the member"
+          - "`std::string&`"
+          - "`std::string*`"
+        answer: 1
+        why: "Callers with temporaries pay only moves; callers with named strings pay one copy — the minimum either way."
+      - type: tf
+        prompt: "Catching `const std::exception&` also catches `std::out_of_range`."
+        answer: true
+        why: "All standard exceptions derive from `std::exception`."
+
+  - type: exam
+    id: c15-exam
+    title: "Chapter 15 exam"
+    minutes: 40
+    pick: 12
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <memory>
+
+          struct R {
+              int id;
+              explicit R(int i) : id{i} { std::cout << '+' << id; }
+              ~R() { std::cout << '-' << id; }
+          };
+
+          int main() {
+              auto a = std::make_unique<R>(1);
+              {
+                  auto b = std::make_unique<R>(2);
+                  a = std::move(b);
+              }
+              std::cout << '|';
+              return 0;
+          }
+        answer: |
+          +1+2-1|-2
+        why: "Assigning into `a` deletes object 1; object 2 now belongs to `a` and dies at the end of main."
+      - type: mcq
+        prompt: "What's wrong with `auto p = std::make_unique<int>(5); auto q = p;`?"
+        options:
+          - Nothing
+          - "unique_ptr can't be copied — use `std::move(p)`"
+          - "`make_unique` needs `new`"
+          - "`q` would be null"
+        answer: 1
+        why: "Copying a unique_ptr is deleted."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <memory>
+
+          int main() {
+              auto a = std::make_shared<int>(10);
+              std::weak_ptr<int> w = a;
+              {
+                  auto b = a;
+                  std::cout << a.use_count();
+              }
+              a.reset();
+              std::cout << w.expired() << '\n';
+              return 0;
+          }
+        answer: |
+          21
+        why: "Two owners inside the block; after `a.reset()`, no owners remain and the weak_ptr has expired."
+      - type: tf
+        prompt: "After `std::string b = std::move(a);`, it is safe to assign a new value to `a`."
+        answer: true
+        why: "A moved-from object is valid (just unspecified): assigning to it or destroying it is fine."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <stdexcept>
+          #include <string>
+
+          int main() {
+              std::string results{};
+              for (std::string s : {"12", "x", "7"}) {
+                  try {
+                      results += std::to_string(std::stoi(s) * 2) + ' ';
+                  } catch (const std::invalid_argument&) {
+                      results += "? ";
+                  }
+              }
+              std::cout << results << '\n';
+              return 0;
+          }
+        answer: |
+          24 ? 14
+        why: "`std::stoi(\"x\")` throws invalid_argument, handled inside the loop."
+      - type: mcq
+        prompt: "Which class needs a hand-written destructor, copy and move operations?"
+        options:
+          - "`struct Point { double x, y; };`"
+          - "`class Library { std::vector<Book> books_; };`"
+          - "`class Image { unsigned char* pixels_; /* from new[] */ };`"
+          - "`class Registry { std::unique_ptr<Db> db_; };`"
+        answer: 2
+        why: "Only the class owning a raw resource needs the rule of five. (Better still: use a vector for the pixels.)"
+      - type: output
+        code: |
+          #include <iostream>
+          #include <optional>
+          #include <string>
+
+          std::optional<char> firstVowel(const std::string& s) {
+              for (char c : s) {
+                  if (std::string{"aeiou"}.find(c) != std::string::npos) {
+                      return c;
+                  }
+              }
+              return {};
+          }
+
+          int main() {
+              std::cout << firstVowel("rhythm").value_or('-') << firstVowel("strong").value_or('-') << '\n';
+              return 0;
+          }
+        answer: |
+          -o
+        why: "\"rhythm\" has no vowel from aeiou; \"strong\" has o."
+      - type: mcq
+        prompt: What is **stack unwinding**?
+        options:
+          - Clearing a `std::stack`
+          - Destroying local objects in each scope an exception leaves, on its way to a handler
+          - Returning from main
+          - Undoing a move
+        answer: 1
+        why: "Destructors run as the exception propagates — which is why RAII makes code exception-safe."
+      - type: spot
+        prompt: "Which line makes this code leak memory if `process` throws?"
+        code: |
+          #include <stdexcept>
+          #include <vector>
+
+          void process(const std::vector<int>& v) {
+              if (v.empty()) {
+                  throw std::runtime_error{"empty"};
+              }
+          }
+
+          void run() {
+              int* scratch = new int[1000];
+              process({});
+              delete[] scratch;
+          }
+        answer: 11
+        why: "If `process` throws, `delete[]` is never reached. Use a `std::vector<int>` (or `std::unique_ptr<int[]>`) instead of `new`."
+      - type: fill
+        prompt: Complete the function so it transfers ownership into the vector.
+        code: |
+          void addTask(std::vector<std::unique_ptr<Task>>& tasks, std::unique_ptr<Task> t) {
+              tasks.push_back(std::___(t));
+          }
+        blanks:
+          - [move]
+        why: "A unique_ptr must be moved, not copied."
+      - type: code
+        prompt: |
+          Write `std::optional<double> average(const std::vector<int>& v)`
+          returning the average, or nothing for an empty vector; and
+          `double averageOrThrow(const std::vector<int>& v)` that throws
+          `std::invalid_argument` for an empty vector.
+        starter: |
+          #include <optional>
+          #include <stdexcept>
+          #include <vector>
+
+          std::optional<double> average(const std::vector<int>& v) {
+              return std::nullopt;
+          }
+
+          double averageOrThrow(const std::vector<int>& v) {
+              return 0.0;
+          }
+        harness: |
+          CHECK(average({1, 2}).value_or(-1), 1.5);
+          CHECK(average({}).has_value(), false);
+          CHECK(averageOrThrow({4, 4, 7}), 5.0);
+          CHECK_THROWS(averageOrThrow({}));
+        solution: |
+          #include <optional>
+          #include <stdexcept>
+          #include <vector>
+
+          std::optional<double> average(const std::vector<int>& v) {
+              if (v.empty()) {
+                  return std::nullopt;
+              }
+              double sum{0.0};
+              for (int x : v) {
+                  sum += x;
+              }
+              return sum / static_cast<double>(v.size());
+          }
+
+          double averageOrThrow(const std::vector<int>& v) {
+              auto a = average(v);
+              if (!a) {
+                  throw std::invalid_argument{"empty"};
+              }
+              return *a;
+          }
+      - type: code
+        prompt: |
+          `struct Node { int value; std::unique_ptr<Node> next; };` Write
+          `std::unique_ptr<Node> fromVector(const std::vector<int>& v)` building
+          a linked list in the vector's order (nullptr for an empty vector), and
+          `int sum(const Node* head)`.
+        starter: |
+          #include <memory>
+          #include <vector>
+
+          struct Node {
+              int value;
+              std::unique_ptr<Node> next;
+          };
+
+          std::unique_ptr<Node> fromVector(const std::vector<int>& v) {
+              return nullptr;
+          }
+
+          int sum(const Node* head) {
+              return 0;
+          }
+        harness: |
+          auto list = fromVector({4, 5, 6});
+          CHECK(list->value, 4);
+          CHECK(list->next->next->value, 6);
+          CHECK(list->next->next->next == nullptr, true);
+          CHECK(sum(list.get()), 15);
+          CHECK(fromVector({}) == nullptr, true);
+          CHECK(sum(nullptr), 0);
+        solution: |
+          #include <memory>
+          #include <vector>
+
+          struct Node {
+              int value;
+              std::unique_ptr<Node> next;
+          };
+
+          std::unique_ptr<Node> fromVector(const std::vector<int>& v) {
+              std::unique_ptr<Node> head{};
+              for (auto it = v.rbegin(); it != v.rend(); ++it) {
+                  head = std::make_unique<Node>(Node{*it, std::move(head)});
+              }
+              return head;
+          }
+
+          int sum(const Node* head) {
+              int total{0};
+              for (const Node* n = head; n != nullptr; n = n->next.get()) {
+                  total += n->value;
+              }
+              return total;
+          }

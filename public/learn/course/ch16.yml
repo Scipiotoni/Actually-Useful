@@ -1,0 +1,1423 @@
+id: ch16
+number: 16
+part: p4
+title: Templates and Generic Programming
+blurb: Write code once that works for any type — the machinery behind std::vector, std::sort and the whole standard library.
+hours: 5
+goals:
+  - Write function templates, and explain how the compiler deduces their types
+  - Write class templates such as a generic container
+  - Write generic algorithms over iterators and any callable
+  - Use non-type template parameters, `static_assert` and `if constexpr`
+  - Constrain templates with C++20 concepts
+
+items:
+  - type: lesson
+    id: c16-fn-templates
+    title: Function templates
+    minutes: 22
+    objectives:
+      - Write a function template with a type parameter
+      - Explain template argument deduction, and specify types explicitly
+      - Read the error when a type doesn't support what the template needs
+    body: |
+      Here's a function to find the larger of two `int`s:
+
+      ```cpp static
+      int larger(int a, int b) { return a > b ? a : b; }
+      ```
+
+      Now you need it for `double`s. And `std::string`s. And `char`s. The body
+      is identical every time — only the type changes. Overloading means
+      copying the same code again and again. Instead, write a **template**: a
+      recipe the compiler uses to generate the function for whatever type you
+      need.
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      template <typename T>
+      T larger(T a, T b) {
+          return a > b ? a : b;
+      }
+
+      int main() {
+          std::cout << larger(3, 7) << '\n';
+          std::cout << larger(2.5, 1.5) << '\n';
+          std::cout << larger(std::string{"pear"}, std::string{"apple"}) << '\n';
+          std::cout << larger<double>(3, 4.5) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      7
+      2.5
+      pear
+      4.5
+      ```
+
+      - `template <typename T>` introduces a **type parameter** named `T` (any name works; `T` is traditional). Inside, `T` stands for "some type".
+      - At each call, the compiler **deduces** `T` from the arguments: `larger(3, 7)` makes `T` = `int`, and the compiler generates (*instantiates*) an `int` version.
+      - When deduction is ambiguous — `larger(3, 4.5)` has an `int` and a `double` — say which type you want: `larger<double>(3, 4.5)`.
+
+      This is **generic programming**: the same algorithm for any suitable
+      type. It's how `std::max`, `std::swap` and `std::sort` work.
+
+      ## What types are "suitable"?
+
+      A template works with any type that supports **what its body uses**.
+      `larger` uses `>` — so it works for numbers, strings, characters… but not
+      for a type without `>`:
+
+      ```cpp error
+      #include <iostream>
+
+      struct Point {
+          int x;
+          int y;
+      };
+
+      template <typename T>
+      T larger(T a, T b) {
+          return a > b ? a : b;
+      }
+
+      int main() {
+          Point p = larger(Point{1, 2}, Point{3, 4});
+          std::cout << p.x << '\n';
+          return 0;
+      }
+      ```
+
+      The error appears **inside** the template ("no match for operator>"),
+      which is why template errors are famous for being long. Read them from
+      the line that mentions *your* code ("required from here"). Lesson 16.4
+      shows how C++20 concepts make these errors much clearer.
+
+      ## Several type parameters
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      template <typename K, typename V>
+      void printEntry(const K& key, const V& value) {
+          std::cout << key << " => " << value << '\n';
+      }
+
+      int main() {
+          printEntry("pi", 3.14159);
+          printEntry(42, std::string{"answer"});
+          return 0;
+      }
+      ```
+
+      ```output
+      pi => 3.14159
+      42 => answer
+      ```
+
+      Note `const K&`: in a template you don't know how big the type is, so
+      taking parameters by const reference is the safe default.
+
+      {{check deduce}}
+
+      {{task clamp}}
+    checks:
+      - id: deduce
+        type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          template <typename T>
+          T twice(const T& x) {
+              return x + x;
+          }
+
+          int main() {
+              std::cout << twice(21) << ' ' << twice(1.25) << ' ' << twice(std::string{"ab"}) << '\n';
+              return 0;
+          }
+        answer: |
+          42 2.5 abab
+        why: "T is deduced as int, double and std::string — and `+` means addition or concatenation accordingly."
+      - id: ambiguous
+        type: mcq
+        prompt: "`template <typename T> T larger(T a, T b);` — why doesn't `larger(3, 4.5)` compile?"
+        options:
+          - Templates can't take numbers
+          - "T would have to be both `int` and `double`; deduction fails. Write `larger<double>(3, 4.5)`."
+          - "`4.5` is too big"
+          - It does compile, returning 4
+        answer: 1
+        why: "Each argument deduces T independently, and they disagree."
+    tasks:
+      - id: clamp
+        title: A generic clamp
+        prompt: |
+          Write a function template `T clampTo(const T& value, const T& low, const T& high)`
+          that returns `low` if `value < low`, `high` if `high < value`, and
+          `value` otherwise. Use only `<` so it works for as many types as
+          possible.
+        starter: |
+          template <typename T>
+          T clampTo(const T& value, const T& low, const T& high) {
+              return value;
+          }
+        harness: |
+          CHECK(clampTo(15, 0, 10), 10);
+          CHECK(clampTo(-3, 0, 10), 0);
+          CHECK(clampTo(0.5, 0.0, 1.0), 0.5);
+          CHECK(clampTo(std::string{"zebra"}, std::string{"apple"}, std::string{"mango"}), "mango");
+          CHECK(clampTo('m', 'a', 'z'), 'm');
+        hints:
+          - "`if (value < low) return low; if (high < value) return high; return value;`"
+        solution: |
+          template <typename T>
+          T clampTo(const T& value, const T& low, const T& high) {
+              if (value < low) {
+                  return low;
+              }
+              if (high < value) {
+                  return high;
+              }
+              return value;
+          }
+    cards:
+      - front: What is a **function template**?
+        back: A recipe for a family of functions, parameterised by type (`template <typename T>`), from which the compiler generates the version each call needs.
+      - front: What is **template argument deduction**?
+        back: The compiler working out the template parameters from the call's arguments, e.g. `larger(3, 7)` → T = int.
+      - front: What must a type support to be used with a template?
+        back: Every operation the template's body uses on it (e.g. `>` or `+`). Otherwise the instantiation fails to compile.
+
+  - type: lesson
+    id: c16-class-templates
+    title: Class templates
+    minutes: 22
+    objectives:
+      - Write a class template with a type parameter
+      - Use class templates with explicit and deduced arguments
+      - Explain why `std::vector<int>` and `std::vector<std::string>` are different types
+    body: |
+      Classes can be templates too. You've used many: `std::vector<T>`,
+      `std::map<K, V>`, `std::unique_ptr<T>`. Here's a small container of your
+      own:
+
+      ```cpp
+      #include <iostream>
+      #include <stdexcept>
+      #include <string>
+      #include <vector>
+
+      template <typename T>
+      class Stack {
+      public:
+          void push(const T& value) { items_.push_back(value); }
+
+          T pop() {
+              if (items_.empty()) {
+                  throw std::out_of_range{"pop on empty stack"};
+              }
+              T top = items_.back();
+              items_.pop_back();
+              return top;
+          }
+
+          bool empty() const { return items_.empty(); }
+          std::size_t size() const { return items_.size(); }
+
+      private:
+          std::vector<T> items_{};
+      };
+
+      int main() {
+          Stack<int> numbers{};
+          numbers.push(1);
+          numbers.push(2);
+          std::cout << numbers.pop() << numbers.pop() << '\n';
+
+          Stack<std::string> words{};
+          words.push("generic");
+          words.push("is");
+          std::cout << words.pop() << ' ' << words.size() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      21
+      is 1
+      ```
+
+      - `template <typename T> class Stack` — inside the class, `T` is the element type.
+      - `Stack<int>` and `Stack<std::string>` are **two different classes**, each generated from the template. A function taking a `Stack<int>&` won't accept a `Stack<std::string>`.
+      - Member functions defined inside the class body are templates automatically. (Defined outside, they need the `template <typename T>` header again, and `Stack<T>::pop` — you'll see that in library code.)
+
+      ## Class template argument deduction
+
+      Since C++17 the compiler can often deduce a class template's arguments
+      from the constructor, as with functions:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <utility>
+      #include <vector>
+
+      int main() {
+          std::vector v{1, 2, 3};                   // std::vector<int>
+          std::pair p{std::string{"Ada"}, 36};      // std::pair<std::string, int>
+          std::cout << v.size() << ' ' << p.first << ' ' << p.second << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      3 Ada 36
+      ```
+
+      Handy — but when the type isn't obvious from the values, write it out.
+
+      ## Templates live in headers
+
+      The compiler must see a template's **full definition** wherever it's
+      used, to generate code for new types. That's why templates are written
+      entirely in header files (Chapter 17), unlike ordinary functions whose
+      bodies go in `.cpp` files.
+
+      {{check class-template}}
+
+      {{task pair}}
+    checks:
+      - id: class-template
+        type: output
+        code: |
+          #include <iostream>
+
+          template <typename T>
+          class Box {
+          public:
+              explicit Box(const T& v) : value_{v} {}
+              T get() const { return value_; }
+              template <typename F>
+              Box<T> map(F f) const { return Box<T>{f(value_)}; }
+          private:
+              T value_;
+          };
+
+          int main() {
+              Box<int> b{5};
+              auto c = b.map([](int x) { return x * 3; }).map([](int x) { return x + 1; });
+              std::cout << b.get() << ' ' << c.get() << '\n';
+              return 0;
+          }
+        answer: |
+          5 16
+        why: "`map` returns a new Box: 5 × 3 = 15, + 1 = 16. The original is unchanged."
+      - id: types-differ
+        type: tf
+        prompt: "`Stack<int>` and `Stack<double>` are the same type."
+        answer: false
+        why: "Each set of template arguments generates a separate class."
+    tasks:
+      - id: pair
+        title: A generic pair of values
+        prompt: |
+          Write a class template `MinMax<T>` that tracks the smallest and
+          largest values it has seen:
+
+          - `void add(const T& v)`
+          - `bool empty() const`
+          - `const T& min() const` and `const T& max() const` (only called when not empty)
+        starter: |
+          template <typename T>
+          class MinMax {
+          public:
+              void add(const T& v) {
+              }
+
+              bool empty() const { return true; }
+              const T& min() const { return min_; }
+              const T& max() const { return max_; }
+
+          private:
+              T min_{};
+              T max_{};
+              bool any_{false};
+          };
+        harness: |
+          MinMax<int> m{};
+          CHECK(m.empty(), true);
+          m.add(5);
+          m.add(-2);
+          m.add(9);
+          CHECK(m.empty(), false);
+          CHECK(m.min(), -2);
+          CHECK(m.max(), 9);
+          MinMax<std::string> w{};
+          w.add("pear");
+          w.add("apple");
+          w.add("zucchini");
+          CHECK(w.min(), "apple");
+          CHECK(w.max(), "zucchini");
+        hints:
+          - "On the first `add`, set both `min_` and `max_` to `v`; afterwards compare with `<`."
+        solution: |
+          template <typename T>
+          class MinMax {
+          public:
+              void add(const T& v) {
+                  if (!any_) {
+                      min_ = v;
+                      max_ = v;
+                      any_ = true;
+                      return;
+                  }
+                  if (v < min_) {
+                      min_ = v;
+                  }
+                  if (max_ < v) {
+                      max_ = v;
+                  }
+              }
+
+              bool empty() const { return !any_; }
+              const T& min() const { return min_; }
+              const T& max() const { return max_; }
+
+          private:
+              T min_{};
+              T max_{};
+              bool any_{false};
+          };
+    cards:
+      - front: What is a **class template**?
+        back: A recipe for a family of classes parameterised by types, like `template <typename T> class Stack`; `Stack<int>` is one class generated from it.
+      - front: What is **class template argument deduction** (CTAD)?
+        back: "C++17 feature: the compiler deduces a class template's arguments from the constructor, e.g. `std::vector v{1, 2, 3};`."
+      - front: Why are templates written in header files?
+        back: The compiler needs the full definition wherever the template is used, to generate code for each new type.
+
+  - type: quiz
+    id: c16-quiz1
+    title: "Quiz: templates"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          template <typename T>
+          void show(const T& x) {
+              std::cout << '[' << x << ']';
+          }
+
+          int main() {
+              show(1);
+              show('a');
+              show("hi");
+              show(2.5);
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          [1][a][hi][2.5]
+        why: "One template, four instantiations."
+      - type: mcq
+        prompt: "`template <typename T> T sum(const std::vector<T>& v)` is called with a `std::vector<double>`. What is T?"
+        options:
+          - "`std::vector<double>`"
+          - "`double`"
+          - "`int`"
+          - It can't be deduced
+        answer: 1
+        why: "The parameter pattern `std::vector<T>` matches `std::vector<double>`, so T = double."
+      - type: tf
+        prompt: "A template function can be used with any type at all."
+        answer: false
+        why: "Only with types that support every operation the template's body uses."
+      - type: output
+        code: |
+          #include <iostream>
+
+          template <typename T>
+          T accumulateAll(const T* first, const T* last, T start) {
+              for (const T* p = first; p != last; ++p) {
+                  start = start + *p;
+              }
+              return start;
+          }
+
+          int main() {
+              int a[3]{1, 2, 3};
+              double b[2]{0.5, 0.25};
+              std::cout << accumulateAll(a, a + 3, 10) << ' ' << accumulateAll(b, b + 2, 0.0) << '\n';
+              return 0;
+          }
+        answer: |
+          16 0.75
+        why: "10 + 1 + 2 + 3 = 16 and 0.0 + 0.5 + 0.25 = 0.75."
+
+  - type: lesson
+    id: c16-generic
+    title: Writing generic algorithms
+    minutes: 24
+    objectives:
+      - Write algorithms over any iterator range
+      - Accept any callable as a template parameter
+      - Use generic lambdas and `auto` parameters
+      - Use non-type template parameters, `static_assert` and `if constexpr`
+    body: |
+      The standard algorithms are templates over **iterators**: they don't
+      care whether the range is a vector, a list or an array, only that they
+      can move through it with `++`, compare with `!=` and read with `*`.
+      You can write your own in the same style:
+
+      ```cpp
+      #include <iostream>
+      #include <list>
+      #include <string>
+      #include <vector>
+
+      template <typename It, typename Pred>
+      int countWhere(It first, It last, Pred pred) {
+          int n{0};
+          for (It it = first; it != last; ++it) {
+              if (pred(*it)) {
+                  ++n;
+              }
+          }
+          return n;
+      }
+
+      int main() {
+          std::vector<int> v{3, 8, 12, 5};
+          std::list<std::string> words{"cat", "horse", "ox"};
+          std::cout << countWhere(v.begin(), v.end(), [](int x) { return x > 4; }) << ' '
+                    << countWhere(words.begin(), words.end(), [](const std::string& w) { return w.size() < 4; })
+                    << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      3 2
+      ```
+
+      Taking the callable as a template parameter (`Pred pred`) instead of a
+      `std::function` lets the compiler inline the call — it's how `std::sort`
+      can be faster with a lambda than C's `qsort` with a function pointer.
+
+      ## Generic lambdas
+
+      A lambda with an `auto` parameter is a template in disguise — it works
+      for any type:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          auto describe = [](const auto& x) { return x + x; };
+          std::cout << describe(4) << ' ' << describe(std::string{"ha"}) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      8 haha
+      ```
+
+      (C++20 allows `auto` parameters on ordinary functions too — an
+      *abbreviated function template*.)
+
+      ## Values as template parameters
+
+      A template parameter can also be a **compile-time value**, like the size
+      in `std::array<int, 5>`:
+
+      ```cpp
+      #include <iostream>
+
+      template <typename T, int N>
+      class FixedStack {
+      public:
+          static_assert(N > 0, "FixedStack needs room for at least one element");
+
+          bool push(const T& v) {
+              if (count_ == N) {
+                  return false;
+              }
+              data_[count_++] = v;
+              return true;
+          }
+          int size() const { return count_; }
+          static constexpr int capacity() { return N; }
+
+      private:
+          T data_[N]{};
+          int count_{0};
+      };
+
+      int main() {
+          FixedStack<char, 2> s{};
+          std::cout << s.push('a') << s.push('b') << s.push('c') << ' ' << s.size() << '/'
+                    << FixedStack<char, 2>::capacity() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      110 2/2
+      ```
+
+      **`static_assert(condition, message)`** checks a condition **at compile
+      time** — `FixedStack<int, 0>` would fail to compile with that message.
+
+      ## `if constexpr`
+
+      Inside a template, `if constexpr` chooses code **at compile time**, based
+      on the type. The branch not taken isn't even compiled for that type:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <type_traits>
+
+      template <typename T>
+      std::string describe(const T& value) {
+          if constexpr (std::is_integral_v<T>) {
+              return "integer " + std::to_string(value);
+          } else if constexpr (std::is_floating_point_v<T>) {
+              return "decimal " + std::to_string(value);
+          } else {
+              return "something else";
+          }
+      }
+
+      int main() {
+          std::cout << describe(42) << " / " << describe(1.5) << " / " << describe("text") << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      integer 42 / decimal 1.500000 / something else
+      ```
+
+      `std::is_integral_v<T>` and friends come from `<type_traits>` — questions
+      you can ask about types at compile time.
+
+      {{check generic-output}}
+
+      {{task transform-all}}
+    checks:
+      - id: generic-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          template <typename It, typename F>
+          void applyAll(It first, It last, F f) {
+              for (; first != last; ++first) {
+                  *first = f(*first);
+              }
+          }
+
+          int main() {
+              std::vector<int> v{1, 2, 3};
+              int calls{0};
+              applyAll(v.begin(), v.end(), [&calls](int x) { ++calls; return x * x; });
+              std::cout << v[0] << v[1] << v[2] << ' ' << calls << '\n';
+              return 0;
+          }
+        answer: |
+          149 3
+        why: "Each element is replaced by its square; the lambda (capturing `calls` by reference) runs three times."
+      - id: static-assert
+        type: mcq
+        prompt: "When does `static_assert(sizeof(T) <= 8, \"too big\");` report a problem?"
+        options:
+          - When the program runs
+          - When the template is instantiated with a type larger than 8 bytes — at compile time
+          - Never
+          - Only in debug builds
+        answer: 1
+        why: "static_assert is checked by the compiler."
+    tasks:
+      - id: transform-all
+        title: A generic map function
+        prompt: |
+          Write a function template `mapped(const std::vector<T>& v, F f)` that
+          returns a new `std::vector` of the results of `f` applied to each
+          element. The result's element type is **whatever `f` returns** — not
+          necessarily `T` — so the starter's `std::vector<T>` is wrong and the
+          checks won't even compile until you fix it. The hints show the tool
+          you need.
+        starter: |
+          #include <vector>
+
+          template <typename T, typename F>
+          auto mapped(const std::vector<T>& v, F f) {
+              std::vector<T> out{};
+              return out;
+          }
+        starter_broken: true
+        harness: |
+          std::vector<int> nums{1, 2, 3};
+          CHECK(mapped(nums, [](int x) { return x * 10; }), (std::vector<int>{10, 20, 30}));
+          CHECK(mapped(nums, [](int x) { return x / 2.0; }), (std::vector<double>{0.5, 1.0, 1.5}));
+          CHECK(mapped(nums, [](int x) { return std::string(static_cast<std::size_t>(x), '*'); }),
+                (std::vector<std::string>{"*", "**", "***"}));
+          CHECK(mapped(std::vector<int>{}, [](int x) { return x; }).size(), 0);
+        hints:
+          - "The result type is `std::vector<decltype(f(v[0]))>` — `decltype` gives the type of an expression without running it."
+          - "Declare `std::vector<decltype(f(v[0]))> out{};`, loop with `out.push_back(f(x));`, return `out`. (`auto` as the return type deduces the rest.)"
+        solution: |
+          #include <vector>
+
+          template <typename T, typename F>
+          auto mapped(const std::vector<T>& v, F f) {
+              std::vector<decltype(f(v[0]))> out{};
+              for (const auto& x : v) {
+                  out.push_back(f(x));
+              }
+              return out;
+          }
+        explain: |
+          `decltype(expression)` is the type the expression *would* have — it's
+          never evaluated, so using `v[0]` is safe even for an empty vector.
+          With `auto` as the return type, the compiler deduces it from `return out;`.
+    cards:
+      - front: How do standard algorithms work on any container?
+        back: They're templates over iterator types — they only need `++`, `!=` and `*` on the iterators.
+      - front: What is a **generic lambda**?
+        back: "A lambda with `auto` parameters: `[](const auto& x) { ... }` — effectively a template."
+      - front: What does `static_assert(cond, msg)` do?
+        back: Checks `cond` at compile time and stops compilation with `msg` if it's false.
+      - front: What does `if constexpr` do?
+        back: Chooses a branch at compile time based on a constant condition (often a type trait); the other branch isn't compiled.
+
+  - type: lesson
+    id: c16-concepts
+    title: Concepts (C++20)
+    minutes: 18
+    objectives:
+      - Constrain a template with a standard concept
+      - Write a simple concept of your own with `requires`
+      - Explain how concepts improve error messages
+    body: |
+      A template's requirements ("T must support `<`") have always been
+      **implicit** — written nowhere but the body. Break them and you get a
+      page of errors from deep inside the template. **C++20 concepts** make
+      requirements part of the template's declaration.
+
+      > [!note]
+      > This lesson uses C++20. The compiler in this course supports it; on
+      > your own computer you may need to add `-std=c++20`.
+
+      ## Using standard concepts
+
+      `<concepts>` provides ready-made ones: `std::integral`,
+      `std::floating_point`, `std::totally_ordered`, `std::same_as`, …
+
+      ```cpp cpp20
+      #include <concepts>
+      #include <iostream>
+
+      template <std::integral T>
+      T gcd(T a, T b) {
+          while (b != 0) {
+              T r = a % b;
+              a = b;
+              b = r;
+          }
+          return a;
+      }
+
+      int main() {
+          std::cout << gcd(84, 36) << ' ' << gcd(10LL, 4LL) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      12 2
+      ```
+
+      `template <std::integral T>` means "T must be an integer type". Calling
+      `gcd(2.5, 1.5)` now fails at the **call**, with a short message saying
+      the constraint `std::integral<double>` isn't satisfied — instead of an
+      error about `%` inside the body.
+
+      ## Writing a concept
+
+      A concept is a named, compile-time `bool` about types. A `requires`
+      expression lists operations that must compile:
+
+      ```cpp cpp20
+      #include <iostream>
+      #include <string>
+
+      template <typename T>
+      concept Printable = requires(std::ostream& out, const T& value) {
+          out << value;
+      };
+
+      template <Printable T>
+      void printTwice(const T& value) {
+          std::cout << value << ' ' << value << '\n';
+      }
+
+      struct Secret {};
+
+      int main() {
+          printTwice(7);
+          printTwice(std::string{"echo"});
+          std::cout << Printable<int> << Printable<Secret> << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      7 7
+      echo echo
+      10
+      ```
+
+      `Printable<Secret>` is `false` — calling `printTwice(Secret{})` wouldn't
+      compile, with an error that names the unmet concept.
+
+      ## `requires` clauses and `auto`
+
+      Constraints can also be written as a `requires` clause, and combined:
+
+      ```cpp static
+      template <typename T>
+          requires std::integral<T> || std::floating_point<T>
+      T half(T x) { return x / 2; }
+
+      void log(const std::totally_ordered auto& x);   // abbreviated form
+      ```
+
+      Concepts don't change what code *can* do — they document intent and
+      turn baffling errors into clear ones. They're one of the biggest
+      quality-of-life improvements in modern C++.
+
+      {{check concept}}
+    checks:
+      - id: concept
+        type: mcq
+        prompt: "What's the main benefit of `template <std::integral T>` over `template <typename T>`?"
+        options:
+          - The code runs faster
+          - The requirement is stated up front, so misuse gives a short error at the call site
+          - It allows floating-point types too
+          - It makes T a reference
+        answer: 1
+        why: "Concepts check requirements at the point of use and report them by name."
+    cards:
+      - front: What is a **concept** (C++20)?
+        back: A named compile-time predicate on types (like `std::integral`) used to constrain templates.
+      - front: How do you write a template that only accepts integer types?
+        back: "`template <std::integral T> ...` (from `<concepts>`)."
+      - front: What does `requires(const T& x) { x.size(); }` express?
+        back: That the operation `x.size()` must compile for T — the building block of custom concepts.
+
+  - type: quiz
+    id: c16-quiz2
+    title: "Quiz: generic code"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          template <int N>
+          int timesN(int x) {
+              return x * N;
+          }
+
+          int main() {
+              std::cout << timesN<3>(5) << ' ' << timesN<10>(timesN<2>(1)) << '\n';
+              return 0;
+          }
+        answer: |
+          15 20
+        why: "N is a compile-time value: 5 × 3; then (1 × 2) × 10."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <type_traits>
+
+          template <typename T>
+          int size() {
+              if constexpr (std::is_same_v<T, char>) {
+                  return 1;
+              } else {
+                  return static_cast<int>(sizeof(T));
+              }
+          }
+
+          int main() {
+              std::cout << size<char>() << size<int>() << size<double>() << '\n';
+              return 0;
+          }
+        answer: |
+          148
+        why: "char takes the first branch; int and double use sizeof: 4 and 8."
+      - type: mcq
+        prompt: "Why do standard algorithms take the comparison as a template parameter rather than a `std::function`?"
+        options:
+          - "`std::function` can't hold lambdas"
+          - The compiler can inline the call, making it faster
+          - To allow only function pointers
+          - There's no reason
+        answer: 1
+        why: "The exact callable type is known, so the call can be inlined."
+      - type: tf
+        prompt: "`auto f = [](auto x) { return x * 2; };` can be called with both `int` and `double`."
+        answer: true
+        why: "A generic lambda's `auto` parameter makes it a template."
+
+  - type: challenge
+    id: c16-ch-ring
+    title: A ring buffer template
+    difficulty: 3
+    tags: [class templates, non-type parameters]
+    prompt: |
+      A **ring buffer** keeps the last `N` values pushed: once full, each new
+      value overwrites the oldest. Write `template <typename T, int N> class RingBuffer`:
+
+      - `void push(const T& v)`
+      - `int size() const` — how many values it holds (at most N)
+      - `T at(int i) const` — the i-th oldest value held (0 = oldest)
+      - `std::vector<T> items() const` — all held values, oldest first
+
+      Use a fixed `std::array<T, N>` (or C array) for storage — no vectors
+      inside the class.
+    starter: |
+      #include <array>
+      #include <vector>
+
+      template <typename T, int N>
+      class RingBuffer {
+      public:
+          void push(const T& v) {
+          }
+
+          int size() const { return 0; }
+
+          T at(int i) const { return T{}; }
+
+          std::vector<T> items() const { return {}; }
+
+      private:
+          std::array<T, N> data_{};
+          int start_{0};
+          int count_{0};
+      };
+    harness: |
+      RingBuffer<int, 3> r{};
+      CHECK(r.size(), 0);
+      r.push(1);
+      r.push(2);
+      CHECK(r.items(), (std::vector<int>{1, 2}));
+      r.push(3);
+      r.push(4);
+      CHECK(r.size(), 3);
+      CHECK(r.items(), (std::vector<int>{2, 3, 4}));
+      CHECK(r.at(0), 2);
+      r.push(5);
+      r.push(6);
+      r.push(7);
+      CHECK(r.items(), (std::vector<int>{5, 6, 7}));
+      RingBuffer<std::string, 2> s{};
+      s.push("a");
+      s.push("b");
+      s.push("c");
+      CHECK(s.items(), (std::vector<std::string>{"b", "c"}));
+    hints:
+      - "Keep `start_` (index of the oldest) and `count_`. The i-th oldest is at `(start_ + i) % N`."
+      - "`push`: if not full, write at `(start_ + count_) % N` and increase `count_`; if full, overwrite at `start_` and move `start_` forward."
+    solution: |
+      #include <array>
+      #include <vector>
+
+      template <typename T, int N>
+      class RingBuffer {
+      public:
+          void push(const T& v) {
+              if (count_ < N) {
+                  data_[static_cast<std::size_t>((start_ + count_) % N)] = v;
+                  ++count_;
+              } else {
+                  data_[static_cast<std::size_t>(start_)] = v;
+                  start_ = (start_ + 1) % N;
+              }
+          }
+
+          int size() const { return count_; }
+
+          T at(int i) const { return data_[static_cast<std::size_t>((start_ + i) % N)]; }
+
+          std::vector<T> items() const {
+              std::vector<T> out{};
+              for (int i{0}; i < count_; ++i) {
+                  out.push_back(at(i));
+              }
+              return out;
+          }
+
+      private:
+          std::array<T, N> data_{};
+          int start_{0};
+          int count_{0};
+      };
+    explain: |
+      Ring buffers are everywhere in systems code — audio, logging, network
+      queues — precisely because their memory is fixed: no allocation ever
+      happens after construction. The capacity being a template parameter
+      means it's known at compile time and costs nothing to store.
+
+  - type: challenge
+    id: c16-ch-generic-algos
+    title: Your own algorithms
+    difficulty: 2
+    tags: [function templates, iterators]
+    prompt: |
+      Write two iterator-based function templates, in the style of the
+      standard library:
+
+      - `It findFirst(It first, It last, Pred pred)` — iterator to the first element satisfying `pred`, or `last`.
+      - `bool isSorted(It first, It last)` — whether the range is in non-decreasing order (use only `<`).
+    starter: |
+      template <typename It, typename Pred>
+      It findFirst(It first, It last, Pred pred) {
+          return last;
+      }
+
+      template <typename It>
+      bool isSorted(It first, It last) {
+          return false;
+      }
+    harness: |
+      std::vector<int> v{3, 8, 1, 9};
+      auto it = findFirst(v.begin(), v.end(), [](int x) { return x > 5; });
+      CHECK(*it, 8);
+      CHECK(findFirst(v.begin(), v.end(), [](int x) { return x > 100; }) == v.end(), true);
+      CHECK(isSorted(v.begin(), v.end()), false);
+      std::vector<std::string> w{"a", "b", "b", "c"};
+      CHECK(isSorted(w.begin(), w.end()), true);
+      int arr[3]{1, 2, 3};
+      CHECK(isSorted(arr, arr + 3), true);
+      CHECK(isSorted(arr, arr), true);
+    hints:
+      - "`isSorted`: walk with two iterators, `prev` and `it`; if `*it < *prev` anywhere, it's not sorted."
+    solution: |
+      template <typename It, typename Pred>
+      It findFirst(It first, It last, Pred pred) {
+          for (; first != last; ++first) {
+              if (pred(*first)) {
+                  return first;
+              }
+          }
+          return last;
+      }
+
+      template <typename It>
+      bool isSorted(It first, It last) {
+          if (first == last) {
+              return true;
+          }
+          It prev = first;
+          for (++first; first != last; ++first) {
+              if (*first < *prev) {
+                  return false;
+              }
+              prev = first;
+          }
+          return true;
+      }
+
+  - type: challenge
+    id: c16-ch-matrix
+    title: Compile-time matrix sizes
+    difficulty: 3
+    tags: [templates, non-type parameters]
+    prompt: |
+      Write `template <typename T, int R, int C> struct Matrix` holding
+      `std::array<std::array<T, C>, R> m{}` (public), and a function template
+      `operator*` that multiplies an R×K matrix by a K×C one giving R×C —
+      where mismatched sizes are a **compile error** automatically, because
+      the shared `K` must match. Also write `transpose`, returning C×R.
+    starter: |
+      #include <array>
+
+      template <typename T, int R, int C>
+      struct Matrix {
+          std::array<std::array<T, C>, R> m{};
+      };
+
+      // TODO: operator* and transpose
+    starter_broken: true
+    harness: |
+      Matrix<int, 2, 3> a{};
+      a.m = {{{1, 2, 3}, {4, 5, 6}}};
+      Matrix<int, 3, 2> b{};
+      b.m = {{{7, 8}, {9, 10}, {11, 12}}};
+      Matrix<int, 2, 2> p = a * b;
+      CHECK(p.m[0][0], 58);
+      CHECK(p.m[0][1], 64);
+      CHECK(p.m[1][0], 139);
+      CHECK(p.m[1][1], 154);
+      Matrix<int, 3, 2> t = transpose(a);
+      CHECK(t.m[2][0], 3);
+      CHECK(t.m[0][1], 4);
+      Matrix<double, 1, 1> one{};
+      one.m[0][0] = 2.5;
+      CHECK((one * one).m[0][0], 6.25);
+    hints:
+      - "`template <typename T, int R, int K, int C> Matrix<T, R, C> operator*(const Matrix<T, R, K>& a, const Matrix<T, K, C>& b)`."
+      - "`template <typename T, int R, int C> Matrix<T, C, R> transpose(const Matrix<T, R, C>& a)`."
+    solution: |
+      #include <array>
+
+      template <typename T, int R, int C>
+      struct Matrix {
+          std::array<std::array<T, C>, R> m{};
+      };
+
+      template <typename T, int R, int K, int C>
+      Matrix<T, R, C> operator*(const Matrix<T, R, K>& a, const Matrix<T, K, C>& b) {
+          Matrix<T, R, C> out{};
+          for (int r{0}; r < R; ++r) {
+              for (int c{0}; c < C; ++c) {
+                  T sum{};
+                  for (int k{0}; k < K; ++k) {
+                      sum += a.m[static_cast<std::size_t>(r)][static_cast<std::size_t>(k)] *
+                             b.m[static_cast<std::size_t>(k)][static_cast<std::size_t>(c)];
+                  }
+                  out.m[static_cast<std::size_t>(r)][static_cast<std::size_t>(c)] = sum;
+              }
+          }
+          return out;
+      }
+
+      template <typename T, int R, int C>
+      Matrix<T, C, R> transpose(const Matrix<T, R, C>& a) {
+          Matrix<T, C, R> out{};
+          for (int r{0}; r < R; ++r) {
+              for (int c{0}; c < C; ++c) {
+                  out.m[static_cast<std::size_t>(c)][static_cast<std::size_t>(r)] =
+                      a.m[static_cast<std::size_t>(r)][static_cast<std::size_t>(c)];
+              }
+          }
+          return out;
+      }
+    explain: |
+      Compare with Chapter 11's `Matrix`, where a size mismatch was only a
+      comment ("assume a.cols() == b.rows()"). Here, multiplying a 2×3 by a
+      2×3 matrix simply doesn't compile — the type system catches the bug
+      before the program ever runs.
+
+  - type: review
+    id: c16-review
+    title: "Chapter 16 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      template <typename T>
+      T larger(const T& a, const T& b) { return a < b ? b : a; }
+      larger(3, 7);  larger<double>(3, 4.5);
+
+      template <typename T>
+      class Stack { std::vector<T> items_; ... };
+      Stack<std::string> s;   std::vector v{1, 2, 3};   // CTAD
+
+      template <typename It, typename Pred>
+      int countWhere(It first, It last, Pred pred);
+
+      auto twice = [](const auto& x) { return x + x; };   // generic lambda
+
+      template <typename T, int N> class Fixed { T data_[N]; };
+      static_assert(N > 0, "message");
+      if constexpr (std::is_integral_v<T>) { } else { }
+
+      template <std::integral T> T gcd(T a, T b);         // C++20 concept
+      template <typename T> concept Printable = requires(std::ostream& o, const T& v) { o << v; };
+      ```
+
+      ## Key ideas
+
+      - Templates are recipes; the compiler instantiates them per type.
+      - A type works with a template if it supports everything the body uses.
+      - Different template arguments give different types.
+      - Templates are defined in headers.
+      - Generic algorithms take iterators and callables as template parameters.
+      - Compile-time tools: non-type parameters, `static_assert`, `if constexpr`, type traits.
+      - Concepts state requirements and give clear errors.
+    questions:
+      - type: output
+        prompt: "Interleaving: templates, vectors and lambdas."
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          template <typename T, typename F>
+          T reduce(const std::vector<T>& v, T start, F f) {
+              for (const auto& x : v) {
+                  start = f(start, x);
+              }
+              return start;
+          }
+
+          int main() {
+              std::vector<int> n{1, 2, 3, 4};
+              std::vector<std::string> w{"a", "b", "c"};
+              std::cout << reduce(n, 0, [](int a, int b) { return a + b * b; }) << ' '
+                        << reduce(w, std::string{">"}, [](const std::string& a, const std::string& b) { return b + a; })
+                        << '\n';
+              return 0;
+          }
+        answer: |
+          30 cba>
+        why: "Sum of squares: 1 + 4 + 9 + 16 = 30. Prepending each string to the accumulated one reverses them."
+      - type: mcq
+        prompt: "What happens with `Stack<int> a; Stack<double> b; a = b;`?"
+        options:
+          - "The doubles are converted to ints"
+          - "Compile error — they're different types"
+          - "Undefined behaviour"
+          - "b becomes empty"
+        answer: 1
+        why: "Different template arguments produce unrelated types (unless the class provides a conversion)."
+      - type: tf
+        prompt: "You can put a class template's member function bodies in a `.cpp` file like ordinary classes, and use the template from other files."
+        answer: false
+        why: "Template definitions must be visible where they're used — normally in headers."
+
+  - type: exam
+    id: c16-exam
+    title: "Chapter 16 exam"
+    minutes: 35
+    pick: 10
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          template <typename T>
+          T triple(T x) {
+              return x * 3;
+          }
+
+          int main() {
+              std::cout << triple(2) << ' ' << triple(0.5) << ' ' << triple<int>(2.9) << '\n';
+              return 0;
+          }
+        answer: |
+          6 1.5 6
+        why: "With T = int explicitly, 2.9 is converted to 2 before multiplying."
+      - type: mcq
+        prompt: "Which declaration makes a template with a type and a compile-time size?"
+        options:
+          - "`template <typename T, int N> class Buffer;`"
+          - "`template <T, N> class Buffer;`"
+          - "`class Buffer<T, N>;`"
+          - "`template class Buffer(T, int N);`"
+        answer: 0
+        why: "Type parameters use `typename` (or `class`); value parameters use their type, like `int N`."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          template <typename T>
+          std::size_t countEqual(const std::vector<T>& v, const T& x) {
+              std::size_t n{0};
+              for (const auto& e : v) {
+                  if (e == x) {
+                      ++n;
+                  }
+              }
+              return n;
+          }
+
+          int main() {
+              std::vector<char> c{'a', 'b', 'a'};
+              std::vector<int> i{7, 7, 7, 1};
+              std::cout << countEqual(c, 'a') << countEqual(i, 7) << '\n';
+              return 0;
+          }
+        answer: |
+          23
+        why: "Two 'a's and three 7s."
+      - type: tf
+        prompt: "`static_assert` checks its condition when the program runs."
+        answer: false
+        why: "It's checked by the compiler."
+      - type: mcq
+        prompt: "Why are template error messages traditionally long, and what C++20 feature helps?"
+        options:
+          - "Templates are slow; `constexpr` helps"
+          - "Errors surface deep inside the template's body; concepts check requirements at the call"
+          - "Templates can't have errors"
+          - "Because of `auto`; `decltype` helps"
+        answer: 1
+        why: "Concepts make the requirement explicit and report it by name."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <type_traits>
+
+          template <typename T>
+          std::string kind(const T&) {
+              if constexpr (std::is_pointer_v<T>) {
+                  return "pointer";
+              } else if constexpr (std::is_arithmetic_v<T>) {
+                  return "number";
+              } else {
+                  return "other";
+              }
+          }
+
+          int main() {
+              int x{1};
+              std::cout << kind(x) << ' ' << kind(&x) << ' ' << kind(std::string{}) << '\n';
+              return 0;
+          }
+        answer: |
+          number pointer other
+        why: "Type traits inspect T at compile time."
+      - type: fill
+        prompt: Complete the template header for a function working on any type.
+        code: |
+          ___ <___ T>
+          void swapValues(T& a, T& b) {
+              T tmp = a;
+              a = b;
+              b = tmp;
+          }
+        blanks:
+          - [template]
+          - [typename, class]
+        why: "`template <typename T>` (or the equivalent `template <class T>`)."
+      - type: spot
+        prompt: "Which line fails to compile?"
+        code: |
+          #include <iostream>
+
+          template <typename T>
+          T biggest(T a, T b) {
+              return a > b ? a : b;
+          }
+
+          int main() {
+              std::cout << biggest(4, 9) << '\n';
+              std::cout << biggest(2.5, 7) << '\n';
+              return 0;
+          }
+        answer: 10
+        why: "One argument is a double and the other an int, so T can't be deduced. Use `biggest<double>(2.5, 7)`."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          template <typename T>
+          class Counter {
+          public:
+              void add(const T& v) {
+                  if (v == last_) {
+                      ++run_;
+                  } else {
+                      last_ = v;
+                      run_ = 1;
+                  }
+                  if (run_ > best_) {
+                      best_ = run_;
+                  }
+              }
+              int best() const { return best_; }
+          private:
+              T last_{};
+              int run_{0};
+              int best_{0};
+          };
+
+          int main() {
+              Counter<char> c{};
+              for (char ch : std::string{"aabbbcb"}) {
+                  c.add(ch);
+              }
+              std::cout << c.best() << '\n';
+              return 0;
+          }
+        answer: |
+          3
+        why: "The longest run of equal values is \"bbb\"."
+      - type: mcq
+        prompt: "`std::vector v{1.5, 2.5};` — what is the type of `v`?"
+        options:
+          - "`std::vector<int>`"
+          - "`std::vector<double>`"
+          - "`std::vector<float>`"
+          - It doesn't compile
+        answer: 1
+        why: "Class template argument deduction: the elements are doubles."
+      - type: tf
+        prompt: "A lambda written `[](auto a, auto b) { return a < b; }` can compare two strings or two ints."
+        answer: true
+        why: "`auto` parameters make it a generic lambda."
+      - type: code
+        prompt: |
+          Write a function template `bool allEqual(const std::vector<T>& v)`
+          returning `true` if every element equals the first (and for an empty
+          vector), and `std::size_t countDistinct(std::vector<T> v)` returning
+          how many different values there are (hint: sort, then count changes).
+        starter: |
+          #include <algorithm>
+          #include <vector>
+
+          template <typename T>
+          bool allEqual(const std::vector<T>& v) {
+              return false;
+          }
+
+          template <typename T>
+          std::size_t countDistinct(std::vector<T> v) {
+              return 0;
+          }
+        harness: |
+          CHECK(allEqual(std::vector<int>{3, 3, 3}), true);
+          CHECK(allEqual(std::vector<int>{3, 4}), false);
+          CHECK(allEqual(std::vector<std::string>{}), true);
+          CHECK(countDistinct(std::vector<int>{3, 1, 3, 2, 1}), 3);
+          CHECK(countDistinct(std::vector<std::string>{"a", "b", "a"}), 2);
+          CHECK(countDistinct(std::vector<double>{}), 0);
+        solution: |
+          #include <algorithm>
+          #include <vector>
+
+          template <typename T>
+          bool allEqual(const std::vector<T>& v) {
+              for (const auto& x : v) {
+                  if (!(x == v.front())) {
+                      return false;
+                  }
+              }
+              return true;
+          }
+
+          template <typename T>
+          std::size_t countDistinct(std::vector<T> v) {
+              std::sort(v.begin(), v.end());
+              return static_cast<std::size_t>(std::unique(v.begin(), v.end()) - v.begin());
+          }
