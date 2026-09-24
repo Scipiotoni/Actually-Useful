@@ -1,0 +1,2368 @@
+id: ch12
+number: 12
+part: p3
+title: Inheritance and Polymorphism
+blurb: Build families of related types and write code that works with all of them — without knowing which one it has.
+hours: 6
+goals:
+  - Derive a class from a base class and call the base constructor
+  - Use `protected`, and predict the order of construction and destruction
+  - Make functions `virtual`, use `override`, and explain dynamic dispatch
+  - Write abstract classes with pure virtual functions to define interfaces
+  - Avoid object slicing, and give polymorphic bases a virtual destructor
+  - Choose composition over inheritance when "has-a" fits better than "is-a"
+
+items:
+  - type: lesson
+    id: c12-inherit
+    title: "Inheritance: \"is a kind of\""
+    minutes: 22
+    objectives:
+      - Derive a class from a base class with public inheritance
+      - Call a base-class constructor from a derived constructor
+      - Use `protected` members, and predict construction and destruction order
+    body: |
+      Many types are **special kinds** of other types. A `SavingsAccount` *is
+      an* `Account` with interest. A `Dog` *is an* `Animal`. **Inheritance**
+      lets a new class — the **derived** class — reuse everything a **base**
+      class has, and add to it.
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      class Animal {
+      public:
+          explicit Animal(const std::string& name) : name_{name} {}
+
+          void eat() const {
+              std::cout << name_ << " is eating\n";
+          }
+
+          const std::string& name() const { return name_; }
+
+      private:
+          std::string name_;
+      };
+
+      class Dog : public Animal {
+      public:
+          explicit Dog(const std::string& name) : Animal{name} {}
+
+          void fetch() const {
+              std::cout << name() << " fetches the ball\n";
+          }
+      };
+
+      int main() {
+          Dog rex{"Rex"};
+          rex.eat();      // inherited from Animal
+          rex.fetch();    // Dog's own
+          return 0;
+      }
+      ```
+
+      ```output
+      Rex is eating
+      Rex fetches the ball
+      ```
+
+      - `class Dog : public Animal` — `Dog` derives from `Animal`. Every `Dog` contains an `Animal` part, and all of `Animal`'s public members are public members of `Dog` too.
+      - `Dog`'s constructor must construct its `Animal` part: `: Animal{name}` in the initialiser list calls the base constructor.
+      - `Dog` can't touch `name_` directly — it's `private` to `Animal`. It uses the public `name()` like everyone else.
+
+      ## `protected`
+
+      Between `public` and `private` there's **`protected`**: accessible to the
+      class itself **and to classes derived from it**, but not to outside
+      code. Use it sparingly — a derived class that can modify the base's data
+      directly can break the base's invariants. Protected *functions* are
+      usually fine; protected *data* often isn't.
+
+      ## Construction and destruction order
+
+      A derived object is built **base first**, then the derived part; it's
+      destroyed in the **reverse** order:
+
+      ```cpp
+      #include <iostream>
+
+      class Base {
+      public:
+          Base() { std::cout << "Base built\n"; }
+          ~Base() { std::cout << "Base destroyed\n"; }
+      };
+
+      class Derived : public Base {
+      public:
+          Derived() { std::cout << "Derived built\n"; }
+          ~Derived() { std::cout << "Derived destroyed\n"; }
+      };
+
+      int main() {
+          Derived d{};
+          std::cout << "--\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      Base built
+      Derived built
+      --
+      Derived destroyed
+      Base destroyed
+      ```
+
+      That makes sense: the derived part may use the base part, so the base
+      must exist first and be destroyed last.
+
+      {{check inherit-output}}
+
+      {{check access}}
+    checks:
+      - id: inherit-output
+        type: output
+        code: |
+          #include <iostream>
+
+          class Counter {
+          public:
+              void add(int n) { total_ += n; }
+              int total() const { return total_; }
+          private:
+              int total_{0};
+          };
+
+          class DoubleCounter : public Counter {
+          public:
+              void addTwice(int n) {
+                  add(n);
+                  add(n);
+              }
+          };
+
+          int main() {
+              DoubleCounter c{};
+              c.add(1);
+              c.addTwice(5);
+              std::cout << c.total() << '\n';
+              return 0;
+          }
+        answer: |
+          11
+        why: "`add` and `total` are inherited: 1 + 5 + 5 = 11."
+      - id: access
+        type: mcq
+        prompt: "Class `B` derives publicly from `A`. `A` has a `private` member `x_` and a `protected` member `y_`. Inside `B`'s member functions, which can be used?"
+        options:
+          - Both
+          - Only `y_`
+          - Only `x_`
+          - Neither
+        answer: 1
+        why: "Protected members are accessible to derived classes; private members are not."
+    cards:
+      - front: What does `class Dog : public Animal` mean?
+        back: Dog derives from Animal — every Dog *is an* Animal and inherits Animal's members (public ones stay public).
+      - front: How does a derived constructor initialise its base part?
+        back: "By calling the base constructor in its initialiser list: `Dog(...) : Animal{name} {}`."
+      - front: What does `protected` mean?
+        back: Accessible inside the class and in derived classes, but not to outside code.
+      - front: In what order are base and derived parts constructed and destroyed?
+        back: Constructed base first, then derived; destroyed in reverse (derived first, then base).
+
+  - type: lesson
+    id: c12-virtual
+    title: Virtual functions and polymorphism
+    minutes: 26
+    objectives:
+      - Use a base-class reference or pointer to refer to a derived object
+      - Make a function `virtual` so the derived version is called
+      - Mark overriding functions with `override`
+      - Write code that works with a whole family of types
+    body: |
+      A `Dog` is an `Animal`, so a `Dog` can be used wherever an `Animal&` or
+      `Animal*` is expected. That's where inheritance gets its real power —
+      and where there's a trap.
+
+      ```cpp
+      #include <iostream>
+
+      class Animal {
+      public:
+          void speak() const { std::cout << "...\n"; }
+      };
+
+      class Dog : public Animal {
+      public:
+          void speak() const { std::cout << "Woof!\n"; }
+      };
+
+      void makeItSpeak(const Animal& a) {
+          a.speak();
+      }
+
+      int main() {
+          Dog d{};
+          d.speak();
+          makeItSpeak(d);
+          return 0;
+      }
+      ```
+
+      ```output
+      Woof!
+      ...
+      ```
+
+      Through the `Animal&`, the **Animal** version ran. By default, C++ picks
+      the function from the **static type** — the type the code says
+      (`Animal&`) — at compile time.
+
+      ## `virtual`: choose at run time
+
+      Mark the base function **`virtual`**, and C++ instead looks at the
+      **actual object** at run time and calls *its* version. In the derived
+      class, mark the replacement with **`override`**:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      class Animal {
+      public:
+          virtual ~Animal() = default;
+          virtual void speak() const { std::cout << "...\n"; }
+      };
+
+      class Dog : public Animal {
+      public:
+          void speak() const override { std::cout << "Woof!\n"; }
+      };
+
+      class Cat : public Animal {
+      public:
+          void speak() const override { std::cout << "Meow!\n"; }
+      };
+
+      int main() {
+          Dog rex{};
+          Cat tom{};
+          Animal generic{};
+          std::vector<const Animal*> zoo{&rex, &tom, &generic};
+          for (const Animal* a : zoo) {
+              a->speak();
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      Woof!
+      Meow!
+      ...
+      ```
+
+      One loop, one call `a->speak()` — and each object does its own thing.
+      This is **polymorphism** ("many forms"): code written against the base
+      class works for every derived class, **including ones written later**.
+      Add a `Cow` next year and the loop handles it without changing a line.
+
+      (The `virtual ~Animal() = default;` line is explained in lesson 12.4 —
+      for now, always put one in a base class with virtual functions.)
+
+      ## Why `override`?
+
+      `override` asks the compiler to **check** that the function really
+      overrides a virtual function of the base. A tiny mismatch — a missing
+      `const`, a different parameter type — would otherwise silently create a
+      *new* function instead of overriding, and the base version would keep
+      being called:
+
+      ```cpp error
+      #include <iostream>
+
+      class Shape {
+      public:
+          virtual ~Shape() = default;
+          virtual double area() const { return 0; }
+      };
+
+      class Square : public Shape {
+      public:
+          double area() override { return 4; }   // forgot const: doesn't override!
+      };
+
+      int main() {
+          Square s{};
+          std::cout << s.area() << '\n';
+          return 0;
+      }
+      ```
+
+      With `override`, that mistake is a compile error instead of a bug.
+      **Always write `override`.**
+
+      > [!deep] How does it work?
+      > A class with virtual functions gets a hidden table of function
+      > pointers (the *vtable*), and each object a hidden pointer to its
+      > class's table. A virtual call looks up the right function through it —
+      > a tiny cost, paid only for virtual functions.
+
+      {{check virtual-output}}
+
+      {{task shapes}}
+    checks:
+      - id: virtual-output
+        type: output
+        code: |
+          #include <iostream>
+
+          class Base {
+          public:
+              virtual ~Base() = default;
+              virtual char v() const { return 'B'; }
+              char n() const { return 'b'; }
+          };
+
+          class Derived : public Base {
+          public:
+              char v() const override { return 'D'; }
+              char n() const { return 'd'; }
+          };
+
+          int main() {
+              Derived d{};
+              const Base& r = d;
+              std::cout << r.v() << r.n() << d.v() << d.n() << '\n';
+              return 0;
+          }
+        answer: |
+          DbDd
+        why: "Through the Base reference, the virtual `v` uses the real object (D), but the non-virtual `n` uses the static type (b). Called on `d` directly, both are Derived's."
+      - id: override-why
+        type: mcq
+        prompt: What does `override` do?
+        options:
+          - It makes the function virtual in the base class
+          - It asks the compiler to check that the function really overrides a base virtual function
+          - It prevents the function from being called
+          - It makes the function faster
+        answer: 1
+        why: "A signature mismatch becomes a compile error instead of a silent bug."
+    tasks:
+      - id: shapes
+        title: Shapes
+        prompt: |
+          The starter has a base class `Shape` with `virtual double area() const`.
+          Write `Rectangle` (width, height) and `Circle` (radius; use
+          `3.14159265358979` for π) that override it, and a function
+          `double totalArea(const std::vector<const Shape*>& shapes)`.
+        starter: |
+          #include <vector>
+
+          class Shape {
+          public:
+              virtual ~Shape() = default;
+              virtual double area() const { return 0.0; }
+          };
+
+          class Rectangle : public Shape {
+          public:
+              Rectangle(double width, double height) : width_{width}, height_{height} {}
+          private:
+              double width_;
+              double height_;
+          };
+
+          class Circle : public Shape {
+          public:
+              explicit Circle(double radius) : radius_{radius} {}
+          private:
+              double radius_;
+          };
+
+          double totalArea(const std::vector<const Shape*>& shapes) {
+              return 0.0;
+          }
+        harness: |
+          Rectangle r{3, 4};
+          Circle c{1};
+          CHECK(r.area(), 12.0);
+          CHECK(c.area(), 3.14159265358979);
+          const Shape& s = r;
+          CHECK(s.area(), 12.0);
+          CHECK(totalArea({&r, &c, &r}), 24 + 3.14159265358979);
+          CHECK(totalArea({}), 0.0);
+        hints:
+          - "In `Rectangle`: `double area() const override { return width_ * height_; }`."
+          - "`totalArea` loops over the pointers and adds `s->area()`."
+        solution: |
+          #include <vector>
+
+          class Shape {
+          public:
+              virtual ~Shape() = default;
+              virtual double area() const { return 0.0; }
+          };
+
+          class Rectangle : public Shape {
+          public:
+              Rectangle(double width, double height) : width_{width}, height_{height} {}
+              double area() const override { return width_ * height_; }
+          private:
+              double width_;
+              double height_;
+          };
+
+          class Circle : public Shape {
+          public:
+              explicit Circle(double radius) : radius_{radius} {}
+              double area() const override { return 3.14159265358979 * radius_ * radius_; }
+          private:
+              double radius_;
+          };
+
+          double totalArea(const std::vector<const Shape*>& shapes) {
+              double total{0.0};
+              for (const Shape* s : shapes) {
+                  total += s->area();
+              }
+              return total;
+          }
+    cards:
+      - front: What does `virtual` do?
+        back: Makes calls through a base reference/pointer choose the function of the **actual object** at run time (dynamic dispatch).
+      - front: What is **polymorphism**?
+        back: Code written against a base class that works with every derived class, each object behaving in its own way.
+      - front: Why always write `override`?
+        back: So the compiler checks it really overrides a base virtual function; a signature mistake becomes an error, not a silent bug.
+      - front: Without `virtual`, which version does `baseRef.f()` call?
+        back: The base class's version — chosen from the static type at compile time.
+
+  - type: lesson
+    id: c12-abstract
+    title: Abstract classes and interfaces
+    minutes: 20
+    objectives:
+      - Declare pure virtual functions with `= 0`
+      - Explain why an abstract class can't be instantiated
+      - Program against an interface
+    body: |
+      What's the area of a generic "shape"? The question makes no sense —
+      only specific shapes have areas. Instead of returning a made-up 0, a
+      base class can declare a function **pure virtual** with `= 0`: "every
+      derived class must provide this; I don't have a version".
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      class Shape {
+      public:
+          virtual ~Shape() = default;
+          virtual double area() const = 0;              // pure virtual
+          virtual std::string name() const = 0;
+
+          void describe() const {                        // ordinary function using them
+              std::cout << name() << " with area " << area() << '\n';
+          }
+      };
+
+      class Square : public Shape {
+      public:
+          explicit Square(double side) : side_{side} {}
+          double area() const override { return side_ * side_; }
+          std::string name() const override { return "square"; }
+      private:
+          double side_;
+      };
+
+      class Triangle : public Shape {
+      public:
+          Triangle(double base, double height) : base_{base}, height_{height} {}
+          double area() const override { return base_ * height_ / 2; }
+          std::string name() const override { return "triangle"; }
+      private:
+          double base_;
+          double height_;
+      };
+
+      int main() {
+          Square sq{3};
+          Triangle tr{4, 5};
+          std::vector<const Shape*> shapes{&sq, &tr};
+          for (const Shape* s : shapes) {
+              s->describe();
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      square with area 9
+      triangle with area 10
+      ```
+
+      A class with at least one pure virtual function is **abstract**: you
+      **can't create objects of it** — `Shape s{};` is a compile error. It
+      exists only to be derived from. A derived class that doesn't override
+      every pure virtual function is abstract too.
+
+      Notice `describe()`: an ordinary function in the base that calls the
+      virtual ones. The base defines the *algorithm*; derived classes fill in
+      the *steps*.
+
+      ## Interfaces
+
+      An abstract class with **only** pure virtual functions (and a virtual
+      destructor) is an **interface**: a pure contract, with no data and no
+      code. Other code can depend on the interface alone:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      class Logger {
+      public:
+          virtual ~Logger() = default;
+          virtual void log(const std::string& message) = 0;
+      };
+
+      class ConsoleLogger : public Logger {
+      public:
+          void log(const std::string& message) override {
+              std::cout << "[log] " << message << '\n';
+          }
+      };
+
+      class CountingLogger : public Logger {
+      public:
+          void log(const std::string&) override { ++count_; }
+          int count() const { return count_; }
+      private:
+          int count_{0};
+      };
+
+      void transfer(Logger& logger, int amount) {
+          logger.log("transferring " + std::to_string(amount));
+          logger.log("done");
+      }
+
+      int main() {
+          ConsoleLogger console{};
+          CountingLogger counter{};
+          transfer(console, 50);
+          transfer(counter, 50);
+          std::cout << counter.count() << " messages counted\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      [log] transferring 50
+      [log] done
+      2 messages counted
+      ```
+
+      `transfer` doesn't know or care where messages go. In tests you pass a
+      counting logger; in production, one that writes to a file. That's
+      **programming to an interface** — one of the most useful design ideas
+      there is.
+
+      {{check abstract}}
+
+      {{task animals}}
+    checks:
+      - id: abstract
+        type: mcq
+        prompt: "`class Instrument { public: virtual void play() const = 0; virtual ~Instrument() = default; };` Which line compiles?"
+        options:
+          - "`Instrument i{};`"
+          - "`std::vector<Instrument> band;` then `band.push_back(Instrument{});`"
+          - "`void perform(const Instrument& i) { i.play(); }`"
+          - "`Instrument* p = new Instrument{};`"
+        answer: 2
+        why: "Abstract classes can't be instantiated, but references and pointers to them are fine — that's how they're used."
+      - id: pure-output
+        type: output
+        code: |
+          #include <iostream>
+
+          class Step {
+          public:
+              virtual ~Step() = default;
+              void run() const {
+                  std::cout << '<' << body() << '>';
+              }
+          private:
+              virtual char body() const = 0;
+          };
+
+          class A : public Step {
+              char body() const override { return 'a'; }
+          };
+
+          class B : public Step {
+              char body() const override { return 'b'; }
+          };
+
+          int main() {
+              A a{};
+              B b{};
+              a.run();
+              b.run();
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          <a><b>
+        why: "`run` is the fixed algorithm; each class supplies its own `body`. (A virtual function can even be private — derived classes can still override it.)"
+    tasks:
+      - id: animals
+        title: Animal sounds
+        prompt: |
+          Make `Animal` abstract with `virtual std::string sound() const = 0;`
+          and an ordinary member `std::string speak() const` returning
+          `name + " says " + sound()`. Write `Dog` (`"Woof"`) and `Cow`
+          (`"Moo"`). Both take their name in the constructor.
+        starter: |
+          #include <string>
+
+          class Animal {
+          public:
+              explicit Animal(const std::string& name) : name_{name} {}
+              virtual ~Animal() = default;
+
+              std::string speak() const {
+                  return "";
+              }
+
+          protected:
+              std::string name_;
+          };
+
+          class Dog : public Animal {
+          public:
+              explicit Dog(const std::string& name) : Animal{name} {}
+          };
+
+          class Cow : public Animal {
+          public:
+              explicit Cow(const std::string& name) : Animal{name} {}
+          };
+        starter_broken: true
+        harness: |
+          Dog d{"Rex"};
+          Cow c{"Daisy"};
+          CHECK(d.speak(), "Rex says Woof");
+          CHECK(c.speak(), "Daisy says Moo");
+          const Animal& a = c;
+          CHECK(a.sound(), "Moo");
+        hints:
+          - "In `Animal`, add the pure virtual `sound`, and make `speak` return `name_ + \" says \" + sound();`."
+          - "Each derived class adds `std::string sound() const override { return \"Woof\"; }`."
+        solution: |
+          #include <string>
+
+          class Animal {
+          public:
+              explicit Animal(const std::string& name) : name_{name} {}
+              virtual ~Animal() = default;
+
+              virtual std::string sound() const = 0;
+
+              std::string speak() const {
+                  return name_ + " says " + sound();
+              }
+
+          protected:
+              std::string name_;
+          };
+
+          class Dog : public Animal {
+          public:
+              explicit Dog(const std::string& name) : Animal{name} {}
+              std::string sound() const override { return "Woof"; }
+          };
+
+          class Cow : public Animal {
+          public:
+              explicit Cow(const std::string& name) : Animal{name} {}
+              std::string sound() const override { return "Moo"; }
+          };
+    cards:
+      - front: What is a **pure virtual** function?
+        back: "A virtual function declared with `= 0` and no body in the base; every concrete derived class must override it."
+      - front: What is an **abstract class**?
+        back: A class with at least one pure virtual function. It can't be instantiated — only used through references/pointers to derived objects.
+      - front: What is an **interface** in C++?
+        back: An abstract class with only pure virtual functions (and a virtual destructor) — a contract other code can depend on.
+
+  - type: quiz
+    id: c12-quiz1
+    title: "Quiz: inheritance and virtual functions"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          class A {
+          public:
+              A() { std::cout << "A"; }
+              ~A() { std::cout << "a"; }
+          };
+
+          class B : public A {
+          public:
+              B() { std::cout << "B"; }
+              ~B() { std::cout << "b"; }
+          };
+
+          int main() {
+              B x{};
+              std::cout << '-';
+              return 0;
+          }
+        answer: |
+          AB-ba
+        why: "Base constructed first, destroyed last."
+      - type: output
+        code: |
+          #include <iostream>
+
+          class Vehicle {
+          public:
+              virtual ~Vehicle() = default;
+              virtual int wheels() const { return 0; }
+          };
+
+          class Bike : public Vehicle {
+          public:
+              int wheels() const override { return 2; }
+          };
+
+          class Car : public Vehicle {
+          public:
+              int wheels() const override { return 4; }
+          };
+
+          int count(const Vehicle& a, const Vehicle& b) {
+              return a.wheels() + b.wheels();
+          }
+
+          int main() {
+              Bike b{};
+              Car c{};
+              std::cout << count(b, c) << ' ' << count(c, c) << '\n';
+              return 0;
+          }
+        answer: |
+          6 8
+        why: "Virtual calls use the real objects: 2 + 4 and 4 + 4."
+      - type: mcq
+        prompt: What happens if a derived class forgets to override one pure virtual function?
+        options:
+          - The base version is used
+          - The derived class is abstract too — creating objects of it is a compile error
+          - A run-time crash
+          - It returns 0
+        answer: 1
+        why: "There is no base version; the class stays abstract."
+      - type: spot
+        prompt: "The loop should print each animal's own sound, but every animal prints `...`. Which line needs a keyword?"
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          class Animal {
+          public:
+              void sound() const { std::cout << "...\n"; }
+          };
+
+          class Duck : public Animal {
+          public:
+              void sound() const { std::cout << "Quack\n"; }
+          };
+
+          int main() {
+              Duck d{};
+              std::vector<const Animal*> all{&d};
+              for (const Animal* a : all) {
+                  a->sound();
+              }
+              return 0;
+          }
+        answer: 6
+        why: "Without `virtual` in the base, the call through `Animal*` always uses Animal's version."
+
+  - type: lesson
+    id: c12-pitfalls
+    title: Slicing and virtual destructors
+    minutes: 18
+    objectives:
+      - Recognise object slicing and avoid it by using references and pointers
+      - Explain why a polymorphic base class needs a virtual destructor
+    body: |
+      Two classic traps come with polymorphism. Both have simple rules that
+      avoid them completely.
+
+      ## Object slicing
+
+      A derived object can be **copied into** a base object — but only the
+      base part is copied. The rest is **sliced off**, and the copy is a plain
+      base object:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      class Animal {
+      public:
+          virtual ~Animal() = default;
+          virtual std::string sound() const { return "..."; }
+      };
+
+      class Dog : public Animal {
+      public:
+          std::string sound() const override { return "Woof"; }
+      };
+
+      void byValue(Animal a) { std::cout << a.sound() << '\n'; }
+      void byReference(const Animal& a) { std::cout << a.sound() << '\n'; }
+
+      int main() {
+          Dog d{};
+          byValue(d);       // sliced: a is just an Animal
+          byReference(d);   // no copy: still the Dog
+          return 0;
+      }
+      ```
+
+      ```output
+      ...
+      Woof
+      ```
+
+      The same happens with `std::vector<Animal>` — `push_back(dog)` stores a
+      sliced copy. **Rule: pass and store polymorphic objects by reference or
+      pointer, never by value.** (That's why the examples used
+      `std::vector<const Animal*>`. Chapter 15's `std::unique_ptr` makes owning
+      containers of polymorphic objects safe.)
+
+      ## Virtual destructors
+
+      Suppose a derived object is created with `new` and deleted through a
+      **base pointer**:
+
+      ```cpp
+      #include <iostream>
+
+      class Base {
+      public:
+          virtual ~Base() { std::cout << "~Base\n"; }
+      };
+
+      class Derived : public Base {
+      public:
+          ~Derived() override { std::cout << "~Derived\n"; }
+      };
+
+      int main() {
+          Base* p = new Derived{};
+          delete p;
+          return 0;
+      }
+      ```
+
+      ```output
+      ~Derived
+      ~Base
+      ```
+
+      Because the destructor is `virtual`, `delete p` runs the **Derived**
+      destructor first, then the Base one — everything is cleaned up. Without
+      `virtual` on `~Base`, deleting a derived object through a base pointer is
+      **undefined behaviour**: typically only `~Base` runs, and the derived
+      part's resources leak.
+
+      > [!remember]
+      > **Any class with a virtual function gets a virtual destructor**:
+      > `virtual ~Base() = default;`. It costs nothing extra (the class already
+      > has a vtable) and prevents a nasty class of bugs.
+
+      {{check slicing}}
+    checks:
+      - id: slicing
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          class Item {
+          public:
+              virtual ~Item() = default;
+              virtual int price() const { return 1; }
+          };
+
+          class Gem : public Item {
+          public:
+              int price() const override { return 100; }
+          };
+
+          int main() {
+              Gem g{};
+              std::vector<Item> byValue{g};
+              std::vector<const Item*> byPointer{&g};
+              std::cout << byValue[0].price() << ' ' << byPointer[0]->price() << '\n';
+              return 0;
+          }
+        answer: |
+          1 100
+        why: "The vector of `Item` stores a sliced copy — a plain Item. The vector of pointers still refers to the Gem."
+      - id: vdtor
+        type: mcq
+        prompt: "Why does `class Base { public: virtual void f(); ~Base(); };` have a problem?"
+        options:
+          - It doesn't — the destructor is fine
+          - Deleting a derived object through a `Base*` is undefined behaviour because the destructor isn't virtual
+          - "`f` must be pure virtual"
+          - Destructors can't be declared in classes with virtual functions
+        answer: 1
+        why: "A polymorphic base needs `virtual ~Base()` so `delete basePtr` runs the derived destructor too."
+    cards:
+      - front: What is **object slicing**?
+        back: Copying a derived object into a base object by value — only the base part is copied, and the derived behaviour is lost.
+      - front: How do you avoid slicing?
+        back: Pass and store polymorphic objects by reference or pointer, never by value.
+      - front: Why must a polymorphic base class have a virtual destructor?
+        back: Deleting a derived object through a base pointer is undefined behaviour otherwise (the derived destructor wouldn't run).
+
+  - type: lesson
+    id: c12-composition
+    title: Composition over inheritance
+    minutes: 18
+    objectives:
+      - Tell an "is-a" relationship from a "has-a" relationship
+      - Build a class by composing other objects
+      - Explain the Liskov substitution principle with an example
+    body: |
+      Inheritance is powerful, and beginners tend to use it everywhere. Most
+      experienced C++ programmers follow the opposite advice: **prefer
+      composition**.
+
+      ## is-a versus has-a
+
+      - A dog **is an** animal → inheritance can fit.
+      - A car **has an** engine → the engine is a **member**. A car is not a kind of engine!
+
+      Building a class out of other objects is **composition**:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      class Engine {
+      public:
+          explicit Engine(int horsepower) : hp_{horsepower} {}
+          void start() const { std::cout << hp_ << "hp engine starts\n"; }
+      private:
+          int hp_;
+      };
+
+      class Car {
+      public:
+          Car(const std::string& model, int horsepower) : model_{model}, engine_{horsepower} {}
+          void drive() const {
+              engine_.start();
+              std::cout << model_ << " drives off\n";
+          }
+      private:
+          std::string model_;
+          Engine engine_;   // a Car has an Engine
+      };
+
+      int main() {
+          Car car{"Roadster", 300};
+          car.drive();
+          return 0;
+      }
+      ```
+
+      ```output
+      300hp engine starts
+      Roadster drives off
+      ```
+
+      Composition keeps classes independent: `Car` uses only `Engine`'s public
+      interface, and you can change either one without breaking the other.
+      Inheritance ties the derived class tightly to the base's internals.
+
+      ## The substitution test
+
+      Inheritance promises that a derived object can be used **anywhere** a
+      base object can, without surprises. This is the **Liskov substitution
+      principle**. The famous violation: a `Square` derived from `Rectangle`.
+
+      Mathematically a square *is* a rectangle. But if `Rectangle` has
+      `setWidth` and `setHeight`, what should `Square::setWidth(5)` do? If it
+      changes only the width, it's no longer a square. If it changes both,
+      code that expects "setting the width doesn't change the height" breaks:
+
+      ```cpp static
+      void stretch(Rectangle& r) {
+          r.setWidth(10);
+          r.setHeight(2);
+          // Code here expects area() == 20. For a Square, it isn't.
+      }
+      ```
+
+      The lesson: "is-a" must hold for **behaviour**, not just for the
+      real-world idea. If a derived class can't honour every promise of the
+      base, don't derive — compose, or rethink the design.
+
+      > [!tip] A rule of thumb
+      > Use public inheritance when you need **polymorphism** — code that
+      > works on a base reference and should accept many kinds of object. To
+      > **reuse code**, use composition.
+
+      {{check isa}}
+    checks:
+      - id: isa
+        type: mcq
+        prompt: Which relationship is best modelled with inheritance?
+        options:
+          - A `Library` and its `Book`s
+          - A `Circle` and a `Shape` interface drawn by a renderer
+          - A `Computer` and its `Keyboard`
+          - A `Player` and their `Inventory`
+        answer: 1
+        why: "A circle *is a* shape, and the renderer needs polymorphism. The others are \"has-a\" — composition."
+    cards:
+      - front: "\"is-a\" vs \"has-a\"?"
+        back: "is-a (a Dog is an Animal) may call for inheritance; has-a (a Car has an Engine) calls for composition — a member object."
+      - front: What is the **Liskov substitution principle**?
+        back: A derived object must be usable anywhere a base object is, without breaking expectations. (Square-derived-from-Rectangle is the classic violation.)
+      - front: Composition or inheritance by default?
+        back: Composition. Use public inheritance when you need polymorphism.
+
+  - type: quiz
+    id: c12-quiz2
+    title: "Quiz: abstract classes, slicing and design"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          class Greeter {
+          public:
+              virtual ~Greeter() = default;
+              std::string greet(const std::string& n) const { return open() + n + close(); }
+          private:
+              virtual std::string open() const = 0;
+              virtual std::string close() const { return "!"; }
+          };
+
+          class Formal : public Greeter {
+              std::string open() const override { return "Good day, "; }
+              std::string close() const override { return "."; }
+          };
+
+          class Casual : public Greeter {
+              std::string open() const override { return "Hey "; }
+          };
+
+          int main() {
+              Formal f{};
+              Casual c{};
+              std::cout << f.greet("Ada") << ' ' << c.greet("Al") << '\n';
+              return 0;
+          }
+        answer: |
+          Good day, Ada. Hey Al!
+        why: "Casual doesn't override `close`, so it inherits the base version `!`."
+      - type: mcq
+        prompt: "`void show(Shape s)` is called with a `Circle`. What is `s` inside `show`?"
+        options:
+          - The Circle itself
+          - A sliced copy — just the Shape part
+          - A reference to the Circle
+          - A compile error, always
+        answer: 1
+        why: "Passing by value copies only the base part (if Shape isn't abstract; if it is, it doesn't compile)."
+      - type: tf
+        prompt: "`virtual ~Base() = default;` should be in every class that has virtual functions."
+        answer: true
+        why: "It makes deleting derived objects through base pointers safe."
+      - type: mcq
+        prompt: "A `Stack` class needs to store elements. Best design?"
+        options:
+          - "`class Stack : public std::vector<int>`"
+          - "`class Stack { ... private: std::vector<int> items_; };`"
+          - A global vector
+          - "`class Stack : protected std::vector<int>`"
+        answer: 1
+        why: "A stack *has* storage; deriving from vector would expose every vector operation and break the stack's rules."
+
+  - type: project
+    id: c12-project
+    title: "Project: Arena Battle"
+    body: |
+      A turn-based battle simulator — the core of every RPG — built with a
+      class hierarchy. Each fighter class has its own rules, but the battle
+      loop treats them all the same through a base-class interface. That's
+      polymorphism doing real work.
+
+      Rules common to all milestones: fighters take turns, **first fighter
+      first**. Damage reduces health; health can't go below 0. When a
+      fighter's health reaches 0, print `NAME is defeated!` then
+      `WINNER wins!` and stop.
+    milestones:
+      - title: Two fighters
+        prompt: |
+          Write `class Fighter` with a name, health and power, and a battle
+          between two fighters. Input: two lines `NAME HEALTH POWER`. On each
+          turn the attacker deals damage equal to its power. Print each hit:
+
+          ```text
+          Ann hits Bob for 7 (Bob: 13)
+          ```
+
+          For input `Ann 30 7` / `Bob 20 9`:
+
+          ```text
+          Ann hits Bob for 7 (Bob: 13)
+          Bob hits Ann for 9 (Ann: 21)
+          Ann hits Bob for 7 (Bob: 6)
+          Bob hits Ann for 9 (Ann: 12)
+          Ann hits Bob for 7 (Bob: 0)
+          Bob is defeated!
+          Ann wins!
+          ```
+        starter: |
+          #include <iostream>
+          #include <string>
+
+          class Fighter {
+          public:
+
+          private:
+          };
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: |
+              Ann 30 7
+              Bob 20 9
+            out: |
+              Ann hits Bob for 7 (Bob: 13)
+              Bob hits Ann for 9 (Ann: 21)
+              Ann hits Bob for 7 (Bob: 6)
+              Bob hits Ann for 9 (Ann: 12)
+              Ann hits Bob for 7 (Bob: 0)
+              Bob is defeated!
+              Ann wins!
+          - in: |
+              Weak 5 1
+              Strong 50 10
+            out: |
+              Weak hits Strong for 1 (Strong: 49)
+              Strong hits Weak for 10 (Weak: 0)
+              Weak is defeated!
+              Strong wins!
+        hints:
+          - "`Fighter` needs: a constructor, `name()`, `health()`, `alive()`, `power()` and `takeDamage(int)` that keeps health ≥ 0."
+          - "The battle: two references `attacker` and `defender`; after each hit, if the defender is dead, announce and stop; otherwise swap roles."
+          - "Swapping roles with references isn't possible (they can't be reseated) — use pointers: `Fighter* attacker = &a; Fighter* defender = &b;` and `std::swap(attacker, defender)`."
+        solution: |
+          #include <iostream>
+          #include <string>
+          #include <utility>
+
+          class Fighter {
+          public:
+              Fighter(const std::string& name, int health, int power)
+                  : name_{name}, health_{health}, power_{power} {}
+
+              const std::string& name() const { return name_; }
+              int health() const { return health_; }
+              int power() const { return power_; }
+              bool alive() const { return health_ > 0; }
+
+              void takeDamage(int amount) {
+                  health_ -= amount;
+                  if (health_ < 0) {
+                      health_ = 0;
+                  }
+              }
+
+          private:
+              std::string name_;
+              int health_;
+              int power_;
+          };
+
+          int main() {
+              std::string n1{};
+              std::string n2{};
+              int h1{};
+              int p1{};
+              int h2{};
+              int p2{};
+              std::cin >> n1 >> h1 >> p1 >> n2 >> h2 >> p2;
+              Fighter a{n1, h1, p1};
+              Fighter b{n2, h2, p2};
+
+              Fighter* attacker = &a;
+              Fighter* defender = &b;
+              while (true) {
+                  int damage = attacker->power();
+                  defender->takeDamage(damage);
+                  std::cout << attacker->name() << " hits " << defender->name() << " for " << damage
+                            << " (" << defender->name() << ": " << defender->health() << ")\n";
+                  if (!defender->alive()) {
+                      std::cout << defender->name() << " is defeated!\n";
+                      std::cout << attacker->name() << " wins!\n";
+                      break;
+                  }
+                  std::swap(attacker, defender);
+              }
+              return 0;
+          }
+      - title: Warriors and mages
+        prompt: |
+          Now fighters come in **classes**. Input lines become
+          `TYPE NAME HEALTH POWER`, where `TYPE` is `warrior` or `mage`:
+
+          - A **warrior** has armour: damage it *receives* is reduced by 2 (but always at least 1).
+          - A **mage** casts a fireball on every **third** attack it makes (its 3rd, 6th, …): that attack deals **triple** its power.
+
+          Make `Fighter` a base class with **virtual** functions — for
+          example `virtual int attackDamage()` and `virtual int reduce(int damage) const` —
+          overridden by `Warrior` and `Mage`. The battle loop must work with
+          `Fighter` pointers/references only. Print the damage actually dealt.
+
+          For input `warrior Conan 30 5` / `mage Merlin 20 4`:
+
+          ```text
+          Conan hits Merlin for 5 (Merlin: 15)
+          Merlin hits Conan for 2 (Conan: 28)
+          Conan hits Merlin for 5 (Merlin: 10)
+          Merlin hits Conan for 2 (Conan: 26)
+          Conan hits Merlin for 5 (Merlin: 5)
+          Merlin hits Conan for 10 (Conan: 16)
+          Conan hits Merlin for 5 (Merlin: 0)
+          Merlin is defeated!
+          Conan wins!
+          ```
+
+          (Merlin's third attack is a fireball: 3 × 4 = 12, minus 2 for
+          Conan's armour = 10.)
+        tests:
+          - in: |
+              warrior Conan 30 5
+              mage Merlin 20 4
+            out: |
+              Conan hits Merlin for 5 (Merlin: 15)
+              Merlin hits Conan for 2 (Conan: 28)
+              Conan hits Merlin for 5 (Merlin: 10)
+              Merlin hits Conan for 2 (Conan: 26)
+              Conan hits Merlin for 5 (Merlin: 5)
+              Merlin hits Conan for 10 (Conan: 16)
+              Conan hits Merlin for 5 (Merlin: 0)
+              Merlin is defeated!
+              Conan wins!
+          - in: |
+              mage Zed 12 3
+              mage Ivy 12 4
+            out: |
+              Zed hits Ivy for 3 (Ivy: 9)
+              Ivy hits Zed for 4 (Zed: 8)
+              Zed hits Ivy for 3 (Ivy: 6)
+              Ivy hits Zed for 4 (Zed: 4)
+              Zed hits Ivy for 9 (Ivy: 0)
+              Ivy is defeated!
+              Zed wins!
+          - in: |
+              warrior Tank 10 1
+              warrior Wall 10 2
+            out: |
+              Tank hits Wall for 1 (Wall: 9)
+              Wall hits Tank for 1 (Tank: 9)
+              Tank hits Wall for 1 (Wall: 8)
+              Wall hits Tank for 1 (Tank: 8)
+              Tank hits Wall for 1 (Wall: 7)
+              Wall hits Tank for 1 (Tank: 7)
+              Tank hits Wall for 1 (Wall: 6)
+              Wall hits Tank for 1 (Tank: 6)
+              Tank hits Wall for 1 (Wall: 5)
+              Wall hits Tank for 1 (Tank: 5)
+              Tank hits Wall for 1 (Wall: 4)
+              Wall hits Tank for 1 (Tank: 4)
+              Tank hits Wall for 1 (Wall: 3)
+              Wall hits Tank for 1 (Tank: 3)
+              Tank hits Wall for 1 (Wall: 2)
+              Wall hits Tank for 1 (Tank: 2)
+              Tank hits Wall for 1 (Wall: 1)
+              Wall hits Tank for 1 (Tank: 1)
+              Tank hits Wall for 1 (Wall: 0)
+              Wall is defeated!
+              Tank wins!
+        hints:
+          - "`attackDamage()` isn't `const` for a mage — it counts its attacks."
+          - "A hit: `int dealt = defender->reduce(attacker->attackDamage()); defender->takeDamage(dealt);`"
+          - "Create the fighters from the input with a helper that returns a `Fighter*` from `new Warrior{...}` or `new Mage{...}` — and `delete` them at the end (with a virtual destructor in `Fighter`!)."
+        solution: |
+          #include <iostream>
+          #include <string>
+          #include <utility>
+
+          class Fighter {
+          public:
+              Fighter(const std::string& name, int health, int power)
+                  : name_{name}, health_{health}, power_{power} {}
+              virtual ~Fighter() = default;
+
+              const std::string& name() const { return name_; }
+              int health() const { return health_; }
+              bool alive() const { return health_ > 0; }
+
+              virtual int attackDamage() { return power_; }
+              virtual int reduce(int damage) const { return damage; }
+
+              void takeDamage(int amount) {
+                  health_ -= amount;
+                  if (health_ < 0) {
+                      health_ = 0;
+                  }
+              }
+
+          protected:
+              int power() const { return power_; }
+
+          private:
+              std::string name_;
+              int health_;
+              int power_;
+          };
+
+          class Warrior : public Fighter {
+          public:
+              using Fighter::Fighter;
+
+              int reduce(int damage) const override {
+                  return damage - 2 < 1 ? 1 : damage - 2;
+              }
+          };
+
+          class Mage : public Fighter {
+          public:
+              using Fighter::Fighter;
+
+              int attackDamage() override {
+                  ++attacks_;
+                  return attacks_ % 3 == 0 ? 3 * power() : power();
+              }
+
+          private:
+              int attacks_{0};
+          };
+
+          Fighter* makeFighter(const std::string& type, const std::string& name, int health, int power) {
+              if (type == "warrior") {
+                  return new Warrior{name, health, power};
+              }
+              return new Mage{name, health, power};
+          }
+
+          Fighter* readFighter() {
+              std::string type{};
+              std::string name{};
+              int health{};
+              int power{};
+              std::cin >> type >> name >> health >> power;
+              return makeFighter(type, name, health, power);
+          }
+
+          int main() {
+              Fighter* a = readFighter();
+              Fighter* b = readFighter();
+
+              Fighter* attacker = a;
+              Fighter* defender = b;
+              while (true) {
+                  int dealt = defender->reduce(attacker->attackDamage());
+                  defender->takeDamage(dealt);
+                  std::cout << attacker->name() << " hits " << defender->name() << " for " << dealt
+                            << " (" << defender->name() << ": " << defender->health() << ")\n";
+                  if (!defender->alive()) {
+                      std::cout << defender->name() << " is defeated!\n";
+                      std::cout << attacker->name() << " wins!\n";
+                      break;
+                  }
+                  std::swap(attacker, defender);
+              }
+
+              delete a;
+              delete b;
+              return 0;
+          }
+      - title: The healer
+        prompt: |
+          Add a third class, **healer**: on its turn, if its health is
+          **below half** of its *starting* health (integer division — health
+          < start / 2), it heals itself by its power instead of attacking,
+          never above its starting health. It prints:
+
+          ```text
+          Faye heals for 6 (Faye: 14)
+          ```
+
+          (showing the amount actually healed). Otherwise it attacks normally.
+          Add a `virtual bool takeTurn(Fighter& opponent)` (or similar) so the
+          battle loop stays the same for every class; it must still print the
+          defeat and the winner.
+
+          For input `healer Faye 20 6` / `warrior Brute 40 9`:
+
+          ```text
+          Faye hits Brute for 4 (Brute: 36)
+          Brute hits Faye for 9 (Faye: 11)
+          Faye hits Brute for 4 (Brute: 32)
+          Brute hits Faye for 9 (Faye: 2)
+          Faye heals for 6 (Faye: 8)
+          Brute hits Faye for 9 (Faye: 0)
+          Faye is defeated!
+          Brute wins!
+          ```
+        tests:
+          - in: |
+              healer Faye 20 6
+              warrior Brute 40 9
+            out: |
+              Faye hits Brute for 4 (Brute: 36)
+              Brute hits Faye for 9 (Faye: 11)
+              Faye hits Brute for 4 (Brute: 32)
+              Brute hits Faye for 9 (Faye: 2)
+              Faye heals for 6 (Faye: 8)
+              Brute hits Faye for 9 (Faye: 0)
+              Faye is defeated!
+              Brute wins!
+          - in: |
+              healer Hana 30 4
+              mage Mo 30 5
+            out: |
+              Hana hits Mo for 4 (Mo: 26)
+              Mo hits Hana for 5 (Hana: 25)
+              Hana hits Mo for 4 (Mo: 22)
+              Mo hits Hana for 5 (Hana: 20)
+              Hana hits Mo for 4 (Mo: 18)
+              Mo hits Hana for 15 (Hana: 5)
+              Hana heals for 4 (Hana: 9)
+              Mo hits Hana for 5 (Hana: 4)
+              Hana heals for 4 (Hana: 8)
+              Mo hits Hana for 5 (Hana: 3)
+              Hana heals for 4 (Hana: 7)
+              Mo hits Hana for 15 (Hana: 0)
+              Hana is defeated!
+              Mo wins!
+          - in: |
+              warrior Axe 20 6
+              mage Orb 15 2
+            out: |
+              Axe hits Orb for 6 (Orb: 9)
+              Orb hits Axe for 1 (Axe: 19)
+              Axe hits Orb for 6 (Orb: 3)
+              Orb hits Axe for 1 (Axe: 18)
+              Axe hits Orb for 6 (Orb: 0)
+              Orb is defeated!
+              Axe wins!
+        hints:
+          - "Give the base class a `virtual void takeTurn(Fighter& opponent)` that does the normal attack and prints the hit; `Healer` overrides it to heal when low."
+          - "Store the starting health in the base (or in `Healer`) so the healer knows what \"half\" and \"full\" mean."
+          - "Healing: `int healed = std::min(power, start - health);` — add a protected `heal(int)` to the base."
+        solution: |
+          #include <algorithm>
+          #include <iostream>
+          #include <string>
+          #include <utility>
+
+          class Fighter {
+          public:
+              Fighter(const std::string& name, int health, int power)
+                  : name_{name}, health_{health}, start_{health}, power_{power} {}
+              virtual ~Fighter() = default;
+
+              const std::string& name() const { return name_; }
+              int health() const { return health_; }
+              bool alive() const { return health_ > 0; }
+
+              virtual int attackDamage() { return power_; }
+              virtual int reduce(int damage) const { return damage; }
+
+              void takeDamage(int amount) {
+                  health_ -= amount;
+                  if (health_ < 0) {
+                      health_ = 0;
+                  }
+              }
+
+              virtual void takeTurn(Fighter& opponent) {
+                  int dealt = opponent.reduce(attackDamage());
+                  opponent.takeDamage(dealt);
+                  std::cout << name() << " hits " << opponent.name() << " for " << dealt
+                            << " (" << opponent.name() << ": " << opponent.health() << ")\n";
+              }
+
+          protected:
+              int power() const { return power_; }
+              int start() const { return start_; }
+
+              int heal(int amount) {
+                  int healed = std::min(amount, start_ - health_);
+                  health_ += healed;
+                  return healed;
+              }
+
+          private:
+              std::string name_;
+              int health_;
+              int start_;
+              int power_;
+          };
+
+          class Warrior : public Fighter {
+          public:
+              using Fighter::Fighter;
+
+              int reduce(int damage) const override {
+                  return damage - 2 < 1 ? 1 : damage - 2;
+              }
+          };
+
+          class Mage : public Fighter {
+          public:
+              using Fighter::Fighter;
+
+              int attackDamage() override {
+                  ++attacks_;
+                  return attacks_ % 3 == 0 ? 3 * power() : power();
+              }
+
+          private:
+              int attacks_{0};
+          };
+
+          class Healer : public Fighter {
+          public:
+              using Fighter::Fighter;
+
+              void takeTurn(Fighter& opponent) override {
+                  if (health() < start() / 2) {
+                      int healed = heal(power());
+                      std::cout << name() << " heals for " << healed << " (" << name() << ": " << health() << ")\n";
+                      return;
+                  }
+                  Fighter::takeTurn(opponent);
+              }
+          };
+
+          Fighter* readFighter() {
+              std::string type{};
+              std::string name{};
+              int health{};
+              int power{};
+              std::cin >> type >> name >> health >> power;
+              if (type == "warrior") {
+                  return new Warrior{name, health, power};
+              }
+              if (type == "healer") {
+                  return new Healer{name, health, power};
+              }
+              return new Mage{name, health, power};
+          }
+
+          int main() {
+              Fighter* a = readFighter();
+              Fighter* b = readFighter();
+
+              Fighter* attacker = a;
+              Fighter* defender = b;
+              while (true) {
+                  attacker->takeTurn(*defender);
+                  if (!defender->alive()) {
+                      std::cout << defender->name() << " is defeated!\n";
+                      std::cout << attacker->name() << " wins!\n";
+                      break;
+                  }
+                  std::swap(attacker, defender);
+              }
+
+              delete a;
+              delete b;
+              return 0;
+          }
+        explain: |
+          `Healer::takeTurn` decides whether to heal, and otherwise calls the
+          base version with `Fighter::takeTurn(opponent)` — reusing the normal
+          attack instead of copying it. `using Fighter::Fighter;` *inherits* the
+          base constructors, so the derived classes don't have to repeat them.
+          And the battle loop never changed after milestone 2: new fighter
+          types plug into it. That's what polymorphism buys you.
+
+  - type: challenge
+    id: c12-ch-payroll
+    title: Payroll
+    difficulty: 2
+    tags: [polymorphism, abstract classes]
+    prompt: |
+      Write an abstract `class Employee` with a name and a pure virtual
+      `double pay() const`, and three kinds of employee:
+
+      - `Salaried(name, yearlySalary)` — pays `yearlySalary / 12` per month.
+      - `Hourly(name, rate, hours)` — pays `rate × hours`, but hours over 160 are paid at **1.5×** the rate.
+      - `Commissioned(name, base, sales)` — pays `base + 10%` of sales.
+
+      And `double totalPayroll(const std::vector<const Employee*>& staff)`.
+    starter: |
+      #include <string>
+      #include <vector>
+
+      class Employee {
+      public:
+          explicit Employee(const std::string& name) : name_{name} {}
+          virtual ~Employee() = default;
+          const std::string& name() const { return name_; }
+          virtual double pay() const { return 0.0; }   // TODO: make this pure virtual
+      private:
+          std::string name_;
+      };
+
+      class Salaried : public Employee {
+      public:
+          Salaried(const std::string& name, double yearly) : Employee{name}, yearly_{yearly} {}
+      private:
+          double yearly_;
+      };
+
+      class Hourly : public Employee {
+      public:
+          Hourly(const std::string& name, double rate, double hours)
+              : Employee{name}, rate_{rate}, hours_{hours} {}
+      private:
+          double rate_;
+          double hours_;
+      };
+
+      class Commissioned : public Employee {
+      public:
+          Commissioned(const std::string& name, double base, double sales)
+              : Employee{name}, base_{base}, sales_{sales} {}
+      private:
+          double base_;
+          double sales_;
+      };
+
+      double totalPayroll(const std::vector<const Employee*>& staff) {
+          return 0.0;
+      }
+    harness: |
+      Salaried s{"Ada", 36000};
+      Hourly h{"Al", 20, 100};
+      Hourly o{"Grace", 20, 170};
+      Commissioned c{"Linus", 1000, 5000};
+      CHECK(s.pay(), 3000.0);
+      CHECK(h.pay(), 2000.0);
+      CHECK(o.pay(), 3500.0);
+      CHECK(c.pay(), 1500.0);
+      const Employee& e = o;
+      CHECK(e.pay(), 3500.0);
+      CHECK(totalPayroll({&s, &h, &o, &c}), 10000.0);
+      CHECK(totalPayroll({}), 0.0);
+    hints:
+      - "Overtime: the first 160 hours at `rate`, the rest at `rate * 1.5`."
+      - "Each class adds `double pay() const override { ... }`."
+    solution: |
+      #include <string>
+      #include <vector>
+
+      class Employee {
+      public:
+          explicit Employee(const std::string& name) : name_{name} {}
+          virtual ~Employee() = default;
+          const std::string& name() const { return name_; }
+          virtual double pay() const = 0;
+      private:
+          std::string name_;
+      };
+
+      class Salaried : public Employee {
+      public:
+          Salaried(const std::string& name, double yearly) : Employee{name}, yearly_{yearly} {}
+          double pay() const override { return yearly_ / 12; }
+      private:
+          double yearly_;
+      };
+
+      class Hourly : public Employee {
+      public:
+          Hourly(const std::string& name, double rate, double hours)
+              : Employee{name}, rate_{rate}, hours_{hours} {}
+          double pay() const override {
+              constexpr double normal{160};
+              if (hours_ <= normal) {
+                  return rate_ * hours_;
+              }
+              return rate_ * normal + rate_ * 1.5 * (hours_ - normal);
+          }
+      private:
+          double rate_;
+          double hours_;
+      };
+
+      class Commissioned : public Employee {
+      public:
+          Commissioned(const std::string& name, double base, double sales)
+              : Employee{name}, base_{base}, sales_{sales} {}
+          double pay() const override { return base_ + 0.10 * sales_; }
+      private:
+          double base_;
+          double sales_;
+      };
+
+      double totalPayroll(const std::vector<const Employee*>& staff) {
+          double total{0.0};
+          for (const Employee* e : staff) {
+              total += e->pay();
+          }
+          return total;
+      }
+
+  - type: challenge
+    id: c12-ch-expr
+    title: Expression trees
+    difficulty: 3
+    tags: [polymorphism, recursion, trees]
+    prompt: |
+      Represent arithmetic expressions as a tree of objects. Write an abstract
+      `class Expr` with `virtual double eval() const = 0;` and
+      `virtual std::string str() const = 0;`, and three node types:
+
+      - `Num(double v)` — `str()` prints the value with `std::ostringstream` (so `2` prints `2`, `2.5` prints `2.5`).
+      - `Add(Expr* left, Expr* right)` and `Mul(Expr* left, Expr* right)` — they **own** their children and `delete` them in their destructors. `str()` wraps in parentheses: `(2 + (3 * 4))`.
+
+      The checker builds trees with `new` and deletes the root.
+    starter: |
+      #include <sstream>
+      #include <string>
+
+      class Expr {
+      public:
+          virtual ~Expr() = default;
+          // TODO: eval() and str()
+      };
+
+      // TODO: Num, Add and Mul
+    starter_broken: true
+    harness: |
+      Expr* e = new Add(new Num(2), new Mul(new Num(3), new Num(4)));
+      CHECK(e->eval(), 14.0);
+      CHECK(e->str(), "(2 + (3 * 4))");
+      delete e;
+      Expr* f = new Mul(new Add(new Num(1.5), new Num(0.5)), new Num(10));
+      CHECK(f->eval(), 20.0);
+      CHECK(f->str(), "((1.5 + 0.5) * 10)");
+      delete f;
+      Expr* n = new Num(7);
+      CHECK(n->str(), "7");
+      delete n;
+    hints:
+      - "`Add::eval()` is `left_->eval() + right_->eval()` — each node trusts its children to evaluate themselves. Recursion through virtual calls!"
+      - "`~Add() override { delete left_; delete right_; }` — and because `Expr` has a virtual destructor, deleting the root deletes the whole tree."
+      - "The binary nodes own raw pointers, so they must not be copied: add `Add(const Add&) = delete;` and `Add& operator=(const Add&) = delete;`."
+    solution: |
+      #include <sstream>
+      #include <string>
+
+      class Expr {
+      public:
+          virtual ~Expr() = default;
+          virtual double eval() const = 0;
+          virtual std::string str() const = 0;
+      };
+
+      class Num : public Expr {
+      public:
+          explicit Num(double v) : v_{v} {}
+          double eval() const override { return v_; }
+          std::string str() const override {
+              std::ostringstream out{};
+              out << v_;
+              return out.str();
+          }
+      private:
+          double v_;
+      };
+
+      class Binary : public Expr {
+      public:
+          Binary(Expr* left, Expr* right) : left_{left}, right_{right} {}
+          ~Binary() override {
+              delete left_;
+              delete right_;
+          }
+          Binary(const Binary&) = delete;
+          Binary& operator=(const Binary&) = delete;
+
+      protected:
+          Expr* left_;
+          Expr* right_;
+      };
+
+      class Add : public Binary {
+      public:
+          using Binary::Binary;
+          double eval() const override { return left_->eval() + right_->eval(); }
+          std::string str() const override { return "(" + left_->str() + " + " + right_->str() + ")"; }
+      };
+
+      class Mul : public Binary {
+      public:
+          using Binary::Binary;
+          double eval() const override { return left_->eval() * right_->eval(); }
+          std::string str() const override { return "(" + left_->str() + " * " + right_->str() + ")"; }
+      };
+    explain: |
+      This is how compilers and calculators represent formulas — and your
+      first **tree**. Evaluation is recursion where each call dispatches on
+      the node's real type. Ownership is explicit: each binary node owns its
+      two children, so deleting the root frees everything exactly once.
+      Chapter 15's `std::unique_ptr` would make that ownership automatic.
+
+  - type: challenge
+    id: c12-ch-accounts
+    title: Account types
+    difficulty: 2
+    tags: [inheritance, virtual]
+    prompt: |
+      Write a base `class Account` with a balance, `deposit(double)`,
+      `double balance() const` and `virtual bool withdraw(double amount)`
+      (refuses if amount > balance), plus a virtual `void monthEnd()` that
+      does nothing. Then:
+
+      - `Savings(initial, ratePercent)` — `monthEnd` adds interest: balance × rate / 100.
+      - `Checking(initial, overdraft)` — `withdraw` allows the balance to go down to `-overdraft`; `monthEnd` charges a fee of 5 if the balance is negative.
+    starter: |
+      class Account {
+      public:
+          explicit Account(double initial) : balance_{initial} {}
+          virtual ~Account() = default;
+
+          void deposit(double amount) { balance_ += amount; }
+          double balance() const { return balance_; }
+
+          virtual bool withdraw(double amount) {
+              return false;
+          }
+
+          virtual void monthEnd() {}
+
+      protected:
+          double balance_;
+      };
+
+      class Savings : public Account {
+      public:
+          Savings(double initial, double rate) : Account{initial}, rate_{rate} {}
+      private:
+          double rate_;
+      };
+
+      class Checking : public Account {
+      public:
+          Checking(double initial, double overdraft) : Account{initial}, overdraft_{overdraft} {}
+      private:
+          double overdraft_;
+      };
+    harness: |
+      Savings s{1000, 2};
+      CHECK(s.withdraw(1500), false);
+      CHECK(s.withdraw(200), true);
+      s.monthEnd();
+      CHECK(s.balance(), 816.0);
+      Checking c{100, 50};
+      CHECK(c.withdraw(140), true);
+      CHECK(c.balance(), -40.0);
+      CHECK(c.withdraw(20), false);
+      c.monthEnd();
+      CHECK(c.balance(), -45.0);
+      Account& a = c;
+      a.deposit(100);
+      a.monthEnd();
+      CHECK(a.balance(), 55.0);
+      Account& b = s;
+      b.monthEnd();
+      CHECK(b.balance(), 832.32);
+    hints:
+      - "Base `withdraw`: if `amount > balance_` return false; else subtract and return true."
+      - "`Checking::withdraw` checks `balance_ - amount < -overdraft_` instead."
+    solution: |
+      class Account {
+      public:
+          explicit Account(double initial) : balance_{initial} {}
+          virtual ~Account() = default;
+
+          void deposit(double amount) { balance_ += amount; }
+          double balance() const { return balance_; }
+
+          virtual bool withdraw(double amount) {
+              if (amount > balance_) {
+                  return false;
+              }
+              balance_ -= amount;
+              return true;
+          }
+
+          virtual void monthEnd() {}
+
+      protected:
+          double balance_;
+      };
+
+      class Savings : public Account {
+      public:
+          Savings(double initial, double rate) : Account{initial}, rate_{rate} {}
+          void monthEnd() override { balance_ += balance_ * rate_ / 100; }
+      private:
+          double rate_;
+      };
+
+      class Checking : public Account {
+      public:
+          Checking(double initial, double overdraft) : Account{initial}, overdraft_{overdraft} {}
+
+          bool withdraw(double amount) override {
+              if (balance_ - amount < -overdraft_) {
+                  return false;
+              }
+              balance_ -= amount;
+              return true;
+          }
+
+          void monthEnd() override {
+              if (balance_ < 0) {
+                  balance_ -= 5;
+              }
+          }
+
+      private:
+          double overdraft_;
+      };
+
+  - type: review
+    id: c12-review
+    title: "Chapter 12 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      class Shape {                                  // abstract base / interface
+      public:
+          virtual ~Shape() = default;                // ALWAYS for polymorphic bases
+          virtual double area() const = 0;           // pure virtual
+          virtual std::string name() const { return "shape"; }   // virtual with default
+          void describe() const;                     // non-virtual, uses the virtuals
+      };
+
+      class Circle : public Shape {
+      public:
+          explicit Circle(double r) : r_{r} {}
+          double area() const override { return 3.14159 * r_ * r_; }
+      private:
+          double r_;
+      };
+
+      class Special : public Circle {
+      public:
+          using Circle::Circle;                      // inherit constructors
+          std::string name() const override { return "special " + Circle::name(); }
+      };
+
+      void print(const Shape& s);                    // by reference: no slicing
+      std::vector<const Shape*> shapes;              // pointers: no slicing
+      ```
+
+      ## Key ideas
+
+      - Public inheritance models **is-a**; the derived object contains a base part, built first and destroyed last.
+      - A call through a base reference/pointer uses the **static** type — unless the function is `virtual`, when the **real object** decides.
+      - Always write `override`; it turns signature mistakes into errors.
+      - Pure virtual `= 0` makes a class abstract: an interface to program against.
+      - Polymorphic objects go by reference or pointer — copying by value slices.
+      - Polymorphic bases need a virtual destructor.
+      - Prefer composition (has-a); use inheritance for polymorphism, honouring Liskov substitution.
+    questions:
+      - type: output
+        prompt: "Interleaving: classes, vectors, loops and virtual calls."
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          class Op {
+          public:
+              virtual ~Op() = default;
+              virtual int apply(int x) const = 0;
+          };
+
+          class AddN : public Op {
+          public:
+              explicit AddN(int n) : n_{n} {}
+              int apply(int x) const override { return x + n_; }
+          private:
+              int n_;
+          };
+
+          class Twice : public Op {
+          public:
+              int apply(int x) const override { return 2 * x; }
+          };
+
+          int main() {
+              AddN add3{3};
+              Twice twice{};
+              std::vector<const Op*> pipeline{&add3, &twice, &add3};
+              int v{1};
+              for (const Op* op : pipeline) {
+                  v = op->apply(v);
+              }
+              std::cout << v << '\n';
+              return 0;
+          }
+        answer: |
+          11
+        why: "1 → 4 → 8 → 11."
+      - type: mcq
+        prompt: "`Square` inherits from `Rectangle`, and `Rectangle::setWidth` changes only the width. Which principle does a `Square` that also changes its height break?"
+        options:
+          - Encapsulation
+          - The Liskov substitution principle
+          - RAII
+          - DRY
+        answer: 1
+        why: "Code that works with any Rectangle (expecting width and height to be independent) breaks when given a Square."
+      - type: tf
+        prompt: "Calling a non-virtual function through a base pointer runs the derived class's version."
+        answer: false
+        why: "Non-virtual calls are resolved from the static type — the base version runs."
+
+  - type: exam
+    id: c12-exam
+    title: "Chapter 12 exam"
+    minutes: 45
+    pick: 11
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+
+          class P {
+          public:
+              P() { std::cout << 'P'; }
+              virtual ~P() { std::cout << 'p'; }
+          };
+
+          class C : public P {
+          public:
+              C() { std::cout << 'C'; }
+              ~C() override { std::cout << 'c'; }
+          };
+
+          int main() {
+              P* x = new C{};
+              delete x;
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          PCcp
+        why: "Base constructed first; with a virtual destructor, deleting through the base pointer runs ~C then ~P."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          class Bird {
+          public:
+              virtual ~Bird() = default;
+              virtual std::string move() const { return "flies"; }
+          };
+
+          class Penguin : public Bird {
+          public:
+              std::string move() const override { return "swims"; }
+          };
+
+          std::string how(Bird b) { return b.move(); }
+          std::string how2(const Bird& b) { return b.move(); }
+
+          int main() {
+              Penguin p{};
+              std::cout << how(p) << ' ' << how2(p) << '\n';
+              return 0;
+          }
+        answer: |
+          flies swims
+        why: "By value, the Penguin is sliced into a Bird. By reference, the virtual call reaches Penguin."
+      - type: mcq
+        prompt: "Which declaration makes `Shape` abstract?"
+        options:
+          - "`virtual double area() const;`"
+          - "`virtual double area() const = 0;`"
+          - "`double area() const override;`"
+          - "`abstract double area() const;`"
+        answer: 1
+        why: A pure virtual function (`= 0`) makes the class abstract.
+      - type: spot
+        prompt: "The author meant `Loud::say` to override `Speaker::say`, but it doesn't — the base version still runs. With `override` added, the compiler would catch it. Which line is the mistake?"
+        code: |
+          #include <iostream>
+
+          class Speaker {
+          public:
+              virtual ~Speaker() = default;
+              virtual void say(int times) const { std::cout << "hi\n"; }
+          };
+
+          class Loud : public Speaker {
+          public:
+              void say(long times) const { std::cout << "HI!\n"; }
+          };
+
+          int main() {
+              Loud l{};
+              const Speaker& s = l;
+              s.say(1);
+              return 0;
+          }
+        answer: 11
+        why: "`long` instead of `int` makes it a different function (it hides, not overrides). `override` would have turned this into a compile error."
+      - type: tf
+        prompt: "A derived class can access its base class's `private` members directly."
+        answer: false
+        why: "Only public and protected members are accessible to derived classes."
+      - type: mcq
+        prompt: "A `Library` has many `Book`s. How should `Library` relate to `Book`?"
+        options:
+          - "`class Library : public Book`"
+          - "`class Book : public Library`"
+          - "`Library` has a member `std::vector<Book>`"
+          - "They should be the same class"
+        answer: 2
+        why: "has-a → composition."
+      - type: output
+        code: |
+          #include <iostream>
+
+          class A {
+          public:
+              virtual ~A() = default;
+              void run() const { std::cout << name() << step(); }
+              virtual char name() const { return 'A'; }
+          private:
+              virtual int step() const { return 1; }
+          };
+
+          class B : public A {
+          public:
+              char name() const override { return 'B'; }
+          private:
+              int step() const override { return 2; }
+          };
+
+          int main() {
+              B b{};
+              A a{};
+              b.run();
+              a.run();
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          B2A1
+        why: "`run` is inherited, and its virtual calls dispatch on the real object."
+      - type: mcq
+        prompt: What does `using Base::Base;` inside a derived class do?
+        options:
+          - Makes the derived class abstract
+          - Inherits the base class's constructors
+          - Calls the base destructor
+          - Makes base members public
+        answer: 1
+        why: "The derived class can then be constructed with the base's constructor arguments."
+      - type: fill
+        prompt: Complete the declarations of a polymorphic base class.
+        code: |
+          class Plugin {
+          public:
+              ___ ~Plugin() = default;
+              virtual void run() = ___;
+          };
+        blanks:
+          - [virtual]
+          - ['0']
+        why: "A virtual destructor, and a pure virtual `run`."
+      - type: code
+        prompt: |
+          Write an abstract `class Discount` with `virtual double apply(double price) const = 0;`,
+          and `Percent(double p)` (takes p% off), `Fixed(double amount)` (takes
+          `amount` off, never below 0). Then
+          `double finalPrice(double price, const std::vector<const Discount*>& ds)`
+          applying each discount in order.
+        starter: |
+          #include <vector>
+
+          class Discount {
+          public:
+              virtual ~Discount() = default;
+              virtual double apply(double price) const { return price; }   // TODO: pure virtual
+          };
+
+          class Percent : public Discount {
+          public:
+              explicit Percent(double p) : p_{p} {}
+          private:
+              double p_;
+          };
+
+          class Fixed : public Discount {
+          public:
+              explicit Fixed(double amount) : amount_{amount} {}
+          private:
+              double amount_;
+          };
+
+          double finalPrice(double price, const std::vector<const Discount*>& ds) {
+              return 0.0;
+          }
+        harness: |
+          Percent tenOff{10};
+          Fixed fiveOff{5};
+          Fixed big{1000};
+          CHECK(tenOff.apply(200), 180.0);
+          CHECK(fiveOff.apply(3), 0.0);
+          CHECK(finalPrice(100, {&tenOff, &fiveOff}), 85.0);
+          CHECK(finalPrice(100, {&fiveOff, &tenOff}), 85.5);
+          CHECK(finalPrice(50, {&big}), 0.0);
+          CHECK(finalPrice(42, {}), 42.0);
+        solution: |
+          #include <vector>
+
+          class Discount {
+          public:
+              virtual ~Discount() = default;
+              virtual double apply(double price) const = 0;
+          };
+
+          class Percent : public Discount {
+          public:
+              explicit Percent(double p) : p_{p} {}
+              double apply(double price) const override { return price * (100 - p_) / 100; }
+          private:
+              double p_;
+          };
+
+          class Fixed : public Discount {
+          public:
+              explicit Fixed(double amount) : amount_{amount} {}
+              double apply(double price) const override {
+                  double result = price - amount_;
+                  return result < 0 ? 0 : result;
+              }
+          private:
+              double amount_;
+          };
+
+          double finalPrice(double price, const std::vector<const Discount*>& ds) {
+              for (const Discount* d : ds) {
+                  price = d->apply(price);
+              }
+              return price;
+          }
+      - type: code
+        prompt: |
+          `class Counter` has `virtual void tick()` adding 1 to a protected
+          `count_`, and `int count() const`. Write `class StepCounter`
+          (constructor takes a step; each `tick` adds the step) and
+          `class LimitedCounter` (constructor takes a limit; `tick` does
+          nothing once `count_` has reached the limit).
+        starter: |
+          class Counter {
+          public:
+              virtual ~Counter() = default;
+              virtual void tick() { ++count_; }
+              int count() const { return count_; }
+          protected:
+              int count_{0};
+          };
+
+          class StepCounter : public Counter {
+          public:
+              explicit StepCounter(int step) : step_{step} {}
+          private:
+              int step_;
+          };
+
+          class LimitedCounter : public Counter {
+          public:
+              explicit LimitedCounter(int limit) : limit_{limit} {}
+          private:
+              int limit_;
+          };
+        harness: |
+          StepCounter s{5};
+          LimitedCounter l{2};
+          Counter plain{};
+          Counter* all[3]{&s, &l, &plain};
+          for (int i{0}; i < 4; ++i) {
+              for (Counter* c : all) {
+                  c->tick();
+              }
+          }
+          CHECK(s.count(), 20);
+          CHECK(l.count(), 2);
+          CHECK(plain.count(), 4);
+        solution: |
+          class Counter {
+          public:
+              virtual ~Counter() = default;
+              virtual void tick() { ++count_; }
+              int count() const { return count_; }
+          protected:
+              int count_{0};
+          };
+
+          class StepCounter : public Counter {
+          public:
+              explicit StepCounter(int step) : step_{step} {}
+              void tick() override { count_ += step_; }
+          private:
+              int step_;
+          };
+
+          class LimitedCounter : public Counter {
+          public:
+              explicit LimitedCounter(int limit) : limit_{limit} {}
+              void tick() override {
+                  if (count_ < limit_) {
+                      ++count_;
+                  }
+              }
+          private:
+              int limit_;
+          };
