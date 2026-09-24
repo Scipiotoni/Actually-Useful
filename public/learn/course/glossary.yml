@@ -1,0 +1,594 @@
+terms:
+  - term: Abstract class
+    def: A class with at least one pure virtual function (`= 0`). It can't be instantiated — only used as a base class, typically as an interface.
+    chapter: ch12
+  - term: Access specifier
+    def: "`public`, `private` or `protected` — who may use a class member."
+    chapter: ch11
+  - term: Adjacency list
+    def: A graph representation where each node has a list of its neighbours, e.g. `std::vector<std::vector<int>>`.
+    chapter: ch18
+  - term: Algorithm
+    def: A precise, step-by-step method for solving a problem. Also the standard header `<algorithm>` with ready-made ones like `std::sort`.
+    chapter: ch14
+  - term: Alias
+    def: Another name for an existing thing — a reference is an alias for a variable; `using Name = Type;` is a type alias.
+    chapter: ch10
+  - term: Amortised O(1)
+    def: Constant time on average over many operations, even if one occasionally takes longer — like `push_back` on a vector.
+    chapter: ch18
+  - term: Argument
+    def: The value passed to a function when calling it. The function receives it in a parameter.
+    chapter: ch06
+  - term: Array
+    def: A fixed-size sequence of elements of one type stored side by side — `std::array<int, 5>` or a C array `int a[5]`.
+    chapter: ch07
+  - term: assert
+    def: "`assert(condition)` from `<cassert>` stops the program with a message if the condition is false. For catching programmer mistakes."
+    chapter: ch17
+  - term: Assignment
+    def: Giving an existing variable a new value with `=`.
+    chapter: ch02
+  - term: auto
+    def: Lets the compiler deduce a variable's type from its initialiser, e.g. `auto it = v.begin();`.
+    chapter: ch07
+  - term: Backtracking
+    def: Exploring all possibilities recursively — make a choice, recurse, undo the choice, try the next — abandoning dead ends early.
+    chapter: ch18
+  - term: Base case
+    def: The case in a recursive function that is answered directly, without recursing, so the recursion stops.
+    chapter: ch06
+  - term: Base class
+    def: The class another class inherits from (the "parent").
+    chapter: ch12
+  - term: BFS (breadth-first search)
+    def: Exploring a graph in rings of increasing distance using a queue. Finds shortest paths in unweighted graphs.
+    chapter: ch18
+  - term: Big-O notation
+    def: Describes how an algorithm's running time grows with input size n, ignoring constants — O(1), O(log n), O(n), O(n log n), O(n²).
+    chapter: ch18
+  - term: Binary search
+    def: Finding a value in sorted data by repeatedly halving the range. O(log n).
+    chapter: ch18
+  - term: Block
+    def: Statements grouped by `{ }`. Variables declared inside a block exist only until its closing brace.
+    chapter: ch04
+  - term: bool
+    def: The type with two values, `true` and `false`.
+    chapter: ch02
+  - term: break
+    def: Leaves the innermost loop (or switch) immediately.
+    chapter: ch05
+  - term: Buffer
+    def: Memory where output (or input) is collected before being sent on. `std::cout` is buffered; `std::cerr` is not.
+    chapter: ch17
+  - term: Bug
+    def: A mistake in a program that makes it behave incorrectly.
+    chapter: ch01
+  - term: Call stack
+    def: The stack of active function calls; each call gets a frame with its parameters and local variables.
+    chapter: ch06
+  - term: Capture
+    def: How a lambda gets access to variables around it — by value `[x]` (a copy) or by reference `[&x]`.
+    chapter: ch14
+  - term: Cast
+    def: An explicit type conversion, e.g. `static_cast<double>(n)`.
+    chapter: ch02
+  - term: char
+    def: A single character, like `'a'`. Stored as a small integer code.
+    chapter: ch02
+  - term: Class
+    def: A user-defined type bundling data (members) with the functions that operate on it, hiding the details behind a public interface.
+    chapter: ch11
+  - term: Class template
+    def: A recipe for a family of classes parameterised by types, like `std::vector<T>`.
+    chapter: ch16
+  - term: CMake
+    def: The standard build system generator for C++ projects, configured with a `CMakeLists.txt` file.
+    chapter: ch17
+  - term: Comment
+    def: Text for humans that the compiler ignores — `// to the end of the line` or `/* between markers */`.
+    chapter: ch01
+  - term: Compiler
+    def: The program that translates C++ source code into machine code the computer can run.
+    chapter: ch00
+  - term: Compile-time error
+    def: An error the compiler reports before the program can run — syntax mistakes, type mismatches, unknown names.
+    chapter: ch01
+  - term: Composition
+    def: Building a class from other objects as members ("has a"), often preferable to inheritance ("is a").
+    chapter: ch12
+  - term: Concept
+    def: A C++20 named compile-time requirement on template arguments, like `std::integral`.
+    chapter: ch16
+  - term: Condition
+    def: An expression that is true or false, deciding what an `if` or loop does.
+    chapter: ch04
+  - term: const
+    def: Marks something as not modifiable after initialisation. On a member function, promises not to modify the object.
+    chapter: ch02
+  - term: const reference
+    def: "`const T&` — read access to an object without copying it. The usual way to pass large objects to functions."
+    chapter: ch06
+  - term: constexpr
+    def: A value or function that can be evaluated at compile time.
+    chapter: ch02
+  - term: Constructor
+    def: A special member function that initialises a new object and establishes its invariants. Same name as the class, no return type.
+    chapter: ch11
+  - term: Container
+    def: An object that holds a collection of elements — `vector`, `map`, `set`, `deque` and more.
+    chapter: ch13
+  - term: continue
+    def: Skips the rest of the current loop iteration and goes on to the next.
+    chapter: ch05
+  - term: Copy constructor
+    def: The constructor that creates an object as a copy of another of the same type, `T(const T&)`.
+    chapter: ch15
+  - term: Dangling pointer
+    def: A pointer (or reference) to an object that no longer exists. Using it is undefined behaviour.
+    chapter: ch10
+  - term: Debugger
+    def: A tool to pause a running program at breakpoints, step through it line by line, and inspect variables.
+    chapter: ch17
+  - term: Declaration
+    def: Introduces a name and its type to the compiler, e.g. `int square(int x);`.
+    chapter: ch06
+  - term: decltype
+    def: "`decltype(expr)` gives the type of an expression without evaluating it."
+    chapter: ch16
+  - term: Deep copy
+    def: Copying an object together with the resources it owns (not just pointers to them).
+    chapter: ch15
+  - term: Default argument
+    def: A value a parameter takes if the caller leaves it out, e.g. `void greet(std::string name = "friend")`.
+    chapter: ch06
+  - term: Definition
+    def: A declaration that also provides the thing itself — a function's body, a variable's storage.
+    chapter: ch17
+  - term: delete
+    def: Destroys an object created with `new` and frees its memory. Modern code lets smart pointers do this.
+    chapter: ch10
+  - term: Deque
+    def: "`std::deque` — a double-ended queue, efficient at adding and removing at both ends."
+    chapter: ch13
+  - term: Dereference
+    def: Getting the object a pointer points to, with `*p` (or `p->member`).
+    chapter: ch10
+  - term: Derived class
+    def: A class that inherits from a base class (the "child").
+    chapter: ch12
+  - term: Destructor
+    def: A special member function, `~T()`, run automatically when an object's lifetime ends. Releases its resources.
+    chapter: ch11
+  - term: DFS (depth-first search)
+    def: Exploring a graph by going as deep as possible before backing up, usually with recursion. Used for flood fill and regions.
+    chapter: ch18
+  - term: do-while loop
+    def: A loop that runs its body first and tests the condition afterwards, so the body runs at least once.
+    chapter: ch05
+  - term: double
+    def: A floating-point number type with about 15–16 significant digits, like `3.14`.
+    chapter: ch02
+  - term: Dynamic programming
+    def: Solving a problem from the answers to overlapping subproblems, each computed once (memoisation or a table).
+    chapter: ch18
+  - term: Edge case
+    def: An input at the extremes — empty, zero, one element, the boundary value — where bugs tend to hide.
+    chapter: ch17
+  - term: Element
+    def: One of the values stored in an array, vector or other container.
+    chapter: ch07
+  - term: Encapsulation
+    def: Hiding a class's data behind a public interface so its invariants can't be broken from outside.
+    chapter: ch11
+  - term: enum class
+    def: A scoped enumeration — a type with a fixed set of named values, like `enum class Suit { Hearts, Spades };`.
+    chapter: ch09
+  - term: Escape sequence
+    def: A backslash code inside a string or char for special characters, like `\n` (newline), `\t` (tab) or `\"`.
+    chapter: ch01
+  - term: Exception
+    def: An object thrown with `throw` to signal an error, travelling up the call stack until a matching `catch` handles it.
+    chapter: ch15
+  - term: Expression
+    def: Code that produces a value, like `a + b * 2`.
+    chapter: ch03
+  - term: Floating point
+    def: The representation of real numbers (`double`, `float`) — approximate, so `0.1 + 0.2` isn't exactly `0.3`.
+    chapter: ch02
+  - term: Flood fill
+    def: Visiting every cell connected to a starting cell — the paint bucket tool. Usually done with DFS or BFS.
+    chapter: ch18
+  - term: for loop
+    def: A loop with initialisation, condition and update in one line, e.g. `for (int i{0}; i < n; ++i)`.
+    chapter: ch05
+  - term: Function
+    def: A named, reusable block of code that takes parameters and may return a value.
+    chapter: ch06
+  - term: Function template
+    def: A recipe for a family of functions parameterised by types, e.g. `template <typename T> T larger(T a, T b)`.
+    chapter: ch16
+  - term: Generic lambda
+    def: A lambda with `auto` parameters, which works for any suitable type.
+    chapter: ch16
+  - term: getline
+    def: "`std::getline(std::cin, line)` reads a whole line of text, spaces included."
+    chapter: ch02
+  - term: Graph
+    def: A set of nodes connected by edges — roads between cities, friendships, links between pages.
+    chapter: ch18
+  - term: Greedy algorithm
+    def: An algorithm that always takes the choice that looks best right now. Simple, but not always optimal.
+    chapter: ch18
+  - term: Hash table
+    def: A structure that finds elements by computing a hash of the key — the basis of `unordered_map` and `unordered_set`, with O(1) average operations.
+    chapter: ch13
+  - term: Header file
+    def: A file (`.h`, `.hpp`) holding declarations — the interface — included by source files with `#include`.
+    chapter: ch17
+  - term: Heap (free store)
+    def: Memory for objects whose lifetime you control, created with `new` or `std::make_unique`.
+    chapter: ch10
+  - term: IDE
+    def: An integrated development environment — editor, compiler, debugger in one, like Visual Studio or CLion.
+    chapter: ch17
+  - term: if statement
+    def: Runs code only when a condition is true; `else` gives the alternative.
+    chapter: ch04
+  - term: Include guard
+    def: "`#ifndef X_H` / `#define X_H` / `#endif` (or `#pragma once`) so a header is processed only once per file."
+    chapter: ch17
+  - term: Index
+    def: The position of an element, starting at 0 — `v[0]` is the first element.
+    chapter: ch07
+  - term: Infinite loop
+    def: A loop whose condition never becomes false.
+    chapter: ch05
+  - term: Inheritance
+    def: Defining a class as an extension of another ("is a kind of"), reusing and specialising its behaviour.
+    chapter: ch12
+  - term: Initialisation
+    def: Giving a variable its first value when it's created — preferably with braces, `int x{5};`.
+    chapter: ch02
+  - term: inline
+    def: Allows a function or variable to be defined in a header included by several files without breaking the One Definition Rule.
+    chapter: ch17
+  - term: Input stream
+    def: A source of data you read with `>>` or `getline` — `std::cin`, a file (`std::ifstream`) or a string (`std::istringstream`).
+    chapter: ch17
+  - term: Insertion sort
+    def: Sorting by taking each element and sliding it left into place. O(n²), but fast on nearly-sorted data.
+    chapter: ch18
+  - term: Instantiation
+    def: The compiler generating a concrete function or class from a template for specific arguments.
+    chapter: ch16
+  - term: int
+    def: The basic integer type, typically 32 bits (about ±2.1 billion).
+    chapter: ch02
+  - term: Integer division
+    def: Dividing two integers gives an integer, dropping the fractional part — `7 / 2` is `3`.
+    chapter: ch03
+  - term: Integer overflow
+    def: A result too large for its type. For signed integers it's undefined behaviour.
+    chapter: ch02
+  - term: Interface
+    def: The public operations a class offers; also an abstract class of pure virtual functions that other classes implement.
+    chapter: ch12
+  - term: Invariant
+    def: A condition that is always true for a valid object (e.g. "balance is never negative"), guaranteed by the class.
+    chapter: ch11
+  - term: Iterator
+    def: An object that points into a container and moves through it — `begin()`, `end()`, `++it`, `*it`.
+    chapter: ch13
+  - term: Lambda
+    def: An unnamed function written inline, `[captures](params) { body }`, often passed to algorithms.
+    chapter: ch14
+  - term: Lifetime
+    def: The span of a program during which an object exists — from its construction to its destruction.
+    chapter: ch10
+  - term: Linked list
+    def: A sequence of nodes, each holding a value and a pointer to the next node.
+    chapter: ch10
+  - term: Linker
+    def: Joins compiled object files and libraries into an executable, connecting each call to its definition.
+    chapter: ch17
+  - term: Literal
+    def: A value written directly in code — `42`, `3.5`, `'x'`, `"hello"`, `true`.
+    chapter: ch02
+  - term: Local variable
+    def: A variable declared inside a function or block, existing only while it runs.
+    chapter: ch06
+  - term: Logic error
+    def: A program that compiles and runs but gives the wrong result.
+    chapter: ch01
+  - term: Loop
+    def: Code that repeats while a condition holds — `while`, `for`, `do`-`while`, range-based `for`.
+    chapter: ch05
+  - term: lower_bound
+    def: "`std::lower_bound` — in sorted data, an iterator to the first element not less than a value."
+    chapter: ch18
+  - term: main
+    def: The function where every C++ program starts.
+    chapter: ch01
+  - term: map
+    def: "`std::map<K, V>` — key–value pairs kept sorted by key, with O(log n) lookup."
+    chapter: ch13
+  - term: Member function
+    def: A function that belongs to a class and works on its objects (a "method").
+    chapter: ch11
+  - term: Member variable
+    def: A piece of data stored in each object of a class or struct.
+    chapter: ch09
+  - term: Memoisation
+    def: Caching the results of function calls so each subproblem is computed only once.
+    chapter: ch18
+  - term: Memory leak
+    def: Heap memory that is never freed because nothing deletes it.
+    chapter: ch10
+  - term: Merge sort
+    def: Sorting by splitting in halves, sorting each recursively, and merging. O(n log n) and stable.
+    chapter: ch18
+  - term: Modulo
+    def: The remainder operator `%` — `17 % 5` is `2`.
+    chapter: ch03
+  - term: Move semantics
+    def: Transferring an object's resources to another instead of copying them, e.g. with `std::move`.
+    chapter: ch15
+  - term: Namespace
+    def: A named scope that groups names to avoid clashes, like `std`.
+    chapter: ch17
+  - term: Narrowing conversion
+    def: A conversion that may lose information, like `double` to `int`. Brace initialisation forbids it.
+    chapter: ch02
+  - term: Nested loop
+    def: A loop inside another loop; the inner one runs completely for each outer iteration.
+    chapter: ch05
+  - term: new
+    def: Creates an object on the heap and returns a pointer to it. Prefer `std::make_unique`.
+    chapter: ch10
+  - term: nullptr
+    def: The null pointer value — a pointer that points to nothing.
+    chapter: ch10
+  - term: Object
+    def: A region of memory holding a value of some type; in OOP, an instance of a class.
+    chapter: ch11
+  - term: Object file
+    def: The machine code the compiler produces for one source file (`.o`), before linking.
+    chapter: ch17
+  - term: One Definition Rule
+    def: Anything may be declared many times but defined only once in a program (with exceptions for inline functions, classes and templates).
+    chapter: ch17
+  - term: Operator
+    def: A symbol that performs an operation — `+`, `*`, `==`, `&&`, `<<`.
+    chapter: ch03
+  - term: Operator overloading
+    def: Defining what an operator like `+` or `==` means for your own types.
+    chapter: ch11
+  - term: Operator precedence
+    def: Which operators are applied first — `*` before `+`, for example. Parentheses override it.
+    chapter: ch03
+  - term: optional
+    def: "`std::optional<T>` — either holds a value of type T or nothing (`std::nullopt`)."
+    chapter: ch15
+  - term: Output stream
+    def: A destination you write to with `<<` — `std::cout`, a file (`std::ofstream`) or a string (`std::ostringstream`).
+    chapter: ch17
+  - term: override
+    def: Marks a member function as overriding a virtual function of the base class; the compiler checks it really does.
+    chapter: ch12
+  - term: Overloading
+    def: Several functions with the same name but different parameter types.
+    chapter: ch06
+  - term: Parameter
+    def: A variable in a function's definition that receives an argument.
+    chapter: ch06
+  - term: Pass by reference
+    def: Giving a function access to the caller's variable itself (`T&`), so it can change it.
+    chapter: ch06
+  - term: Pass by value
+    def: Giving a function a copy of the argument; changes don't affect the caller.
+    chapter: ch06
+  - term: Pointer
+    def: A variable that holds a memory address, `T*`. Can be null and can be re-pointed.
+    chapter: ch10
+  - term: Polymorphism
+    def: Code working with objects of different types through a common interface, with virtual functions choosing the right behaviour at run time.
+    chapter: ch12
+  - term: Prefix sums
+    def: An array where entry i is the sum of the first i elements, allowing O(1) range sums.
+    chapter: ch18
+  - term: Preprocessor
+    def: The first build stage, handling lines starting with `#` such as `#include`.
+    chapter: ch17
+  - term: priority_queue
+    def: "`std::priority_queue` — a container adapter that always gives you the largest (or smallest) element first."
+    chapter: ch13
+  - term: Pruning
+    def: Abandoning a branch of a search as soon as it can't lead to a valid answer.
+    chapter: ch18
+  - term: Pure virtual function
+    def: A virtual function with no implementation, declared `= 0`, which derived classes must override.
+    chapter: ch12
+  - term: Queue
+    def: First-in, first-out collection — `std::queue`, with `push`, `front` and `pop`.
+    chapter: ch13
+  - term: RAII
+    def: Resource Acquisition Is Initialisation — tie a resource to an object's lifetime so its destructor releases it automatically.
+    chapter: ch11
+  - term: Range-based for loop
+    def: "`for (const auto& x : v)` — visits every element of a container."
+    chapter: ch07
+  - term: Recursion
+    def: A function calling itself on a smaller version of the problem.
+    chapter: ch06
+  - term: Reference
+    def: An alias for an existing object, `T&`. Must be initialised and can't be re-bound.
+    chapter: ch10
+  - term: Refactoring
+    def: Improving code's structure without changing what it does.
+    chapter: ch17
+  - term: Return value
+    def: The value a function sends back to its caller with `return`.
+    chapter: ch06
+  - term: Rule of zero / three / five
+    def: Either write none of the destructor, copy and move operations (zero), or, if a class manages a resource directly, write all of them (three/five).
+    chapter: ch15
+  - term: Runtime error
+    def: An error that happens while the program runs — a crash, an exception, an infinite loop.
+    chapter: ch01
+  - term: Sanitizer
+    def: A compiler option (`-fsanitize=address,undefined`) that adds run-time checks for memory errors and undefined behaviour.
+    chapter: ch17
+  - term: Scope
+    def: The region of code where a name is visible — usually from its declaration to the end of its block.
+    chapter: ch04
+  - term: Seed
+    def: The starting value of a random number generator; the same seed gives the same sequence.
+    chapter: ch05
+  - term: Selection sort
+    def: Sorting by repeatedly selecting the smallest remaining element. O(n²).
+    chapter: ch18
+  - term: set
+    def: "`std::set<T>` — a sorted collection of unique values with O(log n) lookup."
+    chapter: ch13
+  - term: shared_ptr
+    def: A smart pointer with shared ownership; the object is deleted when the last `shared_ptr` to it goes away.
+    chapter: ch15
+  - term: Short-circuit evaluation
+    def: "`&&` and `||` stop evaluating as soon as the result is known — `p && p->ok()` is safe when p is null."
+    chapter: ch04
+  - term: Signature
+    def: A function's name and parameter types, which identify it among overloads.
+    chapter: ch06
+  - term: Slicing
+    def: Copying a derived object into a base-class object, losing the derived part.
+    chapter: ch12
+  - term: Sliding window
+    def: A range over consecutive elements updated incrementally as it moves, instead of being recomputed.
+    chapter: ch18
+  - term: Smart pointer
+    def: An object that owns a heap object and deletes it automatically — `std::unique_ptr`, `std::shared_ptr`.
+    chapter: ch15
+  - term: Source file
+    def: A `.cpp` file containing definitions — the implementation — compiled on its own.
+    chapter: ch17
+  - term: Spaced repetition
+    def: Reviewing material at growing intervals, just before you'd forget it — how this course's Review works.
+  - term: Stable sort
+    def: A sort that keeps equal elements in their original order, like `std::stable_sort`.
+    chapter: ch18
+  - term: Stack (data structure)
+    def: Last-in, first-out collection — `std::stack`, with `push`, `top` and `pop`.
+    chapter: ch13
+  - term: Stack (memory)
+    def: The memory where local variables live; each function call gets a frame that disappears when it returns.
+    chapter: ch10
+  - term: Standard library
+    def: The collection of types and functions that comes with every C++ compiler, in namespace `std`.
+    chapter: ch13
+  - term: Statement
+    def: A single instruction, usually ending with `;`.
+    chapter: ch01
+  - term: static_assert
+    def: A condition checked at compile time; compilation fails with a message if it's false.
+    chapter: ch16
+  - term: static member
+    def: A member shared by all objects of a class rather than stored in each one.
+    chapter: ch11
+  - term: std::cin
+    def: The standard input stream — reading from the keyboard (or the input box here).
+    chapter: ch02
+  - term: std::cout
+    def: The standard output stream — printing to the screen.
+    chapter: ch01
+  - term: std::cerr
+    def: The standard error stream — for error and debug messages, unbuffered and separate from normal output.
+    chapter: ch17
+  - term: std::string
+    def: The standard text type — a sequence of characters that can grow and shrink.
+    chapter: ch08
+  - term: Stream
+    def: A sequence of characters you read from or write to — the console, files and strings all work as streams.
+    chapter: ch17
+  - term: String literal
+    def: Text in double quotes in the code, like `"Hello"`.
+    chapter: ch01
+  - term: struct
+    def: A type grouping named pieces of data (members). Like a class, but members are public by default.
+    chapter: ch09
+  - term: Structured binding
+    def: "`auto [a, b] = pair;` — unpacks a pair, tuple or struct into named variables."
+    chapter: ch09
+  - term: switch
+    def: Chooses among cases based on an integer or enum value.
+    chapter: ch04
+  - term: Syntax
+    def: The grammar rules of a programming language.
+    chapter: ch01
+  - term: Template
+    def: Code parameterised by types or values, from which the compiler generates concrete functions and classes.
+    chapter: ch16
+  - term: Ternary operator
+    def: "`condition ? a : b` — an expression choosing between two values."
+    chapter: ch04
+  - term: Test-driven development
+    def: Writing a failing test first, then the code to pass it, then tidying — "red, green, refactor".
+    chapter: ch17
+  - term: this
+    def: Inside a member function, a pointer to the object the function was called on.
+    chapter: ch11
+  - term: throw / try / catch
+    def: "`throw` raises an exception; code in a `try` block that throws jumps to a matching `catch` handler."
+    chapter: ch15
+  - term: Translation unit
+    def: A source file after preprocessing — what the compiler compiles in one go.
+    chapter: ch17
+  - term: Two pointers
+    def: A pattern where two indices move through data (often from both ends of sorted data), each step discarding options.
+    chapter: ch18
+  - term: Type
+    def: What kind of value something is — it decides what values are possible and what operations are allowed.
+    chapter: ch02
+  - term: Type trait
+    def: A compile-time question about a type, like `std::is_integral_v<T>`, from `<type_traits>`.
+    chapter: ch16
+  - term: Undefined behaviour
+    def: What happens when a program breaks the language rules (out-of-bounds access, signed overflow, …) — anything, including seeming to work.
+    chapter: ch02
+  - term: unique_ptr
+    def: A smart pointer that is the sole owner of a heap object; it can be moved but not copied.
+    chapter: ch15
+  - term: unordered_map
+    def: "`std::unordered_map<K, V>` — a hash table of key–value pairs with O(1) average lookup, in no particular order."
+    chapter: ch13
+  - term: using namespace
+    def: Makes every name in a namespace usable without its prefix. Risky; never in header files.
+    chapter: ch17
+  - term: Variable
+    def: A named piece of memory holding a value of a particular type.
+    chapter: ch02
+  - term: vector
+    def: "`std::vector<T>` — a resizable array, the default container in C++."
+    chapter: ch07
+  - term: virtual function
+    def: A member function that derived classes can override, chosen at run time based on the object's real type.
+    chapter: ch12
+  - term: Virtual destructor
+    def: "`virtual ~Base()` — makes deleting a derived object through a base pointer safe."
+    chapter: ch12
+  - term: void
+    def: The "no type" type — a function returning `void` returns nothing.
+    chapter: ch06
+  - term: Warning
+    def: A message from the compiler about code that is legal but probably wrong. Treat warnings as errors to fix.
+    chapter: ch01
+  - term: weak_ptr
+    def: A non-owning observer of an object managed by `shared_ptr`, used to break reference cycles.
+    chapter: ch15
+  - term: while loop
+    def: Repeats its body as long as its condition is true, testing before each iteration.
+    chapter: ch05
+  - term: Whitespace
+    def: Spaces, tabs and newlines. `>>` skips it when reading.
+    chapter: ch02
