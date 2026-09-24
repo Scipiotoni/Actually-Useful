@@ -1,0 +1,2566 @@
+id: ch08
+number: 8
+part: p2
+title: Strings and Text
+blurb: Text is everywhere — names, messages, files, commands. Learn to take it apart, change it and build it up.
+hours: 5.5
+goals:
+  - Treat a string as a sequence of characters you can index and loop over
+  - Classify and convert characters with `<cctype>`
+  - Search, cut and change strings with `find`, `substr`, `erase`, `insert` and `replace`
+  - Read whole lines with `std::getline`, including after `>>`
+  - Convert between numbers and text, and split lines into words with string streams
+  - Apply the classic text-processing patterns — counting, splitting, cleaning, frequency tables
+
+items:
+  - type: lesson
+    id: c8-chars
+    title: A string is a sequence of characters
+    minutes: 18
+    objectives:
+      - Read and change individual characters of a string by index
+      - Loop over every character of a string
+      - Build a new string character by character
+    body: |
+      A `std::string` is really a **vector of characters**. Everything you
+      learned about vectors works on it: indexes from 0, `size()`, `[]`,
+      `.at()`, range-based `for`, `push_back`, `back()`…
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string word{"planet"};
+          std::cout << word[0] << word[word.size() - 1] << '\n';
+
+          word[0] = 'P';
+          std::cout << word << '\n';
+
+          for (char c : word) {
+              std::cout << c << '-';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      pt
+      Planet
+      P-l-a-n-e-t-
+      ```
+
+      Each element is a `char`, so `word[0] = 'P'` needs **single** quotes.
+
+      ## Counting and searching character by character
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string text{"Mississippi"};
+          int count{0};
+          for (char c : text) {
+              if (c == 's') {
+                  ++count;
+              }
+          }
+          std::cout << count << " s's\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      4 s's
+      ```
+
+      ## Building a string
+
+      Start empty and add characters with `+=` (or `push_back`). Here's
+      reversing a string by walking it backwards:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string original{"stressed"};
+          std::string reversed{};
+          for (int i = static_cast<int>(original.size()) - 1; i >= 0; --i) {
+              reversed += original[i];
+          }
+          std::cout << reversed << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      desserts
+      ```
+
+      {{check char-loop}}
+
+      {{task count-char}}
+    checks:
+      - id: char-loop
+        type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"banana"};
+              std::string out{};
+              for (std::size_t i{0}; i < s.size(); i += 2) {
+                  out += s[i];
+              }
+              std::cout << out << '\n';
+              return 0;
+          }
+        answer: |
+          bnn
+        why: "Indexes 0, 2, 4: b, n, n."
+      - id: single-quote
+        type: mcq
+        prompt: "Which line changes the first letter of `name` to Z?"
+        options:
+          - "`name[0] = \"Z\";`"
+          - "`name[0] = 'Z';`"
+          - "`name[1] = 'Z';`"
+          - "`name.first = 'Z';`"
+        answer: 1
+        why: "Each element is a `char`, written in single quotes, and the first index is 0."
+    tasks:
+      - id: count-char
+        title: Count a letter
+        prompt: |
+          Write `int countChar(const std::string& text, char target)` that
+          returns how many times `target` appears in `text`.
+        starter: |
+          #include <string>
+
+          int countChar(const std::string& text, char target) {
+              return 0;
+          }
+        harness: |
+          CHECK(countChar("Mississippi", 's'), 4);
+          CHECK(countChar("Mississippi", 'M'), 1);
+          CHECK(countChar("Mississippi", 'm'), 0);
+          CHECK(countChar("", 'a'), 0);
+        hints:
+          - "`for (char c : text)` and the counter pattern."
+        solution: |
+          #include <string>
+
+          int countChar(const std::string& text, char target) {
+              int count{0};
+              for (char c : text) {
+                  if (c == target) {
+                      ++count;
+                  }
+              }
+              return count;
+          }
+    cards:
+      - front: How do you get the first and last characters of a string `s`?
+        back: "`s[0]` and `s[s.size() - 1]` (or `s.front()` and `s.back()`) — if it isn't empty."
+      - front: How do you add a character to the end of a string?
+        back: "`s += 'x';` or `s.push_back('x');`"
+
+  - type: lesson
+    id: c8-cctype
+    title: "Classifying characters: <cctype>"
+    minutes: 16
+    objectives:
+      - Test characters with `std::isalpha`, `std::isdigit`, `std::isspace` and friends
+      - Change case with `std::toupper` and `std::tolower`
+    body: |
+      Is this character a letter? A digit? A space? The **`<cctype>`** header
+      answers these questions:
+
+      | Function | True for |
+      |---|---|
+      | `std::isalpha(c)` | letters `a–z`, `A–Z` |
+      | `std::isdigit(c)` | digits `0–9` |
+      | `std::isalnum(c)` | letters or digits |
+      | `std::isspace(c)` | space, tab, newline… |
+      | `std::isupper(c)`, `std::islower(c)` | upper / lower case letters |
+      | `std::ispunct(c)` | punctuation such as `! , . ?` |
+
+      And two converters: `std::toupper(c)` and `std::tolower(c)` return the
+      other-case version of a letter (and leave anything else alone).
+
+      ```cpp
+      #include <cctype>
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string text{"Hello, World 2024!"};
+          int letters{0};
+          int digits{0};
+          std::string shout{};
+          for (char c : text) {
+              if (std::isalpha(static_cast<unsigned char>(c))) {
+                  ++letters;
+              } else if (std::isdigit(static_cast<unsigned char>(c))) {
+                  ++digits;
+              }
+              shout += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+          }
+          std::cout << letters << " letters, " << digits << " digits\n";
+          std::cout << shout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      10 letters, 4 digits
+      HELLO, WORLD 2024!
+      ```
+
+      ## About those casts
+
+      Two awkward details, both inherited from C:
+
+      1. These functions take and return an `int`, not a `char` — so `std::toupper(c)` gives an `int`, and you cast it back with `static_cast<char>(...)`.
+      2. Passing a `char` with a negative value (which happens for accented letters like `é` in UTF-8 text) is undefined behaviour. Casting to `unsigned char` first avoids it.
+
+      A tiny helper hides all that once and for all:
+
+      ```cpp static
+      char upper(char c) {
+          return static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+      }
+      ```
+
+      > [!note]
+      > `<cctype>` only understands plain English letters. Proper handling of
+      > accents and other alphabets (Unicode) needs dedicated libraries — a
+      > topic for much later.
+
+      {{check classify}}
+
+      {{task to-upper}}
+    checks:
+      - id: classify
+        type: output
+        code: |
+          #include <cctype>
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"a1 B2?"};
+              int a{0};
+              int d{0};
+              int other{0};
+              for (char c : s) {
+                  unsigned char u = static_cast<unsigned char>(c);
+                  if (std::isalpha(u)) {
+                      ++a;
+                  } else if (std::isdigit(u)) {
+                      ++d;
+                  } else {
+                      ++other;
+                  }
+              }
+              std::cout << a << d << other << '\n';
+              return 0;
+          }
+        answer: |
+          222
+        why: "Letters a, B; digits 1, 2; other: the space and `?`."
+    tasks:
+      - id: to-upper
+        title: Shout
+        prompt: |
+          Write `std::string toUpper(const std::string& s)` that returns an
+          upper-case copy of `s`.
+        starter: |
+          #include <cctype>
+          #include <string>
+
+          std::string toUpper(const std::string& s) {
+              return s;
+          }
+        harness: |
+          CHECK(toUpper("hello"), "HELLO");
+          CHECK(toUpper("Mixed Case 123!"), "MIXED CASE 123!");
+          CHECK(toUpper(""), "");
+        hints:
+          - "Copy `s` into a result, then `for (char& c : result) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));`"
+        solution: |
+          #include <cctype>
+          #include <string>
+
+          std::string toUpper(const std::string& s) {
+              std::string result{s};
+              for (char& c : result) {
+                  c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+              }
+              return result;
+          }
+    cards:
+      - front: Which header has `std::isdigit`, `std::isalpha`, `std::toupper`?
+        back: "`<cctype>`"
+      - front: Why cast a `char` to `unsigned char` before `std::isalpha` etc.?
+        back: A negative `char` (e.g. part of an accented letter) is undefined behaviour for these functions.
+      - front: What type does `std::toupper(c)` return?
+        back: An `int` — cast it back with `static_cast<char>(...)`.
+
+  - type: lesson
+    id: c8-ops
+    title: Searching and changing strings
+    minutes: 22
+    objectives:
+      - Extract part of a string with `substr`
+      - Search with `find` and `rfind`, and check for `std::string::npos`
+      - Change strings with `erase`, `insert` and `replace`
+    body: |
+      `std::string` comes with a toolbox of member functions. These are the
+      ones you'll use constantly.
+
+      ## `substr`: a piece of a string
+
+      `s.substr(pos, len)` returns `len` characters starting at index `pos`.
+      Leave out `len` to go to the end:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string date{"2024-09-24"};
+          std::string year = date.substr(0, 4);
+          std::string month = date.substr(5, 2);
+          std::string day = date.substr(8);
+          std::cout << day << '/' << month << '/' << year << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      24/09/2024
+      ```
+
+      ## `find`: where is it?
+
+      `s.find(x)` returns the index of the **first** occurrence of `x` (a
+      character or a string), searching from the start. `s.rfind(x)` searches
+      from the end. If it isn't there, they return the special value
+      **`std::string::npos`** — always check for it:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string email{"ada.lovelace@example.com"};
+          std::size_t at = email.find('@');
+          if (at != std::string::npos) {
+              std::cout << "User: " << email.substr(0, at) << '\n';
+              std::cout << "Domain: " << email.substr(at + 1) << '\n';
+          }
+          std::cout << (email.find("xyz") == std::string::npos ? "no xyz" : "has xyz") << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      User: ada.lovelace
+      Domain: example.com
+      no xyz
+      ```
+
+      `find` can also start from a given position: `s.find(x, from)`. That's
+      how you find **every** occurrence:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string text{"the cat sat on the mat"};
+          std::size_t pos = text.find("at");
+          while (pos != std::string::npos) {
+              std::cout << pos << ' ';
+              pos = text.find("at", pos + 1);
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      5 9 20
+      ```
+
+      > [!mistake] Storing the result in an `int`
+      > `npos` is the largest `std::size_t` value. Put the result of `find` in a
+      > `std::size_t` (or `auto`) and compare it with `std::string::npos` —
+      > don't compare with `-1`.
+
+      ## Changing a string
+
+      | Call | Does |
+      |---|---|
+      | `s.erase(pos, len)` | removes `len` characters starting at `pos` |
+      | `s.insert(pos, text)` | inserts `text` before index `pos` |
+      | `s.replace(pos, len, text)` | replaces `len` characters at `pos` with `text` |
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string s{"I like tea."};
+          s.replace(s.find("tea"), 3, "coffee");
+          std::cout << s << '\n';
+          s.insert(2, "really ");
+          std::cout << s << '\n';
+          s.erase(0, 2);
+          std::cout << s << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      I like coffee.
+      I really like coffee.
+      really like coffee.
+      ```
+
+      {{check substr}}
+
+      {{check find}}
+
+      {{task ext}}
+
+      {{task replace-all}}
+    checks:
+      - id: substr
+        type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"programming"};
+              std::cout << s.substr(3, 4) << ' ' << s.substr(7) << '\n';
+              return 0;
+          }
+        answer: |
+          gram ming
+        why: "From index 3, four characters: g-r-a-m. From index 7 to the end: m-i-n-g."
+      - id: find
+        type: mcq
+        prompt: "What does `std::string{\"hello\"}.find('z')` return?"
+        options:
+          - "-1"
+          - "0"
+          - "`std::string::npos`"
+          - "5"
+        answer: 2
+        why: "`npos` means \"not found\". It's a huge unsigned value, not −1."
+    tasks:
+      - id: ext
+        title: File extension
+        prompt: |
+          Write `std::string extension(const std::string& filename)` that
+          returns the part after the **last** dot (`"photo.jpg"` → `"jpg"`,
+          `"archive.tar.gz"` → `"gz"`), or an empty string if there's no dot.
+        starter: |
+          #include <string>
+
+          std::string extension(const std::string& filename) {
+              return "";
+          }
+        harness: |
+          CHECK(extension("photo.jpg"), "jpg");
+          CHECK(extension("archive.tar.gz"), "gz");
+          CHECK(extension("README"), "");
+          CHECK(extension("notes."), "");
+        hints:
+          - "`rfind('.')` finds the last dot."
+          - "If it's `npos`, return `\"\"`; otherwise return `substr(dot + 1)`."
+        solution: |
+          #include <string>
+
+          std::string extension(const std::string& filename) {
+              std::size_t dot = filename.rfind('.');
+              if (dot == std::string::npos) {
+                  return "";
+              }
+              return filename.substr(dot + 1);
+          }
+      - id: replace-all
+        title: Replace every occurrence
+        prompt: |
+          Write `std::string replaceAll(std::string text, const std::string& from, const std::string& to)`
+          that replaces **every** occurrence of `from` (never empty) with `to`.
+          Be careful when `to` contains `from`!
+        starter: |
+          #include <string>
+
+          std::string replaceAll(std::string text, const std::string& from, const std::string& to) {
+              return text;
+          }
+        harness: |
+          CHECK(replaceAll("a cat and a hat", "at", "og"), "a cog and a hog");
+          CHECK(replaceAll("aaa", "a", "b"), "bbb");
+          CHECK(replaceAll("aaa", "a", "aa"), "aaaaaa");
+          CHECK(replaceAll("nothing here", "xyz", "!"), "nothing here");
+        hints:
+          - "Loop with `pos = text.find(from, pos)` while it isn't `npos`."
+          - "After replacing at `pos`, continue searching from `pos + to.size()` — that skips over the text you just inserted."
+        solution: |
+          #include <string>
+
+          std::string replaceAll(std::string text, const std::string& from, const std::string& to) {
+              std::size_t pos = text.find(from);
+              while (pos != std::string::npos) {
+                  text.replace(pos, from.size(), to);
+                  pos = text.find(from, pos + to.size());
+              }
+              return text;
+          }
+    cards:
+      - front: What does `s.substr(4, 3)` return?
+        back: Three characters of `s` starting at index 4. (`s.substr(4)` goes to the end.)
+      - front: What does `s.find(x)` return when `x` isn't in `s`?
+        back: "`std::string::npos` — always compare the result against it."
+      - front: How do you find every occurrence of `x` in `s`?
+        back: "`pos = s.find(x); while (pos != npos) { ...; pos = s.find(x, pos + 1); }`"
+      - front: Name three functions that change a string in place.
+        back: "`erase(pos, len)`, `insert(pos, text)`, `replace(pos, len, text)`."
+
+  - type: quiz
+    id: c8-quiz1
+    title: "Quiz: characters and string operations"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"hello world"};
+              std::size_t p = s.find('o');
+              std::cout << p << ' ' << s.rfind('o') << ' ' << s.substr(p, 4) << '\n';
+              return 0;
+          }
+        answer: |
+          4 7 o wo
+        why: "The first 'o' is at 4, the last at 7. From 4, four characters: `o wo`."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"abcdef"};
+              s.erase(1, 2);
+              s.insert(0, "X");
+              std::cout << s << '\n';
+              return 0;
+          }
+        answer: |
+          Xadef
+        why: "Erase `bc` → `adef`, then insert X at the start."
+      - type: mcq
+        prompt: "Which check correctly tests that `c` is a digit?"
+        options:
+          - "`std::isdigit(static_cast<unsigned char>(c))`"
+          - "`c.isdigit()`"
+          - "`std::isnumber(c)`"
+          - "`c >= 0 && c <= 9`"
+        answer: 0
+        why: "`std::isdigit` from `<cctype>`, with the unsigned char cast for safety. (`c >= '0' && c <= '9'` would also work — with quotes.)"
+      - type: fill
+        prompt: Complete the check for "no comma in the line".
+        code: |
+          if (line.find(',') == std::string::___) {
+              std::cout << "no comma\n";
+          }
+        blanks:
+          - [npos]
+        why: "`std::string::npos` is the \"not found\" value."
+      - type: tf
+        prompt: "`std::toupper('a')` returns the `char` `'A'`."
+        answer: false
+        why: "It returns an `int` (65). Cast it to `char` to use it as a character."
+
+  - type: lesson
+    id: c8-getline
+    title: Reading whole lines
+    minutes: 18
+    objectives:
+      - Read a whole line, spaces included, with `std::getline`
+      - Mix `>>` and `std::getline` correctly
+      - Process every line of the input
+    body: |
+      `std::cin >> s` reads one word. To read a whole line — spaces and all —
+      use **`std::getline`**:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string fullName{};
+          std::getline(std::cin, fullName);
+          std::cout << "Hello, " << fullName << "!\n";
+          return 0;
+      }
+      ```
+
+      ```stdin
+      Ada King, Countess of Lovelace
+      ```
+
+      ```output
+      Hello, Ada King, Countess of Lovelace!
+      ```
+
+      `std::getline(std::cin, line)` reads everything up to the end of the
+      line, stores it (without the newline) in `line`, and moves on to the
+      next line.
+
+      ## The `>>` then `getline` trap
+
+      This looks right, and fails:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          int age{};
+          std::string name{};
+          std::cin >> age;
+          std::getline(std::cin, name);
+          std::cout << "[" << name << "] is " << age << '\n';
+          return 0;
+      }
+      ```
+
+      ```stdin
+      36
+      Ada Lovelace
+      ```
+
+      ```output
+      [] is 36
+      ```
+
+      Why is the name empty? `>> age` reads `36` and **stops right before the
+      newline**. `getline` then reads from there — finds the end of the line
+      immediately — and returns an empty string.
+
+      The fix: skip the leftover whitespace before `getline` with
+      **`std::ws`**:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          int age{};
+          std::string name{};
+          std::cin >> age;
+          std::getline(std::cin >> std::ws, name);
+          std::cout << "[" << name << "] is " << age << '\n';
+          return 0;
+      }
+      ```
+
+      ```stdin
+      36
+      Ada Lovelace
+      ```
+
+      ```output
+      [Ada Lovelace] is 36
+      ```
+
+      > [!remember]
+      > After a `>>`, read a line with `std::getline(std::cin >> std::ws, line)`.
+
+      ## Every line of the input
+
+      Like `>>`, `getline` can be used as a condition — it's false when there
+      are no more lines:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string line{};
+          int number{1};
+          while (std::getline(std::cin, line)) {
+              std::cout << number << ": " << line << '\n';
+              ++number;
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      First line
+      Second line, with spaces
+      Third
+      ```
+
+      ```output
+      1: First line
+      2: Second line, with spaces
+      3: Third
+      ```
+
+      {{check getline-trap}}
+
+      {{task longest-line}}
+    checks:
+      - id: getline-trap
+        type: mcq
+        prompt: "After `std::cin >> n;`, why does `std::getline(std::cin, s);` often give an empty `s`?"
+        options:
+          - "`getline` can't be used after `>>`"
+          - "`>>` leaves the newline behind, and `getline` reads up to it immediately"
+          - "`s` must be initialised first"
+          - "`getline` only reads numbers"
+        answer: 1
+        why: "Skip the leftover whitespace with `std::cin >> std::ws` before `getline`."
+      - id: getline-output
+        type: output
+        prompt: "The Input box contains two lines: `3` and `a b c`."
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              int n{};
+              std::string line{};
+              std::cin >> n;
+              std::getline(std::cin >> std::ws, line);
+              std::cout << n * static_cast<int>(line.size()) << '\n';
+              return 0;
+          }
+        stdin: |
+          3
+          a b c
+        answer: |
+          15
+        why: "The line is `a b c`, 5 characters (spaces count); 3 × 5 = 15."
+    tasks:
+      - id: longest-line
+        title: The longest line
+        prompt: |
+          Read lines until the input ends and print the longest one (the first
+          one, if several tie). Print nothing if there are no lines.
+        starter: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: |
+              short
+              a much longer line
+              medium line
+            out: a much longer line
+          - in: |
+              tie one
+              tie two
+            out: tie one
+          - in: ""
+            out: ""
+        hints:
+          - "`while (std::getline(std::cin, line))` with the max pattern on `line.size()`."
+        solution: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string line{};
+              std::string longest{};
+              bool any{false};
+              while (std::getline(std::cin, line)) {
+                  if (!any || line.size() > longest.size()) {
+                      longest = line;
+                      any = true;
+                  }
+              }
+              if (any) {
+                  std::cout << longest << '\n';
+              }
+              return 0;
+          }
+    cards:
+      - front: How do you read a whole line into `line`?
+        back: "`std::getline(std::cin, line);`"
+      - front: "How do you read a line right after `std::cin >> x;`?"
+        back: "`std::getline(std::cin >> std::ws, line);` — `std::ws` skips the leftover newline."
+      - front: How do you process every line of the input?
+        back: "`while (std::getline(std::cin, line)) { ... }`"
+
+  - type: lesson
+    id: c8-convert
+    title: Numbers and text, and string streams
+    minutes: 20
+    objectives:
+      - Convert numbers to strings with `std::to_string` and back with `std::stoi` / `std::stod`
+      - Split a line into words with `std::istringstream`
+      - Build a formatted string with `std::ostringstream`
+    body: |
+      ## Numbers to text and back
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          int score{42};
+          std::string label = "Score: " + std::to_string(score);
+          std::cout << label << '\n';
+
+          std::string typed{"1234"};
+          int value = std::stoi(typed);      // string to int
+          double price = std::stod("9.95");  // string to double
+          std::cout << value + 1 << ' ' << price * 2 << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Score: 42
+      1235 19.9
+      ```
+
+      `std::stoi` ("string to int") throws an exception if the text isn't a
+      number at all — Chapter 15 shows how to catch that. (Note that
+      `std::to_string` of a `double` always uses 6 decimals: `"9.950000"`; use
+      a string stream for nicer formatting.)
+
+      ## String streams
+
+      A **string stream** is like `std::cin` or `std::cout`, but reading from
+      or writing to a string. Include `<sstream>`.
+
+      `std::istringstream` lets you use `>>` on a string — the easiest way to
+      split a line into words or numbers:
+
+      ```cpp
+      #include <iostream>
+      #include <sstream>
+      #include <string>
+
+      int main() {
+          std::string line{"apples 3 1.25"};
+          std::istringstream in{line};
+          std::string item{};
+          int count{};
+          double price{};
+          in >> item >> count >> price;
+          std::cout << count << ' ' << item << " cost " << count * price << '\n';
+
+          std::istringstream words{"the quick  brown   fox"};
+          std::string w{};
+          int n{0};
+          while (words >> w) {
+              ++n;
+          }
+          std::cout << n << " words\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      3 apples cost 3.75
+      4 words
+      ```
+
+      Combining `getline` (one line at a time) with `istringstream` (the
+      pieces of that line) is how you handle input where each line has a
+      meaning:
+
+      ```cpp
+      #include <iostream>
+      #include <sstream>
+      #include <string>
+
+      int main() {
+          std::string line{};
+          while (std::getline(std::cin, line)) {
+              std::istringstream in{line};
+              int x{};
+              int sum{0};
+              while (in >> x) {
+                  sum += x;
+              }
+              std::cout << sum << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```stdin
+      1 2 3
+      10 20
+      7
+      ```
+
+      ```output
+      6
+      30
+      7
+      ```
+
+      `std::ostringstream` goes the other way: write to it with `<<` —
+      manipulators and all — then get the result with `.str()`:
+
+      ```cpp
+      #include <iomanip>
+      #include <iostream>
+      #include <sstream>
+      #include <string>
+
+      std::string money(double amount) {
+          std::ostringstream out{};
+          out << std::fixed << std::setprecision(2) << amount << " EUR";
+          return out.str();
+      }
+
+      int main() {
+          std::string m = money(3.5);
+          std::cout << m << " (" << m.size() << " characters)\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      3.50 EUR (8 characters)
+      ```
+
+      {{check split}}
+
+      {{task sum-line}}
+    checks:
+      - id: split
+        type: output
+        code: |
+          #include <iostream>
+          #include <sstream>
+          #include <string>
+
+          int main() {
+              std::istringstream in{"10 apples and 20 pears"};
+              std::string word{};
+              int longest{0};
+              while (in >> word) {
+                  if (static_cast<int>(word.size()) > longest) {
+                      longest = static_cast<int>(word.size());
+                  }
+              }
+              std::cout << longest << '\n';
+              return 0;
+          }
+        answer: |
+          6
+        why: "The words are 10, apples, and, 20, pears — `apples` has 6 letters."
+      - id: to-string
+        type: mcq
+        prompt: "What's `std::to_string(7) + std::to_string(3)`?"
+        options:
+          - "10"
+          - "\"10\""
+          - "\"73\""
+          - A compile error
+        answer: 2
+        why: "Both become strings, and `+` on strings joins them."
+    tasks:
+      - id: sum-line
+        title: Parse a sum
+        prompt: |
+          Write `int sumOfNumbers(const std::string& line)` that returns the sum
+          of the whole numbers in a line separated by spaces (`"4 5 -2"` → 7).
+          An empty line sums to 0.
+        starter: |
+          #include <sstream>
+          #include <string>
+
+          int sumOfNumbers(const std::string& line) {
+              return 0;
+          }
+        harness: |
+          CHECK(sumOfNumbers("4 5 -2"), 7);
+          CHECK(sumOfNumbers(""), 0);
+          CHECK(sumOfNumbers("  100   200 "), 300);
+          CHECK(sumOfNumbers("42"), 42);
+        hints:
+          - "`std::istringstream in{line};` then `while (in >> x)`."
+        solution: |
+          #include <sstream>
+          #include <string>
+
+          int sumOfNumbers(const std::string& line) {
+              std::istringstream in{line};
+              int x{};
+              int sum{0};
+              while (in >> x) {
+                  sum += x;
+              }
+              return sum;
+          }
+    cards:
+      - front: How do you turn the number 42 into the string "42"? And back?
+        back: "`std::to_string(42)`; and `std::stoi(\"42\")` (or `std::stod` for doubles)."
+      - front: How do you split a string into words?
+        back: "`std::istringstream in{text}; std::string w; while (in >> w) { ... }` (from `<sstream>`)."
+      - front: How do you build a formatted string?
+        back: "`std::ostringstream out; out << ...; std::string s = out.str();`"
+
+  - type: lesson
+    id: c8-patterns
+    title: Text-processing patterns
+    minutes: 24
+    objectives:
+      - Split a string on a delimiter character
+      - Trim spaces from both ends of a string
+      - Count letter frequencies with a table indexed by letter
+      - Compare strings ignoring case and punctuation
+    body: |
+      Some text tasks come up so often they're worth knowing by heart.
+
+      ## Split on a delimiter
+
+      Data often comes as *comma-separated values* (CSV): `Ada,36,London`.
+      `std::getline` can read up to any character you choose, not just `'\n'`:
+
+      ```cpp
+      #include <iostream>
+      #include <sstream>
+      #include <string>
+      #include <vector>
+
+      std::vector<std::string> split(const std::string& text, char delimiter) {
+          std::vector<std::string> parts{};
+          std::istringstream in{text};
+          std::string part{};
+          while (std::getline(in, part, delimiter)) {
+              parts.push_back(part);
+          }
+          return parts;
+      }
+
+      int main() {
+          for (const auto& p : split("Ada,36,London", ',')) {
+              std::cout << '[' << p << "] ";
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      [Ada] [36] [London]
+      ```
+
+      ## Trim
+
+      Remove spaces at both ends — `find_first_not_of` and
+      `find_last_not_of` find the first and last characters that are **not**
+      in a given set:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+
+      std::string trim(const std::string& s) {
+          std::size_t first = s.find_first_not_of(" \t");
+          if (first == std::string::npos) {
+              return "";
+          }
+          std::size_t last = s.find_last_not_of(" \t");
+          return s.substr(first, last - first + 1);
+      }
+
+      int main() {
+          std::cout << '[' << trim("   hello world  ") << "]\n";
+          std::cout << '[' << trim("     ") << "]\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      [hello world]
+      []
+      ```
+
+      ## A frequency table
+
+      To count each letter, use a vector of 26 counters. The letter `c` goes
+      in slot `c - 'a'` — `'a'` in 0, `'b'` in 1… — the char arithmetic from
+      Chapter 2 doing real work:
+
+      ```cpp
+      #include <cctype>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::string text{"Hello World"};
+          std::vector<int> counts(26, 0);
+          for (char c : text) {
+              unsigned char u = static_cast<unsigned char>(c);
+              if (std::isalpha(u)) {
+                  ++counts[std::tolower(u) - 'a'];
+              }
+          }
+          for (int i{0}; i < 26; ++i) {
+              if (counts[i] > 0) {
+                  std::cout << static_cast<char>('a' + i) << ':' << counts[i] << ' ';
+              }
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      d:1 e:1 h:1 l:3 o:2 r:1 w:1
+      ```
+
+      ## Normalise, then compare
+
+      "Is *A man, a plan, a canal: Panama* a palindrome?" Only if you ignore
+      case, spaces and punctuation. The trick for all such questions: first
+      build a **cleaned-up** copy (only letters, all lower case), then compare
+      that.
+
+      {{check split-out}}
+
+      {{task clean}}
+    checks:
+      - id: split-out
+        type: output
+        code: |
+          #include <iostream>
+          #include <sstream>
+          #include <string>
+
+          int main() {
+              std::istringstream in{"a;;b;c"};
+              std::string part{};
+              int n{0};
+              while (std::getline(in, part, ';')) {
+                  ++n;
+                  std::cout << '[' << part << ']';
+              }
+              std::cout << ' ' << n << '\n';
+              return 0;
+          }
+        answer: |
+          [a][][b][c] 4
+        why: "Two delimiters in a row produce an empty field between them."
+    tasks:
+      - id: clean
+        title: Letters only
+        prompt: |
+          Write `std::string lettersOnly(const std::string& s)` that returns only
+          the letters of `s`, in lower case. `"A man, a plan!"` → `"amanaplan"`.
+        starter: |
+          #include <cctype>
+          #include <string>
+
+          std::string lettersOnly(const std::string& s) {
+              return s;
+          }
+        harness: |
+          CHECK(lettersOnly("A man, a plan!"), "amanaplan");
+          CHECK(lettersOnly("123"), "");
+          CHECK(lettersOnly("C++ Rocks"), "crocks");
+        hints:
+          - "For each character: if `std::isalpha`, append `std::tolower` of it."
+        solution: |
+          #include <cctype>
+          #include <string>
+
+          std::string lettersOnly(const std::string& s) {
+              std::string out{};
+              for (char c : s) {
+                  unsigned char u = static_cast<unsigned char>(c);
+                  if (std::isalpha(u)) {
+                      out += static_cast<char>(std::tolower(u));
+                  }
+              }
+              return out;
+          }
+    cards:
+      - front: How do you split "a,b,c" on commas?
+        back: "`std::istringstream in{text}; while (std::getline(in, part, ',')) parts.push_back(part);`"
+      - front: How do you count how often each letter appears?
+        back: "`std::vector<int> counts(26, 0);` and `++counts[lower - 'a'];` for each letter."
+      - front: How do you compare text "ignoring case and punctuation"?
+        back: First build a normalised copy (e.g. only lowercase letters), then compare the copies.
+
+  - type: quiz
+    id: c8-quiz2
+    title: "Quiz: lines, streams and patterns"
+    questions:
+      - type: output
+        prompt: "The Input box has two lines: `5 apples` and `are red`."
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              int n{};
+              std::string a{};
+              std::string b{};
+              std::cin >> n >> a;
+              std::getline(std::cin, b);
+              std::cout << n << '|' << a << '|' << b << '|' << '\n';
+              return 0;
+          }
+        stdin: |
+          5 apples
+          are red
+        answer: |
+          5|apples||
+        why: "`getline` right after `>>` reads the rest of the first line, which is empty."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <sstream>
+          #include <string>
+
+          int main() {
+              std::ostringstream out{};
+              for (int i{1}; i <= 3; ++i) {
+                  out << i << (i < 3 ? "+" : "=");
+              }
+              out << 6;
+              std::string s = out.str();
+              std::cout << s << ' ' << s.size() << '\n';
+              return 0;
+          }
+        answer: |
+          1+2+3=6 7
+        why: "The stream builds `1+2+3=6`, seven characters."
+      - type: mcq
+        prompt: "How do you read the input `Ada Lovelace` into a single string?"
+        options:
+          - "`std::cin >> name;`"
+          - "`std::getline(std::cin, name);`"
+          - "`std::cin << name;`"
+          - "`name = std::cin;`"
+        answer: 1
+        why: "`>>` stops at the space; `getline` reads the whole line."
+      - type: fill
+        prompt: Complete the frequency count for a lowercase letter `c`.
+        code: |
+          std::vector<int> counts(26, 0);
+          ++counts[c - ___];
+        blanks:
+          - ["'a'"]
+        why: "`c - 'a'` maps 'a' to 0, 'b' to 1, …, 'z' to 25."
+      - type: tf
+        prompt: "`std::stoi(\"12abc\")` returns 12."
+        answer: true
+        why: "It reads as many digits as it can from the start and stops. (Only text with *no* number at the start throws.)"
+
+  - type: project
+    id: c8-project
+    title: "Project: Text Analyzer"
+    body: |
+      Build a tool that reads any text and reports statistics about it — the
+      kind of thing a word processor's "word count" does, and more. Each
+      milestone adds one report; by the end your program prints all of them.
+
+      A **word** is a maximal run of letters (so `don't` is two words, `don`
+      and `t`, and `C++` is the word `C`). Words are compared ignoring case.
+    milestones:
+      - title: Counting
+        prompt: |
+          Read all the input, line by line, and print:
+
+          ```text
+          Lines: 2
+          Characters: 27
+          Words: 6
+          ```
+
+          *Characters* counts every character on every line, not the newlines.
+          Use the definition of a word above (runs of letters).
+
+          For this input:
+
+          ```text
+          Hello, world!
+          C++ is 2x fun.
+          ```
+
+          the words are `Hello`, `world`, `C`, `is`, `x`, `fun`.
+        starter: |
+          #include <cctype>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: |
+              Hello, world!
+              C++ is 2x fun.
+            out: |
+              Lines: 2
+              Characters: 27
+              Words: 6
+          - in: ""
+            out: |
+              Lines: 0
+              Characters: 0
+              Words: 0
+          - in: |
+              one
+              two  three
+
+              four!!!
+            out: |
+              Lines: 4
+              Characters: 20
+              Words: 4
+        hints:
+          - "Read with `while (std::getline(std::cin, line))`, adding `line.size()` to the character count."
+          - "To split into words, walk each line: while you're on letters, add them to the current word; when you hit a non-letter (or the end of the line) and the current word isn't empty, you've finished a word."
+          - "Store the words (lower-cased) in a `std::vector<std::string>` — the next milestones need them."
+        solution: |
+          #include <cctype>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          std::vector<std::string> wordsIn(const std::string& line) {
+              std::vector<std::string> words{};
+              std::string current{};
+              for (char c : line) {
+                  unsigned char u = static_cast<unsigned char>(c);
+                  if (std::isalpha(u)) {
+                      current += static_cast<char>(std::tolower(u));
+                  } else if (!current.empty()) {
+                      words.push_back(current);
+                      current.clear();
+                  }
+              }
+              if (!current.empty()) {
+                  words.push_back(current);
+              }
+              return words;
+          }
+
+          int main() {
+              std::string line{};
+              int lines{0};
+              int characters{0};
+              std::vector<std::string> words{};
+              while (std::getline(std::cin, line)) {
+                  ++lines;
+                  characters += static_cast<int>(line.size());
+                  for (const auto& w : wordsIn(line)) {
+                      words.push_back(w);
+                  }
+              }
+              std::cout << "Lines: " << lines << '\n';
+              std::cout << "Characters: " << characters << '\n';
+              std::cout << "Words: " << words.size() << '\n';
+              return 0;
+          }
+      - title: Longest word and average length
+        prompt: |
+          Add two lines to the report: the **longest** word (the first one if
+          there's a tie, in lower case) and the **average word length** with 2
+          decimals. With no words, print `Longest: -` and `Average length: 0.00`.
+
+          ```text
+          Lines: 2
+          Characters: 27
+          Words: 6
+          Longest: hello
+          Average length: 2.83
+          ```
+        tests:
+          - in: |
+              Hello, world!
+              C++ is 2x fun.
+            out: |
+              Lines: 2
+              Characters: 27
+              Words: 6
+              Longest: hello
+              Average length: 2.83
+          - in: ""
+            out: |
+              Lines: 0
+              Characters: 0
+              Words: 0
+              Longest: -
+              Average length: 0.00
+          - in: |
+              Supercalifragilistic is extraordinarily long.
+            out: |
+              Lines: 1
+              Characters: 45
+              Words: 4
+              Longest: supercalifragilistic
+              Average length: 10.25
+        hints:
+          - "The max pattern over `word.size()`, and a total of all lengths divided by the number of words."
+          - "`#include <iomanip>` and `std::fixed << std::setprecision(2)` for the average."
+        solution: |
+          #include <cctype>
+          #include <iomanip>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          std::vector<std::string> wordsIn(const std::string& line) {
+              std::vector<std::string> words{};
+              std::string current{};
+              for (char c : line) {
+                  unsigned char u = static_cast<unsigned char>(c);
+                  if (std::isalpha(u)) {
+                      current += static_cast<char>(std::tolower(u));
+                  } else if (!current.empty()) {
+                      words.push_back(current);
+                      current.clear();
+                  }
+              }
+              if (!current.empty()) {
+                  words.push_back(current);
+              }
+              return words;
+          }
+
+          int main() {
+              std::string line{};
+              int lines{0};
+              int characters{0};
+              std::vector<std::string> words{};
+              while (std::getline(std::cin, line)) {
+                  ++lines;
+                  characters += static_cast<int>(line.size());
+                  for (const auto& w : wordsIn(line)) {
+                      words.push_back(w);
+                  }
+              }
+
+              std::string longest{"-"};
+              std::size_t totalLength{0};
+              for (const auto& w : words) {
+                  if (longest == "-" || w.size() > longest.size()) {
+                      longest = w;
+                  }
+                  totalLength += w.size();
+              }
+              double average = words.empty() ? 0.0 : static_cast<double>(totalLength) / static_cast<double>(words.size());
+
+              std::cout << "Lines: " << lines << '\n';
+              std::cout << "Characters: " << characters << '\n';
+              std::cout << "Words: " << words.size() << '\n';
+              std::cout << "Longest: " << longest << '\n';
+              std::cout << std::fixed << std::setprecision(2) << "Average length: " << average << '\n';
+              return 0;
+          }
+      - title: Letter frequency
+        prompt: |
+          Add a line with the **most common letter** and how many times it
+          appears (the earliest in the alphabet if there's a tie), counting
+          letters case-insensitively. With no letters, print `Top letter: -`.
+
+          ```text
+          Top letter: l (3)
+          ```
+
+          (For the first example, `l` and `o`… count them: h-e-l-l-o w-o-r-l-d
+          c i-s x f-u-n → `l` appears 3 times, `o` twice.)
+        tests:
+          - in: |
+              Hello, world!
+              C++ is 2x fun.
+            out: |
+              Lines: 2
+              Characters: 27
+              Words: 6
+              Longest: hello
+              Average length: 2.83
+              Top letter: l (3)
+          - in: ""
+            out: |
+              Lines: 0
+              Characters: 0
+              Words: 0
+              Longest: -
+              Average length: 0.00
+              Top letter: -
+          - in: |
+              ab ba
+            out: |
+              Lines: 1
+              Characters: 5
+              Words: 2
+              Longest: ab
+              Average length: 2.00
+              Top letter: a (2)
+        hints:
+          - "The words are already lower case: count their letters in `std::vector<int> counts(26, 0);`."
+          - "Find the index of the maximum count with `>` (so ties keep the earliest letter)."
+        solution: |
+          #include <cctype>
+          #include <iomanip>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          std::vector<std::string> wordsIn(const std::string& line) {
+              std::vector<std::string> words{};
+              std::string current{};
+              for (char c : line) {
+                  unsigned char u = static_cast<unsigned char>(c);
+                  if (std::isalpha(u)) {
+                      current += static_cast<char>(std::tolower(u));
+                  } else if (!current.empty()) {
+                      words.push_back(current);
+                      current.clear();
+                  }
+              }
+              if (!current.empty()) {
+                  words.push_back(current);
+              }
+              return words;
+          }
+
+          int main() {
+              std::string line{};
+              int lines{0};
+              int characters{0};
+              std::vector<std::string> words{};
+              while (std::getline(std::cin, line)) {
+                  ++lines;
+                  characters += static_cast<int>(line.size());
+                  for (const auto& w : wordsIn(line)) {
+                      words.push_back(w);
+                  }
+              }
+
+              std::string longest{"-"};
+              std::size_t totalLength{0};
+              std::vector<int> counts(26, 0);
+              for (const auto& w : words) {
+                  if (longest == "-" || w.size() > longest.size()) {
+                      longest = w;
+                  }
+                  totalLength += w.size();
+                  for (char c : w) {
+                      ++counts[c - 'a'];
+                  }
+              }
+              double average = words.empty() ? 0.0 : static_cast<double>(totalLength) / static_cast<double>(words.size());
+
+              std::cout << "Lines: " << lines << '\n';
+              std::cout << "Characters: " << characters << '\n';
+              std::cout << "Words: " << words.size() << '\n';
+              std::cout << "Longest: " << longest << '\n';
+              std::cout << std::fixed << std::setprecision(2) << "Average length: " << average << '\n';
+
+              int best{0};
+              for (int i{1}; i < 26; ++i) {
+                  if (counts[i] > counts[best]) {
+                      best = i;
+                  }
+              }
+              if (counts[best] == 0) {
+                  std::cout << "Top letter: -\n";
+              } else {
+                  std::cout << "Top letter: " << static_cast<char>('a' + best) << " (" << counts[best] << ")\n";
+              }
+              return 0;
+          }
+      - title: Most common word
+        prompt: |
+          Finally, add the **most common word** and its count. If several tie,
+          pick the one that appears **first** in the text. With no words,
+          print `Top word: -`.
+
+          ```text
+          Top word: the (3)
+          ```
+
+          (You don't have maps yet — Chapter 13 — so count with vectors: for
+          each distinct word, count how many times it appears.)
+        tests:
+          - in: |
+              The cat and the dog.
+              THE END
+            out: |
+              Lines: 2
+              Characters: 27
+              Words: 7
+              Longest: the
+              Average length: 3.00
+              Top letter: e (4)
+              Top word: the (3)
+          - in: ""
+            out: |
+              Lines: 0
+              Characters: 0
+              Words: 0
+              Longest: -
+              Average length: 0.00
+              Top letter: -
+              Top word: -
+          - in: |
+              b a b a c
+            out: |
+              Lines: 1
+              Characters: 9
+              Words: 5
+              Longest: b
+              Average length: 1.00
+              Top letter: a (2)
+              Top word: b (2)
+        hints:
+          - "For each word `w` at position `i`, count how many words equal `w` (a nested loop). Keep the best count and its word, updating only on a strictly bigger count — so the earliest wins ties."
+        solution: |
+          #include <cctype>
+          #include <iomanip>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          std::vector<std::string> wordsIn(const std::string& line) {
+              std::vector<std::string> words{};
+              std::string current{};
+              for (char c : line) {
+                  unsigned char u = static_cast<unsigned char>(c);
+                  if (std::isalpha(u)) {
+                      current += static_cast<char>(std::tolower(u));
+                  } else if (!current.empty()) {
+                      words.push_back(current);
+                      current.clear();
+                  }
+              }
+              if (!current.empty()) {
+                  words.push_back(current);
+              }
+              return words;
+          }
+
+          int countOf(const std::vector<std::string>& words, const std::string& target) {
+              int count{0};
+              for (const auto& w : words) {
+                  if (w == target) {
+                      ++count;
+                  }
+              }
+              return count;
+          }
+
+          int main() {
+              std::string line{};
+              int lines{0};
+              int characters{0};
+              std::vector<std::string> words{};
+              while (std::getline(std::cin, line)) {
+                  ++lines;
+                  characters += static_cast<int>(line.size());
+                  for (const auto& w : wordsIn(line)) {
+                      words.push_back(w);
+                  }
+              }
+
+              std::string longest{"-"};
+              std::size_t totalLength{0};
+              std::vector<int> counts(26, 0);
+              for (const auto& w : words) {
+                  if (longest == "-" || w.size() > longest.size()) {
+                      longest = w;
+                  }
+                  totalLength += w.size();
+                  for (char c : w) {
+                      ++counts[c - 'a'];
+                  }
+              }
+              double average = words.empty() ? 0.0 : static_cast<double>(totalLength) / static_cast<double>(words.size());
+
+              std::cout << "Lines: " << lines << '\n';
+              std::cout << "Characters: " << characters << '\n';
+              std::cout << "Words: " << words.size() << '\n';
+              std::cout << "Longest: " << longest << '\n';
+              std::cout << std::fixed << std::setprecision(2) << "Average length: " << average << '\n';
+
+              int best{0};
+              for (int i{1}; i < 26; ++i) {
+                  if (counts[i] > counts[best]) {
+                      best = i;
+                  }
+              }
+              if (counts[best] == 0) {
+                  std::cout << "Top letter: -\n";
+              } else {
+                  std::cout << "Top letter: " << static_cast<char>('a' + best) << " (" << counts[best] << ")\n";
+              }
+
+              std::string topWord{"-"};
+              int topCount{0};
+              for (const auto& w : words) {
+                  int c = countOf(words, w);
+                  if (c > topCount) {
+                      topCount = c;
+                      topWord = w;
+                  }
+              }
+              if (topCount == 0) {
+                  std::cout << "Top word: -\n";
+              } else {
+                  std::cout << "Top word: " << topWord << " (" << topCount << ")\n";
+              }
+              return 0;
+          }
+        explain: |
+          The word count is O(n²) — every word is compared with every other.
+          For a book of 100,000 words that's 10 billion comparisons. In
+          Chapter 13, `std::map` or `std::unordered_map` turns it into a single
+          pass. Notice how splitting the work into `wordsIn` and `countOf`
+          kept `main` manageable as the report grew.
+
+  - type: challenge
+    id: c8-ch-caesar
+    title: Caesar cipher
+    difficulty: 1
+    tags: [strings, chars]
+    prompt: |
+      Julius Caesar encrypted messages by shifting every letter along the
+      alphabet: with shift 3, `a` → `d`, `x` → `a` (it wraps around). Write
+      `std::string caesar(const std::string& text, int shift)`:
+
+      - Shift lower-case letters within `a–z` and upper-case within `A–Z`.
+      - Leave every other character unchanged.
+      - `shift` can be negative (decrypting) or bigger than 26.
+    starter: |
+      #include <string>
+
+      std::string caesar(const std::string& text, int shift) {
+          return text;
+      }
+    harness: |
+      CHECK(caesar("abc", 3), "def");
+      CHECK(caesar("xyz", 3), "abc");
+      CHECK(caesar("Hello, World!", 13), "Uryyb, Jbeyq!");
+      CHECK(caesar("def", -3), "abc");
+      CHECK(caesar("abc", 29), "def");
+      CHECK(caesar("Zoo", -27), "Ynn");
+    hints:
+      - "Normalise the shift into 0–25 first: `int s = ((shift % 26) + 26) % 26;` handles negatives."
+      - "For a lower-case letter: `'a' + (c - 'a' + s) % 26`."
+    solution: |
+      #include <string>
+
+      std::string caesar(const std::string& text, int shift) {
+          int s = ((shift % 26) + 26) % 26;
+          std::string out{text};
+          for (char& c : out) {
+              if (c >= 'a' && c <= 'z') {
+                  c = static_cast<char>('a' + (c - 'a' + s) % 26);
+              } else if (c >= 'A' && c <= 'Z') {
+                  c = static_cast<char>('A' + (c - 'A' + s) % 26);
+              }
+          }
+          return out;
+      }
+    explain: |
+      `((shift % 26) + 26) % 26` is the standard trick for a "true" modulo
+      that's never negative: C++'s `%` keeps the sign of the left side, so −3
+      % 26 is −3; adding 26 and taking % 26 again gives 23.
+
+  - type: challenge
+    id: c8-ch-palindrome
+    title: Sentence palindrome
+    difficulty: 2
+    tags: [strings, two pointers]
+    prompt: |
+      Write `bool isPalindrome(const std::string& s)` that ignores case and
+      every character that isn't a letter or a digit. "A man, a plan, a
+      canal: Panama!" is a palindrome. An empty string counts as one.
+    starter: |
+      #include <cctype>
+      #include <string>
+
+      bool isPalindrome(const std::string& s) {
+          return false;
+      }
+    harness: |
+      CHECK(isPalindrome("A man, a plan, a canal: Panama!"), true);
+      CHECK(isPalindrome("racecar"), true);
+      CHECK(isPalindrome("Hello"), false);
+      CHECK(isPalindrome(""), true);
+      CHECK(isPalindrome("No 'x' in Nixon"), true);
+      CHECK(isPalindrome("12321"), true);
+      CHECK(isPalindrome("ab"), false);
+    hints:
+      - Build a cleaned copy with only `std::isalnum` characters, lower-cased.
+      - "Then compare it with its reverse — or use two indexes moving inwards."
+    solution: |
+      #include <cctype>
+      #include <string>
+
+      bool isPalindrome(const std::string& s) {
+          std::string clean{};
+          for (char c : s) {
+              unsigned char u = static_cast<unsigned char>(c);
+              if (std::isalnum(u)) {
+                  clean += static_cast<char>(std::tolower(u));
+              }
+          }
+          std::size_t n = clean.size();
+          for (std::size_t i{0}; i < n / 2; ++i) {
+              if (clean[i] != clean[n - 1 - i]) {
+                  return false;
+              }
+          }
+          return true;
+      }
+
+  - type: challenge
+    id: c8-ch-title
+    title: Title Case
+    difficulty: 1
+    tags: [strings, chars]
+    prompt: |
+      Write `std::string titleCase(const std::string& s)` that makes the first
+      letter of every word upper case and the rest lower case. A word starts
+      after a space (or at the start). `"hELLO wORLD  from c++"` →
+      `"Hello World  From C++"`.
+    starter: |
+      #include <cctype>
+      #include <string>
+
+      std::string titleCase(const std::string& s) {
+          return s;
+      }
+    harness: |
+      CHECK(titleCase("hELLO wORLD  from c++"), "Hello World  From C++");
+      CHECK(titleCase("a"), "A");
+      CHECK(titleCase(""), "");
+      CHECK(titleCase("  leading spaces"), "  Leading Spaces");
+    hints:
+      - "Keep a `bool startOfWord{true};`. For each character: if it's a space, set it true; otherwise upper-case it if `startOfWord`, else lower-case it, then set it false."
+    solution: |
+      #include <cctype>
+      #include <string>
+
+      std::string titleCase(const std::string& s) {
+          std::string out{s};
+          bool startOfWord{true};
+          for (char& c : out) {
+              unsigned char u = static_cast<unsigned char>(c);
+              if (c == ' ') {
+                  startOfWord = true;
+              } else {
+                  c = static_cast<char>(startOfWord ? std::toupper(u) : std::tolower(u));
+                  startOfWord = false;
+              }
+          }
+          return out;
+      }
+
+  - type: challenge
+    id: c8-ch-rle
+    title: Run-length encoding
+    difficulty: 2
+    tags: [strings, compression]
+    prompt: |
+      **Run-length encoding** compresses runs of repeated characters:
+      `aaabccdddd` becomes `a3b1c2d4`. Write:
+
+      - `std::string encode(const std::string& s)` — each run as its character followed by its length.
+      - `std::string decode(const std::string& s)` — the reverse. Counts can have several digits (`x12`).
+
+      The input to `encode` never contains digits.
+    starter: |
+      #include <string>
+
+      std::string encode(const std::string& s) {
+          return "";
+      }
+
+      std::string decode(const std::string& s) {
+          return "";
+      }
+    harness: |
+      CHECK(encode("aaabccdddd"), "a3b1c2d4");
+      CHECK(encode(""), "");
+      CHECK(encode("z"), "z1");
+      CHECK(encode("xxxxxxxxxxxx"), "x12");
+      CHECK(decode("a3b1c2d4"), "aaabccdddd");
+      CHECK(decode("x12"), "xxxxxxxxxxxx");
+      CHECK(decode(""), "");
+      CHECK(decode(encode("hello  world")), "hello  world");
+    hints:
+      - "`encode`: walk with an index `i`; count how far the same character continues (`j`), append `s[i]` and `std::to_string(j - i)`, then jump `i = j`."
+      - "`decode`: read a character, then read all the digits after it into a number, then append that many copies: `std::string(count, c)`."
+    solution: |
+      #include <cctype>
+      #include <string>
+
+      std::string encode(const std::string& s) {
+          std::string out{};
+          std::size_t i{0};
+          while (i < s.size()) {
+              std::size_t j{i};
+              while (j < s.size() && s[j] == s[i]) {
+                  ++j;
+              }
+              out += s[i];
+              out += std::to_string(j - i);
+              i = j;
+          }
+          return out;
+      }
+
+      std::string decode(const std::string& s) {
+          std::string out{};
+          std::size_t i{0};
+          while (i < s.size()) {
+              char c = s[i];
+              ++i;
+              std::size_t count{0};
+              while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) {
+                  count = count * 10 + static_cast<std::size_t>(s[i] - '0');
+                  ++i;
+              }
+              out += std::string(count, c);
+          }
+          return out;
+      }
+
+  - type: challenge
+    id: c8-ch-anagram
+    title: Anagrams
+    difficulty: 2
+    tags: [strings, frequency]
+    prompt: |
+      Two phrases are **anagrams** if they use exactly the same letters the
+      same number of times, ignoring case and anything that isn't a letter:
+      "Listen" / "Silent", "Dormitory" / "Dirty room!". Write
+      `bool areAnagrams(const std::string& a, const std::string& b)`.
+    starter: |
+      #include <cctype>
+      #include <string>
+      #include <vector>
+
+      bool areAnagrams(const std::string& a, const std::string& b) {
+          return false;
+      }
+    harness: |
+      CHECK(areAnagrams("Listen", "Silent"), true);
+      CHECK(areAnagrams("Dormitory", "Dirty room!"), true);
+      CHECK(areAnagrams("Hello", "World"), false);
+      CHECK(areAnagrams("aab", "abb"), false);
+      CHECK(areAnagrams("", "  !!"), true);
+    hints:
+      - "Build a 26-slot letter count for each phrase and compare the two vectors with `==`."
+    solution: |
+      #include <cctype>
+      #include <string>
+      #include <vector>
+
+      std::vector<int> letterCounts(const std::string& s) {
+          std::vector<int> counts(26, 0);
+          for (char c : s) {
+              unsigned char u = static_cast<unsigned char>(c);
+              if (std::isalpha(u)) {
+                  ++counts[std::tolower(u) - 'a'];
+              }
+          }
+          return counts;
+      }
+
+      bool areAnagrams(const std::string& a, const std::string& b) {
+          return letterCounts(a) == letterCounts(b);
+      }
+    explain: |
+      Vectors can be compared with `==` — same size, same elements in the
+      same order. Comparing letter counts avoids sorting and runs in one pass.
+
+  - type: challenge
+    id: c8-ch-reverse-words
+    title: Reverse the words
+    difficulty: 2
+    tags: [strings, streams]
+    prompt: |
+      Read lines until the input ends. For each, print its words in reverse
+      order, separated by single spaces (however many spaces were between
+      them). `the quick  brown fox` → `fox brown quick the`. An empty line
+      stays empty.
+    starter: |
+      #include <iostream>
+      #include <sstream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          the quick  brown fox
+          hello
+        out: |
+          fox brown quick the
+          hello
+      - in: |
+          a b c
+
+          1 2
+        out: |
+          c b a
+
+          2 1
+    hints:
+      - "For each line: split into words with an `istringstream`, store them in a vector, then print the vector backwards."
+    solution: |
+      #include <iostream>
+      #include <sstream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::string line{};
+          while (std::getline(std::cin, line)) {
+              std::istringstream in{line};
+              std::vector<std::string> words{};
+              std::string w{};
+              while (in >> w) {
+                  words.push_back(w);
+              }
+              for (int i = static_cast<int>(words.size()) - 1; i >= 0; --i) {
+                  std::cout << words[i];
+                  if (i > 0) {
+                      std::cout << ' ';
+                  }
+              }
+              std::cout << '\n';
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c8-ch-csv
+    title: Class results from CSV
+    difficulty: 2
+    tags: [strings, parsing]
+    prompt: |
+      Each input line is `name,score` (score is a whole number). Print each
+      student with their score padded to 3 characters, then the class
+      average (2 decimals) and the best student (the first, on a tie). For
+      input:
+
+      ```text
+      Ada,95
+      Alan,82
+      Grace,95
+      ```
+
+      print:
+
+      ```text
+      Ada:  95
+      Alan:  82
+      Grace:  95
+      Average: 90.67
+      Best: Ada
+      ```
+
+      Ignore empty lines. With no students, print only `No students`.
+    starter: |
+      #include <iomanip>
+      #include <iostream>
+      #include <sstream>
+      #include <string>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          Ada,95
+          Alan,82
+          Grace,95
+        out: |
+          Ada:  95
+          Alan:  82
+          Grace:  95
+          Average: 90.67
+          Best: Ada
+      - in: |
+          Linus,7
+
+          Bjarne,100
+        out: |
+          Linus:   7
+          Bjarne: 100
+          Average: 53.50
+          Best: Bjarne
+      - in: ""
+        out: No students
+    hints:
+      - "Split each line at the comma with `find(',')` and `substr`, and convert the score with `std::stoi`."
+      - "Padding: `std::setw(3) << score` after `\": \"`."
+    solution: |
+      #include <iomanip>
+      #include <iostream>
+      #include <sstream>
+      #include <string>
+
+      int main() {
+          std::string line{};
+          int count{0};
+          int total{0};
+          int bestScore{-1};
+          std::string best{};
+          while (std::getline(std::cin, line)) {
+              if (line.empty()) {
+                  continue;
+              }
+              std::size_t comma = line.find(',');
+              std::string name = line.substr(0, comma);
+              int score = std::stoi(line.substr(comma + 1));
+              std::cout << name << ": " << std::setw(3) << score << '\n';
+              ++count;
+              total += score;
+              if (score > bestScore) {
+                  bestScore = score;
+                  best = name;
+              }
+          }
+          if (count == 0) {
+              std::cout << "No students\n";
+              return 0;
+          }
+          std::cout << std::fixed << std::setprecision(2)
+                    << "Average: " << static_cast<double>(total) / count << '\n';
+          std::cout << "Best: " << best << '\n';
+          return 0;
+      }
+
+  - type: challenge
+    id: c8-ch-wrap
+    title: Word wrap
+    difficulty: 3
+    tags: [strings, algorithms]
+    prompt: |
+      Read a width `w`, then all the remaining words of the input. Print the
+      words on lines at most `w` characters long, separated by single spaces,
+      putting as many words on each line as fit. A word longer than `w` goes
+      on a line of its own. For width `16` and the text
+      `The quick brown fox jumps over the lazy dog`:
+
+      ```text
+      The quick brown
+      fox jumps over
+      the lazy dog
+      ```
+    starter: |
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::size_t width{};
+          std::cin >> width;
+
+          return 0;
+      }
+    tests:
+      - in: "16 The quick brown fox jumps over the lazy dog"
+        out: |
+          The quick brown
+          fox jumps over
+          the lazy dog
+      - in: |
+          10
+          a bb ccc dddd eeeee ffffff
+        out: |
+          a bb ccc
+          dddd eeeee
+          ffffff
+      - in: "4 hello hi a b"
+        out: |
+          hello
+          hi a
+          b
+      - in: "20"
+        out: ""
+    hints:
+      - "Build the current line in a string. For each word: if the line is empty, the word starts it; otherwise, if `line.size() + 1 + word.size() <= width`, append a space and the word; otherwise print the line and start a new one with the word."
+      - Don't forget to print the last line after the loop — if it isn't empty.
+    solution: |
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::size_t width{};
+          std::cin >> width;
+          std::string word{};
+          std::string line{};
+          while (std::cin >> word) {
+              if (line.empty()) {
+                  line = word;
+              } else if (line.size() + 1 + word.size() <= width) {
+                  line += ' ';
+                  line += word;
+              } else {
+                  std::cout << line << '\n';
+                  line = word;
+              }
+          }
+          if (!line.empty()) {
+              std::cout << line << '\n';
+          }
+          return 0;
+      }
+    explain: |
+      This is the *greedy* algorithm most text editors use: fill each line as
+      much as possible. (Typesetting programs like TeX use a cleverer method
+      that balances the whole paragraph — look up the Knuth–Plass algorithm
+      if you're curious.)
+
+  - type: review
+    id: c8-review
+    title: "Chapter 8 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      s[i]  s.size()  s.empty()  s.front()  s.back()  s += 'x';  s += "abc";
+      s.substr(pos, len)       s.substr(pos)            // pieces
+      s.find(x)  s.rfind(x)  s.find(x, from)          // std::string::npos if absent
+      s.erase(pos, len)  s.insert(pos, t)  s.replace(pos, len, t)
+      s.find_first_not_of(" ")  s.find_last_not_of(" ")
+
+      #include <cctype>   // isalpha isdigit isalnum isspace isupper islower toupper tolower
+      std::isalpha(static_cast<unsigned char>(c))
+
+      std::getline(std::cin, line);                // whole line
+      std::getline(std::cin >> std::ws, line);     // after >>
+      while (std::getline(std::cin, line)) { }     // every line
+      std::getline(in, part, ',');                 // split on ','
+
+      #include <sstream>
+      std::istringstream in{line};  while (in >> w) { }
+      std::ostringstream out;  out << ...;  out.str();
+      std::to_string(42);  std::stoi("42");  std::stod("4.2");
+      ```
+
+      ## Key ideas
+
+      - A string behaves like a vector of `char`.
+      - Always check `find` against `std::string::npos`, and store its result in a `std::size_t`.
+      - `>>` reads words; `getline` reads lines; `std::ws` fixes the mix.
+      - `getline` + `istringstream` handles line-based input with several values per line.
+      - Normalise text (case, punctuation) before comparing it.
+      - Letter tables: `counts[c - 'a']`.
+    questions:
+      - type: output
+        prompt: Interleaving functions, loops and strings.
+        code: |
+          #include <iostream>
+          #include <string>
+
+          std::string compress(const std::string& s) {
+              std::string out{};
+              for (char c : s) {
+                  if (out.empty() || out.back() != c) {
+                      out += c;
+                  }
+              }
+              return out;
+          }
+
+          int main() {
+              std::cout << compress("aaabbbcaa") << '\n';
+              return 0;
+          }
+        answer: |
+          abca
+        why: "A character is added only if it differs from the last one added."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          int main() {
+              std::vector<std::string> v{"pear", "fig", "banana"};
+              std::size_t total{0};
+              for (const auto& s : v) {
+                  total += s.find('a') == std::string::npos ? 0 : s.find('a');
+              }
+              std::cout << total << '\n';
+              return 0;
+          }
+        answer: |
+          3
+        why: "pear: 'a' at 2; fig: none (0); banana: 'a' at 1 — total 3."
+      - type: mcq
+        prompt: Which is the best tool to read `3.5 apples 12` from a single line into three variables?
+        options:
+          - "`std::getline` three times"
+          - "`std::istringstream` over the line, then `>>` three times"
+          - "`s.substr` with fixed positions"
+          - "`std::stoi` on the whole line"
+        answer: 1
+        why: "A string stream reads typed values from a string exactly like `std::cin`."
+
+  - type: exam
+    id: c8-exam
+    title: "Chapter 8 exam"
+    minutes: 40
+    pick: 13
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"Hello"};
+              s[0] = 'J';
+              s += s.substr(1, 2);
+              std::cout << s << ' ' << s.size() << '\n';
+              return 0;
+          }
+        answer: |
+          Jelloel 7
+        why: "Jello, then append `el` (2 chars from index 1)."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"a-b-c-d"};
+              int dashes{0};
+              std::size_t p = s.find('-');
+              while (p != std::string::npos) {
+                  ++dashes;
+                  p = s.find('-', p + 1);
+              }
+              std::cout << dashes << '\n';
+              return 0;
+          }
+        answer: |
+          3
+        why: "Three dashes, found one after another."
+      - type: mcq
+        prompt: What's the correct way to keep the result of `s.find(x)`?
+        options:
+          - "`int pos = s.find(x);` and compare with `-1`"
+          - "`std::size_t pos = s.find(x);` and compare with `std::string::npos`"
+          - "`bool pos = s.find(x);`"
+          - "`char pos = s.find(x);`"
+        answer: 1
+        why: "`find` returns a `std::size_t`, with `npos` meaning not found."
+      - type: output
+        prompt: "The Input box has three lines: `2`, `alpha beta` and `gamma`."
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              std::string line{};
+              for (int i{0}; i < n; ++i) {
+                  std::getline(std::cin >> std::ws, line);
+                  std::cout << line.size() << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        stdin: |
+          2
+          alpha beta
+          gamma
+        answer: |
+          10 5
+        why: "`alpha beta` has 10 characters, `gamma` 5."
+      - type: output
+        code: |
+          #include <cctype>
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"C3po & R2d2"};
+              std::string out{};
+              for (char c : s) {
+                  unsigned char u = static_cast<unsigned char>(c);
+                  if (std::isdigit(u)) {
+                      out += c;
+                  } else if (std::isupper(u)) {
+                      out += static_cast<char>(std::tolower(u));
+                  }
+              }
+              std::cout << out << '\n';
+              return 0;
+          }
+        answer: |
+          c3r22
+        why: "Keep digits (3, 2, 2) and lower-cased capitals (C, R), in order: c, 3, r, 2, 2."
+      - type: tf
+        prompt: "`std::getline(std::cin, s)` stores the newline at the end of `s`."
+        answer: false
+        why: "The newline is consumed but not stored."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <sstream>
+          #include <string>
+
+          int main() {
+              std::istringstream in{"x=1,y=22,z=333"};
+              std::string part{};
+              std::size_t total{0};
+              while (std::getline(in, part, ',')) {
+                  total += part.substr(part.find('=') + 1).size();
+              }
+              std::cout << total << '\n';
+              return 0;
+          }
+        answer: |
+          6
+        why: "The values after '=' are 1, 22, 333: lengths 1 + 2 + 3 = 6."
+      - type: mcq
+        prompt: "What does `std::string(4, '-')` create?"
+        options:
+          - "\"4-\""
+          - "\"----\""
+          - "\"-4\""
+          - A compile error
+        answer: 1
+        why: "The (count, char) constructor repeats the character."
+      - type: fill
+        prompt: Complete the function that returns `s` without its first and last characters (`s.size()` ≥ 2).
+        code: |
+          std::string inner(const std::string& s) {
+              return s.substr(___, s.size() - ___);
+          }
+        blanks:
+          - ['1']
+          - ['2']
+        why: "Start at index 1 and take all but two characters."
+      - type: spot
+        prompt: This should print the text after the colon, but misbehaves when there's no colon. Which line needs a check?
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"no colon here"};
+              std::size_t p = s.find(':');
+              std::cout << s.substr(p + 1) << '\n';
+              return 0;
+          }
+        answer: 7
+        why: "When `p` is `npos`, `p + 1` wraps to 0 and the whole string is printed — test `p != std::string::npos` first."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"12"};
+              int n = std::stoi(s) * 2;
+              std::string t = s + std::to_string(n);
+              std::cout << t << '\n';
+              return 0;
+          }
+        answer: |
+          1224
+        why: "12 × 2 = 24; joining \"12\" and \"24\" gives \"1224\"."
+      - type: code
+        prompt: |
+          Write `int countWords(const std::string& s)` that returns the number
+          of words, where words are separated by one or more spaces.
+          `"  hello   big world "` has 3.
+        starter: |
+          #include <string>
+
+          int countWords(const std::string& s) {
+              return 0;
+          }
+        harness: |
+          CHECK(countWords("  hello   big world "), 3);
+          CHECK(countWords(""), 0);
+          CHECK(countWords("     "), 0);
+          CHECK(countWords("one"), 1);
+          CHECK(countWords("a b c d"), 4);
+        solution: |
+          #include <sstream>
+          #include <string>
+
+          int countWords(const std::string& s) {
+              std::istringstream in{s};
+              std::string w{};
+              int count{0};
+              while (in >> w) {
+                  ++count;
+              }
+              return count;
+          }
+      - type: code
+        prompt: |
+          Write `std::string initials(const std::string& name)` returning the
+          upper-case first letter of each word followed by a dot:
+          `"grace brewster hopper"` → `"G.B.H."`.
+        starter: |
+          #include <cctype>
+          #include <string>
+
+          std::string initials(const std::string& name) {
+              return "";
+          }
+        harness: |
+          CHECK(initials("grace brewster hopper"), "G.B.H.");
+          CHECK(initials("Ada"), "A.");
+          CHECK(initials("  alan   turing "), "A.T.");
+          CHECK(initials(""), "");
+        solution: |
+          #include <cctype>
+          #include <sstream>
+          #include <string>
+
+          std::string initials(const std::string& name) {
+              std::istringstream in{name};
+              std::string word{};
+              std::string out{};
+              while (in >> word) {
+                  out += static_cast<char>(std::toupper(static_cast<unsigned char>(word[0])));
+                  out += '.';
+              }
+              return out;
+          }

@@ -1,0 +1,2158 @@
+id: ch07
+number: 7
+part: p2
+title: Vectors and Arrays
+blurb: Store as many values as you need in one variable — and process them all with a loop.
+hours: 6
+goals:
+  - Create a `std::vector`, read and change its elements, and add new ones
+  - Loop over a vector with an index or a range-based `for`
+  - Write the classic list algorithms by hand — sum, max, search, count, reverse, filter
+  - Stay inside the bounds of a vector, and handle `std::size_t` safely
+  - Pass vectors to and return them from functions efficiently
+  - Build and use 2D grids as vectors of vectors
+  - Explain when to use `std::array`, and why to avoid raw C arrays
+
+items:
+  - type: lesson
+    id: c7-vector
+    title: "std::vector: a list of values"
+    minutes: 20
+    objectives:
+      - Create a vector with initial values
+      - Read and change elements by index, starting from 0
+      - Add elements with `push_back` and ask for the `size`
+    body: |
+      Store the scores of 30 students. With what you know, you'd need 30
+      variables: `score1`, `score2`… and every calculation would be 30 lines
+      long. What you need is **one variable that holds a list**. In C++ that's
+      **`std::vector`**, from `<vector>`:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> scores{90, 72, 85, 64};
+
+          std::cout << "First: " << scores[0] << '\n';
+          std::cout << "Third: " << scores[2] << '\n';
+          std::cout << "How many: " << scores.size() << '\n';
+
+          scores[1] = 75;              // change an element
+          scores.push_back(88);        // add one at the end
+          std::cout << "Second now: " << scores[1] << '\n';
+          std::cout << "How many now: " << scores.size() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      First: 90
+      Third: 85
+      How many: 4
+      Second now: 75
+      How many now: 5
+      ```
+
+      - `std::vector<int>` is "a vector of `int`s". The type in `< >` is the type of every **element**; a vector holds elements of one type only.
+      - `scores[0]` is the **element at index 0**. Indexes start at **0**, so the last element of a vector of size `n` is at index `n - 1`.
+      - `scores.size()` is the number of elements.
+      - `scores.push_back(88)` appends 88 at the end — the vector grows. (That's the big difference from fixed-size arrays.)
+
+      > [!remember] Why start at 0?
+      > An index is the **distance from the start**. The first element is 0
+      > steps away. It feels odd for a week, then natural forever — nearly every
+      > programming language does it.
+
+      {{check index}}
+
+      ## Vectors of other types
+
+      Any type works: `std::vector<double>`, `std::vector<std::string>`,
+      `std::vector<char>`… You can start empty and fill it later:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<std::string> guests{};
+          guests.push_back("Ada");
+          guests.push_back("Alan");
+          guests.push_back("Grace");
+          std::cout << guests.size() << " guests; the last is " << guests[guests.size() - 1] << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      3 guests; the last is Grace
+      ```
+
+      {{check size-last}}
+
+      {{task grow}}
+    checks:
+      - id: index
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{10, 20, 30, 40};
+              v[0] = v[3] + 1;
+              v.push_back(v[1] * 2);
+              std::cout << v[0] << ' ' << v[4] << ' ' << v.size() << '\n';
+              return 0;
+          }
+        answer: |
+          41 40 5
+        why: "v[3] is 40, so v[0] becomes 41. v[1] is 20, so 40 is appended as v[4], making the size 5."
+      - id: size-last
+        type: mcq
+        prompt: A vector `v` has 8 elements. Which expression is its last element?
+        options:
+          - "`v[8]`"
+          - "`v[7]`"
+          - "`v[v.size()]`"
+          - "`v[-1]`"
+        answer: 1
+        why: "Indexes run from 0 to size − 1, so the last is `v[7]` (or `v[v.size() - 1]`). `v[8]` is past the end."
+    tasks:
+      - id: grow
+        title: Build a vector
+        prompt: |
+          Write `std::vector<int> firstSquares(int n)` that returns a vector
+          holding the squares 1, 4, 9, … up to n² (n ≥ 0; for n = 0, an empty
+          vector).
+        starter: |
+          #include <vector>
+
+          std::vector<int> firstSquares(int n) {
+              std::vector<int> result{};
+
+              return result;
+          }
+        harness: |
+          CHECK(firstSquares(4), (std::vector<int>{1, 4, 9, 16}));
+          CHECK(firstSquares(1), (std::vector<int>{1}));
+          CHECK(firstSquares(0), (std::vector<int>{}));
+        hints:
+          - "A `for` loop from 1 to n, doing `result.push_back(i * i);`"
+        solution: |
+          #include <vector>
+
+          std::vector<int> firstSquares(int n) {
+              std::vector<int> result{};
+              for (int i{1}; i <= n; ++i) {
+                  result.push_back(i * i);
+              }
+              return result;
+          }
+    cards:
+      - front: How do you create a vector of ints holding 3, 1, 4?
+        back: "`std::vector<int> v{3, 1, 4};` (with `#include <vector>`)."
+      - front: What index does the first element of a vector have? The last?
+        back: The first is 0; the last is `size() - 1`.
+      - front: How do you add an element to the end of a vector?
+        back: "`v.push_back(value);` — the vector grows by one."
+
+  - type: lesson
+    id: c7-loop
+    title: Looping over a vector
+    minutes: 20
+    objectives:
+      - Visit every element with an index loop
+      - Use a range-based `for` loop to read or change every element
+      - Use `auto` and `const auto&` in range-based loops
+    body: |
+      Vectors and loops were made for each other. There are two ways to
+      visit every element.
+
+      ## The index loop
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<double> prices{2.5, 10.0, 7.25};
+          for (std::size_t i{0}; i < prices.size(); ++i) {
+              std::cout << "Item " << i << ": " << prices[i] << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      Item 0: 2.5
+      Item 1: 10
+      Item 2: 7.25
+      ```
+
+      Why `std::size_t` and not `int`? `size()` returns a `std::size_t`, an
+      **unsigned** type used for sizes. Comparing an `int` with it makes the
+      compiler warn about mixing signed and unsigned. Using `std::size_t` for
+      the index avoids that. (Lesson 7.4 explains the trap behind the
+      warning.)
+
+      ## The range-based `for` loop
+
+      When you just need each **value**, not its position, there's a neater
+      loop:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> numbers{4, 8, 15, 16, 23, 42};
+          int sum{0};
+          for (int n : numbers) {
+              sum += n;
+          }
+          std::cout << "Sum: " << sum << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Sum: 108
+      ```
+
+      Read `for (int n : numbers)` as *"for each `n` in `numbers`"*. No index,
+      no size, no off-by-one errors possible. **Prefer it whenever you don't
+      need the index.**
+
+      ## Changing elements: use a reference
+
+      In `for (int n : numbers)`, `n` is a **copy** of each element — changing
+      it changes nothing in the vector. To change the elements, make `n` a
+      reference with `&`, exactly like reference parameters:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> values{1, 2, 3};
+          for (int& v : values) {
+              v *= 10;
+          }
+          for (int v : values) {
+              std::cout << v << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      10 20 30
+      ```
+
+      ## `auto`
+
+      `auto` tells the compiler to work out a variable's type from its
+      initialiser: `auto x{5};` is an `int`. It's especially handy in
+      range-based loops. The idiomatic forms are:
+
+      | Loop | When |
+      |---|---|
+      | `for (auto x : v)` | small elements (numbers, chars), read-only |
+      | `for (const auto& x : v)` | big elements (like strings), read-only — no copies |
+      | `for (auto& x : v)` | you want to change the elements |
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<std::string> words{"vectors", "are", "handy"};
+          for (const auto& w : words) {
+              std::cout << w << " (" << w.length() << ")\n";
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      vectors (7)
+      are (3)
+      handy (5)
+      ```
+
+      {{check copy-vs-ref}}
+
+      {{task count-above}}
+    checks:
+      - id: copy-vs-ref
+        type: output
+        warnings: true
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{1, 2, 3};
+              for (int x : v) {
+                  x = 0;
+              }
+              for (int& x : v) {
+                  x += 1;
+              }
+              std::cout << v[0] << v[1] << v[2] << '\n';
+              return 0;
+          }
+        answer: |
+          234
+        why: "The first loop changes copies, so nothing happens. The second loop uses references, so each element grows by 1."
+      - id: which-loop
+        type: mcq
+        prompt: You want to print each element **and its position**. Which loop?
+        options:
+          - "`for (auto x : v)`"
+          - "`for (std::size_t i{0}; i < v.size(); ++i)`"
+          - "`for (auto& x : v)`"
+          - "`while (v)`"
+        answer: 1
+        why: "A range-based loop doesn't give you the index; the index loop does."
+    tasks:
+      - id: count-above
+        title: Above the limit
+        prompt: |
+          Write `int countAbove(const std::vector<int>& values, int limit)`
+          returning how many elements are **greater than** `limit`.
+        starter: |
+          #include <vector>
+
+          int countAbove(const std::vector<int>& values, int limit) {
+              return 0;
+          }
+        harness: |
+          CHECK(countAbove({5, 12, 8, 20, 1}, 7), 3);
+          CHECK(countAbove({}, 0), 0);
+          CHECK(countAbove({1, 2, 3}, 3), 0);
+          CHECK(countAbove({-1, -2, 0}, -2), 2);
+        hints:
+          - "`for (int v : values)` and the counter pattern."
+        solution: |
+          #include <vector>
+
+          int countAbove(const std::vector<int>& values, int limit) {
+              int count{0};
+              for (int v : values) {
+                  if (v > limit) {
+                      ++count;
+                  }
+              }
+              return count;
+          }
+    cards:
+      - front: Write a loop that prints every element of `v` without using indexes.
+        back: "`for (auto x : v) { std::cout << x << ' '; }`"
+      - front: "In `for (int x : v)`, does changing `x` change the vector?"
+        back: No — `x` is a copy. Use `for (int& x : v)` to change the elements.
+      - front: What's the idiomatic read-only loop over a vector of strings?
+        back: "`for (const auto& s : words)` — no copies, no changes."
+      - front: What does `auto` do?
+        back: Lets the compiler deduce the variable's type from its initialiser.
+
+  - type: lesson
+    id: c7-algos
+    title: Classic list algorithms
+    minutes: 26
+    objectives:
+      - Compute the sum, average, maximum and its position
+      - Search for a value and report where it is
+      - Reverse a vector in place, and build a filtered copy
+    body: |
+      These few algorithms appear inside almost every program. Learn to write
+      them without thinking — the standard library has ready-made versions
+      (Chapter 14), but you should know what they do inside.
+
+      ## Maximum and its position
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> temps{14, 19, 23, 17, 23, 11};
+          std::size_t best{0};
+          for (std::size_t i{1}; i < temps.size(); ++i) {
+              if (temps[i] > temps[best]) {
+                  best = i;
+              }
+          }
+          std::cout << "Hottest: " << temps[best] << " on day " << best << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Hottest: 23 on day 2
+      ```
+
+      Keeping the **index** of the best element gives you both its position
+      and its value. With `>`, ties keep the first; with `>=`, the last.
+
+      ## Linear search
+
+      Look at each element in turn until you find the target. Return its
+      index — or a value that can't be an index, like `-1`, if it's not there:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int indexOf(const std::vector<std::string>& items, const std::string& target) {
+          for (std::size_t i{0}; i < items.size(); ++i) {
+              if (items[i] == target) {
+                  return static_cast<int>(i);
+              }
+          }
+          return -1;
+      }
+
+      int main() {
+          std::vector<std::string> planets{"Mercury", "Venus", "Earth", "Mars"};
+          std::cout << indexOf(planets, "Earth") << ' ' << indexOf(planets, "Pluto") << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      2 -1
+      ```
+
+      ## Reverse in place
+
+      Swap the first and last, then the second and second-to-last, moving
+      two indexes towards each other until they meet:
+
+      ```cpp
+      #include <iostream>
+      #include <utility>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{1, 2, 3, 4, 5};
+          std::size_t left{0};
+          std::size_t right{v.size() - 1};
+          while (left < right) {
+              std::swap(v[left], v[right]);
+              ++left;
+              --right;
+          }
+          for (int x : v) {
+              std::cout << x << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      5 4 3 2 1
+      ```
+
+      `std::swap` (from `<utility>`) swaps two variables — the function you
+      wrote in Chapter 6. This "two indexes moving inwards" idea is called the
+      **two-pointer** technique. (Careful: `v.size() - 1` on an empty vector is
+      a trap — see the next lesson.)
+
+      ## Filter: build a new vector
+
+      To keep only some elements, build a new vector and `push_back` the ones
+      you want:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      std::vector<int> evensOnly(const std::vector<int>& values) {
+          std::vector<int> result{};
+          for (int v : values) {
+              if (v % 2 == 0) {
+                  result.push_back(v);
+              }
+          }
+          return result;
+      }
+
+      int main() {
+          for (int x : evensOnly({3, 8, 12, 5, 6})) {
+              std::cout << x << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      8 12 6
+      ```
+
+      {{check max-index}}
+
+      {{check search}}
+
+      {{task average}}
+
+      {{task contains}}
+    checks:
+      - id: max-index
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{3, 9, 2, 9, 5};
+              std::size_t best{0};
+              for (std::size_t i{1}; i < v.size(); ++i) {
+                  if (v[i] >= v[best]) {
+                      best = i;
+                  }
+              }
+              std::cout << best << '\n';
+              return 0;
+          }
+        answer: |
+          3
+        why: "With `>=`, a tie replaces the best, so the **last** 9 (index 3) wins."
+      - id: search
+        type: mcq
+        prompt: A search function returns `-1` when the value isn't found. Why `-1`?
+        options:
+          - It's required by C++
+          - It can never be a valid index, so the caller can tell "not found" apart from a real position
+          - It's the size of the vector
+          - It makes the search faster
+        answer: 1
+        why: "Valid indexes are 0 or more, so −1 is a safe \"no result\" signal."
+    tasks:
+      - id: average
+        title: Average
+        prompt: |
+          Write `double average(const std::vector<double>& values)` returning
+          the average of the elements, or `0.0` for an empty vector.
+        starter: |
+          #include <vector>
+
+          double average(const std::vector<double>& values) {
+              return 0.0;
+          }
+        harness: |
+          CHECK(average({1.0, 2.0, 3.0, 4.0}), 2.5);
+          CHECK(average({7.5}), 7.5);
+          CHECK(average({}), 0.0);
+          CHECK(average({-2.0, 2.0}), 0.0);
+        hints:
+          - Handle the empty case first, to avoid dividing by zero.
+          - Sum with a range-based loop, then divide by `values.size()`.
+        solution: |
+          #include <vector>
+
+          double average(const std::vector<double>& values) {
+              if (values.empty()) {
+                  return 0.0;
+              }
+              double sum{0.0};
+              for (double v : values) {
+                  sum += v;
+              }
+              return sum / static_cast<double>(values.size());
+          }
+      - id: contains
+        title: Last position
+        prompt: |
+          Write `int lastIndexOf(const std::vector<int>& values, int target)`
+          returning the index of the **last** occurrence of `target`, or `-1`.
+        starter: |
+          #include <vector>
+
+          int lastIndexOf(const std::vector<int>& values, int target) {
+              return -1;
+          }
+        harness: |
+          CHECK(lastIndexOf({4, 7, 4, 1}, 4), 2);
+          CHECK(lastIndexOf({4, 7, 4, 1}, 1), 3);
+          CHECK(lastIndexOf({4, 7, 4, 1}, 9), -1);
+          CHECK(lastIndexOf({}, 0), -1);
+        hints:
+          - "Either search from the end backwards, or remember the latest match while going forwards."
+          - "Going forwards: `int found{-1};` and set `found = static_cast<int>(i);` on each match."
+        solution: |
+          #include <vector>
+
+          int lastIndexOf(const std::vector<int>& values, int target) {
+              int found{-1};
+              for (std::size_t i{0}; i < values.size(); ++i) {
+                  if (values[i] == target) {
+                      found = static_cast<int>(i);
+                  }
+              }
+              return found;
+          }
+    cards:
+      - front: How do you find the position of the maximum element?
+        back: Keep the index `best` (start at 0); for each `i`, if `v[i] > v[best]`, set `best = i`.
+      - front: What is **linear search**?
+        back: Checking elements one by one until the target is found (return its index) or the end is reached (return −1).
+      - front: How do you reverse a vector in place?
+        back: Two indexes, `left` at the start and `right` at the end; swap and move them towards each other while `left < right`.
+      - front: How do you keep only some elements of a vector?
+        back: Build a new vector, `push_back` the elements that pass the test, and return it.
+
+  - type: quiz
+    id: c7-quiz1
+    title: "Quiz: vectors"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{};
+              for (int i{0}; i < 4; ++i) {
+                  v.push_back(i * i);
+              }
+              std::cout << v.size() << ' ' << v[3] << '\n';
+              return 0;
+          }
+        answer: |
+          4 9
+        why: "v is {0, 1, 4, 9}."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{5, 3, 8};
+              int total{0};
+              for (int x : v) {
+                  total += x;
+              }
+              for (auto& x : v) {
+                  x = total - x;
+              }
+              std::cout << v[0] << ' ' << v[1] << ' ' << v[2] << '\n';
+              return 0;
+          }
+        answer: |
+          11 13 8
+        why: "total is 16; each element becomes 16 minus itself."
+      - type: fill
+        prompt: Complete the loop so it doubles every element of `v`.
+        code: |
+          for (int___ x : v) {
+              x *= 2;
+          }
+        blanks:
+          - ['&']
+        why: "Only a reference changes the element; without `&`, `x` is a copy."
+      - type: mcq
+        prompt: What is the type of the value returned by `v.size()`?
+        options:
+          - "`int`"
+          - "`double`"
+          - "`std::size_t`, an unsigned type"
+          - "`bool`"
+        answer: 2
+        why: Sizes are `std::size_t`, which can't be negative — hence the signed/unsigned warnings when compared with `int`.
+      - type: spot
+        prompt: This should print all the elements, but crashes. Which line is the bug?
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{1, 2, 3};
+              for (std::size_t i{0}; i <= v.size(); ++i) {
+                  std::cout << v[i] << '\n';
+              }
+              return 0;
+          }
+        answer: 6
+        why: "`<=` makes `i` reach 3, one past the last valid index. It should be `<`."
+
+  - type: lesson
+    id: c7-bounds
+    title: Staying in bounds
+    minutes: 20
+    objectives:
+      - Explain what happens when an index is out of range, and use `.at()` for a checked access
+      - Avoid the `std::size_t` traps — `size() - 1` on an empty vector, and mixing signed and unsigned
+      - Use `empty`, `front`, `back`, `pop_back`, `clear` and `resize`
+      - Tell `std::vector<int> v(5)` from `std::vector<int> v{5}`
+    body: |
+      ## Out of range
+
+      Accessing `v[i]` with an `i` outside `0 … size()-1` is **undefined
+      behaviour**. On a normal build it silently reads or writes whatever
+      memory happens to be there — one of the most dangerous bugs in C++. The
+      compiler used in this course is set up to catch it and stop the program
+      with a message; run this:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{1, 2, 3};
+          std::cout << v[3] << '\n';   // one past the end!
+          return 0;
+      }
+      ```
+
+      On your own computer, don't count on that safety net. `v.at(i)` is the
+      always-checked alternative: out of range, it **throws an exception**
+      (Chapter 15) instead of misbehaving silently.
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{1, 2, 3};
+          std::cout << v.at(1) << '\n';
+          std::cout << v.at(10) << '\n';
+          return 0;
+      }
+      ```
+
+      ## The `std::size_t` trap
+
+      `std::size_t` is unsigned, so it can't be negative — it wraps around
+      instead (Chapter 3). Watch:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> empty{};
+          std::cout << empty.size() - 1 << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      18446744073709551615
+      ```
+
+      `0 - 1` wrapped round to the biggest possible value. Any loop like
+      `for (std::size_t i{0}; i <= v.size() - 1; ++i)` would then run
+      practically forever on an empty vector. Two habits keep you safe:
+
+      1. Write loops as `i < v.size()`, never `i <= v.size() - 1`.
+      2. Before using `v[0]`, `v.back()` or `v.size() - 1`, make sure the vector isn't **empty**.
+
+      When you really need a signed index (to count downwards, or to return
+      `-1`), convert once: `int n = static_cast<int>(v.size());`.
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{1, 2, 3, 4};
+          for (int i = static_cast<int>(v.size()) - 1; i >= 0; --i) {
+              std::cout << v[i] << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      4 3 2 1
+      ```
+
+      ## Handy member functions
+
+      | Call | Does |
+      |---|---|
+      | `v.empty()` | `true` if there are no elements |
+      | `v.front()`, `v.back()` | the first / last element (vector must not be empty) |
+      | `v.pop_back()` | removes the last element |
+      | `v.clear()` | removes all elements |
+      | `v.resize(n)` | makes the size `n` — new elements are 0 |
+
+      ## `( )` versus `{ }`
+
+      A vector can also be created with a **size** and a **fill value**. This
+      needs parentheses, and here's a nasty surprise:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> a(5, 0);   // five elements, all 0
+          std::vector<int> b{5, 0};   // two elements: 5 and 0
+          std::vector<int> c(3);      // three elements, all 0
+          std::cout << a.size() << ' ' << b.size() << ' ' << c.size() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      5 2 3
+      ```
+
+      Braces list the **elements**; parentheses give **size (and fill
+      value)**. This is the one place where braces and parentheses mean
+      different things for initialisation — memorise it.
+
+      {{check parens}}
+
+      {{check empty}}
+    checks:
+      - id: parens
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> x(4, 7);
+              std::vector<int> y{4, 7};
+              std::cout << x.size() << x[3] << ' ' << y.size() << y[1] << '\n';
+              return 0;
+          }
+        answer: |
+          47 27
+        why: "`x(4, 7)` is four 7s. `y{4, 7}` is the two elements 4 and 7."
+      - id: empty
+        type: mcq
+        prompt: "`v` is empty. What does `v.size() - 1` give?"
+        options:
+          - "-1"
+          - "0"
+          - A huge number, because `std::size_t` wraps around
+          - A compile error
+        answer: 2
+        why: "Unsigned arithmetic wraps: 0 − 1 is the largest `std::size_t`."
+      - id: at
+        type: tf
+        prompt: "`v.at(i)` checks that `i` is in range, while `v[i]` normally doesn't."
+        answer: true
+        why: "`at` throws `std::out_of_range` for a bad index; `[]` is unchecked (undefined behaviour) in a normal build."
+    cards:
+      - front: What happens with `v[i]` when `i` is out of range?
+        back: Undefined behaviour — usually silent memory corruption. `v.at(i)` checks and throws instead.
+      - front: "Why is `i <= v.size() - 1` a dangerous loop condition?"
+        back: For an empty vector, `v.size() - 1` wraps round to a huge number. Write `i < v.size()`.
+      - front: "`std::vector<int> v(5, 1)` vs `std::vector<int> v{5, 1}`?"
+        back: "`(5, 1)` is five elements equal to 1; `{5, 1}` is two elements, 5 and 1."
+      - front: How do you get the last element, and remove it?
+        back: "`v.back()` reads it; `v.pop_back()` removes it. Check `!v.empty()` first."
+
+  - type: lesson
+    id: c7-funcs
+    title: Vectors and functions
+    minutes: 16
+    objectives:
+      - Pass a vector by `const &` to read it and by `&` to change it
+      - Return a vector from a function
+      - Read an unknown number of values into a vector
+    body: |
+      Vectors can be large, so how you pass them matters:
+
+      | Parameter | Meaning |
+      |---|---|
+      | `const std::vector<int>& v` | read it, no copy — the usual choice |
+      | `std::vector<int>& v` | change the caller's vector |
+      | `std::vector<int> v` | a full copy — only if you really need your own copy |
+
+      **Returning** a vector by value is efficient: modern C++ *moves* the
+      result out instead of copying it (Chapter 15 explains how), so write
+      functions that build and return vectors freely.
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      std::vector<int> readAll() {
+          std::vector<int> values{};
+          int x{};
+          while (std::cin >> x) {
+              values.push_back(x);
+          }
+          return values;
+      }
+
+      void addToEach(std::vector<int>& values, int amount) {
+          for (int& v : values) {
+              v += amount;
+          }
+      }
+
+      void print(const std::vector<int>& values) {
+          for (std::size_t i{0}; i < values.size(); ++i) {
+              if (i > 0) {
+                  std::cout << ", ";
+              }
+              std::cout << values[i];
+          }
+          std::cout << '\n';
+      }
+
+      int main() {
+          std::vector<int> data = readAll();
+          print(data);
+          addToEach(data, 100);
+          print(data);
+          return 0;
+      }
+      ```
+
+      ```stdin
+      3 1 4 1 5
+      ```
+
+      ```output
+      3, 1, 4, 1, 5
+      103, 101, 104, 101, 105
+      ```
+
+      Reading everything into a vector first is a powerful move: once the
+      data is stored, you can go over it as many times as you like — sort it,
+      search it, compare elements. With a plain read loop, each value is gone
+      once you've moved on.
+
+      {{check pass}}
+
+      {{task running}}
+    checks:
+      - id: pass
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          void a(std::vector<int> v) {
+              v.push_back(1);
+          }
+
+          void b(std::vector<int>& v) {
+              v.push_back(2);
+          }
+
+          int main() {
+              std::vector<int> v{};
+              a(v);
+              b(v);
+              b(v);
+              std::cout << v.size() << '\n';
+              return 0;
+          }
+        answer: |
+          2
+        why: "`a` changes its own copy. `b` changes the caller's vector — twice."
+    tasks:
+      - id: running
+        title: Running total
+        prompt: |
+          Write `std::vector<int> runningTotals(const std::vector<int>& values)`
+          that returns a vector where element `i` is the sum of elements
+          `0..i` of the input. `{1, 2, 3, 4}` gives `{1, 3, 6, 10}`.
+        starter: |
+          #include <vector>
+
+          std::vector<int> runningTotals(const std::vector<int>& values) {
+              return {};
+          }
+        harness: |
+          CHECK(runningTotals({1, 2, 3, 4}), (std::vector<int>{1, 3, 6, 10}));
+          CHECK(runningTotals({5}), (std::vector<int>{5}));
+          CHECK(runningTotals({}), (std::vector<int>{}));
+          CHECK(runningTotals({3, -3, 3}), (std::vector<int>{3, 0, 3}));
+        hints:
+          - "Keep a `sum` that grows; after adding each element, `push_back(sum)`."
+        solution: |
+          #include <vector>
+
+          std::vector<int> runningTotals(const std::vector<int>& values) {
+              std::vector<int> result{};
+              int sum{0};
+              for (int v : values) {
+                  sum += v;
+                  result.push_back(sum);
+              }
+              return result;
+          }
+    cards:
+      - front: How should you pass a vector a function only reads?
+        back: "By const reference: `const std::vector<int>& v`."
+      - front: Is it OK to return a `std::vector` from a function by value?
+        back: Yes — it's moved out efficiently, not copied.
+      - front: Why read all input into a vector first?
+        back: So you can go over the data as many times as needed (sort, search, compare) — a read loop sees each value only once.
+
+  - type: lesson
+    id: c7-2d
+    title: "Grids: vectors of vectors"
+    minutes: 20
+    objectives:
+      - Create a 2D grid as a vector of vectors
+      - Access and change cells with `grid[row][col]`
+      - Loop over a grid, and look at a cell's neighbours
+    body: |
+      A board game, a spreadsheet, an image, a map — lots of data is a
+      **grid**. A vector can hold any type, including vectors, so a grid is a
+      vector of rows, each row a vector of cells:
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          int rows{3};
+          int cols{4};
+          std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));
+
+          grid[0][1] = 5;
+          grid[2][3] = 7;
+
+          for (const auto& row : grid) {
+              for (int cell : row) {
+                  std::cout << cell << ' ';
+              }
+              std::cout << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      0 5 0 0
+      0 0 0 0
+      0 0 0 7
+      ```
+
+      - `std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));` — `rows` copies of a row of `cols` zeros.
+      - `grid[r][c]` — first pick row `r`, then column `c` within it.
+      - `grid.size()` is the number of rows; `grid[0].size()` the number of columns.
+
+      You can also write a small grid out in full:
+
+      ```cpp static
+      std::vector<std::vector<int>> m{
+          {1, 2, 3},
+          {4, 5, 6}
+      };
+      ```
+
+      ## Neighbours
+
+      Many grid problems look at the cells around a cell. The key is to check
+      the bounds **before** indexing:
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<std::string> map{
+              "..#.",
+              ".##.",
+              "...."
+          };
+          int r{1};
+          int c{1};
+          int walls{0};
+          for (int dr{-1}; dr <= 1; ++dr) {
+              for (int dc{-1}; dc <= 1; ++dc) {
+                  if (dr == 0 && dc == 0) {
+                      continue;
+                  }
+                  int nr = r + dr;
+                  int nc = c + dc;
+                  if (nr >= 0 && nr < static_cast<int>(map.size()) &&
+                      nc >= 0 && nc < static_cast<int>(map[nr].size()) &&
+                      map[nr][nc] == '#') {
+                      ++walls;
+                  }
+              }
+          }
+          std::cout << walls << " walls around (1,1)\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      2 walls around (1,1)
+      ```
+
+      Notice two tricks: a vector of **strings** is a convenient grid of
+      characters (`map[r][c]` is a `char`), and the pair of loops over `dr`
+      and `dc` from −1 to 1 visits all eight neighbours.
+
+      {{check grid-output}}
+
+      {{task grid-sum}}
+    checks:
+      - id: grid-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<std::vector<int>> g{
+                  {1, 2, 3},
+                  {4, 5, 6}
+              };
+              int total{0};
+              for (std::size_t r{0}; r < g.size(); ++r) {
+                  total += g[r][r];
+              }
+              std::cout << g.size() << ' ' << g[0].size() << ' ' << total << '\n';
+              return 0;
+          }
+        answer: |
+          2 3 6
+        why: "2 rows, 3 columns. The loop adds g[0][0] = 1 and g[1][1] = 5."
+    tasks:
+      - id: grid-sum
+        title: Row and column sums
+        prompt: |
+          Write `std::vector<int> columnSums(const std::vector<std::vector<int>>& grid)`
+          returning the sum of each column. All rows have the same length;
+          the grid has at least one row.
+        starter: |
+          #include <vector>
+
+          std::vector<int> columnSums(const std::vector<std::vector<int>>& grid) {
+              return {};
+          }
+        harness: |
+          CHECK(columnSums({{1, 2, 3}, {4, 5, 6}}), (std::vector<int>{5, 7, 9}));
+          CHECK(columnSums({{7}}), (std::vector<int>{7}));
+          CHECK(columnSums({{1, -1}, {2, -2}, {3, -3}}), (std::vector<int>{6, -6}));
+        hints:
+          - "Start with `std::vector<int> sums(grid[0].size(), 0);`"
+          - "Then for every row `r` and column `c`: `sums[c] += grid[r][c];`"
+        solution: |
+          #include <vector>
+
+          std::vector<int> columnSums(const std::vector<std::vector<int>>& grid) {
+              std::vector<int> sums(grid[0].size(), 0);
+              for (const auto& row : grid) {
+                  for (std::size_t c{0}; c < row.size(); ++c) {
+                      sums[c] += row[c];
+                  }
+              }
+              return sums;
+          }
+    cards:
+      - front: How do you create a grid of `rows` × `cols` zeros?
+        back: "`std::vector<std::vector<int>> g(rows, std::vector<int>(cols, 0));`"
+      - front: How do you access row 2, column 5 of a grid?
+        back: "`g[2][5]` — row first, then column."
+      - front: How do you visit the 8 neighbours of cell (r, c) safely?
+        back: Loop `dr` and `dc` from −1 to 1 (skipping 0,0), and check `nr`/`nc` are inside the grid before indexing.
+
+  - type: lesson
+    id: c7-array
+    title: Fixed-size arrays
+    minutes: 16
+    objectives:
+      - Use `std::array` for a collection whose size never changes
+      - Recognise C-style arrays and explain their pitfalls
+    body: |
+      A `std::vector` can grow and shrink. When a collection has a size that
+      is fixed and known when you write the code — 7 days, 12 months, a 3×3
+      board — you can use **`std::array`** from `<array>`:
+
+      ```cpp
+      #include <array>
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::array<std::string, 7> days{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+          std::array<int, 12> monthLengths{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+          std::cout << days[4] << ' ' << days.size() << '\n';
+          int total{0};
+          for (int m : monthLengths) {
+              total += m;
+          }
+          std::cout << total << " days in a year\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      Fri 7
+      365 days in a year
+      ```
+
+      The size is part of the type (`std::array<int, 12>`), it can't
+      `push_back`, and it lives directly in the variable with no extra memory
+      allocation — a little faster. Otherwise it's used just like a vector:
+      `[]`, `.at()`, `.size()`, range-based `for`.
+
+      ## C-style arrays
+
+      You'll meet the old array syntax inherited from C in lots of code:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int squares[5]{0, 1, 4, 9, 16};
+          std::cout << squares[3] << '\n';
+          for (int s : squares) {
+              std::cout << s << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      9
+      0 1 4 9 16
+      ```
+
+      They work, but they have well-known problems: they don't know their own
+      size once passed to a function, they can't be copied or returned with
+      `=`, there's no `.at()`, and out-of-range access is never checked.
+      Chapter 10 shows what's going on underneath (arrays *decay* into
+      pointers).
+
+      > [!pro] What to use
+      > - Size can change, or is only known at run time → `std::vector`.
+      > - Size is fixed and known in advance → `std::array`.
+      > - C-style array → only when working with old code or C libraries.
+
+      {{check which}}
+    checks:
+      - id: which
+        type: mcq
+        prompt: "Which container fits \"the names typed in by the user, however many\"?"
+        options:
+          - "`std::array<std::string, 10>`"
+          - "`std::vector<std::string>`"
+          - "`std::string names[10]`"
+          - "`char names`"
+        answer: 1
+        why: The number isn't known in advance, so a growable vector.
+      - id: array-size
+        type: output
+        code: |
+          #include <array>
+          #include <iostream>
+
+          int main() {
+              std::array<int, 4> a{};
+              a[1] = 3;
+              int sum{0};
+              for (int x : a) {
+                  sum += x;
+              }
+              std::cout << a.size() << ' ' << sum << '\n';
+              return 0;
+          }
+        answer: |
+          4 3
+        why: "`a{}` sets all four elements to 0; one is changed to 3."
+    cards:
+      - front: When should you use `std::array` instead of `std::vector`?
+        back: When the size is fixed and known when writing the code (e.g. 7 days). It can't grow.
+      - front: Name two problems with C-style arrays like `int a[5]`.
+        back: They forget their size when passed to functions, can't be copied or returned with `=`, and are never bounds-checked.
+
+  - type: quiz
+    id: c7-quiz2
+    title: "Quiz: bounds, grids and arrays"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v(3);
+              v.push_back(4);
+              v.pop_back();
+              v.push_back(9);
+              std::cout << v.size() << v.front() << v.back() << '\n';
+              return 0;
+          }
+        answer: |
+          409
+        why: "v(3) is {0, 0, 0}; push 4 then pop it; push 9: {0, 0, 0, 9}. Size 4, front 0, back 9."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<std::vector<char>> g(2, std::vector<char>(3, '.'));
+              g[1][2] = '#';
+              for (const auto& row : g) {
+                  for (char c : row) {
+                      std::cout << c;
+                  }
+                  std::cout << '\n';
+              }
+              return 0;
+          }
+        answer: |
+          ...
+          ..#
+        why: "Two rows of three dots, with row 1, column 2 changed to #."
+      - type: mcq
+        prompt: What's the safest way to write a loop over all indexes of `v`?
+        options:
+          - "`for (int i{0}; i <= v.size() - 1; ++i)`"
+          - "`for (std::size_t i{0}; i < v.size(); ++i)`"
+          - "`for (std::size_t i{1}; i <= v.size(); ++i)`"
+          - "`for (int i{0}; i != v.size() + 1; ++i)`"
+        answer: 1
+        why: "Start at 0, stop before size(), with an unsigned index to match `size()`."
+      - type: tf
+        prompt: "`std::vector<int> v{10};` creates a vector of ten zeros."
+        answer: false
+        why: "Braces list elements: it's one element, 10. Ten zeros is `std::vector<int> v(10);`."
+
+  - type: challenge
+    id: c7-ch-rotate
+    title: Rotate
+    difficulty: 2
+    tags: [vectors]
+    prompt: |
+      Write `std::vector<int> rotateRight(const std::vector<int>& v, int k)`
+      that returns `v` rotated `k` places to the right: elements that fall off
+      the end come back at the start. `rotateRight({1, 2, 3, 4, 5}, 2)` is
+      `{4, 5, 1, 2, 3}`. `k` can be larger than the size, and `v` can be
+      empty.
+    starter: |
+      #include <vector>
+
+      std::vector<int> rotateRight(const std::vector<int>& v, int k) {
+          return v;
+      }
+    harness: |
+      CHECK(rotateRight({1, 2, 3, 4, 5}, 2), (std::vector<int>{4, 5, 1, 2, 3}));
+      CHECK(rotateRight({1, 2, 3, 4, 5}, 0), (std::vector<int>{1, 2, 3, 4, 5}));
+      CHECK(rotateRight({1, 2, 3, 4, 5}, 5), (std::vector<int>{1, 2, 3, 4, 5}));
+      CHECK(rotateRight({1, 2, 3}, 7), (std::vector<int>{3, 1, 2}));
+      CHECK(rotateRight({}, 3), (std::vector<int>{}));
+    hints:
+      - "Element `i` moves to position `(i + k) % n`."
+      - "Create `std::vector<int> result(n);` and fill `result[(i + k) % n] = v[i];` — but handle `n == 0` first."
+    solution: |
+      #include <vector>
+
+      std::vector<int> rotateRight(const std::vector<int>& v, int k) {
+          int n = static_cast<int>(v.size());
+          if (n == 0) {
+              return v;
+          }
+          std::vector<int> result(v.size());
+          for (int i{0}; i < n; ++i) {
+              result[(i + k) % n] = v[i];
+          }
+          return result;
+      }
+    explain: |
+      `%` wraps positions around the end — the same trick as a clock. It also
+      handles `k` larger than `n` for free.
+
+  - type: challenge
+    id: c7-ch-dedupe
+    title: Remove duplicates
+    difficulty: 2
+    tags: [vectors, search]
+    prompt: |
+      Write `std::vector<int> unique(const std::vector<int>& v)` that returns
+      the elements of `v` with repeats removed, keeping the **first**
+      occurrence of each and the original order. `{3, 1, 3, 2, 1}` gives
+      `{3, 1, 2}`.
+    starter: |
+      #include <vector>
+
+      std::vector<int> unique(const std::vector<int>& v) {
+          return v;
+      }
+    harness: |
+      CHECK(unique({3, 1, 3, 2, 1}), (std::vector<int>{3, 1, 2}));
+      CHECK(unique({}), (std::vector<int>{}));
+      CHECK(unique({7, 7, 7}), (std::vector<int>{7}));
+      CHECK(unique({1, 2, 3}), (std::vector<int>{1, 2, 3}));
+    hints:
+      - "For each element, search the result so far. Only `push_back` it if it isn't there yet."
+      - A small helper `bool contains(const std::vector<int>& v, int x)` makes it read nicely.
+    solution: |
+      #include <vector>
+
+      bool contains(const std::vector<int>& v, int x) {
+          for (int y : v) {
+              if (y == x) {
+                  return true;
+              }
+          }
+          return false;
+      }
+
+      std::vector<int> unique(const std::vector<int>& v) {
+          std::vector<int> result{};
+          for (int x : v) {
+              if (!contains(result, x)) {
+                  result.push_back(x);
+              }
+          }
+          return result;
+      }
+    explain: |
+      This does about n² comparisons for n elements — fine for thousands,
+      slow for millions. Chapter 13's `std::unordered_set` makes "have I seen
+      this?" instant.
+
+  - type: challenge
+    id: c7-ch-merge
+    title: Merge two sorted lists
+    difficulty: 2
+    tags: [vectors, two pointers]
+    prompt: |
+      Write `std::vector<int> mergeSorted(const std::vector<int>& a, const std::vector<int>& b)`.
+      Both inputs are sorted from smallest to largest; return one sorted
+      vector with all their elements. Don't just join and sort — walk both
+      lists at once.
+    starter: |
+      #include <vector>
+
+      std::vector<int> mergeSorted(const std::vector<int>& a, const std::vector<int>& b) {
+          return {};
+      }
+    harness: |
+      CHECK(mergeSorted({1, 4, 9}, {2, 3, 10}), (std::vector<int>{1, 2, 3, 4, 9, 10}));
+      CHECK(mergeSorted({}, {5, 6}), (std::vector<int>{5, 6}));
+      CHECK(mergeSorted({1, 1}, {1}), (std::vector<int>{1, 1, 1}));
+      CHECK(mergeSorted({}, {}), (std::vector<int>{}));
+      CHECK(mergeSorted({8}, {1, 2, 3}), (std::vector<int>{1, 2, 3, 8}));
+    hints:
+      - "Two indexes `i` (into a) and `j` (into b). While both have elements left, append the smaller of `a[i]` and `b[j]` and advance that index."
+      - Then append whatever is left of either list.
+    solution: |
+      #include <vector>
+
+      std::vector<int> mergeSorted(const std::vector<int>& a, const std::vector<int>& b) {
+          std::vector<int> out{};
+          std::size_t i{0};
+          std::size_t j{0};
+          while (i < a.size() && j < b.size()) {
+              if (a[i] <= b[j]) {
+                  out.push_back(a[i]);
+                  ++i;
+              } else {
+                  out.push_back(b[j]);
+                  ++j;
+              }
+          }
+          while (i < a.size()) {
+              out.push_back(a[i]);
+              ++i;
+          }
+          while (j < b.size()) {
+              out.push_back(b[j]);
+              ++j;
+          }
+          return out;
+      }
+    explain: |
+      Merging takes one pass over both lists — it's the heart of *merge
+      sort*, one of the fastest sorting algorithms, which you'll write in
+      Chapter 18.
+
+  - type: challenge
+    id: c7-ch-histogram
+    title: Grade histogram
+    difficulty: 2
+    tags: [vectors, input, patterns]
+    prompt: |
+      Read scores (0–100) until the input ends. Count them in five bands and
+      print a bar of `*` for each band, one star per score. Scores outside
+      0–100 are ignored. For input `95 87 72 64 55 91 78 83 30`:
+
+      ```text
+      90-100: **
+       80-89: **
+       70-79: **
+       60-69: *
+        0-59: **
+      ```
+
+      Labels are right-aligned in 6 characters, as shown.
+    starter: |
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "95 87 72 64 55 91 78 83 30"
+        out: |
+          90-100: **
+           80-89: **
+           70-79: **
+           60-69: *
+            0-59: **
+      - in: "100 100 0 150 -5"
+        out: |
+          90-100: **
+           80-89:
+           70-79:
+           60-69:
+            0-59: *
+      - in: ""
+        out: |
+          90-100:
+           80-89:
+           70-79:
+           60-69:
+            0-59:
+    hints:
+      - "Keep 5 counters in a `std::vector<int> counts(5, 0);`, and a parallel vector of the labels."
+      - "A score's band: 90+ → 0, 80+ → 1, 70+ → 2, 60+ → 3, else → 4."
+      - "Print each bar with `std::string(counts[i], '*')`."
+    solution: |
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<std::string> labels{"90-100", " 80-89", " 70-79", " 60-69", "  0-59"};
+          std::vector<int> counts(5, 0);
+          int score{};
+          while (std::cin >> score) {
+              if (score < 0 || score > 100) {
+                  continue;
+              }
+              int band{4};
+              if (score >= 90) {
+                  band = 0;
+              } else if (score >= 80) {
+                  band = 1;
+              } else if (score >= 70) {
+                  band = 2;
+              } else if (score >= 60) {
+                  band = 3;
+              }
+              ++counts[band];
+          }
+          for (std::size_t i{0}; i < labels.size(); ++i) {
+              std::cout << labels[i] << ": " << std::string(counts[i], '*') << '\n';
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c7-ch-transpose
+    title: Transpose a matrix
+    difficulty: 2
+    tags: [2D, vectors]
+    prompt: |
+      Write `std::vector<std::vector<int>> transpose(const std::vector<std::vector<int>>& m)`
+      that swaps rows and columns: row `r`, column `c` of the input becomes
+      row `c`, column `r` of the output. A 2×3 matrix becomes 3×2. The input
+      has at least one row, and all rows have the same length.
+    starter: |
+      #include <vector>
+
+      std::vector<std::vector<int>> transpose(const std::vector<std::vector<int>>& m) {
+          return m;
+      }
+    harness: |
+      CHECK(transpose({{1, 2, 3}, {4, 5, 6}}), (std::vector<std::vector<int>>{{1, 4}, {2, 5}, {3, 6}}));
+      CHECK(transpose({{7}}), (std::vector<std::vector<int>>{{7}}));
+      CHECK(transpose({{1, 2}}), (std::vector<std::vector<int>>{{1}, {2}}));
+    hints:
+      - "The result has `m[0].size()` rows and `m.size()` columns."
+      - "`result[c][r] = m[r][c];` for every r and c."
+    solution: |
+      #include <vector>
+
+      std::vector<std::vector<int>> transpose(const std::vector<std::vector<int>>& m) {
+          std::size_t rows = m.size();
+          std::size_t cols = m[0].size();
+          std::vector<std::vector<int>> result(cols, std::vector<int>(rows));
+          for (std::size_t r{0}; r < rows; ++r) {
+              for (std::size_t c{0}; c < cols; ++c) {
+                  result[c][r] = m[r][c];
+              }
+          }
+          return result;
+      }
+
+  - type: challenge
+    id: c7-ch-tictactoe
+    title: Who won at tic-tac-toe?
+    difficulty: 3
+    tags: [2D, logic]
+    prompt: |
+      A tic-tac-toe board is given as three strings of three characters, each
+      `X`, `O` or `.`. Write `char winner(const std::vector<std::string>& board)`
+      returning `'X'` or `'O'` if that player has three in a row
+      (horizontally, vertically or diagonally), and `'-'` if nobody has. You
+      can assume at most one player has a line.
+    starter: |
+      #include <string>
+      #include <vector>
+
+      char winner(const std::vector<std::string>& board) {
+          return '-';
+      }
+    harness: |
+      CHECK(winner({"XXX", "OO.", "..."}), 'X');
+      CHECK(winner({"XO.", "XO.", ".O."}), 'O');
+      CHECK(winner({"X.O", ".XO", "..X"}), 'X');
+      CHECK(winner({"X.O", ".OX", "O.."}), 'O');
+      CHECK(winner({"XOX", "XOO", "OXX"}), '-');
+      CHECK(winner({"...", "...", "..."}), '-');
+    hints:
+      - "Write a helper `bool line(char a, char b, char c)` that is true when all three are equal and not `'.'`."
+      - "Check the 3 rows, the 3 columns, then the 2 diagonals `board[0][0], board[1][1], board[2][2]` and `board[0][2], board[1][1], board[2][0]`."
+    solution: |
+      #include <string>
+      #include <vector>
+
+      bool line(char a, char b, char c) {
+          return a != '.' && a == b && b == c;
+      }
+
+      char winner(const std::vector<std::string>& board) {
+          for (int i{0}; i < 3; ++i) {
+              if (line(board[i][0], board[i][1], board[i][2])) {
+                  return board[i][0];
+              }
+              if (line(board[0][i], board[1][i], board[2][i])) {
+                  return board[0][i];
+              }
+          }
+          if (line(board[0][0], board[1][1], board[2][2])) {
+              return board[1][1];
+          }
+          if (line(board[0][2], board[1][1], board[2][0])) {
+              return board[1][1];
+          }
+          return '-';
+      }
+
+  - type: challenge
+    id: c7-ch-life
+    title: Game of Life
+    difficulty: 3
+    tags: [2D, simulation]
+    prompt: |
+      Conway's **Game of Life**: each cell of a grid is alive (`#`) or dead
+      (`.`). In each generation, every cell looks at its 8 neighbours:
+
+      - A live cell with **2 or 3** live neighbours stays alive; otherwise it dies.
+      - A dead cell with **exactly 3** live neighbours becomes alive.
+
+      All cells change **at the same time**. Cells outside the grid count as
+      dead.
+
+      Input: the number of rows, columns and generations, then the grid, one
+      row per line. Print the grid after that many generations. For a
+      "blinker" (input on the left), one generation gives the output on the
+      right:
+
+      ```text
+      5 5 1          .....
+      .....          ..#..
+      .....          ..#..
+      .###.          ..#..
+      .....          .....
+      .....
+      ```
+    starter: |
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          int rows{};
+          int cols{};
+          int generations{};
+          std::cin >> rows >> cols >> generations;
+          std::vector<std::string> grid(rows);
+          for (auto& row : grid) {
+              std::cin >> row;
+          }
+
+          for (const auto& row : grid) {
+              std::cout << row << '\n';
+          }
+          return 0;
+      }
+    tests:
+      - in: |
+          5 5 1
+          .....
+          .....
+          .###.
+          .....
+          .....
+        out: |
+          .....
+          ..#..
+          ..#..
+          ..#..
+          .....
+      - in: |
+          5 5 2
+          .....
+          .....
+          .###.
+          .....
+          .....
+        out: |
+          .....
+          .....
+          .###.
+          .....
+          .....
+      - in: |
+          6 6 4
+          .#....
+          ..#...
+          ###...
+          ......
+          ......
+          ......
+        out: |
+          ......
+          ..#...
+          ...#..
+          .###..
+          ......
+          ......
+      - in: |
+          4 4 3
+          ....
+          .##.
+          .##.
+          ....
+        out: |
+          ....
+          .##.
+          .##.
+          ....
+        hidden: true
+    hints:
+      - "\"At the same time\" means you must compute the next grid in a **copy** — never update the grid you're still reading."
+      - Write a function that counts live neighbours of (r, c), checking bounds as in lesson 7.6.
+      - "Each generation: `std::vector<std::string> next = grid;`, fill in `next`, then `grid = next;`."
+    solution: |
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int liveNeighbours(const std::vector<std::string>& g, int r, int c) {
+          int rows = static_cast<int>(g.size());
+          int cols = static_cast<int>(g[0].size());
+          int count{0};
+          for (int dr{-1}; dr <= 1; ++dr) {
+              for (int dc{-1}; dc <= 1; ++dc) {
+                  if (dr == 0 && dc == 0) {
+                      continue;
+                  }
+                  int nr = r + dr;
+                  int nc = c + dc;
+                  if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && g[nr][nc] == '#') {
+                      ++count;
+                  }
+              }
+          }
+          return count;
+      }
+
+      int main() {
+          int rows{};
+          int cols{};
+          int generations{};
+          std::cin >> rows >> cols >> generations;
+          std::vector<std::string> grid(rows);
+          for (auto& row : grid) {
+              std::cin >> row;
+          }
+
+          for (int gen{0}; gen < generations; ++gen) {
+              std::vector<std::string> next = grid;
+              for (int r{0}; r < rows; ++r) {
+                  for (int c{0}; c < cols; ++c) {
+                      int n = liveNeighbours(grid, r, c);
+                      bool alive = grid[r][c] == '#';
+                      next[r][c] = (alive && (n == 2 || n == 3)) || (!alive && n == 3) ? '#' : '.';
+                  }
+              }
+              grid = next;
+          }
+
+          for (const auto& row : grid) {
+              std::cout << row << '\n';
+          }
+          return 0;
+      }
+    explain: |
+      The third test is a *glider* — a pattern that walks across the grid
+      forever. Tiny rules, surprising behaviour: the Game of Life can even
+      simulate a computer. The key lesson for your code: when all cells
+      update simultaneously, read from the old state and write to a new one.
+
+  - type: review
+    id: c7-review
+    title: "Chapter 7 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      #include <vector>
+      std::vector<int> v{3, 1, 4};           // elements 3, 1, 4
+      std::vector<int> z(5, 0);              // five zeros
+      v.push_back(9);  v.pop_back();          // add / remove at the end
+      v.size();  v.empty();  v.front();  v.back();  v.clear();
+      v[i];      v.at(i);                     // unchecked / checked
+
+      for (std::size_t i{0}; i < v.size(); ++i) { v[i]; }   // with index
+      for (auto x : v) { }                                  // read (small)
+      for (const auto& s : words) { }                       // read (big)
+      for (auto& x : v) { x *= 2; }                         // change
+
+      std::vector<std::vector<int>> g(rows, std::vector<int>(cols, 0));
+      g[r][c] = 1;
+
+      #include <array>
+      std::array<int, 12> months{};          // fixed size
+      ```
+
+      ## Key ideas
+
+      - Indexes run from `0` to `size() - 1`. Out of range with `[]` is undefined behaviour.
+      - `std::size_t` is unsigned: `size() - 1` on an empty vector wraps to a huge number. Loop with `i < v.size()`.
+      - Braces list elements; parentheses give a size: `v{5}` vs `v(5)`.
+      - Pass vectors by `const &` (read) or `&` (change); return them by value.
+      - Classic algorithms: sum, max + index, search → index or −1, count, reverse with two indexes, filter into a new vector, merge sorted lists.
+      - Grid updates that happen "all at once" need a copy of the grid.
+    questions:
+      - type: output
+        prompt: Interleaving loops, functions and vectors.
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int f(const std::vector<int>& v) {
+              int best{0};
+              for (std::size_t i{1}; i < v.size(); ++i) {
+                  if (v[i] - v[i - 1] > best) {
+                      best = v[i] - v[i - 1];
+                  }
+              }
+              return best;
+          }
+
+          int main() {
+              std::cout << f({1, 4, 5, 11, 12}) << '\n';
+              return 0;
+          }
+        answer: |
+          6
+        why: "It finds the biggest jump between neighbours: 11 − 5 = 6."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          int main() {
+              std::vector<std::string> w{"ab", "cde", "f"};
+              std::string all{};
+              for (const auto& s : w) {
+                  all = s + all;
+              }
+              std::cout << all << ' ' << all.size() << '\n';
+              return 0;
+          }
+        answer: |
+          fcdeab 6
+        why: "Each string is put in front of what's there: ab → cdeab → fcdeab."
+      - type: mcq
+        prompt: Which is the right choice for a function that sorts a vector in place?
+        options:
+          - "`void sortIt(std::vector<int> v)`"
+          - "`void sortIt(const std::vector<int>& v)`"
+          - "`void sortIt(std::vector<int>& v)`"
+          - "`std::vector<int> sortIt()`"
+        answer: 2
+        why: "It must change the caller's vector: a non-const reference."
+
+  - type: exam
+    id: c7-exam
+    title: "Chapter 7 exam"
+    minutes: 40
+    pick: 12
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{2, 4, 6, 8};
+              v[1] = v[0] + v[3];
+              v.push_back(v.size());
+              std::cout << v[1] << ' ' << v[4] << '\n';
+              return 0;
+          }
+        answer: |
+          10 4
+        why: "v[1] = 2 + 8 = 10. v.size() is 4 when pushed."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{5, 1, 4};
+              for (auto& x : v) {
+                  x = x * x;
+              }
+              int s{0};
+              for (auto x : v) {
+                  s += x;
+              }
+              std::cout << s << '\n';
+              return 0;
+          }
+        answer: |
+          42
+        why: "25 + 1 + 16 = 42."
+      - type: mcq
+        prompt: "What does `std::vector<int> v(3);` contain?"
+        options:
+          - "One element, 3"
+          - "Three elements, all 0"
+          - "Three uninitialised elements"
+          - Nothing — it's empty with room for 3
+        answer: 1
+        why: "Parentheses with a size create that many value-initialised (zero) elements."
+      - type: spot
+        prompt: Which line has undefined behaviour?
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{};
+              v.push_back(10);
+              std::cout << v.front() << '\n';
+              v.pop_back();
+              std::cout << v.back() << '\n';
+              return 0;
+          }
+        answer: 9
+        why: "After `pop_back`, the vector is empty; calling `back()` on an empty vector is undefined behaviour."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{1, 2, 3, 4, 5, 6};
+              std::vector<int> w{};
+              for (std::size_t i{0}; i < v.size(); i += 2) {
+                  w.push_back(v[i] + v[i + 1]);
+              }
+              for (int x : w) {
+                  std::cout << x << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          3 7 11
+        why: "Pairs (1,2), (3,4), (5,6) are summed."
+      - type: tf
+        prompt: "`for (int x : v) { x = 0; }` sets every element of `v` to 0."
+        answer: false
+        why: "`x` is a copy. It needs `int&`."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<std::vector<int>> g{{1, 2}, {3, 4}, {5, 6}};
+              std::cout << g.size() << g[0].size() << g[2][1] << g[1][0] << '\n';
+              return 0;
+          }
+        answer: |
+          3263
+        why: "3 rows, 2 columns; g[2][1] is 6; g[1][0] is 3."
+      - type: mcq
+        prompt: Which parameter should a function that only prints a big vector use?
+        options:
+          - "`std::vector<int> v`"
+          - "`const std::vector<int>& v`"
+          - "`std::vector<int>& v`"
+          - "`std::vector<int>* v`"
+        answer: 1
+        why: No copy, and a guarantee not to change it.
+      - type: mcq
+        prompt: "What's printed by `std::vector<int> e{}; std::cout << (e.size() - 1 > 1000);`?"
+        options:
+          - "0 (false), because size − 1 is −1"
+          - "1 (true), because size − 1 wraps to a huge unsigned number"
+          - A compile error
+          - It crashes
+        answer: 1
+        why: "Unsigned arithmetic wraps around."
+      - type: fill
+        prompt: Complete the search so it returns the index of `t`, or −1.
+        code: |
+          int find(const std::vector<int>& v, int t) {
+              for (std::size_t i{0}; i < v.___(); ++i) {
+                  if (v[i] == t) {
+                      return static_cast<int>(___);
+                  }
+              }
+              return -1;
+          }
+        blanks:
+          - [size]
+          - [i]
+        why: "Loop over every index; on a match, return that index converted to `int`."
+      - type: output
+        code: |
+          #include <array>
+          #include <iostream>
+
+          int main() {
+              std::array<int, 5> a{1, 2};
+              int s{0};
+              for (int x : a) {
+                  s += x;
+              }
+              std::cout << s << ' ' << a.size() << '\n';
+              return 0;
+          }
+        answer: |
+          3 5
+        why: "The remaining three elements are zero-initialised; the size is always 5."
+      - type: order
+        prompt: Arrange the lines to reverse `v` in place.
+        lines:
+          - "std::size_t left{0};"
+          - "std::size_t right{v.size() - 1};"
+          - "while (left < right) {"
+          - "    std::swap(v[left], v[right]);"
+          - "    ++left;"
+          - "    --right;"
+          - "}"
+        alternatives:
+          - [1, 0, 2, 3, 4, 5, 6]
+          - [0, 1, 2, 3, 5, 4, 6]
+          - [1, 0, 2, 3, 5, 4, 6]
+        why: Set both indexes, then swap and move them inwards until they meet.
+      - type: code
+        prompt: |
+          Write `std::vector<int> evensThenOdds(const std::vector<int>& v)`
+          returning all even elements (in order) followed by all odd ones (in
+          order). `{1, 2, 3, 4, 5}` gives `{2, 4, 1, 3, 5}`.
+        starter: |
+          #include <vector>
+
+          std::vector<int> evensThenOdds(const std::vector<int>& v) {
+              return v;
+          }
+        harness: |
+          CHECK(evensThenOdds({1, 2, 3, 4, 5}), (std::vector<int>{2, 4, 1, 3, 5}));
+          CHECK(evensThenOdds({}), (std::vector<int>{}));
+          CHECK(evensThenOdds({7, 9}), (std::vector<int>{7, 9}));
+          CHECK(evensThenOdds({-2, -1, 0}), (std::vector<int>{-2, 0, -1}));
+        solution: |
+          #include <vector>
+
+          std::vector<int> evensThenOdds(const std::vector<int>& v) {
+              std::vector<int> result{};
+              for (int x : v) {
+                  if (x % 2 == 0) {
+                      result.push_back(x);
+                  }
+              }
+              for (int x : v) {
+                  if (x % 2 != 0) {
+                      result.push_back(x);
+                  }
+              }
+              return result;
+          }
+      - type: code
+        prompt: |
+          Read `n`, then `n` whole numbers. Print the numbers that are
+          **strictly greater than the average** of all `n`, in their original
+          order, separated by spaces (print an empty line if none). For input
+          `5 1 2 3 4 10`, the average is 4, so print `10`.
+        starter: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+
+              return 0;
+          }
+        tests:
+          - in: "5 1 2 3 4 10"
+            out: "10"
+          - in: "4 1 2 3 4"
+            out: "3 4"
+          - in: "3 5 5 5"
+            out: ""
+        solution: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              int n{};
+              std::cin >> n;
+              std::vector<int> v(n);
+              long long sum{0};
+              for (int& x : v) {
+                  std::cin >> x;
+                  sum += x;
+              }
+              double average = static_cast<double>(sum) / n;
+              bool first{true};
+              for (int x : v) {
+                  if (x > average) {
+                      if (!first) {
+                          std::cout << ' ';
+                      }
+                      std::cout << x;
+                      first = false;
+                  }
+              }
+              std::cout << '\n';
+              return 0;
+          }
