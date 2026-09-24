@@ -1,0 +1,1637 @@
+id: ch14
+number: 14
+part: p4
+title: Algorithms and Lambdas
+blurb: Stop writing the same loops — say what you want done, and let the standard library do it, correctly and fast.
+hours: 5
+goals:
+  - Sort, search, count, reverse and sum ranges with `<algorithm>` and `<numeric>`
+  - Write lambdas, and capture variables by value or by reference
+  - Use algorithms with predicates — `count_if`, `find_if`, `any_of`, `transform`
+  - Remove elements with the erase–remove idiom
+  - Sort by any criterion with a custom comparison
+  - Pass and store functions with `std::function`
+
+items:
+  - type: lesson
+    id: c14-algorithms
+    title: The algorithm library
+    minutes: 22
+    objectives:
+      - Call standard algorithms on a range given by `begin()` and `end()`
+      - Sort, reverse, find, count and find the minimum or maximum
+      - Sum a range with `std::accumulate`
+    body: |
+      You've written loops to sum, search, count and reverse many times. The
+      standard library already has all of them — tested, optimised, and with
+      names that say what the code does. They live in **`<algorithm>`** (and a
+      few in **`<numeric>`**), and they work on **ranges** given as two
+      iterators, a begin and an end:
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <numeric>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{5, 3, 9, 1, 3, 7};
+
+          std::cout << "sum " << std::accumulate(v.begin(), v.end(), 0) << '\n';
+          std::cout << "3 appears " << std::count(v.begin(), v.end(), 3) << " times\n";
+          std::cout << "max " << *std::max_element(v.begin(), v.end()) << '\n';
+
+          std::sort(v.begin(), v.end());
+          for (int x : v) {
+              std::cout << x << ' ';
+          }
+          std::cout << '\n';
+
+          std::reverse(v.begin(), v.end());
+          std::cout << "first after reverse: " << v.front() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      sum 28
+      3 appears 2 times
+      max 9
+      1 3 3 5 7 9
+      first after reverse: 9
+      ```
+
+      Some of the most useful:
+
+      | Algorithm | Does |
+      |---|---|
+      | `std::sort(b, e)` | sorts ascending — O(n log n) |
+      | `std::reverse(b, e)` | reverses in place |
+      | `std::find(b, e, x)` | iterator to the first `x`, or `e` |
+      | `std::count(b, e, x)` | how many equal `x` |
+      | `std::min_element`, `std::max_element` | iterator to the smallest / largest |
+      | `std::accumulate(b, e, start)` | `start` plus every element (`<numeric>`) |
+      | `std::fill(b, e, x)` | sets every element to `x` |
+      | `std::iota(b, e, start)` | fills with start, start+1, … (`<numeric>`) |
+      | `std::binary_search(b, e, x)` | is `x` there? — on a **sorted** range, O(log n) |
+
+      ## Results are iterators
+
+      `find`, `min_element` and friends return **iterators**, so you
+      dereference them for the value and compare with `end()` for "not
+      found". The **position** is the distance from the beginning:
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<std::string> names{"Grace", "Ada", "Linus"};
+          auto it = std::find(names.begin(), names.end(), "Ada");
+          if (it != names.end()) {
+              std::cout << "Found at index " << (it - names.begin()) << '\n';
+          }
+          auto shortest = std::min_element(names.begin(), names.end());
+          std::cout << "Alphabetically first: " << *shortest << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Found at index 1
+      Alphabetically first: Ada
+      ```
+
+      > [!tip] Algorithms work on parts of ranges too
+      > `std::sort(v.begin(), v.begin() + 3)` sorts only the first three
+      > elements. And they work on any container with iterators — strings
+      > included: `std::reverse(s.begin(), s.end())` reverses a string.
+
+      > [!warning] `accumulate`'s starting value sets the type
+      > `std::accumulate(v.begin(), v.end(), 0)` adds in `int` — for doubles,
+      > start with `0.0`, or the fractions are lost at every step.
+
+      {{check algo-output}}
+
+      {{task median}}
+    checks:
+      - id: algo-output
+        type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <numeric>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v(5);
+              std::iota(v.begin(), v.end(), 1);
+              std::reverse(v.begin(), v.begin() + 3);
+              for (int x : v) {
+                  std::cout << x;
+              }
+              std::cout << ' ' << std::accumulate(v.begin(), v.end(), 100) << '\n';
+              return 0;
+          }
+        answer: |
+          32145 115
+        why: "iota fills 1 2 3 4 5; reversing the first three gives 3 2 1 4 5; the sum starts at 100: 115."
+      - id: accumulate-type
+        type: mcq
+        prompt: "`std::vector<double> v{0.5, 0.5};` What's `std::accumulate(v.begin(), v.end(), 0)`?"
+        options:
+          - "1.0"
+          - "0 — the starting value is an `int`, so each addition is truncated"
+          - "1"
+          - A compile error
+        answer: 1
+        why: "The sum is computed in the type of the starting value: 0 + 0.5 → 0, 0 + 0.5 → 0. Use `0.0`."
+    tasks:
+      - id: median
+        title: Median
+        prompt: |
+          Write `double median(std::vector<double> v)` (it takes a copy, so it
+          may sort it): the middle value of the sorted numbers, or the average
+          of the two middle ones if the count is even. `v` is never empty.
+        starter: |
+          #include <algorithm>
+          #include <vector>
+
+          double median(std::vector<double> v) {
+              return 0.0;
+          }
+        harness: |
+          CHECK(median({3, 1, 2}), 2.0);
+          CHECK(median({4, 1, 3, 2}), 2.5);
+          CHECK(median({7}), 7.0);
+          CHECK(median({5, 5, 1, 9}), 5.0);
+        hints:
+          - "`std::sort(v.begin(), v.end());` then look at index `n / 2` (and `n / 2 - 1` when `n` is even)."
+        solution: |
+          #include <algorithm>
+          #include <vector>
+
+          double median(std::vector<double> v) {
+              std::sort(v.begin(), v.end());
+              std::size_t n = v.size();
+              if (n % 2 == 1) {
+                  return v[n / 2];
+              }
+              return (v[n / 2 - 1] + v[n / 2]) / 2;
+          }
+    cards:
+      - front: How do you sort a vector `v`?
+        back: "`std::sort(v.begin(), v.end());` (from `<algorithm>`) — ascending, O(n log n)."
+      - front: What does `std::find` return when the value isn't there?
+        back: The end iterator of the range, e.g. `v.end()`.
+      - front: How do you get the index from an iterator `it` into a vector `v`?
+        back: "`it - v.begin()`."
+      - front: Where is `std::accumulate`, and what's the trap?
+        back: In `<numeric>`. The sum uses the starting value's type — start with `0.0` for doubles.
+
+  - type: lesson
+    id: c14-lambda
+    title: Lambdas
+    minutes: 22
+    objectives:
+      - Write a lambda and call it
+      - Capture variables by value `[x]` and by reference `[&x]`
+      - Pass a lambda to an algorithm
+    body: |
+      A **lambda** is a small, unnamed function written right where it's
+      needed:
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          auto square = [](int x) { return x * x; };
+          std::cout << square(5) << '\n';
+
+          auto greet = [](const std::string& name) {
+              std::cout << "Hello, " << name << "!\n";
+          };
+          greet("Ada");
+          return 0;
+      }
+      ```
+
+      ```output
+      25
+      Hello, Ada!
+      ```
+
+      The parts: `[]` the **capture list** (more below), `(int x)` the
+      parameters, `{ ... }` the body. The return type is worked out from the
+      `return` statement. Stored in an `auto` variable, a lambda is called like
+      any function.
+
+      ## Captures
+
+      A lambda's body can't see the local variables around it — unless it
+      **captures** them:
+
+      | Capture | Meaning |
+      |---|---|
+      | `[x]` | a **copy** of `x`, taken when the lambda is created |
+      | `[&x]` | a **reference** to `x` — sees and can change the original |
+      | `[=]` | copies of everything used |
+      | `[&]` | references to everything used |
+
+      ```cpp
+      #include <iostream>
+
+      int main() {
+          int threshold{10};
+          auto isBig = [threshold](int v) { return v > threshold; };
+
+          int calls{0};
+          auto counted = [&calls](int v) { ++calls; return v * 2; };
+
+          threshold = 100;   // isBig still has its own copy: 10
+          std::cout << isBig(50) << ' ' << counted(1) << counted(2) << ' ' << calls << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      1 24 2
+      ```
+
+      Prefer listing captures explicitly (`[threshold]`, `[&calls]`) — it
+      documents what the lambda depends on. And beware: a lambda that captures
+      a local **by reference** must not be used after that local is destroyed
+      (a dangling reference again).
+
+      ## Where lambdas shine
+
+      Algorithms often take a function that says **how** to do something —
+      like a sort order. Before lambdas you had to write a separate named
+      function; now you write it in place:
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{5, -9, 2, -1, 7};
+          std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });   // descending
+          for (int x : v) {
+              std::cout << x << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      7 5 2 -1 -9
+      ```
+
+      {{check capture}}
+
+      {{task make-counter}}
+    checks:
+      - id: capture
+        type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int a{1};
+              int b{1};
+              auto f = [a, &b]() { return a + b; };
+              a = 10;
+              b = 10;
+              std::cout << f() << '\n';
+              return 0;
+          }
+        answer: |
+          11
+        why: "`a` was copied when the lambda was created (1); `b` is captured by reference, so it sees 10."
+      - id: lambda-parts
+        type: mcq
+        prompt: "In `[&total](int x) { total += x; }`, what does `[&total]` mean?"
+        options:
+          - "`total` is a parameter"
+          - "The lambda uses the outer `total` by reference, so it can change it"
+          - "The lambda returns `total`"
+          - "`total` is copied into the lambda"
+        answer: 1
+        why: "`&` in the capture list means capture by reference."
+    tasks:
+      - id: make-counter
+        title: Sum with a lambda
+        prompt: |
+          Write `int sumIf(const std::vector<int>& v, int minimum)` that uses
+          **`std::for_each`** with a lambda (capturing a running total by
+          reference) to add up the elements that are at least `minimum`.
+        starter: |
+          #include <algorithm>
+          #include <vector>
+
+          int sumIf(const std::vector<int>& v, int minimum) {
+              int total{0};
+
+              return total;
+          }
+        harness: |
+          CHECK(sumIf({1, 5, 10, 3}, 4), 15);
+          CHECK(sumIf({}, 0), 0);
+          CHECK(sumIf({-2, -1}, -1), -1);
+        hints:
+          - "`std::for_each(v.begin(), v.end(), [&total, minimum](int x) { ... });`"
+        solution: |
+          #include <algorithm>
+          #include <vector>
+
+          int sumIf(const std::vector<int>& v, int minimum) {
+              int total{0};
+              std::for_each(v.begin(), v.end(), [&total, minimum](int x) {
+                  if (x >= minimum) {
+                      total += x;
+                  }
+              });
+              return total;
+          }
+    cards:
+      - front: What is a **lambda**?
+        back: "An unnamed function written in place: `[captures](params) { body }`."
+      - front: "`[x]` vs `[&x]` in a lambda?"
+        back: "`[x]` copies x when the lambda is created; `[&x]` refers to the original x (sees later changes, can modify it)."
+      - front: How do you sort a vector in descending order with a lambda?
+        back: "`std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });`"
+
+  - type: quiz
+    id: c14-quiz1
+    title: "Quiz: algorithms and lambdas"
+    questions:
+      - type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"hello"};
+              std::sort(s.begin(), s.end());
+              std::cout << s << ' ' << std::count(s.begin(), s.end(), 'l') << '\n';
+              return 0;
+          }
+        answer: |
+          ehllo 2
+        why: "Sorting a string sorts its characters."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int n{3};
+              auto addN = [n](int x) { return x + n; };
+              auto times = [](int x, int y) { return x * y; };
+              std::cout << times(addN(1), addN(2)) << '\n';
+              return 0;
+          }
+        answer: |
+          20
+        why: "addN(1) = 4, addN(2) = 5, 4 × 5 = 20."
+      - type: mcq
+        prompt: "What does `std::max_element(v.begin(), v.end())` return?"
+        options:
+          - The maximum value
+          - An iterator to the maximum element
+          - The index of the maximum
+          - "`true` if there is a maximum"
+        answer: 1
+        why: "Dereference it (`*it`) for the value; subtract `v.begin()` for the index."
+      - type: tf
+        prompt: "`std::binary_search` gives correct answers on an unsorted vector."
+        answer: false
+        why: "Binary search relies on the range being sorted."
+
+  - type: lesson
+    id: c14-predicates
+    title: Algorithms with predicates
+    minutes: 24
+    objectives:
+      - Count and find by a condition with `count_if` and `find_if`
+      - Ask questions about a whole range with `any_of`, `all_of`, `none_of`
+      - Change every element with `transform`
+      - Remove by condition with the erase–remove idiom
+    body: |
+      A **predicate** is a function returning `bool` — a yes/no question about
+      an element. Many algorithms have an `_if` version that takes one:
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> scores{72, 45, 90, 38, 66, 81};
+          auto passed = [](int s) { return s >= 50; };
+
+          std::cout << std::count_if(scores.begin(), scores.end(), passed) << " passed\n";
+
+          auto firstFail = std::find_if(scores.begin(), scores.end(),
+                                        [](int s) { return s < 50; });
+          std::cout << "first fail: " << *firstFail << '\n';
+
+          std::cout << std::boolalpha
+                    << std::any_of(scores.begin(), scores.end(), [](int s) { return s > 85; }) << ' '
+                    << std::all_of(scores.begin(), scores.end(), passed) << ' '
+                    << std::none_of(scores.begin(), scores.end(), [](int s) { return s < 0; }) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      4 passed
+      first fail: 45
+      true false true
+      ```
+
+      ## `transform`: change every element
+
+      `std::transform` applies a function to each element and writes the
+      results — back into the same range, or into another one:
+
+      ```cpp
+      #include <algorithm>
+      #include <cctype>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<double> prices{10.0, 20.0, 5.0};
+          std::transform(prices.begin(), prices.end(), prices.begin(),
+                         [](double p) { return p * 1.21; });   // add 21% tax, in place
+          std::cout << prices[0] << ' ' << prices[2] << '\n';
+
+          std::string word{"shout"};
+          std::transform(word.begin(), word.end(), word.begin(),
+                         [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+          std::cout << word << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      12.1 6.05
+      SHOUT
+      ```
+
+      ## Removing by condition: erase–remove
+
+      Here's a surprise: `std::remove_if` doesn't actually remove anything. It
+      can't change the container's size — it only has iterators. Instead it
+      **moves the elements to keep to the front** and returns an iterator to
+      the new logical end. Then the container's own `erase` chops off the
+      leftovers:
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{1, 2, 3, 4, 5, 6, 7, 8};
+          auto newEnd = std::remove_if(v.begin(), v.end(), [](int x) { return x % 2 == 0; });
+          v.erase(newEnd, v.end());
+          for (int x : v) {
+              std::cout << x << ' ';
+          }
+          std::cout << "(size " << v.size() << ")\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      1 3 5 7 (size 4)
+      ```
+
+      This **erase–remove idiom** is O(n) — much better than erasing elements
+      one by one, which shifts the rest every time. (C++20 wraps it up as
+      `std::erase_if(v, predicate)`.) The same works for removing a value:
+      `v.erase(std::remove(v.begin(), v.end(), 0), v.end());`.
+
+      {{check pred-output}}
+
+      {{check remove}}
+
+      {{task clean-words}}
+    checks:
+      - id: pred-output
+        type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          int main() {
+              std::vector<std::string> w{"apple", "kiwi", "banana", "fig"};
+              auto longWord = std::find_if(w.begin(), w.end(),
+                                           [](const std::string& s) { return s.size() > 4; });
+              int shortOnes = static_cast<int>(std::count_if(w.begin(), w.end(),
+                                           [](const std::string& s) { return s.size() <= 4; }));
+              std::cout << *longWord << ' ' << shortOnes << '\n';
+              return 0;
+          }
+        answer: |
+          apple 2
+        why: "The first word longer than 4 letters is apple; kiwi and fig have 4 or fewer."
+      - id: remove
+        type: mcq
+        prompt: "After `auto e = std::remove(v.begin(), v.end(), 0);` without calling `erase`, what is `v.size()`?"
+        options:
+          - Smaller — the zeros are gone
+          - Unchanged — remove only moves the kept elements forward and returns the new logical end
+          - Zero
+          - It depends on the compiler
+        answer: 1
+        why: "Algorithms can't change a container's size. Follow up with `v.erase(e, v.end())`."
+    tasks:
+      - id: clean-words
+        title: Tidy a word list
+        prompt: |
+          Write `void tidy(std::vector<std::string>& words)` that, using
+          algorithms, removes every empty string and every word that starts
+          with `#`, then lower-cases the remaining words.
+        starter: |
+          #include <algorithm>
+          #include <cctype>
+          #include <string>
+          #include <vector>
+
+          void tidy(std::vector<std::string>& words) {
+          }
+        harness: |
+          std::vector<std::string> w{"Hello", "", "#tag", "World", "#", "OK"};
+          tidy(w);
+          CHECK(w, (std::vector<std::string>{"hello", "world", "ok"}));
+          std::vector<std::string> none{"", "#a"};
+          tidy(none);
+          CHECK(none.size(), 0);
+        hints:
+          - "Erase–remove with the predicate `[](const std::string& s) { return s.empty() || s[0] == '#'; }`."
+          - "Then, for each word, `std::transform` its characters with `std::tolower`."
+        solution: |
+          #include <algorithm>
+          #include <cctype>
+          #include <string>
+          #include <vector>
+
+          void tidy(std::vector<std::string>& words) {
+              words.erase(std::remove_if(words.begin(), words.end(),
+                                         [](const std::string& s) { return s.empty() || s[0] == '#'; }),
+                          words.end());
+              for (auto& w : words) {
+                  std::transform(w.begin(), w.end(), w.begin(),
+                                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+              }
+          }
+    cards:
+      - front: What is a **predicate**?
+        back: A function returning `bool` — a yes/no question about an element, used by `count_if`, `find_if`, `remove_if`, …
+      - front: What do `any_of`, `all_of` and `none_of` answer?
+        back: Whether the predicate is true for at least one element, for every element, or for no element.
+      - front: What is the **erase–remove idiom**?
+        back: "`v.erase(std::remove_if(v.begin(), v.end(), pred), v.end());` — remove_if moves kept elements forward; erase trims the rest. O(n)."
+      - front: What does `std::transform(b, e, out, f)` do?
+        back: Writes `f(x)` for each element x of [b, e) to `out` (which can be `b` itself, to change in place).
+
+  - type: lesson
+    id: c14-sorting
+    title: Sorting your way
+    minutes: 22
+    objectives:
+      - Sort structs by a member, and by several criteria
+      - Use `std::stable_sort` to keep equal elements in order
+      - Explain why a comparison must be a strict "less than"
+    body: |
+      `std::sort` takes an optional third argument: a function `comp(a, b)`
+      that returns `true` when **`a` should come before `b`**. With lambdas you
+      can sort by anything:
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      struct Player {
+          std::string name;
+          int score;
+      };
+
+      int main() {
+          std::vector<Player> table{{"Ada", 90}, {"Bo", 75}, {"Cy", 90}, {"Di", 82}};
+
+          // Highest score first; equal scores in alphabetical order.
+          std::sort(table.begin(), table.end(), [](const Player& a, const Player& b) {
+              if (a.score != b.score) {
+                  return a.score > b.score;
+              }
+              return a.name < b.name;
+          });
+
+          for (const auto& p : table) {
+              std::cout << p.name << ' ' << p.score << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      Ada 90
+      Cy 90
+      Di 82
+      Bo 75
+      ```
+
+      The pattern for several criteria: compare by the first; **only if they
+      tie**, compare by the next; and so on.
+
+      > [!deep] A neat shortcut: `std::tie`
+      > `std::tie(b.score, a.name) < std::tie(a.score, b.name)` compares
+      > element by element like a pair — a compact way to write multi-level
+      > comparisons (from `<tuple>`). Note the swapped `a`/`b` for the
+      > descending score.
+
+      ## The rule: strictly less
+
+      The comparison must behave like `<`, never like `<=`: `comp(a, a)` must
+      be `false`. Using `<=` breaks `std::sort`'s assumptions and is undefined
+      behaviour — it can even crash. For descending order, use `>`, not `>=`.
+
+      ## Stable sorting
+
+      `std::sort` may reorder elements that compare **equal**. When their
+      existing order matters (say, a list already in order of arrival, now
+      sorted by priority), use **`std::stable_sort`**, which keeps equal
+      elements in their original order:
+
+      ```cpp
+      #include <algorithm>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<std::string> words{"pear", "fig", "kiwi", "plum", "yam", "date"};
+          std::stable_sort(words.begin(), words.end(),
+                           [](const std::string& a, const std::string& b) { return a.size() < b.size(); });
+          for (const auto& w : words) {
+              std::cout << w << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      fig yam pear kiwi plum date
+      ```
+
+      Sorted by length — and within each length, still in the original order.
+
+      {{check sort-output}}
+
+      {{task by-length}}
+    checks:
+      - id: sort-output
+        type: output
+        code: |
+          #include <algorithm>
+          #include <cstdlib>
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{-5, 3, -1, 4, -2};
+              std::sort(v.begin(), v.end(), [](int a, int b) { return std::abs(a) < std::abs(b); });
+              for (int x : v) {
+                  std::cout << x << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          -1 -2 3 4 -5
+        why: "Sorted by absolute value: 1, 2, 3, 4, 5."
+      - id: strict
+        type: mcq
+        prompt: "Why must a sort comparison never use `<=`?"
+        options:
+          - It's slower
+          - "`std::sort` requires a strict ordering where `comp(a, a)` is false; `<=` breaks that and causes undefined behaviour"
+          - "`<=` sorts in descending order"
+          - It doesn't matter
+        answer: 1
+        why: "The algorithm relies on \"a comes before b\" never being true for equal elements."
+    tasks:
+      - id: by-length
+        title: Sort words by length, then alphabetically
+        prompt: |
+          Write `void sortWords(std::vector<std::string>& words)` that sorts
+          shortest first, and words of the same length alphabetically.
+        starter: |
+          #include <algorithm>
+          #include <string>
+          #include <vector>
+
+          void sortWords(std::vector<std::string>& words) {
+          }
+        harness: |
+          std::vector<std::string> w{"pear", "fig", "banana", "kiwi", "apple", "yam"};
+          sortWords(w);
+          CHECK(w, (std::vector<std::string>{"fig", "yam", "kiwi", "pear", "apple", "banana"}));
+        hints:
+          - "`if (a.size() != b.size()) return a.size() < b.size(); return a < b;`"
+        solution: |
+          #include <algorithm>
+          #include <string>
+          #include <vector>
+
+          void sortWords(std::vector<std::string>& words) {
+              std::sort(words.begin(), words.end(), [](const std::string& a, const std::string& b) {
+                  if (a.size() != b.size()) {
+                      return a.size() < b.size();
+                  }
+                  return a < b;
+              });
+          }
+    cards:
+      - front: What must a custom sort comparison `comp(a, b)` return?
+        back: "`true` if `a` should come before `b`. It must be strict: `comp(a, a)` is false (use `<`/`>`, never `<=`/`>=`)."
+      - front: How do you sort by several criteria?
+        back: Compare by the first criterion; only if equal, compare by the next — or use `std::tie(...) < std::tie(...)`.
+      - front: "`std::sort` vs `std::stable_sort`?"
+        back: "`stable_sort` keeps equal elements in their original order; `sort` may reorder them."
+
+  - type: lesson
+    id: c14-function
+    title: "Functions as values: std::function"
+    minutes: 18
+    objectives:
+      - Store any callable in a `std::function`
+      - Write functions that take functions as parameters
+      - Return a lambda from a function
+    body: |
+      Every lambda has its own unique, unnamed type — that's why you store
+      them with `auto`. But to keep different lambdas in one vector, or accept
+      "any function taking an `int` and returning an `int`" as a parameter, you
+      need one type that can hold them all: **`std::function`** from
+      `<functional>`.
+
+      ```cpp
+      #include <functional>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<std::pair<std::string, std::function<int(int, int)>>> ops{
+              {"add", [](int a, int b) { return a + b; }},
+              {"mul", [](int a, int b) { return a * b; }},
+              {"max", [](int a, int b) { return a > b ? a : b; }}
+          };
+          for (const auto& [name, op] : ops) {
+              std::cout << name << "(6, 7) = " << op(6, 7) << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      add(6, 7) = 13
+      mul(6, 7) = 42
+      max(6, 7) = 7
+      ```
+
+      `std::function<int(int, int)>` reads "a function taking two `int`s and
+      returning an `int`". It can hold a lambda, an ordinary function, or any
+      object with `operator()`.
+
+      ## Functions that take functions
+
+      A function taking another function as a parameter is called a
+      **higher-order function** — like `std::sort` taking a comparison. You
+      can write your own:
+
+      ```cpp
+      #include <functional>
+      #include <iostream>
+
+      int applyTwice(const std::function<int(int)>& f, int x) {
+          return f(f(x));
+      }
+
+      std::function<int(int)> makeAdder(int n) {
+          return [n](int x) { return x + n; };    // captures n by value: safe to return
+      }
+
+      int main() {
+          auto add5 = makeAdder(5);
+          std::cout << applyTwice(add5, 1) << '\n';
+          std::cout << applyTwice([](int x) { return x * x; }, 3) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      11
+      81
+      ```
+
+      `makeAdder` builds a new function on demand. Note that it captures `n`
+      **by value** — capturing it by reference would leave the returned lambda
+      referring to a parameter that no longer exists.
+
+      > [!pro] `std::function` or a template?
+      > `std::function` has a small cost (it may allocate and adds an
+      > indirection). For performance-critical code, standard algorithms take
+      > the callable as a **template** parameter instead — Chapter 16.
+
+      {{check fn-output}}
+
+      {{task compose}}
+    checks:
+      - id: fn-output
+        type: output
+        code: |
+          #include <functional>
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<std::function<int(int)>> steps{
+                  [](int x) { return x + 1; },
+                  [](int x) { return x * 10; },
+                  [](int x) { return x - 3; }
+              };
+              int v{2};
+              for (const auto& step : steps) {
+                  v = step(v);
+              }
+              std::cout << v << '\n';
+              return 0;
+          }
+        answer: |
+          27
+        why: "2 + 1 = 3, × 10 = 30, − 3 = 27."
+    tasks:
+      - id: compose
+        title: Compose two functions
+        prompt: |
+          Write `std::function<int(int)> compose(std::function<int(int)> f, std::function<int(int)> g)`
+          returning a function that computes `f(g(x))`.
+        starter: |
+          #include <functional>
+
+          std::function<int(int)> compose(std::function<int(int)> f, std::function<int(int)> g) {
+              return [](int x) { return x; };
+          }
+        harness: |
+          auto inc = [](int x) { return x + 1; };
+          auto dbl = [](int x) { return x * 2; };
+          CHECK(compose(inc, dbl)(5), 11);
+          CHECK(compose(dbl, inc)(5), 12);
+          CHECK(compose(inc, inc)(0), 2);
+        hints:
+          - "Capture both by value: `return [f, g](int x) { return f(g(x)); };`"
+        solution: |
+          #include <functional>
+
+          std::function<int(int)> compose(std::function<int(int)> f, std::function<int(int)> g) {
+              return [f, g](int x) { return f(g(x)); };
+          }
+    cards:
+      - front: What is `std::function<int(int)>`?
+        back: A type that can hold any callable taking an `int` and returning an `int` — lambda, function, function object.
+      - front: What is a **higher-order function**?
+        back: A function that takes a function as a parameter (like `std::sort`'s comparison) or returns one.
+      - front: Why capture by value when returning a lambda?
+        back: Captured references would refer to locals/parameters that are destroyed when the function returns.
+
+  - type: quiz
+    id: c14-quiz2
+    title: "Quiz: predicates, sorting and std::function"
+    questions:
+      - type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{3, 8, 1, 8, 2};
+              v.erase(std::remove(v.begin(), v.end(), 8), v.end());
+              std::cout << v.size() << ' ' << std::count_if(v.begin(), v.end(), [](int x) { return x > 1; }) << '\n';
+              return 0;
+          }
+        answer: |
+          3 2
+        why: "Removing the 8s leaves {3, 1, 2}; two of them are greater than 1."
+      - type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          int main() {
+              std::vector<std::string> v{"bb", "a", "ccc", "dd"};
+              std::stable_sort(v.begin(), v.end(), [](const std::string& x, const std::string& y) {
+                  return x.size() > y.size();
+              });
+              for (const auto& s : v) {
+                  std::cout << s << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          ccc bb dd a
+        why: "Longest first; bb and dd tie and keep their original order (stable)."
+      - type: mcq
+        prompt: "Which comparison sorts `Person`s by age, oldest first?"
+        options:
+          - "`[](const Person& a, const Person& b) { return a.age >= b.age; }`"
+          - "`[](const Person& a, const Person& b) { return a.age > b.age; }`"
+          - "`[](const Person& a, const Person& b) { return a.age < b.age; }`"
+          - "`[](const Person& a) { return a.age; }`"
+        answer: 1
+        why: "Strictly greater for descending order; `>=` is not a valid comparison."
+      - type: tf
+        prompt: "A `std::function<int(int)>` can hold a lambda that captures variables."
+        answer: true
+        why: "It can hold any callable with that signature, captures and all."
+
+  - type: challenge
+    id: c14-ch-intervals
+    title: Merge intervals
+    difficulty: 3
+    tags: [sorting, algorithms]
+    prompt: |
+      Given a list of closed intervals `[start, end]`, merge all overlapping
+      (or touching) ones. Write
+      `std::vector<std::pair<int, int>> merge(std::vector<std::pair<int, int>> intervals)`
+      returning the merged intervals sorted by start.
+
+      `{[1,3], [8,10], [2,6], [15,18]}` → `{[1,6], [8,10], [15,18]}`;
+      `{[1,4], [4,5]}` → `{[1,5]}`.
+    starter: |
+      #include <algorithm>
+      #include <utility>
+      #include <vector>
+
+      std::vector<std::pair<int, int>> merge(std::vector<std::pair<int, int>> intervals) {
+          return intervals;
+      }
+    harness: |
+      using I = std::vector<std::pair<int, int>>;
+      CHECK(merge(I{{1, 3}, {8, 10}, {2, 6}, {15, 18}}), (I{{1, 6}, {8, 10}, {15, 18}}));
+      CHECK(merge(I{{1, 4}, {4, 5}}), (I{{1, 5}}));
+      CHECK(merge(I{}), (I{}));
+      CHECK(merge(I{{5, 7}, {1, 10}}), (I{{1, 10}}));
+      CHECK(merge(I{{1, 2}, {3, 4}}), (I{{1, 2}, {3, 4}}));
+    hints:
+      - "Sort by start first (pairs already compare by `first`, then `second`)."
+      - "Walk the sorted list: if an interval starts at or before the end of the last merged one, extend that end with `std::max`; otherwise start a new merged interval."
+    solution: |
+      #include <algorithm>
+      #include <utility>
+      #include <vector>
+
+      std::vector<std::pair<int, int>> merge(std::vector<std::pair<int, int>> intervals) {
+          std::sort(intervals.begin(), intervals.end());
+          std::vector<std::pair<int, int>> out{};
+          for (const auto& [start, end] : intervals) {
+              if (!out.empty() && start <= out.back().second) {
+                  out.back().second = std::max(out.back().second, end);
+              } else {
+                  out.push_back({start, end});
+              }
+          }
+          return out;
+      }
+    explain: |
+      Sorting first is the key insight: once intervals are ordered by start,
+      any interval that overlaps anything overlaps the **last** merged one.
+      Many problems become easy after the right sort — "sort, then sweep" is
+      a pattern worth remembering.
+
+  - type: challenge
+    id: c14-ch-ranking
+    title: Competition ranking
+    difficulty: 2
+    tags: [sorting, structs]
+    prompt: |
+      Read lines `NAME SCORE` until the input ends. Print a ranking: highest
+      score first, ties in alphabetical order, each line `RANK. NAME SCORE`.
+      Players with equal scores share a rank, and the next rank skips
+      accordingly ("1, 2, 2, 4" — standard competition ranking).
+
+      For:
+
+      ```text
+      Bo 70
+      Ada 90
+      Cy 70
+      Di 50
+      ```
+
+      print
+
+      ```text
+      1. Ada 90
+      2. Bo 70
+      2. Cy 70
+      4. Di 50
+      ```
+    starter: |
+      #include <algorithm>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          Bo 70
+          Ada 90
+          Cy 70
+          Di 50
+        out: |
+          1. Ada 90
+          2. Bo 70
+          2. Cy 70
+          4. Di 50
+      - in: |
+          A 1
+          B 1
+          C 1
+        out: |
+          1. A 1
+          1. B 1
+          1. C 1
+      - in: ""
+        out: ""
+    hints:
+      - "Read into a vector of structs, sort with a two-level comparison."
+      - "Walking the sorted list, position `i` (0-based) gets rank `i + 1`, unless its score equals the previous one — then it keeps the previous rank."
+    solution: |
+      #include <algorithm>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      struct Entry {
+          std::string name;
+          int score;
+      };
+
+      int main() {
+          std::vector<Entry> entries{};
+          std::string name{};
+          int score{};
+          while (std::cin >> name >> score) {
+              entries.push_back({name, score});
+          }
+          std::sort(entries.begin(), entries.end(), [](const Entry& a, const Entry& b) {
+              if (a.score != b.score) {
+                  return a.score > b.score;
+              }
+              return a.name < b.name;
+          });
+          int rank{0};
+          for (std::size_t i{0}; i < entries.size(); ++i) {
+              if (i == 0 || entries[i].score != entries[i - 1].score) {
+                  rank = static_cast<int>(i) + 1;
+              }
+              std::cout << rank << ". " << entries[i].name << ' ' << entries[i].score << '\n';
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c14-ch-normalise
+    title: Normalise to 0–1
+    difficulty: 2
+    tags: [algorithms, lambdas]
+    prompt: |
+      Write `std::vector<double> normalise(const std::vector<double>& v)` that
+      rescales the values so the smallest becomes 0 and the largest 1
+      (`(x - min) / (max - min)`). If all values are equal (or `v` is empty),
+      return a vector of zeros of the same size. Use `std::minmax_element`
+      (or min/max_element) and `std::transform` — no hand-written loops.
+    starter: |
+      #include <algorithm>
+      #include <vector>
+
+      std::vector<double> normalise(const std::vector<double>& v) {
+          return v;
+      }
+    harness: |
+      CHECK(normalise({2, 4, 6}), (std::vector<double>{0, 0.5, 1}));
+      CHECK(normalise({5, 5}), (std::vector<double>{0, 0}));
+      CHECK(normalise({}), (std::vector<double>{}));
+      CHECK(normalise({10, 0, 5}), (std::vector<double>{1, 0, 0.5}));
+    hints:
+      - "`auto [lo, hi] = std::minmax_element(v.begin(), v.end());` gives two iterators."
+      - "`std::transform(v.begin(), v.end(), out.begin(), [min, range](double x) { return (x - min) / range; });` with `out` sized like `v`."
+    solution: |
+      #include <algorithm>
+      #include <vector>
+
+      std::vector<double> normalise(const std::vector<double>& v) {
+          std::vector<double> out(v.size(), 0.0);
+          if (v.empty()) {
+              return out;
+          }
+          auto [lo, hi] = std::minmax_element(v.begin(), v.end());
+          double min = *lo;
+          double range = *hi - *lo;
+          if (range == 0) {
+              return out;
+          }
+          std::transform(v.begin(), v.end(), out.begin(),
+                         [min, range](double x) { return (x - min) / range; });
+          return out;
+      }
+
+  - type: challenge
+    id: c14-ch-pipeline
+    title: A function pipeline
+    difficulty: 2
+    tags: [std::function, lambdas]
+    prompt: |
+      Write a class `Pipeline` that stores a sequence of steps, each a
+      `std::function<double(double)>`:
+
+      - `Pipeline& then(std::function<double(double)> step)` — appends a step and returns `*this` for chaining.
+      - `double run(double x) const` — applies every step in order.
+      - `int size() const`.
+    starter: |
+      #include <functional>
+      #include <vector>
+
+      class Pipeline {
+      public:
+          Pipeline& then(std::function<double(double)> step) {
+              return *this;
+          }
+
+          double run(double x) const {
+              return x;
+          }
+
+          int size() const {
+              return 0;
+          }
+
+      private:
+          std::vector<std::function<double(double)>> steps_{};
+      };
+    harness: |
+      Pipeline p{};
+      p.then([](double x) { return x + 1; })
+       .then([](double x) { return x * x; })
+       .then([](double x) { return x / 2; });
+      CHECK(p.size(), 3);
+      CHECK(p.run(3), 8.0);
+      CHECK(p.run(-1), 0.0);
+      Pipeline empty{};
+      CHECK(empty.run(42), 42.0);
+      double factor{10};
+      Pipeline scale{};
+      scale.then([factor](double x) { return x * factor; });
+      factor = 0;
+      CHECK(scale.run(2), 20.0);
+    hints:
+      - "`then`: `steps_.push_back(step); return *this;`"
+      - "`run`: `for (const auto& s : steps_) x = s(x); return x;`"
+    solution: |
+      #include <functional>
+      #include <vector>
+
+      class Pipeline {
+      public:
+          Pipeline& then(std::function<double(double)> step) {
+              steps_.push_back(std::move(step));
+              return *this;
+          }
+
+          double run(double x) const {
+              for (const auto& step : steps_) {
+                  x = step(x);
+              }
+              return x;
+          }
+
+          int size() const {
+              return static_cast<int>(steps_.size());
+          }
+
+      private:
+          std::vector<std::function<double(double)>> steps_{};
+      };
+
+  - type: challenge
+    id: c14-ch-no-loops
+    title: No raw loops
+    difficulty: 2
+    tags: [algorithms, style]
+    prompt: |
+      Write these without any `for` or `while` loop — only standard
+      algorithms (and lambdas):
+
+      - `int countVowels(const std::string& s)` (a, e, i, o, u, either case)
+      - `bool allDigits(const std::string& s)` (true for an empty string)
+      - `std::string reversed(std::string s)`
+      - `double averageLength(const std::vector<std::string>& words)` (0.0 if empty)
+    starter: |
+      #include <algorithm>
+      #include <cctype>
+      #include <numeric>
+      #include <string>
+      #include <vector>
+
+      int countVowels(const std::string& s) {
+          return 0;
+      }
+
+      bool allDigits(const std::string& s) {
+          return false;
+      }
+
+      std::string reversed(std::string s) {
+          return s;
+      }
+
+      double averageLength(const std::vector<std::string>& words) {
+          return 0.0;
+      }
+    harness: |
+      CHECK(countVowels("Programming In C++"), 4);
+      CHECK(countVowels(""), 0);
+      CHECK(allDigits("2024"), true);
+      CHECK(allDigits("20x4"), false);
+      CHECK(allDigits(""), true);
+      CHECK(reversed("stressed"), "desserts");
+      CHECK(averageLength({"a", "bbb"}), 2.0);
+      CHECK(averageLength({}), 0.0);
+    hints:
+      - "`std::count_if` with a lambda that checks `std::string{\"aeiouAEIOU\"}.find(c) != std::string::npos`."
+      - "`std::all_of` with `std::isdigit` (cast to `unsigned char`); `std::reverse`; `std::accumulate` with a lambda adding `w.size()` — start at `0.0`."
+    solution: |
+      #include <algorithm>
+      #include <cctype>
+      #include <numeric>
+      #include <string>
+      #include <vector>
+
+      int countVowels(const std::string& s) {
+          return static_cast<int>(std::count_if(s.begin(), s.end(), [](char c) {
+              return std::string{"aeiouAEIOU"}.find(c) != std::string::npos;
+          }));
+      }
+
+      bool allDigits(const std::string& s) {
+          return std::all_of(s.begin(), s.end(), [](unsigned char c) { return std::isdigit(c) != 0; });
+      }
+
+      std::string reversed(std::string s) {
+          std::reverse(s.begin(), s.end());
+          return s;
+      }
+
+      double averageLength(const std::vector<std::string>& words) {
+          if (words.empty()) {
+              return 0.0;
+          }
+          double total = std::accumulate(words.begin(), words.end(), 0.0,
+                                         [](double sum, const std::string& w) { return sum + static_cast<double>(w.size()); });
+          return total / static_cast<double>(words.size());
+      }
+    explain: |
+      "No raw loops" is a well-known guideline (from Sean Parent): an
+      algorithm's name says *what* happens, while a loop makes the reader work
+      it out. You won't always follow it — but reaching for an algorithm
+      first is a good habit.
+
+  - type: review
+    id: c14-review
+    title: "Chapter 14 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      #include <algorithm>
+      #include <numeric>
+      #include <functional>
+
+      std::sort(v.begin(), v.end());                                // ascending
+      std::sort(v.begin(), v.end(), [](auto& a, auto& b) { return a > b; });
+      std::stable_sort(...);                                        // keeps ties in order
+      std::reverse(b, e);   std::fill(b, e, x);   std::iota(b, e, 0);
+      auto it = std::find(b, e, x);      auto it2 = std::find_if(b, e, pred);
+      std::count(b, e, x);               std::count_if(b, e, pred);
+      std::any_of / all_of / none_of(b, e, pred);
+      *std::min_element(b, e);   *std::max_element(b, e);   std::minmax_element(b, e);
+      std::accumulate(b, e, 0.0);        std::transform(b, e, out, f);
+      v.erase(std::remove_if(v.begin(), v.end(), pred), v.end());   // erase–remove
+
+      auto f = [captured, &byRef](int x) { return x + captured; };
+      std::function<int(int)> g = f;
+      ```
+
+      ## Key ideas
+
+      - Algorithms take ranges (begin, end) and often return iterators.
+      - Lambdas: `[captures](params) { body }`. Copy `[x]` or reference `[&x]`.
+      - Predicates answer yes/no; `_if` algorithms use them.
+      - `remove`/`remove_if` don't shrink the container — follow with `erase`.
+      - Sort comparisons are strict (`<`, `>`), and compare by the next criterion only on ties.
+      - `std::function` stores any callable with a given signature.
+    questions:
+      - type: output
+        prompt: "Interleaving: maps, lambdas and algorithms."
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <map>
+          #include <string>
+          #include <vector>
+
+          int main() {
+              std::map<std::string, int> stock{{"apple", 3}, {"fig", 0}, {"kiwi", 7}};
+              std::vector<std::string> inStock{};
+              for (const auto& [name, n] : stock) {
+                  if (n > 0) {
+                      inStock.push_back(name);
+                  }
+              }
+              std::sort(inStock.begin(), inStock.end(), [&stock](const std::string& a, const std::string& b) {
+                  return stock.at(a) > stock.at(b);
+              });
+              std::cout << inStock[0] << ' ' << inStock.size() << '\n';
+              return 0;
+          }
+        answer: |
+          kiwi 2
+        why: "fig is out of stock; kiwi (7) sorts before apple (3)."
+      - type: mcq
+        prompt: "Which removes all zeros from `v` in O(n)?"
+        options:
+          - "`std::remove(v.begin(), v.end(), 0);`"
+          - "`v.erase(std::remove(v.begin(), v.end(), 0), v.end());`"
+          - "A loop calling `v.erase(it)` for each zero"
+          - "`v.clear();`"
+        answer: 1
+        why: "The erase–remove idiom."
+      - type: output
+        code: |
+          #include <functional>
+          #include <iostream>
+
+          std::function<int()> counter() {
+              int count{0};
+              return [count]() mutable { return ++count; };
+          }
+
+          int main() {
+              auto c = counter();
+              c();
+              c();
+              std::cout << c() << '\n';
+              return 0;
+          }
+        answer: |
+          3
+        why: "The lambda owns its own copy of `count`; `mutable` lets it change that copy between calls."
+
+  - type: exam
+    id: c14-exam
+    title: "Chapter 14 exam"
+    minutes: 40
+    pick: 12
+    questions:
+      - type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{4, 1, 3, 1, 5};
+              std::sort(v.begin(), v.end());
+              auto it = std::find(v.begin(), v.end(), 3);
+              std::cout << (it - v.begin()) << ' ' << std::count(v.begin(), v.end(), 1) << '\n';
+              return 0;
+          }
+        answer: |
+          2 2
+        why: "Sorted: 1 1 3 4 5 — 3 is at index 2; two 1s."
+      - type: output
+        code: |
+          #include <iostream>
+
+          int main() {
+              int x{2};
+              auto byValue = [x]() { return x * 10; };
+              auto byRef = [&x]() { return x * 10; };
+              x = 5;
+              std::cout << byValue() << ' ' << byRef() << '\n';
+              return 0;
+          }
+        answer: |
+          20 50
+        why: "The copy was taken when the lambda was created; the reference sees the change."
+      - type: mcq
+        prompt: "What does `std::accumulate(v.begin(), v.end(), 1, [](int a, int b) { return a * b; })` compute?"
+        options:
+          - The sum
+          - The product of the elements
+          - The count
+          - The maximum
+        answer: 1
+        why: "Starting from 1, each element is multiplied in."
+      - type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{1, 2, 3, 4, 5, 6};
+              v.erase(std::remove_if(v.begin(), v.end(), [](int x) { return x % 3 == 0; }), v.end());
+              std::transform(v.begin(), v.end(), v.begin(), [](int x) { return x * x; });
+              for (int x : v) {
+                  std::cout << x << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          1 4 16 25
+        why: "3 and 6 are removed; the rest are squared."
+      - type: tf
+        prompt: "`std::sort` guarantees that equal elements keep their original order."
+        answer: false
+        why: "That's `std::stable_sort`."
+      - type: mcq
+        prompt: "Which lambda sorts strings by length, longest first, and alphabetically on ties?"
+        options:
+          - "`[](const auto& a, const auto& b) { return a.size() >= b.size(); }`"
+          - "`[](const auto& a, const auto& b) { return a.size() != b.size() ? a.size() > b.size() : a < b; }`"
+          - "`[](const auto& a, const auto& b) { return a < b; }`"
+          - "`[](const auto& a) { return a.size(); }`"
+        answer: 1
+        why: "Compare lengths strictly; only on a tie compare the strings."
+      - type: output
+        code: |
+          #include <algorithm>
+          #include <iostream>
+          #include <string>
+
+          int main() {
+              std::string s{"Hello World"};
+              bool anyUpper = std::any_of(s.begin(), s.end(), [](char c) { return c >= 'A' && c <= 'Z'; });
+              auto spaces = std::count(s.begin(), s.end(), ' ');
+              std::reverse(s.begin(), s.begin() + 5);
+              std::cout << anyUpper << spaces << ' ' << s << '\n';
+              return 0;
+          }
+        answer: |
+          11 olleH World
+        why: "There are capitals, one space, and the first five characters are reversed."
+      - type: fill
+        prompt: Complete the erase–remove idiom that removes empty strings.
+        code: |
+          words.___(std::remove_if(words.begin(), words.end(),
+                                   [](const std::string& w) { return w.___(); }),
+                    words.end());
+        blanks:
+          - [erase]
+          - [empty]
+        why: "remove_if moves the kept strings forward; erase trims the tail."
+      - type: mcq
+        prompt: "What type can hold both `[](int x) { return x + 1; }` and a function `int twice(int)`?"
+        options:
+          - "`auto`"
+          - "`std::function<int(int)>`"
+          - "`int(*)()`"
+          - "`std::vector<int>`"
+        answer: 1
+        why: "`std::function` with the matching signature can hold any such callable."
+      - type: spot
+        prompt: This program may crash or misbehave. Which line is the problem?
+        code: |
+          #include <algorithm>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v(100, 7);
+              std::sort(v.begin(), v.end(), [](int a, int b) { return a <= b; });
+              return 0;
+          }
+        answer: 6
+        why: "A comparison using `<=` isn't a strict ordering (`comp(a, a)` is true): undefined behaviour for `std::sort`."
+      - type: code
+        prompt: |
+          `struct Book { std::string title; int year; double rating; };`
+          Write `std::vector<std::string> bestSince(std::vector<Book> books, int year, int k)`
+          returning the titles of the `k` highest-rated books published in
+          `year` or later (fewer if there aren't `k`), best first; equal
+          ratings in alphabetical order of title.
+        starter: |
+          #include <algorithm>
+          #include <string>
+          #include <vector>
+
+          struct Book {
+              std::string title;
+              int year;
+              double rating;
+          };
+
+          std::vector<std::string> bestSince(std::vector<Book> books, int year, int k) {
+              return {};
+          }
+        harness: |
+          std::vector<Book> b{{"Dune", 1965, 4.5}, {"Hyperion", 1989, 4.3}, {"Anathem", 2008, 4.4},
+                              {"Blindsight", 2006, 4.4}, {"Old", 1950, 5.0}};
+          CHECK(bestSince(b, 1960, 3), (std::vector<std::string>{"Dune", "Anathem", "Blindsight"}));
+          CHECK(bestSince(b, 2000, 5), (std::vector<std::string>{"Anathem", "Blindsight"}));
+          CHECK(bestSince(b, 2020, 2), (std::vector<std::string>{}));
+        solution: |
+          #include <algorithm>
+          #include <string>
+          #include <vector>
+
+          struct Book {
+              std::string title;
+              int year;
+              double rating;
+          };
+
+          std::vector<std::string> bestSince(std::vector<Book> books, int year, int k) {
+              books.erase(std::remove_if(books.begin(), books.end(),
+                                         [year](const Book& b) { return b.year < year; }),
+                          books.end());
+              std::sort(books.begin(), books.end(), [](const Book& a, const Book& b) {
+                  if (a.rating != b.rating) {
+                      return a.rating > b.rating;
+                  }
+                  return a.title < b.title;
+              });
+              std::vector<std::string> titles{};
+              for (const auto& b : books) {
+                  if (static_cast<int>(titles.size()) == k) {
+                      break;
+                  }
+                  titles.push_back(b.title);
+              }
+              return titles;
+          }
+      - type: code
+        prompt: |
+          Write `std::function<bool(int)> allOf(std::vector<std::function<bool(int)>> tests)`
+          returning a predicate that is true only when **every** test passes
+          (true if there are no tests).
+        starter: |
+          #include <functional>
+          #include <vector>
+
+          std::function<bool(int)> allOf(std::vector<std::function<bool(int)>> tests) {
+              return [](int) { return false; };
+          }
+        harness: |
+          auto positive = [](int x) { return x > 0; };
+          auto even = [](int x) { return x % 2 == 0; };
+          auto both = allOf({positive, even});
+          CHECK(both(4), true);
+          CHECK(both(3), false);
+          CHECK(both(-2), false);
+          CHECK(allOf({})(7), true);
+        solution: |
+          #include <algorithm>
+          #include <functional>
+          #include <vector>
+
+          std::function<bool(int)> allOf(std::vector<std::function<bool(int)>> tests) {
+              return [tests](int x) {
+                  return std::all_of(tests.begin(), tests.end(),
+                                     [x](const std::function<bool(int)>& t) { return t(x); });
+              };
+          }

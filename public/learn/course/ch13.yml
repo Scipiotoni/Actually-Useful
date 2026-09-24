@@ -1,0 +1,1836 @@
+id: ch13
+number: 13
+part: p4
+title: The Standard Library Containers
+blurb: The data structures every C++ programmer reaches for — maps, sets, stacks, queues — and how to choose between them.
+hours: 6
+goals:
+  - Choose a container by what the program needs to do quickly
+  - Store and look up values by key with `std::map` and `std::unordered_map`
+  - Keep unique values with `std::set` and `std::unordered_set`
+  - Use iterators to walk and modify containers, including erasing while iterating
+  - Use `std::stack`, `std::queue`, `std::deque` and `std::priority_queue`
+  - Describe how long common operations take with Big-O notation
+
+items:
+  - type: lesson
+    id: c13-choose
+    title: A map of the containers
+    minutes: 18
+    objectives:
+      - Name the main standard containers and what each is good at
+      - Read simple Big-O notation — O(1), O(log n), O(n)
+      - Default to `std::vector`, and know when not to
+    body: |
+      You've used `std::vector`, `std::array` and `std::string`. The standard
+      library has more **containers**, each organised differently so that
+      *some* operation is fast. Choosing well can turn a program that takes
+      an hour into one that takes a second.
+
+      ## Measuring "fast": Big-O
+
+      Programmers describe how an operation's time **grows** with the number
+      of elements `n` using **Big-O** notation:
+
+      | Notation | Name | Meaning | Example |
+      |---|---|---|---|
+      | O(1) | constant | same time however big `n` is | `v[i]`, `v.push_back(x)` |
+      | O(log n) | logarithmic | doubling `n` adds one step | finding a key in a `std::map` |
+      | O(n) | linear | time grows with `n` | searching an unsorted vector |
+      | O(n²) | quadratic | double `n`, four times the time | comparing every pair |
+
+      For a million elements, O(log n) is about 20 steps, O(n) a million, and
+      O(n²) a trillion. That's the difference that matters.
+
+      ## The main containers
+
+      | Container | Organised as | Fast at |
+      |---|---|---|
+      | `std::vector` | contiguous array | index access, adding/removing at the end |
+      | `std::deque` | chunks | adding/removing at **both** ends |
+      | `std::map` | sorted tree of key → value | lookup by key, O(log n); keeps keys **in order** |
+      | `std::unordered_map` | hash table of key → value | lookup by key, O(1) on average; no order |
+      | `std::set` / `std::unordered_set` | like the maps, keys only | "is this in the set?" |
+      | `std::stack`, `std::queue`, `std::priority_queue` | adapters on top of the others | last-in-first-out, first-in-first-out, "biggest first" |
+
+      > [!remember] The default
+      > **Use `std::vector` unless you have a reason not to.** It's the
+      > fastest container for most tasks in practice, because its elements sit
+      > next to each other in memory. Reach for a map or set when you need to
+      > **look things up by key** or **check membership** often.
+
+      {{check bigo}}
+
+      {{check choose}}
+    checks:
+      - id: bigo
+        type: mcq
+        prompt: An operation is O(n). How does its time change when the container grows from 1,000 to 1,000,000 elements?
+        options:
+          - It stays the same
+          - About 1,000 times longer
+          - About 10 steps longer
+          - About a million times longer
+        answer: 1
+        why: "Linear: 1000 times the elements, 1000 times the time."
+      - id: choose
+        type: mcq
+        prompt: "A program must repeatedly look up a user's score by username. Best container?"
+        options:
+          - "`std::vector<std::pair<std::string, int>>`, searched each time"
+          - "`std::unordered_map<std::string, int>` (or `std::map`)"
+          - "`std::stack<int>`"
+          - "`std::array<int, 100>`"
+        answer: 1
+        why: "Lookups by key are what maps are for: O(1) average or O(log n) instead of O(n) per search."
+    cards:
+      - front: What does O(1), O(log n), O(n), O(n²) mean?
+        back: "How time grows with n: constant, logarithmic (doubling n adds a step), linear, quadratic (doubling n quadruples time)."
+      - front: What's the default container in C++?
+        back: "`std::vector` — use something else only when you need fast lookup by key, membership tests, or both-end insertion."
+      - front: "`std::map` vs `std::unordered_map`?"
+        back: "`map` keeps keys sorted, O(log n) lookup; `unordered_map` is a hash table, O(1) average lookup, no order."
+
+  - type: lesson
+    id: c13-map
+    title: "std::map: look things up by key"
+    minutes: 26
+    objectives:
+      - Insert, read and update entries in a `std::map`
+      - Check whether a key exists without creating it
+      - Loop over a map in key order with structured bindings
+      - Count occurrences with a map
+    body: |
+      A **map** stores **key → value** pairs, like a dictionary: look up a
+      word (the key) to find its definition (the value). Each key appears at
+      most once.
+
+      ```cpp
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> ages{};
+          ages["Ada"] = 36;
+          ages["Alan"] = 41;
+          ages["Grace"] = 85;
+          ages["Ada"] = 37;          // same key: updates the value
+
+          std::cout << ages["Grace"] << '\n';
+          std::cout << ages.size() << " people\n";
+
+          for (const auto& [name, age] : ages) {
+              std::cout << name << ": " << age << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      85
+      3 people
+      Ada: 37
+      Alan: 41
+      Grace: 85
+      ```
+
+      - `std::map<std::string, int>` — keys are strings, values are ints (from `<map>`).
+      - `ages["Ada"] = 36;` inserts the key, or updates it if it's already there.
+      - A range-based loop visits the entries **sorted by key**. Each element is a `std::pair<const Key, Value>` — structured bindings unpack it.
+
+      ## The `[]` trap
+
+      Reading with `m[key]` when the key **isn't there** doesn't fail — it
+      **inserts** the key with a default value (0 for an int, "" for a
+      string):
+
+      ```cpp
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> stock{{"apple", 5}};
+          std::cout << stock["banana"] << '\n';   // inserts banana -> 0!
+          std::cout << stock.size() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      0
+      2
+      ```
+
+      To **check** for a key without inserting it, use `find` (which returns
+      an iterator — the next lesson explains them — equal to `end()` if the key
+      is missing) or `count` (0 or 1). And `.at(key)` reads without inserting,
+      throwing an exception if the key is missing:
+
+      ```cpp
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, std::string> capitals{{"France", "Paris"}, {"Japan", "Tokyo"}};
+
+          auto it = capitals.find("Japan");
+          if (it != capitals.end()) {
+              std::cout << it->first << " -> " << it->second << '\n';
+          }
+          std::cout << capitals.count("Peru") << '\n';
+          std::cout << capitals.at("France") << '\n';
+
+          capitals.erase("France");
+          std::cout << capitals.size() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      Japan -> Tokyo
+      0
+      Paris
+      1
+      ```
+
+      (C++20 adds the friendlier `capitals.contains("Peru")`.)
+
+      ## Counting with a map
+
+      The `[]` behaviour becomes a feature when **counting**: a new key starts
+      at 0, so `++counts[x]` just works:
+
+      ```cpp
+      #include <iostream>
+      #include <map>
+      #include <sstream>
+      #include <string>
+
+      int main() {
+          std::istringstream text{"the cat and the hat and the bat"};
+          std::map<std::string, int> counts{};
+          std::string word{};
+          while (text >> word) {
+              ++counts[word];
+          }
+          for (const auto& [w, n] : counts) {
+              std::cout << w << ' ' << n << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      and 2
+      bat 1
+      cat 1
+      hat 1
+      the 3
+      ```
+
+      Compare that with the O(n²) word counting you wrote in Chapter 8: this
+      is O(n log n), and far simpler.
+
+      {{check map-trap}}
+
+      {{check map-output}}
+
+      {{task letters}}
+    checks:
+      - id: map-trap
+        type: output
+        code: |
+          #include <iostream>
+          #include <map>
+
+          int main() {
+              std::map<int, int> m{{1, 10}};
+              if (m[2] == 0) {
+                  m[3] = 30;
+              }
+              std::cout << m.size() << ' ' << m.count(2) << '\n';
+              return 0;
+          }
+        answer: |
+          3 1
+        why: "Reading `m[2]` inserted key 2 with value 0, which then triggered inserting key 3."
+      - id: map-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <map>
+          #include <string>
+
+          int main() {
+              std::map<std::string, int> m{};
+              m["zeta"] = 1;
+              m["alpha"] = 2;
+              m["mid"] = 3;
+              for (const auto& [k, v] : m) {
+                  std::cout << k[0] << v;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          a2m3z1
+        why: "A `std::map` always iterates in sorted key order, whatever the insertion order."
+    tasks:
+      - id: letters
+        title: Letter counts
+        prompt: |
+          Write `std::map<char, int> letterCounts(const std::string& text)`
+          counting each character of `text` except spaces.
+        starter: |
+          #include <map>
+          #include <string>
+
+          std::map<char, int> letterCounts(const std::string& text) {
+              return {};
+          }
+        harness: |
+          auto m = letterCounts("hello world");
+          CHECK(m['l'], 3);
+          CHECK(m['o'], 2);
+          CHECK(m['h'], 1);
+          CHECK(m.count(' '), 0);
+          CHECK(m.size(), 7);
+          CHECK(letterCounts("").size(), 0);
+        hints:
+          - "`for (char c : text) { if (c != ' ') ++counts[c]; }`"
+        solution: |
+          #include <map>
+          #include <string>
+
+          std::map<char, int> letterCounts(const std::string& text) {
+              std::map<char, int> counts{};
+              for (char c : text) {
+                  if (c != ' ') {
+                      ++counts[c];
+                  }
+              }
+              return counts;
+          }
+    cards:
+      - front: What does `m[key] = value;` do in a `std::map`?
+        back: Inserts the key with that value, or updates the value if the key exists.
+      - front: What happens when you *read* `m[key]` for a missing key?
+        back: The key is inserted with a default value (0, "", …). Use `find`, `count` or `at` to check without inserting.
+      - front: In what order does a range-based loop visit a `std::map`?
+        back: Sorted by key.
+      - front: How do you count occurrences of things with a map?
+        back: "`++counts[x];` — a new key starts at 0."
+
+  - type: lesson
+    id: c13-hash
+    title: Hash maps and sets
+    minutes: 22
+    objectives:
+      - Use `std::unordered_map` for fast lookups when order doesn't matter
+      - Keep unique values with `std::set` and `std::unordered_set`
+      - Test membership and remove duplicates
+    body: |
+      ## `std::unordered_map`
+
+      `std::unordered_map` has almost the same interface as `std::map` —
+      `[]`, `find`, `count`, `at`, `erase`, range-based loops — but it's built
+      on a **hash table**: each key is turned into a number (its *hash*) that
+      says directly where to store it. Lookups are **O(1) on average**. The
+      price: iteration order is unpredictable.
+
+      ```cpp
+      #include <iostream>
+      #include <string>
+      #include <unordered_map>
+
+      int main() {
+          std::unordered_map<std::string, double> prices{{"tea", 2.5}, {"cake", 3.0}};
+          prices["coffee"] = 2.8;
+          std::string order{"coffee"};
+          if (prices.count(order) > 0) {
+              std::cout << order << " costs " << prices[order] << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      coffee costs 2.8
+      ```
+
+      **Which map?** Use `std::unordered_map` for speed; use `std::map` when you
+      need the keys in order (printing a sorted report, finding the smallest
+      key, ranges of keys).
+
+      ## Sets: unique values
+
+      A **set** is a map with keys but no values: a collection of **unique**
+      elements. Inserting something already there does nothing.
+
+      ```cpp
+      #include <iostream>
+      #include <set>
+      #include <vector>
+
+      int main() {
+          std::vector<int> rolls{4, 2, 4, 6, 2, 2, 1};
+          std::set<int> seen(rolls.begin(), rolls.end());   // all the distinct values
+          std::cout << seen.size() << " distinct:";
+          for (int x : seen) {
+              std::cout << ' ' << x;
+          }
+          std::cout << '\n';
+
+          seen.insert(3);
+          seen.insert(4);      // already there: no effect
+          seen.erase(1);
+          std::cout << seen.count(3) << seen.count(1) << ' ' << seen.size() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      4 distinct: 1 2 4 6
+      10 4
+      ```
+
+      `std::set` keeps its elements **sorted**; `std::unordered_set` is the
+      hash version — faster, unordered. (`seen(rolls.begin(), rolls.end())`
+      builds a set from a range — iterators, next lesson.)
+
+      ## "Have I seen this before?"
+
+      Sets make a classic question O(1): *is there a repeat?*
+
+      ```cpp
+      #include <iostream>
+      #include <unordered_set>
+      #include <vector>
+
+      bool hasDuplicate(const std::vector<int>& v) {
+          std::unordered_set<int> seen{};
+          for (int x : v) {
+              if (seen.count(x) > 0) {
+                  return true;
+              }
+              seen.insert(x);
+          }
+          return false;
+      }
+
+      int main() {
+          std::cout << hasDuplicate({3, 1, 4, 1, 5}) << hasDuplicate({2, 7, 1, 8}) << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      10
+      ```
+
+      Compare the nested loop you'd write without a set: O(n²) versus O(n).
+      For a million numbers, that's the difference between a trillion steps
+      and a million.
+
+      > [!deep] `insert` tells you what happened
+      > `s.insert(x)` returns a pair whose `.second` is `true` if `x` was
+      > actually added. So the loop above can be just
+      > `if (!seen.insert(x).second) return true;`.
+
+      {{check set-output}}
+
+      {{task unique-words}}
+    checks:
+      - id: set-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <set>
+          #include <string>
+
+          int main() {
+              std::set<std::string> s{"pear", "apple", "fig"};
+              s.insert("apple");
+              s.insert("banana");
+              for (const auto& x : s) {
+                  std::cout << x[0];
+              }
+              std::cout << ' ' << s.size() << '\n';
+              return 0;
+          }
+        answer: |
+          abfp 4
+        why: "Duplicates are ignored, and a `std::set` iterates in sorted order: apple, banana, fig, pear."
+      - id: which-set
+        type: mcq
+        prompt: "You need to print all distinct tags, **alphabetically**. Which container?"
+        options:
+          - "`std::unordered_set<std::string>`"
+          - "`std::set<std::string>`"
+          - "`std::vector<std::string>`"
+          - "`std::stack<std::string>`"
+        answer: 1
+        why: "A set removes duplicates, and `std::set` keeps them sorted."
+    tasks:
+      - id: unique-words
+        title: Count distinct words
+        prompt: |
+          Write `int distinctWords(const std::vector<std::string>& words)`
+          returning how many different words there are, ignoring case
+          (`"The"` and `"the"` are the same word).
+        starter: |
+          #include <cctype>
+          #include <string>
+          #include <unordered_set>
+          #include <vector>
+
+          int distinctWords(const std::vector<std::string>& words) {
+              return 0;
+          }
+        harness: |
+          CHECK(distinctWords({"The", "cat", "the", "CAT", "dog"}), 3);
+          CHECK(distinctWords({}), 0);
+          CHECK(distinctWords({"a", "A", "a"}), 1);
+        hints:
+          - "Lower-case each word, then insert it into an `std::unordered_set<std::string>`. The answer is the set's size."
+        solution: |
+          #include <cctype>
+          #include <string>
+          #include <unordered_set>
+          #include <vector>
+
+          int distinctWords(const std::vector<std::string>& words) {
+              std::unordered_set<std::string> seen{};
+              for (std::string w : words) {
+                  for (char& c : w) {
+                      c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                  }
+                  seen.insert(w);
+              }
+              return static_cast<int>(seen.size());
+          }
+    cards:
+      - front: How is `std::unordered_map` different from `std::map`?
+        back: It's a hash table — O(1) average lookup — but iterates in no particular order. `std::map` is a sorted tree, O(log n).
+      - front: What is a **set**?
+        back: A collection of unique elements. Inserting an existing element does nothing. `std::set` is sorted; `std::unordered_set` is a faster hash version.
+      - front: How do you detect duplicates in O(n)?
+        back: Walk the elements, checking and inserting each into an `std::unordered_set`; a hit means a duplicate.
+
+  - type: quiz
+    id: c13-quiz1
+    title: "Quiz: maps and sets"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <map>
+          #include <string>
+
+          int main() {
+              std::map<std::string, int> m{{"b", 2}, {"a", 1}};
+              m["c"] += 5;
+              m["a"] *= 10;
+              int total{0};
+              for (const auto& [k, v] : m) {
+                  total += v;
+              }
+              std::cout << m.size() << ' ' << total << '\n';
+              return 0;
+          }
+        answer: |
+          3 17
+        why: "c starts at 0 then becomes 5; a becomes 10; 10 + 2 + 5 = 17."
+      - type: mcq
+        prompt: How do you check whether a `std::map` contains a key without inserting it?
+        options:
+          - "`if (m[key])`"
+          - "`if (m.find(key) != m.end())` or `if (m.count(key))`"
+          - "`if (m.at(key))`"
+          - "`if (key in m)`"
+        answer: 1
+        why: "`[]` inserts; `at` throws if missing. `find`/`count` just check."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <set>
+
+          int main() {
+              std::set<int> s{};
+              for (int x : {5, 3, 5, 9, 3, 1}) {
+                  s.insert(x * 2);
+              }
+              std::cout << s.size() << ' ' << *s.begin() << '\n';
+              return 0;
+          }
+        answer: |
+          4 2
+        why: "The distinct values are 10, 6, 18, 2; `*s.begin()` is the smallest, 2."
+      - type: tf
+        prompt: "An `std::unordered_map` always iterates its keys in the order they were inserted."
+        answer: false
+        why: "Its order is unspecified (it depends on hashing). Neither map keeps insertion order."
+
+  - type: lesson
+    id: c13-iterators
+    title: Iterators
+    minutes: 24
+    objectives:
+      - Walk a container with `begin()`, `end()`, `*it` and `++it`
+      - Use iterators returned by `find`
+      - Erase elements while iterating, correctly
+    body: |
+      How can one range-based `for` loop work on vectors, maps, sets and
+      strings, which are organised completely differently? Through
+      **iterators**: objects that point at an element of a container and know
+      how to move to the next one. They generalise the pointers you used to
+      walk arrays in Chapter 10.
+
+      Every container has:
+
+      - `begin()` — an iterator to the first element,
+      - `end()` — an iterator **one past** the last element (not an element! never dereference it),
+      - and iterators support `*it` (the element), `it->member`, `++it` (move on), `==`/`!=`.
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{10, 20, 30};
+          for (auto it = v.begin(); it != v.end(); ++it) {
+              *it += 1;
+              std::cout << *it << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      11 21 31
+      ```
+
+      This is exactly what a range-based `for` does behind the scenes. (The
+      type of `it` is `std::vector<int>::iterator` — which is why everyone
+      writes `auto`.)
+
+      ## Iterators as positions
+
+      Many operations take or return iterators. `find` returns an iterator to
+      what it found, or `end()`. `erase` removes the element an iterator
+      points at. `insert` puts something before an iterator. Vectors can also
+      jump: `v.begin() + 2` is the third element.
+
+      ```cpp
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<char> letters{'a', 'b', 'd'};
+          letters.insert(letters.begin() + 2, 'c');   // before 'd'
+          letters.erase(letters.begin());              // remove 'a'
+          for (char c : letters) {
+              std::cout << c;
+          }
+          std::cout << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      bcd
+      ```
+
+      ## Erasing while iterating
+
+      Erasing an element **invalidates** the iterator pointing at it — you
+      can't `++` it any more. `erase` returns an iterator to the element
+      **after** the one removed; use it:
+
+      ```cpp
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> stock{{"apple", 0}, {"pear", 4}, {"plum", 0}, {"fig", 2}};
+          for (auto it = stock.begin(); it != stock.end(); ) {
+              if (it->second == 0) {
+                  it = stock.erase(it);   // continue from the next element
+              } else {
+                  ++it;
+              }
+          }
+          for (const auto& [name, n] : stock) {
+              std::cout << name << ' ' << n << '\n';
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      fig 2
+      pear 4
+      ```
+
+      Notice the loop has **no** `++it` in its header: each iteration either
+      erases (and gets the next iterator from `erase`) or moves on.
+
+      > [!warning] Invalidation
+      > Changing a container can invalidate iterators (and pointers and
+      > references) into it. For a vector, `push_back` may invalidate **all** of
+      > them (Chapter 10.6), and `erase` those at and after the erased element.
+      > Maps and sets only invalidate iterators to erased elements.
+
+      {{check iter-output}}
+
+      {{task remove-odd}}
+    checks:
+      - id: iter-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <vector>
+
+          int main() {
+              std::vector<int> v{1, 2, 3, 4, 5};
+              auto it = v.begin();
+              ++it;
+              *it = 20;
+              it += 2;
+              std::cout << *it << ' ' << v[1] << ' ' << (v.end() - v.begin()) << '\n';
+              return 0;
+          }
+        answer: |
+          4 20 5
+        why: "`it` moves to index 1 (changed to 20), then two more to index 3 (4). The distance from begin to end is the size, 5."
+      - id: end-deref
+        type: tf
+        prompt: "`*v.end()` gives the last element of a vector."
+        answer: false
+        why: "`end()` is one past the last element; dereferencing it is undefined behaviour. The last element is `*(v.end() - 1)` or `v.back()`."
+    tasks:
+      - id: remove-odd
+        title: Remove the odd numbers
+        prompt: |
+          Write `void removeOdd(std::vector<int>& v)` that erases every odd
+          number from `v` in place, using iterators and `erase`.
+        starter: |
+          #include <vector>
+
+          void removeOdd(std::vector<int>& v) {
+          }
+        harness: |
+          std::vector<int> a{1, 2, 3, 4, 5, 6};
+          removeOdd(a);
+          CHECK(a, (std::vector<int>{2, 4, 6}));
+          std::vector<int> b{1, 3, 5};
+          removeOdd(b);
+          CHECK(b, (std::vector<int>{}));
+          std::vector<int> c{-3, -2, 0};
+          removeOdd(c);
+          CHECK(c, (std::vector<int>{-2, 0}));
+        hints:
+          - "`for (auto it = v.begin(); it != v.end(); ) { if (*it % 2 != 0) it = v.erase(it); else ++it; }`"
+        solution: |
+          #include <vector>
+
+          void removeOdd(std::vector<int>& v) {
+              for (auto it = v.begin(); it != v.end(); ) {
+                  if (*it % 2 != 0) {
+                      it = v.erase(it);
+                  } else {
+                      ++it;
+                  }
+              }
+          }
+        explain: |
+          Each `erase` in a vector shifts everything after it, so this is O(n²)
+          in the worst case. Chapter 14 shows the O(n) "erase-remove" idiom.
+    cards:
+      - front: What is an **iterator**?
+        back: An object that points at an element of a container and can move to the next (`++it`); `*it` is the element.
+      - front: What is `end()`?
+        back: An iterator one past the last element — a stopping marker. Never dereference it.
+      - front: How do you erase elements while iterating?
+        back: "`it = c.erase(it);` when erasing, `++it` otherwise — no `++it` in the loop header."
+      - front: What does it mean for an iterator to be **invalidated**?
+        back: A change to the container made it unusable (e.g. its element was erased, or the vector reallocated).
+
+  - type: lesson
+    id: c13-adapters
+    title: Stacks, queues and priority queues
+    minutes: 24
+    objectives:
+      - Use `std::stack` for last-in-first-out processing
+      - Use `std::queue` and `std::deque` for first-in-first-out processing
+      - Use `std::priority_queue` to always take the biggest (or smallest) element
+    body: |
+      Three **container adapters** restrict a container to one very useful
+      way of working. Fewer operations means fewer ways to misuse them, and
+      code that says exactly what it does.
+
+      ## `std::stack`: last in, first out
+
+      Like a pile of plates: you only touch the top.
+
+      ```cpp
+      #include <iostream>
+      #include <stack>
+      #include <string>
+
+      int main() {
+          std::stack<std::string> history{};
+          history.push("home");
+          history.push("news");
+          history.push("article");
+          std::cout << "Current: " << history.top() << '\n';
+          history.pop();                     // the Back button
+          std::cout << "Back to: " << history.top() << '\n';
+          std::cout << history.size() << " pages\n";
+          return 0;
+      }
+      ```
+
+      ```output
+      Current: article
+      Back to: news
+      2 pages
+      ```
+
+      `push` adds on top, `top` reads it, `pop` removes it (and returns
+      nothing — read `top` first). Stacks are everywhere: undo history, the
+      call stack itself, checking that brackets match, evaluating expressions.
+
+      ## `std::queue`: first in, first out
+
+      Like a queue at a shop: join at the back, leave from the front.
+
+      ```cpp
+      #include <iostream>
+      #include <queue>
+      #include <string>
+
+      int main() {
+          std::queue<std::string> line{};
+          line.push("Ada");
+          line.push("Alan");
+          line.push("Grace");
+          while (!line.empty()) {
+              std::cout << "Serving " << line.front() << '\n';
+              line.pop();
+          }
+          return 0;
+      }
+      ```
+
+      ```output
+      Serving Ada
+      Serving Alan
+      Serving Grace
+      ```
+
+      Queues model anything processed in arrival order: print jobs, messages,
+      and the *breadth-first search* you'll meet in Chapter 18.
+      **`std::deque`** ("deck", double-ended queue) is the container underneath:
+      it adds and removes at both ends quickly, and you can use it directly
+      (`push_front`, `push_back`, `pop_front`, `pop_back`, `[]`).
+
+      ## `std::priority_queue`: biggest first
+
+      A priority queue always hands you the **largest** element, however they
+      were added:
+
+      ```cpp
+      #include <functional>
+      #include <iostream>
+      #include <queue>
+      #include <vector>
+
+      int main() {
+          std::priority_queue<int> urgent{};
+          for (int p : {3, 9, 1, 7}) {
+              urgent.push(p);
+          }
+          while (!urgent.empty()) {
+              std::cout << urgent.top() << ' ';
+              urgent.pop();
+          }
+          std::cout << '\n';
+
+          // Smallest first: give it a "greater than" comparison.
+          std::priority_queue<int, std::vector<int>, std::greater<int>> small{};
+          for (int p : {3, 9, 1, 7}) {
+              small.push(p);
+          }
+          std::cout << small.top() << '\n';
+          return 0;
+      }
+      ```
+
+      ```output
+      9 7 3 1
+      1
+      ```
+
+      Push and pop are O(log n). It's the tool for scheduling ("run the most
+      important task next"), keeping the top *k* of a stream, and shortest
+      paths (Dijkstra's algorithm).
+
+      {{check stack-output}}
+
+      {{task brackets}}
+    checks:
+      - id: stack-output
+        type: output
+        code: |
+          #include <iostream>
+          #include <queue>
+          #include <stack>
+
+          int main() {
+              std::stack<int> s{};
+              std::queue<int> q{};
+              for (int i{1}; i <= 3; ++i) {
+                  s.push(i);
+                  q.push(i);
+              }
+              std::cout << s.top() << q.front() << ' ';
+              s.pop();
+              q.pop();
+              std::cout << s.top() << q.front() << '\n';
+              return 0;
+          }
+        answer: |
+          31 22
+        why: "The stack's top is the last pushed (3, then 2); the queue's front is the first pushed (1, then 2)."
+      - id: which-adapter
+        type: mcq
+        prompt: "A printer handles jobs in the order they arrive. Which adapter models it?"
+        options:
+          - "`std::stack`"
+          - "`std::queue`"
+          - "`std::priority_queue`"
+          - "`std::set`"
+        answer: 1
+        why: "First come, first served — first in, first out."
+    tasks:
+      - id: brackets
+        title: Balanced brackets
+        prompt: |
+          Write `bool balanced(const std::string& s)` that returns `true` if
+          every `(`, `[` and `{` is closed by the matching bracket in the right
+          order. Other characters are ignored. `"a(b[c]{d})"` is balanced;
+          `"(]"` and `"(("` are not.
+        starter: |
+          #include <stack>
+          #include <string>
+
+          bool balanced(const std::string& s) {
+              return false;
+          }
+        harness: |
+          CHECK(balanced("a(b[c]{d})"), true);
+          CHECK(balanced(""), true);
+          CHECK(balanced("(]"), false);
+          CHECK(balanced("(("), false);
+          CHECK(balanced("())"), false);
+          CHECK(balanced("{[()()]}"), true);
+          CHECK(balanced("([)]"), false);
+        hints:
+          - "Push every opening bracket. On a closing bracket, the stack must be non-empty and its top must be the matching opener — then pop."
+          - "At the end, the stack must be empty."
+        solution: |
+          #include <stack>
+          #include <string>
+
+          bool balanced(const std::string& s) {
+              std::stack<char> open{};
+              for (char c : s) {
+                  if (c == '(' || c == '[' || c == '{') {
+                      open.push(c);
+                  } else if (c == ')' || c == ']' || c == '}') {
+                      char want = c == ')' ? '(' : c == ']' ? '[' : '{';
+                      if (open.empty() || open.top() != want) {
+                          return false;
+                      }
+                      open.pop();
+                  }
+              }
+              return open.empty();
+          }
+        explain: |
+          The most recently opened bracket must be the first to close — "last
+          in, first out" — which is exactly a stack. Your compiler does this
+          check every time it reports `expected '}' at end of input`.
+    cards:
+      - front: "`std::stack` operations?"
+        back: "`push` (onto the top), `top` (read the top), `pop` (remove the top, returns nothing), `empty`, `size`. Last in, first out."
+      - front: "`std::queue` operations?"
+        back: "`push` (at the back), `front` (read the front), `pop` (remove the front), `empty`, `size`. First in, first out."
+      - front: What does `std::priority_queue` do?
+        back: Always gives the largest element at `top()` (O(log n) push/pop). Use `std::greater<T>` for smallest-first.
+
+  - type: quiz
+    id: c13-quiz2
+    title: "Quiz: iterators and adapters"
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <queue>
+
+          int main() {
+              std::priority_queue<int> pq{};
+              for (int x : {4, 8, 1, 8, 3}) {
+                  pq.push(x);
+              }
+              pq.pop();
+              std::cout << pq.top() << ' ' << pq.size() << '\n';
+              return 0;
+          }
+        answer: |
+          8 4
+        why: "The first 8 is popped; the other 8 is now on top. Four elements remain."
+      - type: spot
+        prompt: This loop is meant to erase every zero, but it's broken. Which line is the problem?
+        code: |
+          #include <vector>
+
+          void removeZeros(std::vector<int>& v) {
+              for (auto it = v.begin(); it != v.end(); ++it) {
+                  if (*it == 0) {
+                      v.erase(it);
+                  }
+              }
+          }
+        answer: 6
+        why: "After `erase(it)`, `it` is invalid, yet the loop does `++it`. Use `it = v.erase(it);` and only `++it` when not erasing."
+      - type: mcq
+        prompt: "Why does `std::stack::pop()` return nothing?"
+        options:
+          - It's a bug in the standard library
+          - So you read the element with `top()` first; pop only removes it
+          - It returns the size instead
+          - It returns a copy of the element
+        answer: 1
+        why: "Separating `top` (read) from `pop` (remove) keeps things safe and efficient."
+      - type: output
+        code: |
+          #include <deque>
+          #include <iostream>
+
+          int main() {
+              std::deque<int> d{};
+              d.push_back(2);
+              d.push_front(1);
+              d.push_back(3);
+              d.pop_front();
+              std::cout << d.front() << d.back() << d.size() << '\n';
+              return 0;
+          }
+        answer: |
+          232
+        why: "d goes {2} → {1, 2} → {1, 2, 3} → {2, 3}."
+
+  - type: challenge
+    id: c13-ch-frequency
+    title: Word frequency report
+    difficulty: 1
+    tags: [map, text]
+    prompt: |
+      Read all the words of the input (split on whitespace, compared ignoring
+      case, punctuation `.,!?;:` stripped from both ends). Print each distinct
+      word and its count, in alphabetical order, as `word: count`.
+    starter: |
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          The cat sat. The CAT ran!
+        out: |
+          cat: 2
+          ran: 1
+          sat: 1
+          the: 2
+      - in: ""
+        out: ""
+      - in: |
+          Hello, hello... HELLO?! world
+        out: |
+          hello: 3
+          world: 1
+    hints:
+      - "Read with `while (std::cin >> word)`, strip punctuation from both ends with `find_first_not_of` / `find_last_not_of`, lower-case, then `++counts[word]` — skipping words that became empty."
+    solution: |
+      #include <cctype>
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      std::string clean(const std::string& raw) {
+          const std::string punct{".,!?;:"};
+          std::size_t first = raw.find_first_not_of(punct);
+          if (first == std::string::npos) {
+              return "";
+          }
+          std::size_t last = raw.find_last_not_of(punct);
+          std::string word = raw.substr(first, last - first + 1);
+          for (char& c : word) {
+              c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+          }
+          return word;
+      }
+
+      int main() {
+          std::map<std::string, int> counts{};
+          std::string raw{};
+          while (std::cin >> raw) {
+              std::string word = clean(raw);
+              if (!word.empty()) {
+                  ++counts[word];
+              }
+          }
+          for (const auto& [word, n] : counts) {
+              std::cout << word << ": " << n << '\n';
+          }
+          return 0;
+      }
+
+  - type: challenge
+    id: c13-ch-two-sum
+    title: Two sum
+    difficulty: 2
+    tags: [hash map]
+    prompt: |
+      Write `std::pair<int, int> twoSum(const std::vector<int>& nums, int target)`
+      returning the indexes `{i, j}` (with `i < j`) of the **first pair** of
+      elements that add up to `target` — "first" meaning the pair whose
+      second element comes earliest. Return `{-1, -1}` if there's none.
+
+      Aim for **O(n)**: one pass with an `std::unordered_map` from value to
+      index, not a double loop.
+    starter: |
+      #include <unordered_map>
+      #include <utility>
+      #include <vector>
+
+      std::pair<int, int> twoSum(const std::vector<int>& nums, int target) {
+          return {-1, -1};
+      }
+    harness: |
+      CHECK(twoSum({2, 7, 11, 15}, 9), std::make_pair(0, 1));
+      CHECK(twoSum({3, 2, 4}, 6), std::make_pair(1, 2));
+      CHECK(twoSum({3, 3}, 6), std::make_pair(0, 1));
+      CHECK(twoSum({1, 2, 3}, 100), std::make_pair(-1, -1));
+      CHECK(twoSum({5, 1, 4, 1, 5}, 6), std::make_pair(0, 1));
+      CHECK(twoSum({}, 0), std::make_pair(-1, -1));
+    hints:
+      - "For each index `j`, the partner you need is `target - nums[j]`. Have you seen it before? Look it up in the map."
+      - "If not, store `nums[j] -> j` — but only if that value isn't already stored, so you keep the earliest index."
+    solution: |
+      #include <unordered_map>
+      #include <utility>
+      #include <vector>
+
+      std::pair<int, int> twoSum(const std::vector<int>& nums, int target) {
+          std::unordered_map<int, int> indexOf{};
+          for (int j{0}; j < static_cast<int>(nums.size()); ++j) {
+              auto it = indexOf.find(target - nums[j]);
+              if (it != indexOf.end()) {
+                  return {it->second, j};
+              }
+              if (indexOf.count(nums[j]) == 0) {
+                  indexOf[nums[j]] = j;
+              }
+          }
+          return {-1, -1};
+      }
+    explain: |
+      The double loop checks every pair: O(n²). The hash map remembers every
+      value seen so far, so each lookup is O(1) and the whole thing O(n). Trading
+      memory for time like this is one of the most common optimisations there is.
+
+  - type: challenge
+    id: c13-ch-first-unique
+    title: First unique character
+    difficulty: 1
+    tags: [map, strings]
+    prompt: |
+      Write `int firstUnique(const std::string& s)` returning the index of the
+      first character that appears exactly once, or `-1`.
+      `"leetcode"` → 0, `"loveleetcode"` → 2, `"aabb"` → −1.
+    starter: |
+      #include <string>
+      #include <unordered_map>
+
+      int firstUnique(const std::string& s) {
+          return -1;
+      }
+    harness: |
+      CHECK(firstUnique("leetcode"), 0);
+      CHECK(firstUnique("loveleetcode"), 2);
+      CHECK(firstUnique("aabb"), -1);
+      CHECK(firstUnique(""), -1);
+      CHECK(firstUnique("z"), 0);
+    hints:
+      - "Two passes: count every character, then find the first whose count is 1."
+    solution: |
+      #include <string>
+      #include <unordered_map>
+
+      int firstUnique(const std::string& s) {
+          std::unordered_map<char, int> counts{};
+          for (char c : s) {
+              ++counts[c];
+          }
+          for (std::size_t i{0}; i < s.size(); ++i) {
+              if (counts[s[i]] == 1) {
+                  return static_cast<int>(i);
+              }
+          }
+          return -1;
+      }
+
+  - type: challenge
+    id: c13-ch-anagram-groups
+    title: Group the anagrams
+    difficulty: 3
+    tags: [map, strings, sorting]
+    prompt: |
+      Read words until the input ends. Group words that are anagrams of each
+      other (same letters, any order; all input is lower case). Print one
+      group per line: its words separated by spaces, in the order they
+      appeared. Order the groups by their **key** — the group's letters sorted
+      alphabetically. For input `eat tea tan ate nat bat`:
+
+      ```text
+      bat
+      eat tea ate
+      tan nat
+      ```
+
+      (keys: `abt`, `aet`, `ant`.)
+    starter: |
+      #include <iostream>
+      #include <map>
+      #include <string>
+      #include <vector>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: "eat tea tan ate nat bat"
+        out: |
+          bat
+          eat tea ate
+          tan nat
+      - in: "listen silent enlist google"
+        out: |
+          google
+          listen silent enlist
+      - in: ""
+        out: ""
+    hints:
+      - "The key of a word is its letters in sorted order. With what you know: count the letters (26 counters) and rebuild a string from the counts — or peek ahead at `std::sort` (Chapter 14)."
+      - "`std::map<std::string, std::vector<std::string>> groups;` then `groups[key].push_back(word);` — the map keeps keys sorted for you."
+    solution: |
+      #include <iostream>
+      #include <map>
+      #include <string>
+      #include <vector>
+
+      std::string keyOf(const std::string& word) {
+          std::vector<int> counts(26, 0);
+          for (char c : word) {
+              ++counts[c - 'a'];
+          }
+          std::string key{};
+          for (int i{0}; i < 26; ++i) {
+              key += std::string(counts[i], static_cast<char>('a' + i));
+          }
+          return key;
+      }
+
+      int main() {
+          std::map<std::string, std::vector<std::string>> groups{};
+          std::string word{};
+          while (std::cin >> word) {
+              groups[keyOf(word)].push_back(word);
+          }
+          for (const auto& [key, words] : groups) {
+              for (std::size_t i{0}; i < words.size(); ++i) {
+                  if (i > 0) {
+                      std::cout << ' ';
+                  }
+                  std::cout << words[i];
+              }
+              std::cout << '\n';
+          }
+          return 0;
+      }
+    explain: |
+      A map from a **canonical form** to a list is a powerful pattern: all the
+      things that are "the same" in some sense land in one bucket. Here the
+      canonical form of a word is its sorted letters.
+
+  - type: challenge
+    id: c13-ch-rpn
+    title: Reverse Polish calculator
+    difficulty: 3
+    tags: [stack, parsing]
+    prompt: |
+      In **Reverse Polish Notation**, operators come after their operands:
+      `3 4 +` means 3 + 4, and `5 1 2 + 4 * + 3 -` means 5 + (1 + 2) × 4 − 3
+      = 14. No brackets are ever needed. Write
+      `long long evalRPN(const std::string& expr)` for integer tokens and the
+      operators `+ - * /` (integer division), separated by spaces. The input
+      is always valid.
+    starter: |
+      #include <sstream>
+      #include <stack>
+      #include <string>
+
+      long long evalRPN(const std::string& expr) {
+          return 0;
+      }
+    harness: |
+      CHECK(evalRPN("3 4 +"), 7LL);
+      CHECK(evalRPN("5 1 2 + 4 * + 3 -"), 14LL);
+      CHECK(evalRPN("2 3 4 * +"), 14LL);
+      CHECK(evalRPN("10 3 /"), 3LL);
+      CHECK(evalRPN("-7"), -7LL);
+      CHECK(evalRPN("4 -2 *"), -8LL);
+      CHECK(evalRPN("1000000 1000000 *"), 1000000000000LL);
+    hints:
+      - "Read tokens with an `std::istringstream`. A number goes on the stack; an operator pops two values, applies itself, and pushes the result."
+      - "Careful with order: the first value popped is the **right** operand."
+      - "A token is an operator if it's exactly one of `+ - * /` — `-2` is a number."
+    solution: |
+      #include <sstream>
+      #include <stack>
+      #include <string>
+
+      long long evalRPN(const std::string& expr) {
+          std::stack<long long> values{};
+          std::istringstream in{expr};
+          std::string token{};
+          while (in >> token) {
+              if (token == "+" || token == "-" || token == "*" || token == "/") {
+                  long long right = values.top();
+                  values.pop();
+                  long long left = values.top();
+                  values.pop();
+                  if (token == "+") {
+                      values.push(left + right);
+                  } else if (token == "-") {
+                      values.push(left - right);
+                  } else if (token == "*") {
+                      values.push(left * right);
+                  } else {
+                      values.push(left / right);
+                  }
+              } else {
+                  values.push(std::stoll(token));
+              }
+          }
+          return values.top();
+      }
+
+  - type: challenge
+    id: c13-ch-bank-queue
+    title: Bank queue simulation
+    difficulty: 2
+    tags: [queue, simulation]
+    prompt: |
+      One cashier serves customers in arrival order. Each input line is a
+      customer: `NAME ARRIVAL DURATION` (whole minutes; lines are sorted by
+      arrival). The cashier starts serving a customer at their arrival or
+      when the previous customer finishes, whichever is later. Print, for
+      each customer, `NAME waits W` and finally `Average wait: X` with 2
+      decimals.
+
+      For:
+
+      ```text
+      Ada 0 5
+      Bob 2 3
+      Cy 10 1
+      ```
+
+      Ada starts at 0 (waits 0, done at 5); Bob starts at 5 (waits 3, done
+      at 8); Cy arrives at 10 (waits 0).
+
+      ```text
+      Ada waits 0
+      Bob waits 3
+      Cy waits 0
+      Average wait: 1.00
+      ```
+    starter: |
+      #include <iomanip>
+      #include <iostream>
+      #include <queue>
+      #include <string>
+
+      int main() {
+
+          return 0;
+      }
+    tests:
+      - in: |
+          Ada 0 5
+          Bob 2 3
+          Cy 10 1
+        out: |
+          Ada waits 0
+          Bob waits 3
+          Cy waits 0
+          Average wait: 1.00
+      - in: |
+          A 0 10
+          B 1 10
+          C 2 10
+        out: |
+          A waits 0
+          B waits 9
+          C waits 18
+          Average wait: 9.00
+      - in: ""
+        out: "Average wait: 0.00"
+    hints:
+      - "Keep `int clock{0};` — the time the cashier is next free."
+      - "For each customer (read into a `std::queue` first, then served from its front): `start = std::max(clock, arrival)`, wait = `start - arrival`, then `clock = start + duration`."
+    solution: |
+      #include <algorithm>
+      #include <iomanip>
+      #include <iostream>
+      #include <queue>
+      #include <string>
+
+      struct Customer {
+          std::string name;
+          int arrival;
+          int duration;
+      };
+
+      int main() {
+          std::queue<Customer> line{};
+          std::string name{};
+          int arrival{};
+          int duration{};
+          while (std::cin >> name >> arrival >> duration) {
+              line.push({name, arrival, duration});
+          }
+
+          int clock{0};
+          int served{0};
+          long long totalWait{0};
+          while (!line.empty()) {
+              Customer c = line.front();
+              line.pop();
+              int start = std::max(clock, c.arrival);
+              int wait = start - c.arrival;
+              std::cout << c.name << " waits " << wait << '\n';
+              totalWait += wait;
+              ++served;
+              clock = start + c.duration;
+          }
+          double average = served == 0 ? 0.0 : static_cast<double>(totalWait) / served;
+          std::cout << std::fixed << std::setprecision(2) << "Average wait: " << average << '\n';
+          return 0;
+      }
+
+  - type: challenge
+    id: c13-ch-topk
+    title: Top k most frequent
+    difficulty: 2
+    tags: [map, priority queue]
+    prompt: |
+      Write `std::vector<int> topK(const std::vector<int>& nums, int k)`
+      returning the `k` most frequent values, most frequent first. Break ties
+      by the **smaller value** first. `k` is never more than the number of
+      distinct values.
+    starter: |
+      #include <map>
+      #include <queue>
+      #include <utility>
+      #include <vector>
+
+      std::vector<int> topK(const std::vector<int>& nums, int k) {
+          return {};
+      }
+    harness: |
+      CHECK(topK({1, 1, 1, 2, 2, 3}, 2), (std::vector<int>{1, 2}));
+      CHECK(topK({4, 4, 5, 5, 6}, 2), (std::vector<int>{4, 5}));
+      CHECK(topK({7}, 1), (std::vector<int>{7}));
+      CHECK(topK({3, 1, 3, 2, 1, 3}, 3), (std::vector<int>{3, 1, 2}));
+    hints:
+      - "Count with a map, then push `{count, -value}` pairs into a `std::priority_queue<std::pair<int, int>>`: pairs compare by `first`, then `second`, so the highest count wins and, on a tie, the smaller value (larger `-value`) wins."
+      - "Pop `k` times, turning `-value` back into `value`."
+    solution: |
+      #include <map>
+      #include <queue>
+      #include <utility>
+      #include <vector>
+
+      std::vector<int> topK(const std::vector<int>& nums, int k) {
+          std::map<int, int> counts{};
+          for (int x : nums) {
+              ++counts[x];
+          }
+          std::priority_queue<std::pair<int, int>> pq{};
+          for (const auto& [value, count] : counts) {
+              pq.push({count, -value});
+          }
+          std::vector<int> result{};
+          for (int i{0}; i < k; ++i) {
+              result.push_back(-pq.top().second);
+              pq.pop();
+          }
+          return result;
+      }
+    explain: |
+      `std::pair` compares lexicographically — first by `first`, then by
+      `second` — which makes it an easy way to express "by this, then by
+      that" orderings. Negating the value flips the tie-break direction.
+
+  - type: review
+    id: c13-review
+    title: "Chapter 13 review"
+    body: |
+      ## Cheat sheet
+
+      ```cpp static
+      std::map<std::string, int> m;          // sorted by key, O(log n)
+      std::unordered_map<std::string, int> u; // hash table, O(1) average
+      m[key] = v;          ++m[key];         // insert/update (reading [] inserts!)
+      m.find(key) != m.end();  m.count(key); m.at(key);  m.erase(key);
+      for (const auto& [k, v] : m) { }       // map: in key order
+
+      std::set<int> s;  std::unordered_set<int> us;
+      s.insert(x);  s.count(x);  s.erase(x);
+
+      for (auto it = c.begin(); it != c.end(); ) {
+          if (bad(*it)) it = c.erase(it); else ++it;
+      }
+
+      std::stack<int> st;   st.push(x); st.top(); st.pop();
+      std::queue<int> q;    q.push(x);  q.front(); q.pop();
+      std::priority_queue<int> pq;  pq.top();       // largest first
+      std::priority_queue<int, std::vector<int>, std::greater<int>> minPq;
+      ```
+
+      ## Choosing
+
+      | Need | Use |
+      |---|---|
+      | A list, index access, most things | `std::vector` |
+      | Look up by key | `std::unordered_map` (or `std::map` for sorted keys) |
+      | "Have I seen it?" / distinct values | `std::unordered_set` (or `std::set` sorted) |
+      | Last in, first out | `std::stack` |
+      | First in, first out | `std::queue` |
+      | Always the biggest/smallest next | `std::priority_queue` |
+
+      ## Key ideas
+
+      - Big-O describes growth: O(1) < O(log n) < O(n) < O(n²).
+      - Reading `m[key]` inserts a missing key; check with `find`/`count`.
+      - Iterators generalise pointers; `end()` is one past the end.
+      - Erasing invalidates iterators: use the one `erase` returns.
+    questions:
+      - type: output
+        prompt: "Interleaving: structs, maps and loops."
+        code: |
+          #include <iostream>
+          #include <map>
+          #include <string>
+          #include <vector>
+
+          struct Sale {
+              std::string item;
+              int qty;
+          };
+
+          int main() {
+              std::vector<Sale> sales{{"pen", 2}, {"ink", 1}, {"pen", 5}, {"cap", 3}};
+              std::map<std::string, int> totals{};
+              for (const auto& s : sales) {
+                  totals[s.item] += s.qty;
+              }
+              for (const auto& [item, n] : totals) {
+                  std::cout << item << n << ' ';
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          cap3 ink1 pen7
+        why: "Totals per item, printed in sorted key order."
+      - type: mcq
+        prompt: "What's the time complexity of checking `n` values for duplicates with an `std::unordered_set`?"
+        options:
+          - "O(1)"
+          - "O(n) on average"
+          - "O(n²)"
+          - "O(log n)"
+        answer: 1
+        why: "n insertions/lookups at O(1) average each."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <stack>
+          #include <string>
+
+          int main() {
+              std::stack<char> s{};
+              for (char c : std::string{"stack"}) {
+                  s.push(c);
+              }
+              std::string out{};
+              while (!s.empty()) {
+                  out += s.top();
+                  s.pop();
+              }
+              std::cout << out << '\n';
+              return 0;
+          }
+        answer: |
+          kcats
+        why: "A stack reverses the order of what you push."
+
+  - type: exam
+    id: c13-exam
+    title: "Chapter 13 exam"
+    minutes: 40
+    pick: 12
+    questions:
+      - type: output
+        code: |
+          #include <iostream>
+          #include <map>
+
+          int main() {
+              std::map<int, char> m{{3, 'c'}, {1, 'a'}};
+              m[2] = 'b';
+              m[1] = 'A';
+              for (const auto& [k, v] : m) {
+                  std::cout << k << v;
+              }
+              std::cout << '\n';
+              return 0;
+          }
+        answer: |
+          1A2b3c
+        why: "Sorted by key; key 1 was updated."
+      - type: mcq
+        prompt: "Which container gives O(1) average lookup by key?"
+        options:
+          - "`std::map`"
+          - "`std::unordered_map`"
+          - "`std::vector`"
+          - "`std::stack`"
+        answer: 1
+        why: "A hash table."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <unordered_map>
+          #include <string>
+
+          int main() {
+              std::unordered_map<std::string, int> u{};
+              std::cout << u["x"] << ' ';
+              u["y"] += 2;
+              std::cout << u.size() << ' ' << u.count("z") << '\n';
+              return 0;
+          }
+        answer: |
+          0 2 0
+        why: "Reading u[\"x\"] inserts x → 0; y is inserted with 2; count doesn't insert."
+      - type: tf
+        prompt: "Dereferencing `v.end()` gives the last element."
+        answer: false
+        why: "`end()` is past the last element."
+      - type: output
+        code: |
+          #include <iostream>
+          #include <set>
+
+          int main() {
+              std::set<int> a{1, 2, 3, 4};
+              std::set<int> b{3, 4, 5};
+              int common{0};
+              for (int x : a) {
+                  if (b.count(x) > 0) {
+                      ++common;
+                  }
+              }
+              std::cout << common << '\n';
+              return 0;
+          }
+        answer: |
+          2
+        why: "3 and 4 are in both sets."
+      - type: mcq
+        prompt: "Undo history in an editor: the last change is undone first. Which adapter?"
+        options:
+          - "`std::queue`"
+          - "`std::stack`"
+          - "`std::priority_queue`"
+          - "`std::set`"
+        answer: 1
+        why: "Last in, first out."
+      - type: fill
+        prompt: Complete the loop that erases all negative values from a map's values.
+        code: |
+          for (auto it = m.begin(); it != m.end(); ) {
+              if (it->second < 0) {
+                  it = m.___(it);
+              } else {
+                  ___it;
+              }
+          }
+        blanks:
+          - [erase]
+          - ['++']
+        why: "Use the iterator returned by `erase`; advance manually only when not erasing."
+      - type: output
+        code: |
+          #include <functional>
+          #include <iostream>
+          #include <queue>
+          #include <vector>
+
+          int main() {
+              std::priority_queue<int, std::vector<int>, std::greater<int>> pq{};
+              for (int x : {5, 2, 8, 2}) {
+                  pq.push(x);
+              }
+              int sum{0};
+              for (int i{0}; i < 3; ++i) {
+                  sum += pq.top();
+                  pq.pop();
+              }
+              std::cout << sum << '\n';
+              return 0;
+          }
+        answer: |
+          9
+        why: "Smallest first: 2 + 2 + 5 = 9."
+      - type: mcq
+        prompt: "Roughly how many steps does finding a key in a `std::map` of one million entries take?"
+        options:
+          - "1"
+          - "About 20"
+          - "About 1,000"
+          - "About 1,000,000"
+        answer: 1
+        why: "O(log n): log₂(1,000,000) ≈ 20."
+      - type: spot
+        prompt: "This should count how many words are in `dict` without changing it, but it makes `dict` grow. Which line is the cause?"
+        code: |
+          #include <map>
+          #include <string>
+          #include <vector>
+
+          int known(std::map<std::string, int>& dict, const std::vector<std::string>& words) {
+              int count{0};
+              for (const auto& w : words) {
+                  if (dict[w] != 0) {
+                      ++count;
+                  }
+              }
+              return count;
+          }
+        answer: 8
+        why: "`dict[w]` inserts every missing word. Use `dict.count(w) > 0` (and take `dict` by const reference)."
+      - type: code
+        prompt: |
+          Write `std::map<int, std::vector<std::string>> byLength(const std::vector<std::string>& words)`
+          grouping words by their length, keeping their original order within
+          each group.
+        starter: |
+          #include <map>
+          #include <string>
+          #include <vector>
+
+          std::map<int, std::vector<std::string>> byLength(const std::vector<std::string>& words) {
+              return {};
+          }
+        harness: |
+          auto g = byLength({"to", "be", "or", "not", "sea", "a"});
+          CHECK(g.size(), 3);
+          CHECK(g[2], (std::vector<std::string>{"to", "be", "or"}));
+          CHECK(g[3], (std::vector<std::string>{"not", "sea"}));
+          CHECK(g[1], (std::vector<std::string>{"a"}));
+          CHECK(byLength({}).size(), 0);
+        solution: |
+          #include <map>
+          #include <string>
+          #include <vector>
+
+          std::map<int, std::vector<std::string>> byLength(const std::vector<std::string>& words) {
+              std::map<int, std::vector<std::string>> groups{};
+              for (const auto& w : words) {
+                  groups[static_cast<int>(w.size())].push_back(w);
+              }
+              return groups;
+          }
+      - type: code
+        prompt: |
+          Write `bool isIsomorphic(const std::string& a, const std::string& b)`:
+          two strings are isomorphic if the characters of `a` can be replaced
+          to get `b`, with each character always mapping to the same character
+          and no two characters mapping to the same one. `"egg"`/`"add"` → true,
+          `"foo"`/`"bar"` → false, `"ab"`/`"aa"` → false.
+        starter: |
+          #include <string>
+          #include <unordered_map>
+
+          bool isIsomorphic(const std::string& a, const std::string& b) {
+              return false;
+          }
+        harness: |
+          CHECK(isIsomorphic("egg", "add"), true);
+          CHECK(isIsomorphic("foo", "bar"), false);
+          CHECK(isIsomorphic("paper", "title"), true);
+          CHECK(isIsomorphic("ab", "aa"), false);
+          CHECK(isIsomorphic("", ""), true);
+          CHECK(isIsomorphic("abc", "ab"), false);
+        solution: |
+          #include <string>
+          #include <unordered_map>
+
+          bool isIsomorphic(const std::string& a, const std::string& b) {
+              if (a.size() != b.size()) {
+                  return false;
+              }
+              std::unordered_map<char, char> forward{};
+              std::unordered_map<char, char> backward{};
+              for (std::size_t i{0}; i < a.size(); ++i) {
+                  auto f = forward.find(a[i]);
+                  auto g = backward.find(b[i]);
+                  if (f != forward.end() && f->second != b[i]) {
+                      return false;
+                  }
+                  if (g != backward.end() && g->second != a[i]) {
+                      return false;
+                  }
+                  forward[a[i]] = b[i];
+                  backward[b[i]] = a[i];
+              }
+              return true;
+          }
