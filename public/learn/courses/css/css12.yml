@@ -1,0 +1,1274 @@
+id: css12
+number: 12
+part: css-p3
+title: "Project: Style Your Website"
+blurb: Take the personal website from the HTML course and give it a complete, responsive design — then prove what you know in the final exam.
+hours: 4
+goals:
+  - Organise a real stylesheet — foundations, layout, components, responsive rules
+  - Style a complete page with everything from the course
+  - Pass the CSS final exam
+  - Know what to learn next
+
+items:
+  - type: lesson
+    id: css12-organise
+    title: Organising a stylesheet
+    minutes: 15
+    objectives:
+      - Structure a stylesheet from general to specific
+      - Keep a design consistent with variables
+      - Work in small, checked steps
+    body: |
+      A stylesheet for a whole site can grow to thousands of lines. The
+      cascade rewards a simple, predictable order — **general first,
+      specific last**:
+
+      1. **Foundations** — the `border-box` reset, design **variables** on `:root` (colours, fonts, spacing), and element defaults for `body`, headings, links and images.
+      2. **Layout** — the big regions: header, main container, sections, footer.
+      3. **Components** — reusable pieces: cards, buttons, tables, forms.
+      4. **States and responsive rules** — `:hover`, `:focus-visible`, and media queries **after** the rules they change.
+
+      Mark each part with a comment so it's easy to find:
+
+      ```css static
+      /* ---------- 1. Foundations ---------- */
+      :root {
+        --accent: #5f3dc4;
+      }
+      ```
+
+      ## A few habits
+
+      - Every colour, font and repeated size is a **variable**. Change the brand colour once, and dark mode becomes a few lines.
+      - Style with element and class selectors; avoid ids and `!important`.
+      - Build and check **one section at a time** in the preview.
+      - Test narrow and wide, with the keyboard (Tab through links and fields), and with the developer tools' contrast checker.
+
+      The project below follows exactly this plan — five milestones, each
+      adding a layer to the same stylesheet.
+
+      {{check order}}
+    checks:
+      - id: order
+        type: order
+        prompt: Put the parts of a stylesheet in a good order.
+        lines:
+          - "Reset and variables on :root"
+          - "Element defaults (body, headings, links)"
+          - "Layout (header, main, footer)"
+          - "Components (cards, tables, forms)"
+          - "Media queries"
+        why: "General to specific; media queries after the rules they override."
+    cards:
+      - front: In what order should a stylesheet be organised?
+        back: Foundations (reset, variables, element defaults) → layout → components → states and media queries.
+      - front: Why put every colour in a variable?
+        back: One place to change the design — and themes like dark mode only need to redefine the variables.
+
+  - type: project
+    id: css12-project
+    title: "Project: style a personal website"
+    body: |
+      This is the personal website from the HTML course — all structure, no
+      style. Over five milestones you'll turn it into a finished,
+      responsive design. The HTML is given (and locked): everything happens
+      in `style.css`, which carries over from one milestone to the next.
+
+      The checks look at the result in a real browser — sizes, colours,
+      positions, and how the page behaves at different widths.
+
+      > [!tip]
+      > Keep the preview open (**▶ Preview**) and look at it after every
+      > few lines.
+    milestones:
+      - title: Foundations
+        prompt: |
+          Set up the base of the design:
+
+          - the `border-box` rule for every element (`*, *::before, *::after`)
+          - on `:root`, the variables `--bg: #fffdf8`, `--text: #2b2b2b`, `--accent: #5f3dc4` and `--font: system-ui, sans-serif`
+          - `body`: no margin, `font-family: var(--font)`, `line-height: 1.6`, background colour `var(--bg)` and colour `var(--text)`
+          - images: `max-width: 100%` and `height: auto`
+        given:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Ada Lovelace — personal site</title>
+                <meta name="description" content="Mathematician, writer and the first programmer.">
+                <link rel="stylesheet" href="style.css">
+              </head>
+              <body>
+                <header>
+                  <h1>Ada Lovelace</h1>
+                  <nav>
+                    <ul>
+                      <li><a href="#about">About</a></li>
+                      <li><a href="#projects">Projects</a></li>
+                      <li><a href="#contact">Contact</a></li>
+                    </ul>
+                  </nav>
+                </header>
+                <main>
+                  <section id="about">
+                    <h2>About me</h2>
+                    <p>I write about machines that can <em>compute</em> — and one day, maybe, compose music.</p>
+                    <img src="ada.jpg" alt="Portrait of Ada Lovelace in a blue dress" width="240" height="300">
+                    <h3>Interests</h3>
+                    <ul>
+                      <li>Mathematics</li>
+                      <li>Poetry</li>
+                      <li>Engines of all kinds</li>
+                    </ul>
+                    <details>
+                      <summary>A fun fact</summary>
+                      <p>My father was the poet Lord Byron.</p>
+                    </details>
+                  </section>
+                  <section id="projects">
+                    <h2>Projects</h2>
+                    <table>
+                      <caption>Things I have worked on</caption>
+                      <thead>
+                        <tr><th scope="col">Project</th><th scope="col">Year</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr><td>Notes on the Analytical Engine</td><td>1843</td></tr>
+                        <tr><td>Flyology (a book about flying)</td><td>1828</td></tr>
+                      </tbody>
+                    </table>
+                  </section>
+                  <section id="contact">
+                    <h2>Contact</h2>
+                    <form method="post">
+                      <p>
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name" required autocomplete="name">
+                      </p>
+                      <p>
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required autocomplete="email">
+                      </p>
+                      <p>
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5"></textarea>
+                      </p>
+                      <button type="submit">Send</button>
+                    </form>
+                  </section>
+                </main>
+                <footer>
+                  <p>&copy; 2026 Ada Lovelace</p>
+                  <address><a href="mailto:ada@example.com">ada@example.com</a></address>
+                </footer>
+              </body>
+            </html>
+        files:
+          style.css: |
+            /* Your site's stylesheet */
+        solution:
+          style.css: |
+            /* ---------- 1. Foundations ---------- */
+            *, *::before, *::after {
+              box-sizing: border-box;
+            }
+
+            :root {
+              --bg: #fffdf8;
+              --text: #2b2b2b;
+              --accent: #5f3dc4;
+              --font: system-ui, sans-serif;
+            }
+
+            body {
+              margin: 0;
+              font-family: var(--font);
+              line-height: 1.6;
+              background-color: var(--bg);
+              color: var(--text);
+            }
+
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+        harness: |
+          check(style('p', 'box-sizing'), 'border-box');
+          check(['--bg', '--text', '--accent', '--font'].map((v) => style(':root', v)), ['#fffdf8', '#2b2b2b', '#5f3dc4', 'system-ui, sans-serif']);
+          check(style('body', 'margin-top'), '0px');
+          check(style('body', 'font-family'), 'system-ui, sans-serif');
+          check(Math.round(parseFloat(style('p', 'line-height')) / parseFloat(style('p', 'font-size')) * 10) / 10, 1.6);
+          check(style('body', 'background-color'), color('#fffdf8'));
+          check(style('body', 'color'), color('#2b2b2b'));
+          check([rule('body', 'background-color'), rule('body', 'color'), rule('body', 'font-family')], ['var(--bg)', 'var(--text)', 'var(--font)']);
+          check(rule('img', 'max-width'), '100%');
+        hints:
+          - "Start with `*, *::before, *::after { box-sizing: border-box; }` and a `:root { … }` rule with the four variables."
+          - "`body` only uses `var(…)` for its font, background and colour."
+      - title: Header and navigation
+        prompt: |
+          - `header`: a flex container, title and navigation on opposite ends (`space-between`), vertically centred, padding `16px 24px`, background colour `var(--accent)` and `white` text
+          - `header h1`: no margin
+          - `nav ul`: no bullets, a flex row with a `16px` gap, no margin and no padding
+          - `nav a`: `white`, no underline — underlined on hover
+        solution:
+          style.css: |
+            /* ---------- 1. Foundations ---------- */
+            *, *::before, *::after {
+              box-sizing: border-box;
+            }
+
+            :root {
+              --bg: #fffdf8;
+              --text: #2b2b2b;
+              --accent: #5f3dc4;
+              --font: system-ui, sans-serif;
+            }
+
+            body {
+              margin: 0;
+              font-family: var(--font);
+              line-height: 1.6;
+              background-color: var(--bg);
+              color: var(--text);
+            }
+
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+            /* ---------- 2. Header and navigation ---------- */
+            header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 16px 24px;
+              background-color: var(--accent);
+              color: white;
+            }
+
+            header h1 {
+              margin: 0;
+            }
+
+            nav ul {
+              list-style: none;
+              display: flex;
+              gap: 16px;
+              margin: 0;
+              padding: 0;
+            }
+
+            nav a {
+              color: white;
+              text-decoration: none;
+            }
+
+            nav a:hover {
+              text-decoration: underline;
+            }
+        harness: |
+          check(style('header', 'display'), 'flex');
+          check(style('header', 'justify-content'), 'space-between');
+          check(style('header', 'align-items'), 'center');
+          check([style('header', 'padding-top'), style('header', 'padding-left')], ['16px', '24px']);
+          check(style('header', 'background-color'), color('#5f3dc4'));
+          check(rule('header', 'background-color'), 'var(--accent)');
+          check(style('header h1', 'margin-top'), '0px');
+          check(style('nav ul', 'list-style-type'), 'none');
+          check(style('nav ul', 'display'), 'flex');
+          check(style('nav ul', 'column-gap'), '16px');
+          check([style('nav ul', 'padding-left'), style('nav ul', 'margin-top')], ['0px', '0px']);
+          const links = $$('nav a').map((a) => a.getBoundingClientRect());
+          check(new Set(links.map((r) => Math.round(r.top))).size, 1);
+          check($$('nav a').every((a) => getComputedStyle(a).color === color('white') && getComputedStyle(a).textDecorationLine === 'none'), true);
+          check(hover('nav a', 'text-decoration-line'), 'underline');
+          const h = box('header');
+          const n = box('nav');
+          check(Math.round(h.x + h.width - (n.x + n.width)), 24);
+        hints:
+          - "`header { display: flex; justify-content: space-between; align-items: center; … }`"
+          - "`nav ul { list-style: none; display: flex; gap: 16px; margin: 0; padding: 0; }`"
+      - title: Content
+        prompt: |
+          - `main`: `width: min(100% - 32px, 720px)`, centred with `margin-inline: auto`
+          - `section`: `48px` margin above and below (`margin-block`)
+          - `h2`: `var(--accent)`
+          - `#about img`: floats to the **right**, with a `24px` left margin and `12px` rounded corners
+        solution:
+          style.css: |
+            /* ---------- 1. Foundations ---------- */
+            *, *::before, *::after {
+              box-sizing: border-box;
+            }
+
+            :root {
+              --bg: #fffdf8;
+              --text: #2b2b2b;
+              --accent: #5f3dc4;
+              --font: system-ui, sans-serif;
+            }
+
+            body {
+              margin: 0;
+              font-family: var(--font);
+              line-height: 1.6;
+              background-color: var(--bg);
+              color: var(--text);
+            }
+
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+            /* ---------- 2. Header and navigation ---------- */
+            header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 16px 24px;
+              background-color: var(--accent);
+              color: white;
+            }
+
+            header h1 {
+              margin: 0;
+            }
+
+            nav ul {
+              list-style: none;
+              display: flex;
+              gap: 16px;
+              margin: 0;
+              padding: 0;
+            }
+
+            nav a {
+              color: white;
+              text-decoration: none;
+            }
+
+            nav a:hover {
+              text-decoration: underline;
+            }
+            /* ---------- 3. Content ---------- */
+            main {
+              width: min(100% - 32px, 720px);
+              margin-inline: auto;
+            }
+
+            section {
+              margin-block: 48px;
+            }
+
+            h2 {
+              color: var(--accent);
+            }
+
+            #about img {
+              float: right;
+              margin-left: 24px;
+              border-radius: 12px;
+            }
+        harness: |
+          const w = document.documentElement.clientWidth;
+          const m = box('main');
+          check(m.width, Math.min(w - 32, 720));
+          check(Math.abs(m.x - (w - m.width) / 2) <= 1, true);
+          check([style('#about', 'margin-top'), style('#about', 'margin-bottom')], ['48px', '48px']);
+          check(style('h2', 'color'), color('#5f3dc4'));
+          check(rule('h2', 'color'), 'var(--accent)');
+          check(style('#about img', 'float'), 'right');
+          check(style('#about img', 'margin-left'), '24px');
+          check(style('#about img', 'border-top-left-radius'), '12px');
+          const img = box('#about img');
+          check(Math.round(img.x + img.width), Math.round(m.x + m.width));
+        hints:
+          - "`main { width: min(100% - 32px, 720px); margin-inline: auto; }`"
+          - "`#about img { float: right; margin-left: 24px; border-radius: 12px; }`"
+      - title: Table and form
+        prompt: |
+          The table:
+
+          - `table`: `100%` wide, `border-collapse: collapse`
+          - `th, td`: padding `8px 12px`, left-aligned text, a `1px solid #ddd` bottom border
+          - `thead th`: background `var(--accent)`, `white` text
+          - even body rows: background colour `#f3f0ff`
+
+          The form:
+
+          - `form`: a grid with a `12px` gap, at most `480px` wide
+          - `form p`: a grid with a `4px` gap (labels above fields) and no margin
+          - `input, textarea`: `font: inherit`, `8px` padding, a `1px solid #bbb` border, `6px` rounded corners, and a `2px solid var(--accent)` outline when focused with the keyboard (`:focus-visible`)
+          - `button`: `font: inherit`, padding `10px 20px`, no border, `6px` corners, background `var(--accent)`, `white` text, a `0.2s` transition of `background-color`, and background `#4c2fa5` on hover
+        solution:
+          style.css: |
+            /* ---------- 1. Foundations ---------- */
+            *, *::before, *::after {
+              box-sizing: border-box;
+            }
+
+            :root {
+              --bg: #fffdf8;
+              --text: #2b2b2b;
+              --accent: #5f3dc4;
+              --font: system-ui, sans-serif;
+            }
+
+            body {
+              margin: 0;
+              font-family: var(--font);
+              line-height: 1.6;
+              background-color: var(--bg);
+              color: var(--text);
+            }
+
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+            /* ---------- 2. Header and navigation ---------- */
+            header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 16px 24px;
+              background-color: var(--accent);
+              color: white;
+            }
+
+            header h1 {
+              margin: 0;
+            }
+
+            nav ul {
+              list-style: none;
+              display: flex;
+              gap: 16px;
+              margin: 0;
+              padding: 0;
+            }
+
+            nav a {
+              color: white;
+              text-decoration: none;
+            }
+
+            nav a:hover {
+              text-decoration: underline;
+            }
+            /* ---------- 3. Content ---------- */
+            main {
+              width: min(100% - 32px, 720px);
+              margin-inline: auto;
+            }
+
+            section {
+              margin-block: 48px;
+            }
+
+            h2 {
+              color: var(--accent);
+            }
+
+            #about img {
+              float: right;
+              margin-left: 24px;
+              border-radius: 12px;
+            }
+            /* ---------- 4. Table and form ---------- */
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+
+            th, td {
+              padding: 8px 12px;
+              text-align: left;
+              border-bottom: 1px solid #ddd;
+            }
+
+            thead th {
+              background-color: var(--accent);
+              color: white;
+            }
+
+            tbody tr:nth-child(even) {
+              background-color: #f3f0ff;
+            }
+
+            form {
+              display: grid;
+              gap: 12px;
+              max-width: 480px;
+            }
+
+            form p {
+              display: grid;
+              gap: 4px;
+              margin: 0;
+            }
+
+            input, textarea {
+              font: inherit;
+              padding: 8px;
+              border: 1px solid #bbb;
+              border-radius: 6px;
+            }
+
+            input:focus-visible, textarea:focus-visible {
+              outline: 2px solid var(--accent);
+            }
+
+            button {
+              font: inherit;
+              padding: 10px 20px;
+              border: none;
+              border-radius: 6px;
+              background-color: var(--accent);
+              color: white;
+              transition: background-color 0.2s;
+            }
+
+            button:hover {
+              background-color: #4c2fa5;
+            }
+        harness: |
+          const t = box('table');
+          check(t.width, box('#projects').width);
+          check(style('table', 'border-collapse'), 'collapse');
+          check([style('td', 'padding-top'), style('td', 'padding-left')], ['8px', '12px']);
+          check(style('th', 'text-align'), 'left');
+          check(style('td', 'border-bottom-style'), 'solid');
+          check(style('thead th', 'background-color'), color('#5f3dc4'));
+          check(style('thead th', 'color'), color('white'));
+          check($$('tbody tr').map((r) => getComputedStyle(r).backgroundColor === color('#f3f0ff')), [false, true]);
+          check(style('form', 'display'), 'grid');
+          check(style('form', 'row-gap'), '12px');
+          check(Math.round(parseFloat(style('form', 'max-width'))), 480);
+          const label = box('label[for=name]');
+          const field = box('#name');
+          check(field.y > label.y && Math.abs(field.x - label.x) <= 1, true);
+          check(style('#name', 'font-family'), style('body', 'font-family'));
+          check(style('textarea', 'border-top-left-radius'), '6px');
+          check(style('#email', 'padding-top'), '8px');
+          const ring = ['outline', 'outline-style', 'outline-width', 'outline-color'].map((p) => focus('input', p)).join(' ');
+          check(['solid', '2px', 'var(--accent)'].every((part) => ring.includes(part)), true);
+          check(style('button', 'background-color'), color('#5f3dc4'));
+          check(style('button', 'border-top-style'), 'none');
+          check(style('button', 'transition-property'), 'background-color');
+          check(style('button', 'transition-duration'), '0.2s');
+          check(color(hover('button', 'background-color')), color('#4c2fa5'));
+        hints:
+          - "Stripes: `tbody tr:nth-child(even) { background-color: #f3f0ff; }`."
+          - "Labels above fields: `form p { display: grid; gap: 4px; margin: 0; }`."
+          - "`input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); }`"
+      - title: Responsive and polish
+        prompt: |
+          Finish the design:
+
+          - **mobile first**: by default the header is a **column** (`flex-direction: column`) with its items at the start (`align-items: flex-start`); from `700px` wide (`@media (min-width: 700px)`) it is a **row** again, with `space-between` and centred items. (Change the `header` rule and add the media query.)
+          - `footer`: centred text, `24px` padding
+          - keyboard focus on nav links: `outline: 2px solid white` (`nav a:focus-visible`)
+          - **dark mode**: inside `@media (prefers-color-scheme: dark)`, redefine `--bg` as `#1a1a1e` and `--text` as `#e9e9ef` on `:root`
+
+          The checks try 400px and 900px widths.
+        solution:
+          style.css: |
+            /* ---------- 1. Foundations ---------- */
+            *, *::before, *::after {
+              box-sizing: border-box;
+            }
+
+            :root {
+              --bg: #fffdf8;
+              --text: #2b2b2b;
+              --accent: #5f3dc4;
+              --font: system-ui, sans-serif;
+            }
+
+            body {
+              margin: 0;
+              font-family: var(--font);
+              line-height: 1.6;
+              background-color: var(--bg);
+              color: var(--text);
+            }
+
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+            /* ---------- 2. Header and navigation ---------- */
+            header {
+              display: flex;
+              flex-direction: column;
+              align-items: flex-start;
+              padding: 16px 24px;
+              background-color: var(--accent);
+              color: white;
+            }
+
+            header h1 {
+              margin: 0;
+            }
+
+            nav ul {
+              list-style: none;
+              display: flex;
+              gap: 16px;
+              margin: 0;
+              padding: 0;
+            }
+
+            nav a {
+              color: white;
+              text-decoration: none;
+            }
+
+            nav a:hover {
+              text-decoration: underline;
+            }
+            /* ---------- 3. Content ---------- */
+            main {
+              width: min(100% - 32px, 720px);
+              margin-inline: auto;
+            }
+
+            section {
+              margin-block: 48px;
+            }
+
+            h2 {
+              color: var(--accent);
+            }
+
+            #about img {
+              float: right;
+              margin-left: 24px;
+              border-radius: 12px;
+            }
+            /* ---------- 4. Table and form ---------- */
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+
+            th, td {
+              padding: 8px 12px;
+              text-align: left;
+              border-bottom: 1px solid #ddd;
+            }
+
+            thead th {
+              background-color: var(--accent);
+              color: white;
+            }
+
+            tbody tr:nth-child(even) {
+              background-color: #f3f0ff;
+            }
+
+            form {
+              display: grid;
+              gap: 12px;
+              max-width: 480px;
+            }
+
+            form p {
+              display: grid;
+              gap: 4px;
+              margin: 0;
+            }
+
+            input, textarea {
+              font: inherit;
+              padding: 8px;
+              border: 1px solid #bbb;
+              border-radius: 6px;
+            }
+
+            input:focus-visible, textarea:focus-visible {
+              outline: 2px solid var(--accent);
+            }
+
+            button {
+              font: inherit;
+              padding: 10px 20px;
+              border: none;
+              border-radius: 6px;
+              background-color: var(--accent);
+              color: white;
+              transition: background-color 0.2s;
+            }
+
+            button:hover {
+              background-color: #4c2fa5;
+            }
+            /* ---------- 5. Responsive and polish ---------- */
+            footer {
+              text-align: center;
+              padding: 24px;
+            }
+
+            nav a:focus-visible {
+              outline: 2px solid white;
+            }
+
+            @media (min-width: 700px) {
+              header {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+              }
+            }
+
+            @media (prefers-color-scheme: dark) {
+              :root {
+                --bg: #1a1a1e;
+                --text: #e9e9ef;
+              }
+
+              tbody tr:nth-child(even) {
+                background-color: #2b2540;
+              }
+            }
+        harness: |
+          await viewport(400);
+          const logo = box('header h1');
+          const nav = box('header nav');
+          check(nav.y > logo.y, true);
+          check(nav.x, logo.x);
+          await viewport(900);
+          const logo2 = box('header h1');
+          const nav2 = box('header nav');
+          check(Math.abs((nav2.y + nav2.height / 2) - (logo2.y + logo2.height / 2)) <= 1, true);
+          check(nav2.x > logo2.x + logo2.width, true);
+          check(style('footer', 'text-align'), 'center');
+          check(style('footer', 'padding-top'), '24px');
+          check(focus('nav a', 'outline-style'), 'solid');
+          check(color(focus('nav a', 'outline-color')), color('white'));
+          const rules = [...document.styleSheets].flatMap((s) => [...s.cssRules]);
+          const dark = rules.find((r) => r.conditionText && r.conditionText.replace(/\s/g, '').includes('prefers-color-scheme:dark'));
+          const root = dark ? [...dark.cssRules].find((r) => r.selectorText === ':root') : null;
+          check(root ? [root.style.getPropertyValue('--bg').trim(), root.style.getPropertyValue('--text').trim()] : null, ['#1a1a1e', '#e9e9ef']);
+          await viewport(800);
+        hints:
+          - "In the `header` rule: `flex-direction: column; align-items: flex-start;` (remove `justify-content` and the old `align-items`)."
+          - "`@media (min-width: 700px) { header { flex-direction: row; justify-content: space-between; align-items: center; } }`"
+          - "`@media (prefers-color-scheme: dark) { :root { --bg: #1a1a1e; --text: #e9e9ef; } }`"
+        explain: |
+          That's a complete, responsive, accessible design, written by hand:
+          variables, Flexbox, fluid widths, a styled table and form, focus
+          styles, a mobile-first breakpoint and dark mode. Paste the HTML and
+          CSS into the main editor and publish it — it's a real website.
+
+  - type: challenge
+    id: css12-ch-landing
+    title: A landing page hero
+    difficulty: 3
+    tags: [everything]
+    prompt: |
+      Style a product hero section:
+
+      - `.hero`: at least `100vh` tall minus nothing else (`min-height: 100vh`), a grid that centres its content (`place-items: center`), `text-align: center`, `24px` padding, and a background image `linear-gradient(135deg, #4c6ef5, #15aabf)` with `white` text
+      - `.hero h1`: `font-size: clamp(2rem, 7vw, 4rem)` and `line-height: 1.1`
+      - `.actions`: a flex row that wraps, centred, with a `12px` gap
+      - `.btn`: `inline-block`, padding `12px 24px`, `999px` rounded corners, no underline, and a `transform` transition of `0.2s`
+      - `.btn:hover`: `translateY(-2px)`
+      - `.btn-primary`: background `white`, text `#364fc7`; `.btn-ghost`: a `2px solid white` border, `white` text
+    given:
+      index.html: |
+        <section class="hero">
+          <div>
+            <h1>Plan trips together</h1>
+            <p>Shared maps, lists and budgets for your whole group.</p>
+            <div class="actions">
+              <a class="btn btn-primary" href="#">Get started</a>
+              <a class="btn btn-ghost" href="#">See how it works</a>
+            </div>
+          </div>
+        </section>
+    files:
+      style.css: |
+        body {
+          margin: 0;
+          font-family: system-ui, sans-serif;
+        }
+
+        /* The hero */
+    solution:
+      style.css: |
+        body {
+          margin: 0;
+          font-family: system-ui, sans-serif;
+        }
+
+        .hero {
+          min-height: 100vh;
+          display: grid;
+          place-items: center;
+          text-align: center;
+          padding: 24px;
+          background-image: linear-gradient(135deg, #4c6ef5, #15aabf);
+          color: white;
+        }
+
+        .hero h1 {
+          font-size: clamp(2rem, 7vw, 4rem);
+          line-height: 1.1;
+        }
+
+        .actions {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 12px;
+        }
+
+        .btn {
+          display: inline-block;
+          padding: 12px 24px;
+          border-radius: 999px;
+          text-decoration: none;
+          transition: transform 0.2s;
+        }
+
+        .btn:hover {
+          transform: translateY(-2px);
+        }
+
+        .btn-primary {
+          background-color: white;
+          color: #364fc7;
+        }
+
+        .btn-ghost {
+          border: 2px solid white;
+          color: white;
+        }
+    harness: |
+      const hero = box('.hero');
+      check(hero.height >= innerHeight, true);
+      const inner = box('.hero > div');
+      check(Math.abs((inner.y + inner.height / 2) - (hero.y + hero.height / 2)) <= 1, true);
+      check(style('.hero', 'text-align'), 'center');
+      check(style('.hero', 'background-image').startsWith('linear-gradient(135deg'), true);
+      check(style('.hero', 'color'), color('white'));
+      check(style('.hero h1', 'font-size'), Math.min(64, Math.max(32, Math.round(document.documentElement.clientWidth * 0.07 * 1000) / 1000)) + 'px');
+      check(style('.actions', 'display'), 'flex');
+      check(style('.actions', 'flex-wrap'), 'wrap');
+      check(style('.actions', 'justify-content'), 'center');
+      check(style('.btn', 'border-top-left-radius'), '999px');
+      check(style('.btn', 'text-decoration-line'), 'none');
+      check(style('.btn', 'transition-property'), 'transform');
+      check(hover('.btn', 'transform'), 'translateY(-2px)');
+      check([style('.btn-primary', 'background-color'), style('.btn-primary', 'color')], [color('white'), color('#364fc7')]);
+      check([style('.btn-ghost', 'border-top-width'), style('.btn-ghost', 'border-top-color')], ['2px', color('white')]);
+    hints:
+      - "`.hero { min-height: 100vh; display: grid; place-items: center; … }`"
+      - "`.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }`"
+
+  - type: review
+    id: css12-review
+    title: "The whole CSS course on one page"
+    body: |
+      ## Selecting and cascading
+
+      ```css static
+      p  .card  #top  *  h1, h2  nav a  ul > li  h2 + p  [type="email"]
+      a:hover  :focus-visible  li:nth-child(even)  :not(.x)  ::before  ::marker
+      /* specificity (ids, classes, types) → then order → inherited values are weakest */
+      ```
+
+      ## Values
+
+      ```css static
+      color: #1a73e8;  rgb(0 0 0 / 50%);  hsl(215 80% 50%);
+      font-size: 1.25rem;  padding: 0.5em;  width: 50%;  height: 100vh;  max-width: 65ch;
+      :root { --accent: #5f3dc4; }  color: var(--accent);
+      font-size: clamp(1rem, 3vw, 2rem);  width: min(100% - 32px, 960px);
+      ```
+
+      ## Boxes and layout
+
+      ```css static
+      *, *::before, *::after { box-sizing: border-box; }
+      .box  { padding: 16px 24px; margin: 0 auto; border: 1px solid; border-radius: 8px; }
+      .row  { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+      .item { flex: 1 1 200px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+      .page { grid-template-areas: "header header" "nav main"; }
+      .card { position: relative; }  .badge { position: absolute; top: 8px; right: 8px; }
+      header { position: sticky; top: 0; z-index: 10; }
+      ```
+
+      ## Responsive and motion
+
+      ```css static
+      @media (min-width: 700px) { … }
+      @media (prefers-color-scheme: dark) { … }
+      @media (prefers-reduced-motion: reduce) { … }
+      .btn { transition: transform 0.2s; }  .btn:hover { transform: translateY(-2px); }
+      @keyframes spin { to { transform: rotate(360deg); } }  .spin { animation: spin 1s linear infinite; }
+      ```
+
+      ## The big ideas
+
+      1. Separate content (HTML) from presentation (CSS); link one stylesheet.
+      2. The cascade: specificity, then order; keep specificity low and flat.
+      3. Everything is a box — use `border-box`.
+      4. Flexbox for one direction, Grid for two.
+      5. Fluid first, then media queries where the design breaks.
+      6. Readable, accessible design: contrast, focus styles, relative units, reduced motion.
+    questions:
+      - type: mcq
+        prompt: Which layout tool fits a gallery of equal cards in rows and columns best?
+        options:
+          - Floats
+          - Grid
+          - Absolute positioning
+          - Tables
+        answer: 1
+        why: "Two dimensions: Grid."
+      - type: mcq
+        prompt: "A rule isn't applied. What's the fastest way to find out why?"
+        options:
+          - Add !important
+          - Inspect the element and look at the Styles panel
+          - Rewrite the stylesheet
+          - Use an id
+        answer: 1
+        why: "The developer tools show every rule, which ones won, and crossed-out mistakes."
+
+  - type: exam
+    id: css-final
+    title: "CSS final exam"
+    minutes: 45
+    pick: 20
+    body: |
+      One exam covering the **whole CSS course**, from the first rule to
+      responsive design and animation. Take your time.
+    questions:
+      - type: mcq
+        prompt: "In `h1 { color: red; }`, what is `h1`?"
+        options:
+          - The property
+          - The selector
+          - The value
+          - The declaration
+        answer: 1
+        why: "The selector chooses the elements."
+      - type: spot
+        prompt: Which line is ignored by the browser?
+        code: |
+          .note {
+            background-color: #fff3bf;
+            padding: 12;
+            border-radius: 6px;
+          }
+        answer: 3
+        why: "`12` needs a unit."
+      - type: mcq
+        prompt: "Which selects every link inside `.menu`, at any depth?"
+        options:
+          - "`.menu > a`"
+          - "`.menu a`"
+          - "`.menu + a`"
+          - "`a.menu`"
+        answer: 1
+        why: "Descendant combinator."
+      - type: mcq
+        prompt: "Which rule wins for `<p class=\"lead\" id=\"intro\">`?"
+        code: |
+          #intro { color: green; }
+          p.lead { color: blue; }
+          .lead { color: red; }
+        options:
+          - green
+          - blue
+          - red
+          - black
+        answer: 0
+        why: "The id has the highest specificity."
+      - type: tf
+        prompt: "`border` is inherited by child elements."
+        answer: false
+        why: "Box properties aren't inherited."
+      - type: mcq
+        prompt: "`hsl(0 0% 0%)` is…"
+        options:
+          - white
+          - black
+          - red
+          - grey
+        answer: 1
+        why: "Lightness 0%."
+      - type: mcq
+        prompt: "With a 16px root, `2.5rem` is…"
+        options:
+          - 25px
+          - 40px
+          - 2.5px
+          - 32px
+        answer: 1
+        why: "2.5 × 16."
+      - type: fill
+        prompt: Use the variable, with a fallback of `navy`.
+        code: |
+          h1 { color: var(--brand, ___); }
+        blanks:
+          - [navy]
+        why: "The second argument is the fallback."
+      - type: mcq
+        prompt: Which gives comfortable body text?
+        options:
+          - "`line-height: 1; max-width: 200ch;`"
+          - "`line-height: 1.5; max-width: 65ch;`"
+          - "`line-height: 3; max-width: 20ch;`"
+          - "`letter-spacing: 1em;`"
+        answer: 1
+        why: "About 1.5 line height and 60–75 characters per line."
+      - type: mcq
+        prompt: "`box-sizing: border-box; width: 300px; padding: 20px; border: 5px solid;` — the box is…"
+        options:
+          - 350px wide
+          - 300px wide
+          - 340px wide
+          - 250px wide
+        answer: 1
+        why: "border-box includes padding and border in the width."
+      - type: mcq
+        prompt: "Two paragraphs, `margin-bottom: 30px` then `margin-top: 20px`. The gap is…"
+        options:
+          - 50px
+          - 30px
+          - 20px
+          - 10px
+        answer: 1
+        why: "Vertical margins collapse."
+      - type: mcq
+        prompt: Which centres a child horizontally and vertically in a flex container?
+        options:
+          - "`justify-content: center; align-items: center;`"
+          - "`text-align: center;`"
+          - "`margin: 0 auto;`"
+          - "`vertical-align: middle;`"
+        answer: 0
+        why: "One for each axis."
+      - type: mcq
+        prompt: "What does `flex: 1` on every item do?"
+        options:
+          - Each item is 1px
+          - They share the space equally
+          - Only the first item grows
+          - They wrap
+        answer: 1
+        why: "Equal grow."
+      - type: fill
+        prompt: A responsive grid with columns at least 250px wide.
+        code: |
+          .grid { display: grid; grid-template-columns: repeat(auto-fit, ___(250px, 1fr)); }
+        blanks:
+          - [minmax]
+        why: "`minmax(250px, 1fr)`."
+      - type: mcq
+        prompt: "`grid-column: 1 / -1` makes an item…"
+        options:
+          - span all columns
+          - one column wide
+          - hidden
+          - the last column only
+        answer: 0
+        why: "From the first to the last line."
+      - type: mcq
+        prompt: To pin a badge to a card's corner, you give the card…
+        options:
+          - "`position: absolute`"
+          - "`position: relative`"
+          - "`position: fixed`"
+          - "`float: right`"
+        answer: 1
+        why: "The positioned ancestor for the absolute badge."
+      - type: mcq
+        prompt: Which stays at the top of the window while the page scrolls, but starts in the normal flow?
+        options:
+          - "`position: sticky; top: 0;`"
+          - "`position: absolute; top: 0;`"
+          - "`position: static;`"
+          - "`z-index: 100;`"
+        answer: 0
+        why: "Sticky."
+      - type: mcq
+        prompt: "Mobile first: which query adds a sidebar on wide screens?"
+        options:
+          - "`@media (max-width: 900px)`"
+          - "`@media (min-width: 900px)`"
+          - "`@media print`"
+          - "`@media (orientation: portrait)`"
+        answer: 1
+        why: "min-width enhances upward."
+      - type: mcq
+        prompt: "`font-size: clamp(1rem, 4vw, 2rem)` on a 300px wide phone (1rem = 16px) is…"
+        options:
+          - 12px
+          - 16px
+          - 32px
+          - 4px
+        answer: 1
+        why: "4vw = 12px, below the minimum."
+      - type: mcq
+        prompt: Which is the smoothest to animate?
+        options:
+          - "`width`"
+          - "`top`"
+          - "`transform`"
+          - "`margin`"
+        answer: 2
+        why: "No layout work."
+      - type: tf
+        prompt: "A transition belongs on the `:hover` rule so it only runs on hover."
+        answer: false
+        why: "On the normal state it animates both ways."
+      - type: fill
+        prompt: Respect readers who want less motion.
+        code: |
+          @media (prefers-reduced-motion: ___) { .spin { animation: none; } }
+        blanks:
+          - [reduce]
+        why: "`prefers-reduced-motion: reduce`."
+      - type: mcq
+        prompt: Why should focus outlines stay visible?
+        options:
+          - They look nice
+          - Keyboard users need to see where they are
+          - Browsers require them
+          - They improve search rankings
+        answer: 1
+        why: "Accessibility."
+      - type: code
+        prompt: |
+          Make `.nav` a flex row with the links spread to opposite ends
+          (`space-between`), vertically centred, and a `16px` padding. On
+          screens narrower than `600px` (use `max-width: 599px`), stack it as
+          a column.
+        given:
+          index.html: |
+            <nav class="nav">
+              <a href="#">Brand</a>
+              <a href="#">Menu</a>
+            </nav>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            .nav {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 16px;
+            }
+
+            @media (max-width: 599px) {
+              .nav {
+                flex-direction: column;
+              }
+            }
+        harness: |
+          await viewport(800);
+          const [a, b] = $$('.nav a').map((x) => x.getBoundingClientRect());
+          const nav = box('.nav');
+          check(Math.round(a.left - nav.x), 16);
+          check(Math.round(nav.x + nav.width - b.right), 16);
+          check(Math.round(a.top), Math.round(b.top));
+          await viewport(400);
+          const [c, d] = $$('.nav a').map((x) => x.getBoundingClientRect());
+          check(d.top > c.top, true);
+          await viewport(800);
+      - type: code
+        prompt: |
+          Build a card grid: `.cards` is a grid of three equal columns with
+          a `20px` gap. Each `.card` has `16px` padding, `8px` rounded
+          corners and a `1px solid #ccc` border; on hover it moves up `4px`
+          (`translateY(-4px)`), with a `0.2s` transition on `transform`.
+        given:
+          index.html: |
+            <div class="cards">
+              <div class="card">A</div>
+              <div class="card">B</div>
+              <div class="card">C</div>
+            </div>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            .cards {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 20px;
+            }
+
+            .card {
+              padding: 16px;
+              border-radius: 8px;
+              border: 1px solid #ccc;
+              transition: transform 0.2s;
+            }
+
+            .card:hover {
+              transform: translateY(-4px);
+            }
+        harness: |
+          const cards = $$('.card').map((c) => c.getBoundingClientRect());
+          check(new Set(cards.map((c) => Math.round(c.top))).size, 1);
+          check(new Set(cards.map((c) => Math.round(c.width))).size, 1);
+          check(Math.round(cards[1].left - cards[0].right), 20);
+          check(style('.card', 'padding-top'), '16px');
+          check(style('.card', 'border-top-left-radius'), '8px');
+          check(style('.card', 'border-top-color'), color('#ccc'));
+          check(style('.card', 'transition-property'), 'transform');
+          check(hover('.card', 'transform'), 'translateY(-4px)');
+
+  - type: lesson
+    id: css12-next
+    title: What next?
+    minutes: 8
+    objectives:
+      - Know where to go after this course
+    body: |
+      You can now take any HTML and give it a polished, responsive,
+      accessible design — by hand, understanding every line. That's the
+      whole visual side of the web.
+
+      ## Next: JavaScript
+
+      Your pages look great, but they don't *do* anything yet. The
+      **JavaScript course** makes them interactive: menus that open, forms
+      that check themselves, games, apps that fetch live data. You'll use
+      your CSS all the time — JavaScript often just adds or removes a class,
+      and your stylesheet does the rest.
+
+      ## Keep practising
+
+      - **Recreate designs**: pick a website or app screen you like and rebuild it from scratch. Compare with the original in the developer tools afterwards.
+      - **Design challenge sites** (like Frontend Mentor) give you designs to build, at every level.
+      - **MDN Web Docs** (developer.mozilla.org) documents every property with examples.
+      - **Read the CSS of sites you admire** with Inspect — it's all public.
+      - **Publish**: the main editor of this site deploys your pages with one click.
+
+      ## Going further
+
+      When you're comfortable, look into container queries (`@container`),
+      cascade layers (`@layer`), native CSS nesting, `:has()` (the "parent
+      selector"), and logical properties (`margin-inline`, `padding-block`)
+      — all part of modern CSS.
+
+      > [!tip]
+      > Keep reviewing your flashcards for a few minutes a day — they keep
+      > every property at your fingertips.
+    cards:
+      - front: What does the `:has()` selector do?
+        back: "Selects an element that contains something — e.g. `.card:has(img)` — the long-awaited \"parent selector\"."

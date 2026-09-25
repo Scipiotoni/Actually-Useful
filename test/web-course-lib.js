@@ -110,7 +110,20 @@ function webJobs(course) {
     (item.questions || []).forEach(questionJobs);
     (item.tasks || []).forEach((t) => taskJobs(t, t.id));
     if (item.task) taskJobs(item.task, item.id);
-    (item.milestones || []).forEach((m, i) => taskJobs(m, m.id, i > 0 ? item.milestones[0] : null));
+    (item.milestones || []).forEach((m, i) => {
+      taskJobs(m, m.id, i > 0 ? item.milestones[0] : null);
+      // Each milestone must ask for something new: the previous one's
+      // solution should not already pass it.
+      const prev = item.milestones[i - 1];
+      if (!prev || m._raw.starter_fails === false) return;
+      if (m.kind === 'page') {
+        const first = item.milestones[0];
+        const given = m.given.length ? m.given : first.given;
+        list.push({ where: m.id + ' (previous solution)', kind: 'page', files: merge(merge(given, first.files), prev.solutionFiles), harness: m.harness, width: m.width, expect: 'not-pass' });
+      } else if (m.kind === 'js') {
+        list.push({ where: m.id + ' (previous solution)', kind: 'js', code: prev.solution, harness: m.harness, expect: 'not-pass' });
+      }
+    });
   });
   return list;
 }
@@ -173,7 +186,7 @@ async function runWebJob(page, job) {
       return `${job.where}: solution fails — ${bad || '(no failed checks)'}${errs ? ' | errors: ' + cut(errs) : ''}${r.timedOut ? ' | TIMED OUT' : ''}${r.checks.length ? '' : ' | no checks ran'}`;
     }
     if (job.expect === 'pass' && r.errors.length) return `${job.where}: solution passes but reports errors: ${cut(errs)}`;
-    if (job.expect === 'not-pass' && passed) return `${job.where}: the starter already passes every check`;
+    if (job.expect === 'not-pass' && passed) return `${job.where}: already passes every check`;
     return null;
   }
   if (r.timedOut) return `${job.where}: timed out`;

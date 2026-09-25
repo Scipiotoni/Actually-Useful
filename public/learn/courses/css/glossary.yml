@@ -1,0 +1,286 @@
+terms:
+  - term: "!important"
+    def: Added to a declaration, it beats all normal declarations. Avoid it — overriding it needs another !important.
+    chapter: css03
+  - term: "@keyframes"
+    def: "Defines the steps of an animation: `@keyframes spin { to { transform: rotate(360deg); } }`."
+    chapter: css11
+  - term: "@media"
+    def: "A media query — rules that apply only when a condition is true, like `@media (min-width: 700px)`."
+    chapter: css10
+  - term: align-items
+    def: "Aligns flex or grid items on the cross axis: `stretch`, `center`, `flex-start`, `flex-end`, `baseline`."
+    chapter: css07
+  - term: Alpha
+    def: "A colour's transparency, e.g. `rgb(0 0 0 / 50%)` or `#00000080`."
+    chapter: css04
+  - term: animation
+    def: "Runs a `@keyframes` animation on an element: `animation: name duration timing-function delay count direction fill-mode`."
+    chapter: css11
+  - term: aspect-ratio
+    def: "Keeps a box's proportions as its width changes: `aspect-ratio: 16 / 9`."
+    chapter: css10
+  - term: Attribute selector
+    def: "Selects by attribute: `[required]`, `input[type=\"email\"]`, `a[href^=\"https\"]`, `a[href$=\".pdf\"]`."
+    chapter: css02
+  - term: background-image
+    def: "An image or gradient behind an element: `url(\"photo.jpg\")` or `linear-gradient(…)`."
+    chapter: css04
+  - term: background-size
+    def: "How a background image is sized: `cover` fills the box (cropping), `contain` fits the whole image."
+    chapter: css04
+  - term: Block
+    def: "`display: block` — starts on a new line and takes the full width; respects width, height and margins."
+    chapter: css06
+  - term: border-radius
+    def: "Rounds an element's corners; `50%` on a square makes a circle."
+    chapter: css06
+  - term: Box model
+    def: Every element is a box of content, padding, border and margin, from the inside out.
+    chapter: css06
+  - term: box-shadow
+    def: "A shadow around a box: `box-shadow: x y blur spread colour`."
+    chapter: css06
+  - term: box-sizing
+    def: "`border-box` makes width and height include padding and border; the default `content-box` doesn't."
+    chapter: css06
+  - term: Breakpoint
+    def: A width at which a responsive layout changes, set with a media query. Put them where the design breaks.
+    chapter: css10
+  - term: calc()
+    def: "Does arithmetic with mixed units: `width: calc(100% - 200px)`."
+    chapter: css10
+  - term: Cascade
+    def: How the browser decides which declaration wins when several set the same property — importance, then specificity, then order.
+    chapter: css03
+  - term: ch
+    def: "A unit the width of the character \"0\" — `max-width: 65ch` gives lines of about 65 characters."
+    chapter: css05
+  - term: Class selector
+    def: "`.name` — selects every element with that class. The main tool for styling."
+    chapter: css02
+  - term: clamp()
+    def: "`clamp(min, preferred, max)` — a value that follows the preferred one but stays within the limits. Great for fluid font sizes."
+    chapter: css10
+  - term: Combinator
+    def: "The relationship between selectors: space (descendant), `>` (child), `+` (next sibling), `~` (later siblings)."
+    chapter: css02
+  - term: Contrast ratio
+    def: How much text stands out from its background. Normal text needs at least 4.5 : 1.
+    chapter: css04
+  - term: Cross axis
+    def: In flexbox, the axis across the main axis — vertical in a row. Controlled by align-items.
+    chapter: css07
+  - term: Custom property
+    def: "A CSS variable: defined as `--name: value`, used with `var(--name)`. Inherited, so it can be redefined for part of a page."
+    chapter: css04
+  - term: Declaration
+    def: "A property and a value: `color: red;`."
+    chapter: css01
+  - term: Descendant selector
+    def: "`nav a` — an element anywhere inside another."
+    chapter: css02
+  - term: Developer tools
+    def: The browser's built-in tools (right-click → Inspect) — see which rules apply, the box model, grid overlays and more.
+    chapter: css01
+  - term: display
+    def: "How a box takes part in layout: `block`, `inline`, `inline-block`, `flex`, `grid`, `none`."
+    chapter: css06
+  - term: em
+    def: "A unit relative to the element's own font size (the parent's, for font-size). Compounds when nested."
+    chapter: css04
+  - term: fixed
+    def: "`position: fixed` — positioned relative to the window; stays put while scrolling."
+    chapter: css09
+  - term: flex
+    def: "Shorthand for how a flex item grows, shrinks and its base size: `flex: 1`, `flex: 0 0 200px`."
+    chapter: css07
+  - term: Flexbox
+    def: "`display: flex` — a one-dimensional layout of the children in a row or column, with spacing and alignment."
+    chapter: css07
+  - term: flex-wrap
+    def: "`wrap` lets flex items move onto new lines when they don't fit."
+    chapter: css07
+  - term: float
+    def: "Pushes an element to one side so text wraps around it. Today used only for that."
+    chapter: css09
+  - term: Font stack
+    def: A list of fonts for font-family, ending with a generic family (serif, sans-serif, monospace) as the fallback.
+    chapter: css05
+  - term: "@font-face"
+    def: Declares a downloadable web font with a name and a file.
+    chapter: css05
+  - term: font-weight
+    def: "How bold text is: `normal` (400), `bold` (700), or 100–900."
+    chapter: css05
+  - term: fr
+    def: A grid unit — one fraction of the free space.
+    chapter: css08
+  - term: gap
+    def: Space between flex or grid items (not at the edges).
+    chapter: css07
+  - term: Generic family
+    def: "`serif`, `sans-serif`, `monospace` (and a few more) — fonts every device has."
+    chapter: css01
+  - term: Gradient
+    def: "An image the browser paints from colours: `linear-gradient(to right, red, blue)`, `radial-gradient(…)`."
+    chapter: css04
+  - term: Grid
+    def: "`display: grid` — a two-dimensional layout of rows and columns."
+    chapter: css08
+  - term: grid-template-areas
+    def: "Names areas of a grid by drawing them as strings; items join an area with `grid-area`."
+    chapter: css08
+  - term: grid-template-columns
+    def: "Defines a grid's columns: `200px 1fr`, `repeat(3, 1fr)`, `repeat(auto-fit, minmax(200px, 1fr))`."
+    chapter: css08
+  - term: Hex colour
+    def: "A colour as hexadecimal red, green and blue: `#1a73e8`, or short `#f60`."
+    chapter: css04
+  - term: hsl()
+    def: "A colour by hue (0–360), saturation and lightness: `hsl(215 80% 50%)`."
+    chapter: css04
+  - term: Id selector
+    def: "`#name` — selects the element with that id. Very specific, so avoid it for styling."
+    chapter: css02
+  - term: Inheritance
+    def: Some properties (mostly text ones like color and font) pass from an element to its descendants. An inherited value is the weakest.
+    chapter: css03
+  - term: inherit
+    def: A value that takes the parent's value for the property.
+    chapter: css03
+  - term: Inline
+    def: "`display: inline` — flows within text; ignores width, height and vertical margins."
+    chapter: css06
+  - term: inline-block
+    def: Flows within text like inline, but is a real box with width, height and margins.
+    chapter: css06
+  - term: inset
+    def: "Shorthand for top, right, bottom and left — `inset: 0` covers the containing block."
+    chapter: css09
+  - term: justify-content
+    def: "Distributes flex items along the main axis: `flex-start`, `center`, `space-between`, `space-evenly`…"
+    chapter: css07
+  - term: line-height
+    def: Space between lines. Best as a unitless number like 1.5.
+    chapter: css05
+  - term: Main axis
+    def: In flexbox, the direction items flow — horizontal in a row, vertical in a column. Controlled by justify-content.
+    chapter: css07
+  - term: Margin
+    def: Transparent space outside an element's border. Vertical margins collapse.
+    chapter: css06
+  - term: margin auto
+    def: "`margin: 0 auto` centres a block that has a width. In flexbox, an auto margin takes all the free space."
+    chapter: css06
+  - term: Margin collapsing
+    def: Two touching vertical margins merge into the larger one.
+    chapter: css06
+  - term: min() and max()
+    def: "Pick the smallest or largest value: `width: min(100% - 32px, 960px)`."
+    chapter: css10
+  - term: minmax()
+    def: "A grid track size between a minimum and a maximum: `minmax(200px, 1fr)`."
+    chapter: css08
+  - term: Mobile first
+    def: Write the narrow-screen styles first, then add min-width media queries for wider screens.
+    chapter: css10
+  - term: object-fit
+    def: "How an image fills its box: `cover` crops to fill, `contain` fits it all."
+    chapter: css10
+  - term: opacity
+    def: Makes a whole element (and its children) see-through, from 0 to 1.
+    chapter: css04
+  - term: outline
+    def: A line outside the border that takes no space — used for focus rings.
+    chapter: css06
+  - term: overflow
+    def: "What happens to content that doesn't fit: `visible`, `hidden`, `auto`, `scroll`."
+    chapter: css06
+  - term: Padding
+    def: Space inside an element's border, around its content. Shows the element's background.
+    chapter: css06
+  - term: place-items
+    def: "Aligns grid items in both directions at once: `place-items: center`."
+    chapter: css08
+  - term: position
+    def: "How an element is positioned: `static`, `relative`, `absolute`, `fixed`, `sticky`."
+    chapter: css09
+  - term: prefers-color-scheme
+    def: "A media feature for the reader's light or dark mode setting: `@media (prefers-color-scheme: dark)`."
+    chapter: css10
+  - term: prefers-reduced-motion
+    def: "A media feature for readers who want less motion: `@media (prefers-reduced-motion: reduce)`."
+    chapter: css10
+  - term: Property
+    def: "What a declaration sets, like `color` or `margin`."
+    chapter: css01
+  - term: Pseudo-class
+    def: "Selects elements in a state or position: `:hover`, `:focus-visible`, `:nth-child()`, `:not()`."
+    chapter: css02
+  - term: Pseudo-element
+    def: "Styles part of an element or adds decoration: `::before`, `::after`, `::first-letter`, `::marker`."
+    chapter: css02
+  - term: relative
+    def: "`position: relative` — offset from its normal place, keeping its space; the anchor for absolute children."
+    chapter: css09
+  - term: absolute
+    def: "`position: absolute` — removed from the flow and placed relative to the nearest positioned ancestor."
+    chapter: css09
+  - term: rem
+    def: A unit relative to the root (html) font size — 16px by default. Best for font sizes.
+    chapter: css04
+  - term: Responsive design
+    def: One page whose layout adapts to every screen width.
+    chapter: css10
+  - term: rgb()
+    def: "A colour by red, green and blue amounts 0–255: `rgb(26 115 232)`."
+    chapter: css04
+  - term: Rule
+    def: A selector followed by a block of declarations.
+    chapter: css01
+  - term: Selector
+    def: The part of a rule that chooses which elements it applies to.
+    chapter: css01
+  - term: Specificity
+    def: A score (ids, classes, types) that decides which of several matching rules wins; higher wins before order is considered.
+    chapter: css03
+  - term: Stacking context
+    def: A group of elements layered together; created by things like z-index on positioned elements, opacity below 1 or a transform.
+    chapter: css09
+  - term: sticky
+    def: "`position: sticky` — scrolls normally until it reaches its offset (like `top: 0`), then sticks within its parent."
+    chapter: css09
+  - term: Stylesheet
+    def: "A file of CSS rules, linked with `<link rel=\"stylesheet\" href=\"style.css\">`."
+    chapter: css01
+  - term: text-decoration
+    def: "Lines on text: `underline`, `line-through`, `none`."
+    chapter: css05
+  - term: text-transform
+    def: "Changes case for display: `uppercase`, `lowercase`, `capitalize`."
+    chapter: css05
+  - term: transform
+    def: "Moves, rotates, scales or skews how an element is drawn, without affecting layout: `translate()`, `rotate()`, `scale()`."
+    chapter: css11
+  - term: transition
+    def: "Animates a change of property values: `transition: background-color 0.3s ease`."
+    chapter: css11
+  - term: Type selector
+    def: "An element name like `p` or `h1` — selects every element of that type."
+    chapter: css02
+  - term: Universal selector
+    def: "`*` — selects every element."
+    chapter: css02
+  - term: Value
+    def: "What a property is set to, like `red`, `16px` or `center`."
+    chapter: css01
+  - term: var()
+    def: "Reads a custom property: `var(--brand)`, with an optional fallback: `var(--brand, navy)`."
+    chapter: css04
+  - term: Viewport units
+    def: "`vw` and `vh` — 1% of the window's width and height."
+    chapter: css04
+  - term: z-index
+    def: Decides which positioned elements are on top; higher numbers are closer to the viewer.
+    chapter: css09
