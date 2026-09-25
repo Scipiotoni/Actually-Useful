@@ -397,3 +397,12 @@ test('Ctrl+/ comments C++ with //', () => {
   const back = edits.toggleComment(commented, 0, commented.length, 'cpp');
   assert.strictEqual(commented.slice(0, back.from) + back.insert + commented.slice(back.to), text);
 });
+
+test('unsmart puts back the quotes and dashes a keyboard "smartened"', () => {
+  assert.deepStrictEqual(MiniEditor.unsmart("console.log(‘", 13), { value: "console.log('", cursor: 13 });
+  assert.deepStrictEqual(MiniEditor.unsmart('x = “', 5), { value: 'x = "', cursor: 5 });
+  assert.deepStrictEqual(MiniEditor.unsmart('i—', 2), { value: 'i--', cursor: 3 });
+  assert.strictEqual(MiniEditor.unsmart('plain text', 10), null);
+  // Only what was just typed: older text is left alone.
+  assert.strictEqual(MiniEditor.unsmart('“quoted” long ago', 19), null);
+});

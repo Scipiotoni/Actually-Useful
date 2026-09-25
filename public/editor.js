@@ -401,7 +401,19 @@
 
     var self = this;
     var caret = function () { self._syncCaret(); };
-    this.input.addEventListener('input', function () { self._sync(); self.onChange(); });
+    this.input.addEventListener('input', function (e) {
+      // Phones and some keyboards "smarten" quotes and dashes as you type,
+      // which breaks code: put back what was actually typed.
+      if (e && /^insert/.test(e.inputType || '')) {
+        var fixed = MiniEditor.unsmart(self.input.value, self.input.selectionStart);
+        if (fixed) {
+          self.input.value = fixed.value;
+          self.input.selectionStart = self.input.selectionEnd = fixed.cursor;
+        }
+      }
+      self._sync();
+      self.onChange();
+    });
     this.input.addEventListener('keydown', function (e) { self._onKey(e); });
     this.input.addEventListener('keyup', caret);
     this.input.addEventListener('click', caret);
@@ -916,6 +928,20 @@
         this._insert('');
       }
     }
+  };
+
+  /**
+   * Undoes keyboard "smart punctuation" in the few characters just typed
+   * (before the cursor): curly quotes become ' and ", an em dash made from
+   * -- goes back to --, and an en dash to -. Returns null if nothing changed.
+   */
+  var SMART = { '\u2018': "'", '\u2019': "'", '\u201A': "'", '\u201B': "'", '\u201C': '"', '\u201D': '"', '\u201E': '"', '\u201F': '"', '\u2014': '--', '\u2013': '-' };
+  MiniEditor.unsmart = function (value, cursor) {
+    var from = Math.max(0, cursor - 3);
+    var recent = value.slice(from, cursor);
+    if (!/[\u2018-\u201F\u2013\u2014]/.test(recent)) return null;
+    var plain = recent.replace(/[\u2018-\u201F\u2013\u2014]/g, function (c) { return SMART[c] || c; });
+    return { value: value.slice(0, from) + plain + value.slice(cursor), cursor: from + plain.length };
   };
 
   MiniEditor.highlight = function (mode, src) { return MODES[mode](src); };

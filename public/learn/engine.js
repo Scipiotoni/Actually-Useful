@@ -12,10 +12,35 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  // ------------------------------------------------------------ typing
+
+  /*
+   * What keyboards and autocorrect put in place of the plain characters
+   * code uses: curly quotes, long dashes, invisible and non-breaking
+   * spaces, full-width letters. Answers are compared after undoing them, so
+   * "It’s" typed on a phone matches "It's".
+   */
+  var LOOKALIKES = {
+    '\u2018': "'", '\u2019': "'", '\u201A': "'", '\u201B': "'", '\u2032': "'", '\u00B4': "'",
+    '\u201C': '"', '\u201D': '"', '\u201E': '"', '\u201F': '"', '\u2033': '"', '\u00AB': '"', '\u00BB': '"',
+    '\u2014': '--', '\u2015': '--', '\u2013': '-', '\u2012': '-', '\u2010': '-', '\u2011': '-', '\u2212': '-',
+    '\u00D7': '*'
+  };
+
+  function plainText(text) {
+    var s = String(text == null ? '' : text);
+    if (s.normalize) s = s.normalize('NFKC');
+    return s
+      .replace(/\r\n?/g, '\n')
+      .replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, '')
+      .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+      .replace(/[\u2018\u2019\u201A\u201B\u2032\u00B4\u201C-\u201F\u2033\u00AB\u00BB\u2010-\u2015\u2212\u00D7]/g, function (c) { return LOOKALIKES[c] || c; });
+  }
+
   // ------------------------------------------------------------ output
 
   /** Line endings unified, trailing spaces and trailing blank lines dropped. */
-  function normalizeOutput(text) {
+  function tidyLines(text) {
     return String(text == null ? '' : text)
       .replace(/\r\n?/g, '\n')
       .split('\n')
@@ -24,27 +49,33 @@
       .replace(/\n+$/, '');
   }
 
+  /** Output ready to compare: tidied, with look-alike characters made plain. */
+  function normalizeOutput(text) {
+    return tidyLines(plainText(text));
+  }
+
   /**
    * Compares what a program printed with what it should have printed.
    * @returns {{ok: boolean, line?: number, got?: string, want?: string}}
    */
   function compareOutput(got, want) {
-    var a = normalizeOutput(got);
-    var b = normalizeOutput(want);
-    if (a === b) return { ok: true };
-    var la = a.split('\n');
-    var lb = b.split('\n');
-    for (var i = 0; i < Math.max(la.length, lb.length); i += 1) {
-      if (la[i] !== lb[i]) {
+    var a = normalizeOutput(got).split('\n');
+    var b = normalizeOutput(want).split('\n');
+    if (a.join('\n') === b.join('\n')) return { ok: true };
+    // Report the differing line as it was really printed and written.
+    var ra = tidyLines(got).split('\n');
+    var rb = tidyLines(want).split('\n');
+    for (var i = 0; i < Math.max(a.length, b.length); i += 1) {
+      if (a[i] !== b[i]) {
         return {
           ok: false,
           line: i + 1,
-          got: la[i] === undefined ? null : la[i],
-          want: lb[i] === undefined ? null : lb[i]
+          got: ra[i] === undefined ? null : ra[i],
+          want: rb[i] === undefined ? null : rb[i]
         };
       }
     }
-    return { ok: false, line: 1, got: a, want: b };
+    return { ok: false, line: 1, got: tidyLines(got), want: tidyLines(want) };
   }
 
   // ------------------------------------------------------------ checker
@@ -172,25 +203,56 @@
 
   // ------------------------------------------------------------ answers
 
-  /** Code without the spaces that do not matter; quoted text kept as typed. */
-  function squash(text) {
-    var s = String(text == null ? '' : text).trim().replace(/;+$/, '');
+  /**
+   * Code without the spaces that do not matter; quoted text kept as typed.
+   * In languages where 'x', "x" and `x` mean the same (everything but C++),
+   * strings are rewritten with double quotes; in HTML and CSS, everything
+   * outside quotes is case-insensitive.
+   */
+  function squash(text, lang) {
+    var s = plainText(text).trim().replace(/;+$/, '');
+    var sameQuotes = lang && lang !== 'cpp' && lang !== 'c++';
+    var anyCase = lang === 'html' || lang === 'css';
     var out = '';
-    var quote = null;
-    for (var i = 0; i < s.length; i += 1) {
+    var i = 0;
+    while (i < s.length) {
       var c = s.charAt(i);
-      if (quote) {
-        out += c;
-        if (c === '\\' && i + 1 < s.length) { out += s.charAt(i + 1); i += 1; continue; }
-        if (c === quote) quote = null;
-      } else if (c === '"' || c === "'") {
-        quote = c;
-        out += c;
-      } else if (!/\s/.test(c)) {
-        out += c;
+      if (c === '"' || c === "'" || (c === '`' && sameQuotes)) {
+        var j = i + 1;
+        var body = '';
+        while (j < s.length && s.charAt(j) !== c) {
+          if (s.charAt(j) === '\\' && j + 1 < s.length) { body += s.charAt(j) + s.charAt(j + 1); j += 2; continue; }
+          body += s.charAt(j);
+          j += 1;
+        }
+        var closed = j < s.length;
+        if (sameQuotes && closed && body.indexOf('"') === -1 && !(c === '`' && body.indexOf('${') !== -1)) {
+          out += '"' + (c === "'" ? body.replace(/\\'/g, "'") : body) + '"';
+        } else {
+          out += c + body + (closed ? c : '');
+        }
+        i = j + 1;
+      } else {
+        if (!/\s/.test(c)) out += anyCase ? c.toLowerCase() : c;
+        i += 1;
       }
     }
     return out;
+  }
+
+  /** Whether one typed blank of a fill-in question is right. */
+  function blankMatches(q, index, value) {
+    var mine = squash(value, q.lang);
+    return mine !== '' && asList((q.blanks || [])[index]).some(function (option) { return squash(option, q.lang) === mine; });
+  }
+
+  /** Output as typed by a person: also forgiving about which dash they used. */
+  function sameOutput(typed, expected) {
+    var a = normalizeOutput(typed).replace(/^\n+/, '');
+    var b = normalizeOutput(expected).replace(/^\n+/, '');
+    if (a === b) return true;
+    var dashes = function (x) { return x.replace(/-+/g, '-'); };
+    return dashes(a) === dashes(b);
   }
 
   function asList(value) {
@@ -213,15 +275,10 @@
       case 'tf':
         return { ok: Boolean(response) === Boolean(q.answer) && response !== undefined && response !== null };
       case 'output':
-        return { ok: normalizeOutput(response) === normalizeOutput(q.answer) };
+        return { ok: sameOutput(response, q.answer) };
       case 'fill': {
-        var blanks = q.blanks || [];
         var given = asList(response);
-        var ok = blanks.every(function (accepted, i) {
-          var mine = squash(given[i]);
-          return mine !== '' && asList(accepted).some(function (option) { return squash(option) === mine; });
-        });
-        return { ok: ok };
+        return { ok: (q.blanks || []).every(function (_, i) { return blankMatches(q, i, given[i]); }) };
       }
       case 'order': {
         var order = asList(response).map(Number);
@@ -520,6 +577,9 @@
     checkedExpression: checkedExpression,
     learnerDiagnostics: learnerDiagnostics,
     squash: squash,
+    plainText: plainText,
+    blankMatches: blankMatches,
+    sameOutput: sameOutput,
     checkAnswer: checkAnswer,
     dayKey: dayKey,
     addDays: addDays,

@@ -222,3 +222,30 @@ test('readsInput looks at code, not comments or strings', () => {
   assert.ok(!Engine.readsInput('// std::cin >> x;\nstd::cout << "use cin";'));
   assert.ok(!Engine.readsInput('/* cin */ int main() {}'));
 });
+
+test('answers typed with phone or autocorrect punctuation are still marked right', () => {
+  const fill = (lang, blanks, typed) => Engine.checkAnswer({ type: 'fill', lang, blanks }, typed).ok;
+  assert.ok(fill('js', [["'hi'"]], ['‘hi’']), 'curly single quotes');
+  assert.ok(fill('cpp', [['"Hello"']], ['“Hello”']), 'curly double quotes');
+  assert.ok(fill('js', [['i--']], ['i—']), 'two hyphens turned into a long dash');
+  assert.ok(fill('js', [['a + b']], ['a + b']), 'non-breaking spaces');
+  assert.ok(fill('js', [['map']], ['ma​p']), 'invisible characters');
+  assert.ok(fill('js', [['(x)']], ['（x）']), 'full-width characters');
+  // Quote styles mean the same in JavaScript, not in C++ (a char vs a string).
+  assert.ok(fill('js', [["'hi'"]], ['"hi"']));
+  assert.ok(fill('js', [["'hi'"]], ['`hi`']));
+  assert.ok(!fill('cpp', [["'a'"]], ['"a"']));
+  // HTML and CSS don't care about case outside quotes; JavaScript does.
+  assert.ok(fill('css', [['text-align']], ['Text-Align']));
+  assert.ok(!fill('js', [['log']], ['Log']));
+  assert.ok(!fill('js', [['x']], ['   ']), 'an empty blank is never right');
+
+  const output = (answer, typed) => Engine.checkAnswer({ type: 'output', answer }, typed).ok;
+  assert.ok(output("It's fine", 'It’s fine'));
+  assert.ok(output('Soup — 4', 'Soup - 4'), 'any dash for a dash');
+  assert.ok(output('a\nb', '\n\na\nb\n'), 'blank lines around the answer');
+  assert.ok(!output('a b', 'ab'), 'spacing inside a line still counts');
+
+  // A difference is reported as it was really written.
+  assert.deepStrictEqual(Engine.compareOutput('A — B\nx', 'A — B\ny'), { ok: false, line: 2, got: 'x', want: 'y' });
+});

@@ -767,7 +767,7 @@
       stdinView = h('div', { class: 'ex-io ex-stdin' }, h('div', { class: 'ex-io-label' }, 'Input (what you type)'));
       if (extras.stdin !== undefined) stdinView.append(h('pre', null, extras.stdin));
       else {
-        stdinBox = h('textarea', { spellcheck: 'false', placeholder: 'This program reads input — type it here, one value per line or separated by spaces.' });
+        stdinBox = h('textarea', { spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off', placeholder: 'This program reads input — type it here, one value per line or separated by spaces.' });
         stdinView.append(stdinBox);
       }
       fig.append(stdinView);
@@ -808,7 +808,7 @@
         editor.fit();
         editor.ed.focus();
         if (extras.stdin !== undefined && stdinView) {
-          stdinBox = h('textarea', { spellcheck: 'false' });
+          stdinBox = h('textarea', { spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' });
           stdinBox.value = extras.stdin;
           stdinView.querySelector('pre').replaceWith(stdinBox);
         }
@@ -1206,6 +1206,9 @@
     const area = h('textarea', {
       class: 'q-answer-box',
       spellcheck: 'false',
+      autocapitalize: 'off',
+      autocorrect: 'off',
+      autocomplete: 'off',
       placeholder: 'Type exactly what it prints. Each line of output on its own line.'
     });
     area.addEventListener('input', changed);
@@ -1243,7 +1246,7 @@
     });
     let html = highlight(marked, q.lang);
     const inputs = [];
-    html = html.replace(/__AUBLANK(\d+)__/g, (_, i) => '<input class="blank" data-i="' + i + '" spellcheck="false" autocomplete="off" autocapitalize="off">');
+    html = html.replace(/__AUBLANK(\d+)__/g, (_, i) => '<input class="blank" data-i="' + i + '" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off">');
     const pre = h('pre', { class: 'q-code fill-code', html });
     pre.querySelectorAll('input.blank').forEach((input) => {
       const i = Number(input.dataset.i);
@@ -1262,7 +1265,7 @@
       lock: () => {
         inputs.forEach((input, i) => {
           input.readOnly = true;
-          const ok = q.blanks[i].some((a) => Engine.squash(a) === Engine.squash(input.value));
+          const ok = Engine.blankMatches(q, i, input.value);
           input.classList.add(ok ? 'is-right' : 'is-wrong');
         });
       },
@@ -1636,7 +1639,7 @@
 
     let stdin = null;
     if (isCpp && !task.harness) {
-      stdin = h('textarea', { class: 'io-input', spellcheck: 'false', placeholder: 'Input for ▶ Run — type what a user would type' });
+      stdin = h('textarea', { class: 'io-input', spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off', placeholder: 'Input for ▶ Run — type what a user would type' });
       const first = task.tests.find((t) => !t.hidden && t.input);
       if (first) stdin.value = first.input;
       el.append(h('details', { class: 'task-io', open: Engine.readsInput(task.starter + (task.solution || '')) ? true : null },
@@ -2813,7 +2816,7 @@
     let tabs = null;
     let preview = null;
     let previewTimer = null;
-    const stdin = h('textarea', { class: 'io-input', placeholder: 'Input for the program (what a user would type)', spellcheck: 'false' });
+    const stdin = h('textarea', { class: 'io-input', placeholder: 'Input for the program (what a user would type)', spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' });
     stdin.value = snip.stdin || '';
 
     const persist = () => {
