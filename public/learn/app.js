@@ -3218,6 +3218,7 @@
     lastHash = hash;
     const parts = hash.replace(/^#\/?/, '').split('/');
     let node;
+    let catalog = false;
     try {
       if (parts[0] === 'i' && ALL.byId[parts[1]]) {
         const item = ALL.byId[parts[1]];
@@ -3242,7 +3243,10 @@
       else if (parts[0] === 'glossary') node = glossaryView(parts[1]);
       else if (parts[0] === 'progress') node = progressView();
       else if (parts[0] === 'method') node = methodView();
-      else node = courses.length > 1 ? catalogView() : homeView();
+      else {
+        catalog = courses.length > 1;
+        node = catalog ? catalogView() : homeView();
+      }
     } catch (err) {
       console.error(err);
       node = h('div', { class: 'page' }, h('h1', null, 'Something went wrong'), h('pre', { class: 'plain' }, String(err && err.stack || err)));
@@ -3255,8 +3259,11 @@
     });
     document.body.classList.remove('side-open');
     document.getElementById('btn-menu').setAttribute('aria-expanded', 'false');
+    // The course list belongs to no course: the header just says "Learn".
+    const shownCourse = catalog ? '' : course.short;
+    document.getElementById('brand-course').textContent = shownCourse;
     const title = node.querySelector('h1');
-    document.title = (title ? title.textContent + ' · ' : '') + 'Learn ' + (course ? course.short : '');
+    document.title = (title ? title.textContent + ' · ' : '') + ('Learn ' + shownCourse).trim();
     renderOutline();
     const active = outline.querySelector('a.is-active');
     if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
