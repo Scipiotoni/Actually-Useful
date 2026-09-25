@@ -1,0 +1,851 @@
+id: css05
+number: 5
+part: css-p1
+title: Text and Fonts
+blurb: Typography that's pleasant to read — fonts and fallbacks, spacing, decoration, lists and links.
+hours: 2.5
+goals:
+  - Choose fonts with sensible fallbacks, and load web fonts
+  - Control weight, style, line height, letter spacing and case
+  - Keep lines to a readable length
+  - Style lists and links, including every link state
+
+items:
+  - type: lesson
+    id: css5-fonts
+    title: Choosing fonts
+    minutes: 20
+    objectives:
+      - Write a font stack with fallbacks
+      - Set weight and style with `font-weight` and `font-style`
+      - Load a web font
+    body: |
+      `font-family` takes a **list** of fonts. The browser uses the first one
+      that's available on the reader's device, so the list ends with a
+      **generic family** that always exists:
+
+      ```html
+      <h1>The Gazette</h1>
+      <p>Body text in the system's own interface font.</p>
+      <p><code>let code = "monospace";</code></p>
+      ```
+      ```css
+      h1 {
+        font-family: Georgia, "Times New Roman", serif;
+        font-weight: 700;
+        font-style: italic;
+      }
+
+      p {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      code {
+        font-family: "Courier New", Consolas, monospace;
+      }
+      ```
+
+      - Names with spaces go in **quotes**: `"Times New Roman"`.
+      - `system-ui` is the font of the operating system — clean, fast, and familiar.
+      - **Web-safe** fonts found on almost every computer: Arial, Verdana, Georgia, Times New Roman, Courier New.
+
+      ## Weight and style
+
+      - `font-weight`: `normal` (= `400`), `bold` (= `700`), or any hundred from `100` (thin) to `900` (black) — if the font has that weight.
+      - `font-style`: `normal` or `italic`.
+
+      ## Web fonts
+
+      To use a font the reader may not have, the browser downloads it. The
+      easiest way is a service like Google Fonts: it gives you a `<link>`
+      for your `<head>` and the name to use.
+
+      ```html static
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap">
+      ```
+
+      ```css static
+      body { font-family: "Inter", system-ui, sans-serif; }
+      ```
+
+      Or host the font file yourself with `@font-face`:
+
+      ```css static
+      @font-face {
+        font-family: "Brand";
+        src: url("fonts/brand.woff2") format("woff2");
+        font-weight: 400;
+        font-display: swap;   /* show fallback text while it loads */
+      }
+      ```
+
+      > [!tip]
+      > Two fonts are plenty — one for headings, one for text. Every extra
+      > font (and weight) is another download.
+
+      {{check stack}}
+
+      {{task stacks}}
+    checks:
+      - id: stack
+        type: mcq
+        prompt: "Why does a font stack end with `serif` or `sans-serif`?"
+        options:
+          - It makes the text bold
+          - It's a fallback that exists on every device
+          - It's required syntax
+          - It loads the font faster
+        answer: 1
+        why: "Generic families always exist, so the text never falls back to a surprise font."
+    tasks:
+      - id: stacks
+        title: Font stacks
+        prompt: |
+          - Headings `h1` and `h2` (one grouped rule): `Georgia, "Times New Roman", serif`
+          - `body`: `Verdana, Arial, sans-serif`
+          - `.quote`: `italic`
+          - `.label`: weight `600`
+        given:
+          index.html: |
+            <h1>Field Notes</h1>
+            <p>Observations from a week in the mountains.</p>
+            <h2>Day one</h2>
+            <p class="quote">"The air is thin but the views are endless."</p>
+            <p><span class="label">Weather:</span> clear.</p>
+        files:
+          style.css: |
+            /* Choose the fonts */
+        solution:
+          style.css: |
+            body {
+              font-family: Verdana, Arial, sans-serif;
+            }
+
+            h1, h2 {
+              font-family: Georgia, "Times New Roman", serif;
+            }
+
+            .quote {
+              font-style: italic;
+            }
+
+            .label {
+              font-weight: 600;
+            }
+        harness: |
+          const heading = style('h1', 'font-family');
+          check(heading.startsWith('Georgia') && heading.includes('Times New Roman') && heading.endsWith('serif'), true);
+          check(style('h2', 'font-family'), heading);
+          const bodyFont = style('p', 'font-family');
+          check(bodyFont.startsWith('Verdana') && bodyFont.endsWith('sans-serif'), true);
+          check(style('.quote', 'font-style'), 'italic');
+          check(style('.label', 'font-weight'), '600');
+        hints:
+          - "`h1, h2 { font-family: Georgia, \"Times New Roman\", serif; }`"
+          - "Set the body's font on `body` — paragraphs inherit it."
+    cards:
+      - front: What is a font stack?
+        back: A list of fonts for font-family; the browser uses the first available one, ending with a generic family as the fallback.
+      - front: When must a font name be quoted?
+        back: "When it contains spaces: `\"Times New Roman\"`."
+      - front: "What numbers are `normal` and `bold` in `font-weight`?"
+        back: 400 and 700.
+      - front: How do you use a font the reader might not have?
+        back: A web font — a Google Fonts `<link>`, or `@font-face` with your own file.
+
+  - type: lesson
+    id: css5-spacing
+    title: Spacing and decorating text
+    minutes: 25
+    objectives:
+      - Set comfortable line height and line length
+      - Adjust letter spacing, case, decoration and indentation
+      - Add a text shadow
+    body: |
+      Good typography is mostly about **space**: between lines, between
+      letters, and how long each line is.
+
+      ```html
+      <article>
+        <h2>Reading on screens</h2>
+        <p class="lead">Comfortable text needs room to breathe.</p>
+        <p>Lines that are too long make the eye lose its place when it jumps back to the start of the next one; lines that are too short break the rhythm of reading. Around 60 to 75 characters per line is ideal. Generous line height helps too.</p>
+        <p>Price: <span class="old">€40</span> €29</p>
+      </article>
+      ```
+      ```css
+      article {
+        font-family: Georgia, serif;
+        max-width: 60ch;
+      }
+
+      p {
+        line-height: 1.6;
+      }
+
+      h2 {
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-family: sans-serif;
+      }
+
+      .lead {
+        font-size: 1.25rem;
+        text-shadow: 1px 1px 2px silver;
+      }
+
+      .old {
+        text-decoration: line-through;
+        color: gray;
+      }
+      ```
+
+      | Property | What it does | Example |
+      |---|---|---|
+      | `line-height` | Space between lines. Use a number **without** a unit — it multiplies the font size | `1.5` |
+      | `max-width` in `ch` | `1ch` is the width of a "0" — so `60ch` is about 60 characters | `60ch` |
+      | `letter-spacing` | Space between letters | `0.1em`, `2px` |
+      | `word-spacing` | Space between words | `4px` |
+      | `text-transform` | Case | `uppercase`, `lowercase`, `capitalize` |
+      | `text-decoration` | Lines | `underline`, `line-through`, `none` |
+      | `text-indent` | Indent the first line | `2em` |
+      | `text-shadow` | Shadow: x, y, blur, colour | `1px 1px 2px gray` |
+
+      ## Why unitless line-height?
+
+      `line-height: 1.6` means "1.6 × this element's font size" — and
+      children with a different font size recalculate it for themselves.
+      With `line-height: 24px`, a 40px heading inside would get lines
+      squashed together.
+
+      > [!tip]
+      > Use `text-transform: uppercase` instead of typing in capitals: the
+      > HTML keeps normal text (screen readers may spell out ALL-CAPS words
+      > letter by letter), and you can change the look later.
+
+      {{check lh}}
+
+      {{task article}}
+    checks:
+      - id: lh
+        type: mcq
+        prompt: "A paragraph has `font-size: 20px; line-height: 1.5;`. How tall is each line?"
+        options:
+          - 1.5px
+          - 20px
+          - 30px
+          - 21.5px
+        answer: 2
+        why: "Unitless line-height multiplies the font size: 20 × 1.5 = 30px."
+    tasks:
+      - id: article
+        title: Readable article
+        prompt: |
+          - `article`: at most `65ch` wide
+          - paragraphs: `line-height: 1.7`
+          - `h2`: uppercase, with `letter-spacing: 2px`
+          - `.sold-out`: struck through (`line-through`)
+          - `.intro`: first line indented by `2em`
+        given:
+          index.html: |
+            <article>
+              <h2>Autumn market</h2>
+              <p class="intro">Every Sunday in October, the old square fills with stalls selling apples, pumpkins and warm bread. Come early: the best things go first, and by noon the square is packed.</p>
+              <p>Cider tasting: <span class="sold-out">sold out</span></p>
+            </article>
+        files:
+          style.css: |
+            /* Typography */
+        solution:
+          style.css: |
+            article {
+              max-width: 65ch;
+            }
+
+            p {
+              line-height: 1.7;
+            }
+
+            h2 {
+              text-transform: uppercase;
+              letter-spacing: 2px;
+            }
+
+            .sold-out {
+              text-decoration: line-through;
+            }
+
+            .intro {
+              text-indent: 2em;
+            }
+        harness: |
+          check(rule('article', 'max-width'), '65ch');
+          check(Math.round(parseFloat(style('p', 'line-height')) / parseFloat(style('p', 'font-size')) * 10) / 10, 1.7);
+          check(style('h2', 'text-transform'), 'uppercase');
+          check(style('h2', 'letter-spacing'), '2px');
+          check(style('.sold-out', 'text-decoration-line'), 'line-through');
+          check(style('.intro', 'text-indent'), '32px');
+        hints:
+          - "`article { max-width: 65ch; }` and `p { line-height: 1.7; }`."
+          - "`text-transform: uppercase;`, `text-decoration: line-through;`, `text-indent: 2em;`."
+    cards:
+      - front: Why write line-height without a unit?
+        back: A number multiplies each element's own font size, so children with other sizes still get proportional lines.
+      - front: What's a comfortable line length?
+        back: About 60–75 characters — e.g. `max-width: 65ch`.
+      - front: Why use `text-transform: uppercase` instead of typing capitals?
+        back: The HTML keeps normal text (better for screen readers), and the look can change later.
+
+  - type: quiz
+    id: css5-quiz1
+    title: "Quiz: fonts and spacing"
+    questions:
+      - type: spot
+        prompt: Which line has a mistake?
+        code: |
+          body {
+            font-family: Segoe UI, Arial, sans-serif;
+            line-height: 1.5;
+          }
+        answer: 2
+        why: "A font name with spaces needs quotes: `\"Segoe UI\"`."
+      - type: mcq
+        prompt: Which property adds space **between letters**?
+        options:
+          - "`word-spacing`"
+          - "`letter-spacing`"
+          - "`line-height`"
+          - "`text-indent`"
+        answer: 1
+        why: "`letter-spacing`."
+      - type: fill
+        prompt: Remove the underline from links.
+        code: |
+          a { text-decoration: ___; }
+        blanks:
+          - [none]
+        why: "`none` removes it."
+      - type: tf
+        prompt: "`font-weight: 700` is the same as `bold`."
+        answer: true
+        why: "bold = 700, normal = 400."
+
+  - type: lesson
+    id: css5-lists-links
+    title: Lists and links
+    minutes: 20
+    objectives:
+      - Change or remove list markers and colour them with `::marker`
+      - Reset a list for use as a navigation menu
+      - Style every link state in the right order
+    body: |
+      ## Lists
+
+      ```html
+      <ul class="features">
+        <li>Waterproof</li>
+        <li>Lightweight</li>
+        <li>Two-year warranty</li>
+      </ul>
+      <ol class="steps">
+        <li>Unpack</li>
+        <li>Charge</li>
+        <li>Enjoy</li>
+      </ol>
+      ```
+      ```css
+      .features {
+        list-style-type: square;
+      }
+
+      .features li::marker {
+        color: seagreen;
+      }
+
+      .steps {
+        list-style-type: upper-roman;
+      }
+      ```
+
+      - `list-style-type`: `disc` (the default ●), `circle`, `square`, `decimal`, `lower-alpha`, `upper-roman`, `none`…
+      - `::marker` styles the bullet or number itself.
+      - `list-style-position: inside` puts markers inside the text block.
+
+      Navigation menus are lists of links *without* the list look. Remove
+      the bullets and the browser's default indentation:
+
+      ```css static
+      nav ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      ```
+
+      ## Links and their states
+
+      A link can be in several states at once, and each has a pseudo-class:
+
+      ```html
+      <p>Visit <a href="#">the shop</a> or <a href="#">the blog</a>. Hover them, and press Tab to see the focus style.</p>
+      ```
+      ```css
+      a {
+        color: #1864ab;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 3px;
+      }
+
+      a:visited {
+        color: #5f3dc4;
+      }
+
+      a:hover {
+        color: #d9480f;
+      }
+
+      a:focus-visible {
+        outline: 3px solid #fab005;
+      }
+
+      a:active {
+        color: black;
+      }
+      ```
+
+      Write them in this order — **L**ink, **V**isited, **H**over,
+      **F**ocus, **A**ctive ("LoVe HAte") — because they're equally
+      specific, so later ones win. If `:visited` came after `:hover`, a
+      visited link wouldn't change on hover.
+
+      > [!tip]
+      > Keep text links underlined (or otherwise clearly different from
+      > text): colour alone isn't enough for everyone.
+
+      {{check marker}}
+
+      {{task menu}}
+    checks:
+      - id: marker
+        type: mcq
+        prompt: Which removes the bullets from a list?
+        options:
+          - "`list-style-type: none;`"
+          - "`bullets: none;`"
+          - "`text-decoration: none;`"
+          - "`display: none;`"
+        answer: 0
+        why: "`list-style-type: none` (or the shorthand `list-style: none`)."
+    tasks:
+      - id: menu
+        title: Lists and links
+        prompt: |
+          - `.features` uses `square` markers, and its markers (`.features li::marker`) are `seagreen`
+          - the list inside `nav` has no bullets, and `0` padding and margin
+          - links in `nav` have no underline, but **are** underlined on hover
+          - the list of steps (`.steps`) is numbered with `lower-alpha`
+        given:
+          index.html: |
+            <nav>
+              <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Products</a></li>
+              </ul>
+            </nav>
+            <ul class="features">
+              <li>Fast</li>
+              <li>Quiet</li>
+            </ul>
+            <ol class="steps">
+              <li>Plug in</li>
+              <li>Switch on</li>
+            </ol>
+        files:
+          style.css: |
+            /* Lists and links */
+        solution:
+          style.css: |
+            .features {
+              list-style-type: square;
+            }
+
+            .features li::marker {
+              color: seagreen;
+            }
+
+            nav ul {
+              list-style: none;
+              margin: 0;
+              padding: 0;
+            }
+
+            nav a {
+              text-decoration: none;
+            }
+
+            nav a:hover {
+              text-decoration: underline;
+            }
+
+            .steps {
+              list-style-type: lower-alpha;
+            }
+        harness: |
+          check(style('.features', 'list-style-type'), 'square');
+          check(style('.features li', 'color', '::marker'), color('seagreen'));
+          check(style('nav ul', 'list-style-type'), 'none');
+          check(style('nav ul', 'padding-left'), '0px');
+          check(style('nav ul', 'margin-top'), '0px');
+          check(style('nav a', 'text-decoration-line'), 'none');
+          check(hover('nav a', 'text-decoration-line'), 'underline');
+          check(style('.steps', 'list-style-type'), 'lower-alpha');
+        hints:
+          - "`nav ul { list-style: none; margin: 0; padding: 0; }`"
+          - "`nav a { text-decoration: none; }` and `nav a:hover { text-decoration: underline; }`."
+    cards:
+      - front: How do you turn a list into a plain menu?
+        back: "`list-style: none; margin: 0; padding: 0;` on the ul."
+      - front: How do you colour list bullets?
+        back: "`li::marker { color: … }`"
+      - front: In what order should link states be styled?
+        back: ":link, :visited, :hover, :focus(-visible), :active — \"LoVe HAte\"."
+
+  - type: quiz
+    id: css5-quiz2
+    title: "Quiz: lists and links"
+    questions:
+      - type: order
+        prompt: Put the link rules in the right order.
+        lines:
+          - "a:link { … }"
+          - "a:visited { … }"
+          - "a:hover { … }"
+          - "a:focus-visible { … }"
+          - "a:active { … }"
+        why: "LoVe HAte — later equal-specificity rules win."
+      - type: mcq
+        prompt: Which numbers a list i, ii, iii?
+        options:
+          - "`decimal`"
+          - "`lower-roman`"
+          - "`lower-alpha`"
+          - "`roman`"
+        answer: 1
+        why: "`lower-roman`."
+      - type: tf
+        prompt: Removing link underlines everywhere is fine, as long as links are a different colour.
+        answer: false
+        why: "Colour alone isn't enough for everyone. In body text, keep a clear non-colour cue."
+
+  - type: challenge
+    id: css5-ch-recipe
+    title: A recipe card
+    difficulty: 2
+    tags: [typography, lists]
+    prompt: |
+      Style the recipe:
+
+      - `.recipe`: font `Georgia, serif`, at most `60ch` wide, `line-height: 1.6`
+      - `.recipe h1`: font `system-ui, sans-serif`, uppercase, `letter-spacing: 0.05em`
+      - `.ingredients`: `circle` markers coloured `darkorange`
+      - `.method`: numbered with `decimal-leading-zero`
+      - `.tip`: `italic`, with the text shadow `1px 1px 0 gold`
+    given:
+      index.html: |
+        <div class="recipe">
+          <h1>Tomato soup</h1>
+          <ul class="ingredients">
+            <li>6 tomatoes</li>
+            <li>1 onion</li>
+            <li>Basil</li>
+          </ul>
+          <ol class="method">
+            <li>Chop everything.</li>
+            <li>Simmer for 20 minutes.</li>
+            <li>Blend and season.</li>
+          </ol>
+          <p class="tip">Tip: a spoon of cream makes it silky.</p>
+        </div>
+    files:
+      style.css: |
+        /* Style the recipe */
+    solution:
+      style.css: |
+        .recipe {
+          font-family: Georgia, serif;
+          max-width: 60ch;
+          line-height: 1.6;
+        }
+
+        .recipe h1 {
+          font-family: system-ui, sans-serif;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .ingredients {
+          list-style-type: circle;
+        }
+
+        .ingredients li::marker {
+          color: darkorange;
+        }
+
+        .method {
+          list-style-type: decimal-leading-zero;
+        }
+
+        .tip {
+          font-style: italic;
+          text-shadow: 1px 1px 0 gold;
+        }
+    harness: |
+      check(style('.recipe p', 'font-family'), 'Georgia, serif');
+      check(rule('.recipe', 'max-width'), '60ch');
+      check(Math.round(parseFloat(style('.tip', 'line-height')) / parseFloat(style('.tip', 'font-size')) * 10) / 10, 1.6);
+      check(style('.recipe h1', 'font-family'), 'system-ui, sans-serif');
+      check(style('.recipe h1', 'text-transform'), 'uppercase');
+      check(style('.recipe h1', 'letter-spacing'), (parseFloat(style('.recipe h1', 'font-size')) * 0.05) + 'px');
+      check(style('.ingredients', 'list-style-type'), 'circle');
+      check(style('.ingredients li', 'color', '::marker'), color('darkorange'));
+      check(style('.method', 'list-style-type'), 'decimal-leading-zero');
+      check(style('.tip', 'font-style'), 'italic');
+      check(style('.tip', 'text-shadow'), color('gold') + ' 1px 1px 0px');
+    hints:
+      - "Set font, width and line height once on `.recipe`; everything inside inherits them."
+      - "Marker colour: `.ingredients li::marker { color: darkorange; }`."
+
+  - type: challenge
+    id: css5-ch-links
+    title: Links done right
+    difficulty: 2
+    tags: [links, states]
+    prompt: |
+      Style the links in the article in LVHA order:
+
+      - `a`: colour `#0b7285`, underline offset `4px` (`text-underline-offset`)
+      - `a:visited`: `#862e9c`
+      - `a:hover`: `#e8590c`, and the underline is `3px` thick (`text-decoration-thickness`)
+      - `a:focus-visible`: `outline: 2px dashed #e8590c`
+      - `a:active`: `black`
+
+      The checks read your stylesheet, so they also check the **order**.
+    given:
+      index.html: |
+        <article>
+          <p>Read about <a href="#">our history</a> and <a href="#">our team</a>.</p>
+        </article>
+    files:
+      style.css: |
+        /* LVHA */
+    solution:
+      style.css: |
+        a {
+          color: #0b7285;
+          text-underline-offset: 4px;
+        }
+
+        a:visited {
+          color: #862e9c;
+        }
+
+        a:hover {
+          color: #e8590c;
+          text-decoration-thickness: 3px;
+        }
+
+        a:focus-visible {
+          outline: 2px dashed #e8590c;
+        }
+
+        a:active {
+          color: black;
+        }
+    harness: |
+      check(style('a', 'color'), color('#0b7285'));
+      check(style('a', 'text-underline-offset'), '4px');
+      check(color(rule('a:visited', 'color')), color('#862e9c'));
+      check(color(hover('a', 'color')), color('#e8590c'));
+      check(hover('a', 'text-decoration-thickness'), '3px');
+      check(focus('a', 'outline-style'), 'dashed');
+      check(color(rule('a:active', 'color')), color('black'));
+      const order = [];
+      for (const sheet of document.styleSheets) for (const r of sheet.cssRules) if (r.selectorText) order.push(r.selectorText);
+      const at = (s) => order.indexOf(s);
+      check(at('a:visited') < at('a:hover') && at('a:hover') < at('a:focus-visible') && at('a:focus-visible') < at('a:active'), true);
+    hints:
+      - "Five rules: `a`, `a:visited`, `a:hover`, `a:focus-visible`, `a:active` — in that order."
+
+  - type: review
+    id: css5-review
+    title: "Chapter 5 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      body {
+        font-family: system-ui, "Segoe UI", sans-serif;
+        line-height: 1.5;          /* unitless */
+      }
+      h1 { font-family: Georgia, serif; font-weight: 700; }
+      article { max-width: 65ch; }
+      h2 { text-transform: uppercase; letter-spacing: 0.1em; }
+      .old { text-decoration: line-through; }
+      .intro { text-indent: 2em; }
+      .glow { text-shadow: 1px 1px 2px gray; }
+
+      ul { list-style-type: square; }   li::marker { color: teal; }
+      nav ul { list-style: none; margin: 0; padding: 0; }
+
+      a { … }  a:visited { … }  a:hover { … }  a:focus-visible { … }  a:active { … }
+      ```
+
+      ## Key ideas
+
+      - Font stacks end with a generic family; quote names with spaces; two fonts are plenty.
+      - Readable text: unitless line height around 1.5, lines around 60–75 characters.
+      - Use CSS (not capital letters in HTML) for uppercase.
+      - Style link states in LVHA order, and keep links recognisable without colour.
+    questions:
+      - type: mcq
+        prompt: "What does `max-width: 60ch` achieve?"
+        options:
+          - Lines of about 60 characters — comfortable to read
+          - 60 lines per page
+          - A 60px wide box
+          - 60% of the screen
+        answer: 0
+        why: "1ch ≈ one character's width."
+      - type: mcq
+        prompt: "Which is the safest font stack?"
+        options:
+          - "`font-family: Inter;`"
+          - "`font-family: \"Inter\", system-ui, sans-serif;`"
+          - "`font-family: sans-serif, Inter;`"
+          - "`font-family: Inter Regular;`"
+        answer: 1
+        why: "Preferred font, a good fallback, then a generic family last."
+
+  - type: exam
+    id: css5-exam
+    title: "Chapter 5 exam"
+    minutes: 20
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: "The browser doesn't have Georgia. With `font-family: Georgia, serif;` it uses…"
+        options:
+          - Nothing — the text is hidden
+          - Its default serif font
+          - Arial
+          - Times New Roman, always
+        answer: 1
+        why: "It moves to the next font in the stack."
+      - type: fill
+        prompt: Make every paragraph's lines 1.6 times its font size.
+        code: |
+          p { ___: 1.6; }
+        blanks:
+          - [line-height]
+        why: "Unitless line-height."
+      - type: mcq
+        prompt: Which makes text ALL CAPS without changing the HTML?
+        options:
+          - "`font-variant: caps;`"
+          - "`text-transform: uppercase;`"
+          - "`text-decoration: uppercase;`"
+          - "`font-style: capital;`"
+        answer: 1
+        why: "`text-transform`."
+      - type: mcq
+        prompt: "`font-weight: 400` is…"
+        options:
+          - thin
+          - normal
+          - bold
+          - black
+        answer: 1
+        why: "400 is normal; 700 bold."
+      - type: tf
+        prompt: "`line-height: 1.5` is usually better than `line-height: 24px`."
+        answer: true
+        why: "A number scales with each element's font size."
+      - type: mcq
+        prompt: Which list style gives ■ markers?
+        options:
+          - "`disc`"
+          - "`circle`"
+          - "`square`"
+          - "`box`"
+        answer: 2
+        why: "`square`."
+      - type: mcq
+        prompt: "If `a:hover` comes **before** `a:visited` (same specificity), what happens when you hover a visited link?"
+        options:
+          - The hover style shows
+          - The visited style wins, so hover seems to do nothing (for properties both set)
+          - Both mix
+          - The link disappears
+        answer: 1
+        why: "Later rules win ties — hence LVHA."
+      - type: fill
+        prompt: Use a web font you host yourself.
+        code: |
+          ___ {
+            font-family: "Brand";
+            src: url("brand.woff2") format("woff2");
+          }
+        blanks:
+          - ["@font-face"]
+        why: "`@font-face` declares a downloadable font."
+      - type: mcq
+        prompt: How do you colour the numbers of an ordered list?
+        options:
+          - "`ol { number-color: red; }`"
+          - "`li::marker { color: red; }`"
+          - "`li::before { color: red; }`"
+          - "`ol::number { color: red; }`"
+        answer: 1
+        why: "`::marker`."
+      - type: tf
+        prompt: A page should use as many different fonts as possible to look interesting.
+        answer: false
+        why: "Two is plenty — and each one is a download."
+      - type: code
+        prompt: |
+          Style the quote: font `Georgia, serif`, `italic`, `1.25rem`,
+          `line-height: 1.4`, and at most `40ch` wide. Its `cite` is
+          uppercase, with `letter-spacing: 1px` and no italics
+          (`font-style: normal`).
+        given:
+          index.html: |
+            <blockquote>
+              <p>Simplicity is prerequisite for reliability.</p>
+              <cite>Edsger Dijkstra</cite>
+            </blockquote>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            blockquote {
+              font-family: Georgia, serif;
+              font-style: italic;
+              font-size: 1.25rem;
+              line-height: 1.4;
+              max-width: 40ch;
+            }
+
+            cite {
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-style: normal;
+            }
+        harness: |
+          check(style('blockquote p', 'font-family'), 'Georgia, serif');
+          check(style('blockquote p', 'font-style'), 'italic');
+          check(style('blockquote', 'font-size'), '20px');
+          check(style('blockquote p', 'line-height'), '28px');
+          check(rule('blockquote', 'max-width'), '40ch');
+          check(style('cite', 'text-transform'), 'uppercase');
+          check(style('cite', 'letter-spacing'), '1px');
+          check(style('cite', 'font-style'), 'normal');

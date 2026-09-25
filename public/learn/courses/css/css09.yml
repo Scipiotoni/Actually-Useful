@@ -1,0 +1,859 @@
+id: css09
+number: 9
+part: css-p2
+title: Positioning
+blurb: Take elements out of the normal flow — badges on corners, captions over images, sticky headers, fixed buttons and layered overlays.
+hours: 2.5
+goals:
+  - Offset elements with `position: relative`
+  - Pin elements inside a container with `position: absolute`
+  - Keep elements on screen with `fixed` and `sticky`
+  - Control which element is on top with `z-index`
+  - Wrap text around an image with `float`
+
+items:
+  - type: lesson
+    id: css9-absolute
+    title: Relative and absolute
+    minutes: 25
+    objectives:
+      - Explain the normal flow and what `position` changes
+      - Nudge an element with `position: relative`
+      - Pin an element to a corner of its container with `position: absolute`
+    body: |
+      Normally elements are laid out one after another — the **normal
+      flow**. The `position` property lets you move an element out of it.
+      With `top`, `right`, `bottom` and `left` (called **offsets**) you then
+      say where it goes.
+
+      | `position` | Positioned relative to | Keeps its space in the flow? |
+      |---|---|---|
+      | `static` (default) | — offsets do nothing | yes |
+      | `relative` | its own normal place | yes |
+      | `absolute` | the nearest **positioned** ancestor | no — removed from the flow |
+      | `fixed` | the browser window | no |
+      | `sticky` | normal, until you scroll past it — then it sticks | yes |
+
+      ## relative
+
+      `position: relative; top: 10px;` nudges an element 10px down from
+      where it would have been. Its old space stays reserved. On its own
+      that's rarely useful — its real job is the next pattern.
+
+      ## absolute inside relative
+
+      An absolutely positioned element is placed relative to its nearest
+      ancestor that has a `position` other than `static`. So: make the
+      container `relative`, and the child `absolute`:
+
+      ```html
+      <div class="card">
+        <span class="badge">New</span>
+        <h3>Trail shoes</h3>
+        <p>Light, grippy, waterproof.</p>
+      </div>
+      ```
+      ```css
+      .card {
+        position: relative;
+        width: 240px;
+        padding: 16px;
+        border: 1px solid #ced4da;
+        border-radius: 8px;
+        font-family: sans-serif;
+      }
+
+      .badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background-color: crimson;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+      }
+      ```
+
+      - `top: -10px; right: -10px;` — measured from the card's top and right edges (negative values go outside).
+      - Without `position: relative` on the card, the badge would fly to the corner of the **page**.
+      - An absolute element no longer takes space: the heading moves up as if the badge weren't there.
+
+      ## Covering the whole container
+
+      `inset: 0` is short for `top: 0; right: 0; bottom: 0; left: 0` —
+      it stretches an absolute element over its container, like a caption
+      bar over a photo (`left: 0; right: 0; bottom: 0;`) or a coloured
+      overlay (`inset: 0`).
+
+      {{check anchor}}
+
+      {{task badge}}
+    checks:
+      - id: anchor
+        type: mcq
+        prompt: "An element has `position: absolute; top: 0; left: 0;`, and none of its ancestors is positioned. Where does it go?"
+        options:
+          - The top left of its parent
+          - The top left of the page
+          - It stays where it was
+          - The top left of the next element
+        answer: 1
+        why: "Without a positioned ancestor, it's positioned relative to the page (the initial containing block)."
+    tasks:
+      - id: badge
+        title: A notification badge
+        prompt: |
+          - `.icon`: `position: relative`
+          - `.count`: absolutely positioned `4px` from the **top** and `4px` from the **right** of the icon (use `top` and `right`)
+          - `.count`: background `red`, `white` text, rounded (`border-radius: 50%`), `20px` wide and `20px` tall
+        given:
+          index.html: |
+            <button class="icon">
+              📬
+              <span class="count">3</span>
+            </button>
+        files:
+          style.css: |
+            .icon {
+              width: 64px;
+              height: 64px;
+              font-size: 28px;
+            }
+
+            /* Position the count */
+        solution:
+          style.css: |
+            .icon {
+              width: 64px;
+              height: 64px;
+              font-size: 28px;
+              position: relative;
+            }
+
+            .count {
+              position: absolute;
+              top: 4px;
+              right: 4px;
+              width: 20px;
+              height: 20px;
+              background-color: red;
+              color: white;
+              border-radius: 50%;
+              font-size: 12px;
+            }
+        harness: |
+          const icon = box('.icon');
+          const c = box('.count');
+          check(style('.icon', 'position'), 'relative');
+          check(style('.count', 'position'), 'absolute');
+          const border = parseFloat(style('.icon', 'border-top-width'));
+          check(Math.round(c.y - icon.y - border), 4);
+          check(Math.round(icon.x + icon.width - border - (c.x + c.width)), 4);
+          check([c.width, c.height], [20, 20]);
+          check(style('.count', 'background-color'), color('red'));
+          check(style('.count', 'border-top-left-radius'), '50%');
+        hints:
+          - "The parent gets `position: relative;` so the badge is measured from it."
+          - "`.count { position: absolute; top: 4px; right: 4px; … }`"
+    cards:
+      - front: What does an absolutely positioned element position itself against?
+        back: Its nearest ancestor with a position other than static (or the page, if there's none).
+      - front: How do you pin a badge to a card's corner?
+        back: "Card: `position: relative`. Badge: `position: absolute; top: …; right: …`."
+      - front: "What is `inset: 0`?"
+        back: "Shorthand for top, right, bottom and left all 0 — stretches an absolute element over its container."
+      - front: Does an absolute element keep its space in the flow?
+        back: No — the elements around it close up as if it weren't there. (A relative one keeps its space.)
+
+  - type: lesson
+    id: css9-fixed
+    title: Fixed and sticky
+    minutes: 20
+    objectives:
+      - Keep an element on screen with `position: fixed`
+      - Make a header stick while scrolling with `position: sticky`
+    body: |
+      ## fixed
+
+      A fixed element is positioned relative to the **window**, and stays
+      there when the page scrolls — "back to top" buttons, chat bubbles,
+      cookie banners:
+
+      ```css static
+      .to-top {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+      }
+      ```
+
+      Like `absolute`, it leaves the flow. Careful: fixed things cover
+      content, and on a phone they eat precious space.
+
+      ## sticky
+
+      A sticky element behaves normally until scrolling would take it past
+      its offset — then it **sticks** there, until its container scrolls
+      away. Scroll inside this example:
+
+      ```html
+      <div class="scroller">
+        <h3 class="sticky">A — sticky heading</h3>
+        <p>Apple</p><p>Apricot</p><p>Avocado</p><p>Almond</p>
+        <h3 class="sticky">B — sticky heading</h3>
+        <p>Banana</p><p>Blackberry</p><p>Blueberry</p><p>Brazil nut</p>
+        <h3 class="sticky">C — sticky heading</h3>
+        <p>Cherry</p><p>Coconut</p><p>Cranberry</p><p>Cashew</p>
+      </div>
+      ```
+      ```css
+      .scroller {
+        height: 200px;
+        overflow: auto;
+        border: 1px solid #ced4da;
+        font-family: sans-serif;
+      }
+
+      .sticky {
+        position: sticky;
+        top: 0;
+        margin: 0;
+        padding: 8px;
+        background-color: #ffec99;
+      }
+      ```
+
+      - A sticky element **needs an offset** (`top: 0`), or it never sticks.
+      - It sticks within its **parent**: when the parent scrolls away, it goes too.
+      - Give it a background, or the content scrolls visibly underneath.
+
+      A site header with `position: sticky; top: 0;` stays at the top of the
+      window as you read — no JavaScript needed.
+
+      {{check stickyneeds}}
+
+      {{task sticky}}
+    checks:
+      - id: stickyneeds
+        type: mcq
+        prompt: "You wrote `position: sticky` on a header but it scrolls away normally. What's most likely missing?"
+        options:
+          - "`z-index`"
+          - "An offset such as `top: 0`"
+          - "`display: block`"
+          - "`position: relative` on the body"
+        answer: 1
+        why: "Sticky needs to know where to stick."
+    tasks:
+      - id: sticky
+        title: Sticky header, fixed button
+        prompt: |
+          - `header`: sticks to the **top** of the window when scrolling (`sticky`, `top: 0`), with the background colour `white`
+          - `.to-top`: fixed `16px` from the **bottom** and `16px` from the **right** of the window
+
+          The checks scroll the page to see if they stay put.
+        given:
+          index.html: |
+            <header><strong>Long Read</strong></header>
+            <main style="height: 2000px">
+              <p>A very long article…</p>
+            </main>
+            <a class="to-top" href="#">↑ Top</a>
+        files:
+          style.css: |
+            body {
+              margin: 0;
+            }
+
+            /* Sticky and fixed */
+        solution:
+          style.css: |
+            body {
+              margin: 0;
+            }
+
+            header {
+              position: sticky;
+              top: 0;
+              background-color: white;
+            }
+
+            .to-top {
+              position: fixed;
+              bottom: 16px;
+              right: 16px;
+            }
+        harness: |
+          const w = document.documentElement.clientWidth;
+          const h = document.documentElement.clientHeight;
+          const check2 = () => {
+            const b = box('.to-top');
+            return [Math.round(w - (b.x + b.width)), Math.round(h - (b.y + b.height))];
+          };
+          check(check2(), [16, 16]);
+          scrollTo(0, 700);
+          await wait(50);
+          check(box('header').y, 0);
+          check(check2(), [16, 16]);
+          check(style('header', 'background-color'), color('white'));
+          scrollTo(0, 0);
+        hints:
+          - "`header { position: sticky; top: 0; background-color: white; }`"
+          - "`.to-top { position: fixed; bottom: 16px; right: 16px; }`"
+    cards:
+      - front: "`fixed` vs `sticky`?"
+        back: Fixed is positioned relative to the window and always stays there; sticky scrolls normally until it reaches its offset, then sticks within its parent.
+      - front: What does a sticky element need to work?
+        back: "An offset like `top: 0` — and it only sticks inside its parent."
+
+  - type: quiz
+    id: css9-quiz1
+    title: "Quiz: position values"
+    questions:
+      - type: mcq
+        prompt: Which position value keeps the element's space in the flow **and** lets you nudge it?
+        options:
+          - "`absolute`"
+          - "`relative`"
+          - "`fixed`"
+          - "`static`"
+        answer: 1
+        why: "Relative is offset from its normal place, whose space stays reserved."
+      - type: mcq
+        prompt: "A chat button that stays in the bottom-right corner while you scroll uses…"
+        options:
+          - "`position: absolute`"
+          - "`position: fixed`"
+          - "`position: relative`"
+          - "`float: right`"
+        answer: 1
+        why: "Fixed = relative to the window."
+      - type: fill
+        prompt: Pin a label to the bottom-left corner of a relative container.
+        code: |
+          .label { position: ___; bottom: 0; left: 0; }
+        blanks:
+          - [absolute]
+        why: "Absolute, measured from the positioned container."
+      - type: tf
+        prompt: "`top: 20px` has no effect on an element with `position: static`."
+        answer: true
+        why: "Offsets only apply to positioned elements."
+
+  - type: lesson
+    id: css9-layers
+    title: Layers and floats
+    minutes: 20
+    objectives:
+      - Decide which positioned element is on top with `z-index`
+      - Build a full-screen overlay
+      - Wrap text around an image with `float`
+    body: |
+      ## z-index
+
+      Positioned elements can overlap. Normally the one that comes **later**
+      in the HTML is drawn on top. `z-index` changes that: higher numbers are
+      closer to you.
+
+      ```html
+      <div class="stack">
+        <div class="box one">z-index: 3</div>
+        <div class="box two">z-index: 2</div>
+        <div class="box three">z-index: 1</div>
+      </div>
+      ```
+      ```css
+      .stack {
+        position: relative;
+        height: 180px;
+        font-family: sans-serif;
+      }
+
+      .box {
+        position: absolute;
+        width: 140px;
+        height: 90px;
+        padding: 8px;
+        color: white;
+      }
+
+      .one   { top: 0;    left: 0;    background-color: #e03131; z-index: 3; }
+      .two   { top: 40px; left: 60px; background-color: #1971c2; z-index: 2; }
+      .three { top: 80px; left: 120px; background-color: #2f9e44; z-index: 1; }
+      ```
+
+      - `z-index` works on **positioned** elements (and flex and grid items).
+      - Use small, planned numbers — `1`, `10`, `100` — not `99999`.
+
+      > [!note]
+      > Some properties (like `opacity` below 1 or a `transform`) create a
+      > new **stacking context**: the element's children are layered only
+      > among themselves. If a `z-index: 1000` refuses to go on top, check its
+      > ancestors for one of these.
+
+      ## A modal overlay
+
+      A dimmed layer over the whole window, with a dialog in the middle:
+
+      ```css static
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgb(0 0 0 / 50%);
+        z-index: 10;
+        display: grid;
+        place-items: center;
+      }
+      ```
+
+      (For real dialogs, HTML's `<dialog>` element handles focus and the
+      Escape key for you.)
+
+      ## Floats
+
+      Before Flexbox and Grid, whole layouts were built with `float`. Today
+      it has one job left: letting **text wrap around** an image.
+
+      ```html
+      <p><img class="pic" alt="" width="100" height="100" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23ffa94d'/%3E%3C/svg%3E">Floats take an element out of the normal flow and push it to one side, and the text of the paragraph flows around it. It's the classic look of newspapers and magazines, where a photo sits at the edge of a column and the words wrap neatly around it, line after line, until they pass below it.</p>
+      ```
+      ```css
+      .pic {
+        float: left;
+        margin: 0 12px 8px 0;
+      }
+
+      p {
+        font-family: Georgia, serif;
+        line-height: 1.5;
+      }
+      ```
+
+      `clear: both` on a later element makes it start below any floats.
+
+      {{check zindex}}
+
+      {{task overlay}}
+    checks:
+      - id: zindex
+        type: mcq
+        prompt: "Two overlapping positioned elements: A has `z-index: 5`, B has `z-index: 2`. Which is on top?"
+        options:
+          - A
+          - B
+          - The one that comes later in the HTML
+          - Neither — they blend
+        answer: 0
+        why: "Higher z-index is closer to the viewer (in the same stacking context)."
+    tasks:
+      - id: overlay
+        title: A modal overlay
+        prompt: |
+          The page has a sticky header with `z-index: 5`. Make the overlay
+          cover **everything**, including the header:
+
+          - `.overlay`: fixed, covering the whole window (`inset: 0`), background black at 50% (`rgb(0 0 0 / 50%)`), `z-index: 10`, and centring its child with `display: grid; place-items: center`
+          - `.dialog`: white background, `24px` padding, `8px` rounded corners
+        given:
+          index.html: |
+            <header class="bar">Site header</header>
+            <p>Page content…</p>
+            <div class="overlay">
+              <div class="dialog">
+                <p>Subscribe to our newsletter?</p>
+                <button>No thanks</button>
+              </div>
+            </div>
+        files:
+          style.css: |
+            body {
+              margin: 0;
+            }
+
+            .bar {
+              position: sticky;
+              top: 0;
+              z-index: 5;
+              padding: 16px;
+              background-color: #1c7ed6;
+              color: white;
+            }
+
+            /* The overlay and the dialog */
+        solution:
+          style.css: |
+            body {
+              margin: 0;
+            }
+
+            .bar {
+              position: sticky;
+              top: 0;
+              z-index: 5;
+              padding: 16px;
+              background-color: #1c7ed6;
+              color: white;
+            }
+
+            .overlay {
+              position: fixed;
+              inset: 0;
+              background-color: rgb(0 0 0 / 50%);
+              z-index: 10;
+              display: grid;
+              place-items: center;
+            }
+
+            .dialog {
+              background-color: white;
+              padding: 24px;
+              border-radius: 8px;
+            }
+        harness: |
+          const w = document.documentElement.clientWidth;
+          const h = document.documentElement.clientHeight;
+          const o = box('.overlay');
+          check([o.x, o.y, o.width, o.height], [0, 0, w, h]);
+          check(document.elementFromPoint(10, 10), $('.overlay'));
+          const d = box('.dialog');
+          check(Math.abs(d.x + d.width / 2 - w / 2) <= 1 && Math.abs(d.y + d.height / 2 - h / 2) <= 1, true);
+          check(style('.overlay', 'background-color'), color('rgb(0 0 0 / 50%)'));
+          check(style('.overlay', 'z-index'), '10');
+          check(style('.dialog', 'background-color'), color('white'));
+          check(style('.dialog', 'padding-top'), '24px');
+          check(style('.dialog', 'border-top-left-radius'), '8px');
+        hints:
+          - "`.overlay { position: fixed; inset: 0; z-index: 10; … }` — 10 beats the header's 5."
+          - "`display: grid; place-items: center;` centres the dialog."
+    cards:
+      - front: What does `z-index` control?
+        back: Which positioned elements are drawn on top — higher numbers are closer to the viewer.
+      - front: Why might a huge z-index still not bring an element to the front?
+        back: An ancestor creates a stacking context (e.g. opacity < 1 or a transform), so it's only layered among its siblings inside it.
+      - front: What is `float` still good for?
+        back: Wrapping text around an image. Use Flexbox and Grid for layout.
+
+  - type: quiz
+    id: css9-quiz2
+    title: "Quiz: layers and floats"
+    questions:
+      - type: tf
+        prompt: "`z-index` has an effect on a `position: static` block element."
+        answer: false
+        why: "It needs a positioned element (or a flex/grid item)."
+      - type: mcq
+        prompt: Which makes a paragraph's text wrap around an image on the left?
+        options:
+          - "`img { float: left; }`"
+          - "`img { position: absolute; left: 0; }`"
+          - "`p { display: flex; }`"
+          - "`img { z-index: -1; }`"
+        answer: 0
+        why: "Floats push the image aside and let text flow around it."
+      - type: fill
+        prompt: Stretch an absolute element over its whole container.
+        code: |
+          .shade { position: absolute; ___: 0; }
+        blanks:
+          - [inset]
+        why: "`inset: 0`."
+
+  - type: challenge
+    id: css9-ch-caption
+    title: Caption over a photo
+    difficulty: 2
+    tags: [position]
+    prompt: |
+      - `.photo`: `position: relative`, `400px` wide
+      - `.photo img`: `display: block`, `100%` wide
+      - `.caption`: absolutely positioned across the **bottom** of the photo (`left: 0; right: 0; bottom: 0`), with `12px` padding, `white` text and a background image `linear-gradient(transparent, rgb(0 0 0 / 70%))`
+      - `.tag`: absolutely positioned `12px` from the photo's top and left
+    given:
+      index.html: |
+        <figure class="photo">
+          <img alt="Harbour at dusk" width="400" height="260" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='260'%3E%3Crect width='400' height='260' fill='%23364fc7'/%3E%3Ccircle cx='300' cy='70' r='30' fill='%23ffd43b'/%3E%3C/svg%3E">
+          <span class="tag">Travel</span>
+          <figcaption class="caption">Harbour at dusk, Porto</figcaption>
+        </figure>
+    files:
+      style.css: |
+        figure {
+          margin: 0;
+        }
+
+        /* Caption and tag over the photo */
+    solution:
+      style.css: |
+        figure {
+          margin: 0;
+        }
+
+        .photo {
+          position: relative;
+          width: 400px;
+        }
+
+        .photo img {
+          display: block;
+          width: 100%;
+        }
+
+        .caption {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          padding: 12px;
+          color: white;
+          background-image: linear-gradient(transparent, rgb(0 0 0 / 70%));
+        }
+
+        .tag {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          background-color: white;
+          padding: 2px 8px;
+        }
+    harness: |
+      const p = box('.photo');
+      const img = box('.photo img');
+      const cap = box('.caption');
+      const tag = box('.tag');
+      check(p.width, 400);
+      check(p.height, img.height);
+      check([cap.x, cap.width], [p.x, p.width]);
+      check(Math.round(cap.y + cap.height), Math.round(p.y + p.height));
+      check(style('.caption', 'padding-left'), '12px');
+      check(style('.caption', 'color'), color('white'));
+      check(style('.caption', 'background-image').startsWith('linear-gradient'), true);
+      check([Math.round(tag.x - p.x), Math.round(tag.y - p.y)], [12, 12]);
+    hints:
+      - "The figure is `position: relative`; caption and tag are `position: absolute`."
+      - "`display: block` on the image removes the small gap below it, so the caption sits exactly on its bottom edge."
+
+  - type: challenge
+    id: css9-ch-tooltip
+    title: A tooltip
+    difficulty: 3
+    tags: [position, states]
+    prompt: |
+      Show a tooltip **above** a button when it's hovered or focused:
+
+      - `.tip-wrap`: `position: relative` and `display: inline-block`
+      - `.tip`: absolutely positioned with `bottom: 100%` (its bottom edge on the button's top edge) and `left: 0`, with a `4px` bottom margin, background `#212529`, `white` text, `4px 8px` padding, and `white-space: nowrap`
+      - `.tip` is hidden (`visibility: hidden`) until `.tip-wrap:hover .tip` or `.tip-wrap:focus-within .tip` makes it `visible`
+
+      The checks read your hover and focus rules, and measure where the tip sits.
+    given:
+      index.html: |
+        <p style="margin-top: 80px">
+          <span class="tip-wrap">
+            <button>Save</button>
+            <span class="tip" role="tooltip">Ctrl + S</span>
+          </span>
+        </p>
+    files:
+      style.css: |
+        /* Tooltip */
+    solution:
+      style.css: |
+        .tip-wrap {
+          position: relative;
+          display: inline-block;
+        }
+
+        .tip {
+          position: absolute;
+          bottom: 100%;
+          left: 0;
+          margin-bottom: 4px;
+          background-color: #212529;
+          color: white;
+          padding: 4px 8px;
+          white-space: nowrap;
+          visibility: hidden;
+        }
+
+        .tip-wrap:hover .tip,
+        .tip-wrap:focus-within .tip {
+          visibility: visible;
+        }
+    harness: |
+      check(style('.tip', 'visibility'), 'hidden');
+      check(hover('.tip', 'visibility'), 'visible');
+      check(focus('.tip', 'visibility'), 'visible');
+      const tip = box('.tip');
+      const btn = box('.tip-wrap');
+      check(Math.round(btn.y - (tip.y + tip.height)), 4);
+      check(tip.x, btn.x);
+      check(style('.tip', 'white-space'), 'nowrap');
+      check(style('.tip', 'background-color'), color('#212529'));
+    hints:
+      - "`bottom: 100%` puts the tooltip's bottom at the top of the wrapper; `margin-bottom: 4px` lifts it a little."
+      - "Hidden by default; `.tip-wrap:hover .tip, .tip-wrap:focus-within .tip { visibility: visible; }`."
+
+  - type: review
+    id: css9-review
+    title: "Chapter 9 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      .card   { position: relative; }
+      .badge  { position: absolute; top: 8px; right: 8px; }
+      .cover  { position: absolute; inset: 0; }
+      .header { position: sticky; top: 0; z-index: 5; background: white; }
+      .to-top { position: fixed; bottom: 16px; right: 16px; }
+      .modal  { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; }
+      .pic    { float: left; margin-right: 12px; }
+      ```
+
+      ## Key ideas
+
+      - `relative` keeps its space; `absolute` and `fixed` leave the flow.
+      - Absolute children position against the nearest positioned ancestor — make the container `relative`.
+      - `fixed` = the window; `sticky` = normal until it reaches its offset.
+      - `z-index` layers positioned elements; keep the numbers small and planned.
+      - Floats are for wrapping text around images.
+    questions:
+      - type: mcq
+        prompt: "A caption should sit over the bottom of an image inside a figure. What do you position how?"
+        options:
+          - "Figure `absolute`, caption `relative`"
+          - "Figure `relative`, caption `absolute` with `bottom: 0`"
+          - "Both `fixed`"
+          - "Caption `float: bottom`"
+        answer: 1
+        why: "Container relative, child absolute."
+      - type: mcq
+        prompt: Which position value leaves the element's space in the flow?
+        options:
+          - "`absolute`"
+          - "`fixed`"
+          - "`relative`"
+          - "None"
+        answer: 2
+        why: "Relative (and sticky)."
+
+  - type: exam
+    id: css9-exam
+    title: "Chapter 9 exam"
+    minutes: 20
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: What is the default `position`?
+        options:
+          - "`relative`"
+          - "`static`"
+          - "`absolute`"
+          - "`normal`"
+        answer: 1
+        why: "`static`: normal flow, offsets ignored."
+      - type: mcq
+        prompt: "`position: relative; left: 20px;` moves the element…"
+        options:
+          - 20px to the left
+          - 20px to the right (away from its left edge)
+          - to 20px from the page's left
+          - nowhere
+        answer: 1
+        why: "The offset pushes it away from its own left edge."
+      - type: mcq
+        prompt: "What is an absolutely positioned element positioned against?"
+        options:
+          - Its parent, always
+          - The nearest ancestor that isn't static
+          - The window
+          - The previous sibling
+        answer: 1
+        why: "The nearest positioned ancestor."
+      - type: tf
+        prompt: A fixed element scrolls with the page.
+        answer: false
+        why: "It stays put relative to the window."
+      - type: fill
+        prompt: Make the table header row stick to the top while scrolling.
+        code: |
+          thead th { position: ___; top: 0; }
+        blanks:
+          - [sticky]
+        why: "`sticky` with `top: 0`."
+      - type: mcq
+        prompt: Which element ends up on top?
+        code: |
+          .a { position: absolute; z-index: 1; }
+          .b { position: absolute; z-index: 10; }
+          .c { position: absolute; }
+        options:
+          - ".a"
+          - ".b"
+          - ".c"
+          - The last in the HTML
+        answer: 1
+        why: "Highest z-index."
+      - type: mcq
+        prompt: "What is `inset: 0` short for?"
+        options:
+          - "`margin: 0`"
+          - "`top: 0; right: 0; bottom: 0; left: 0`"
+          - "`padding: 0`"
+          - "`z-index: 0`"
+        answer: 1
+        why: "All four offsets."
+      - type: tf
+        prompt: Floats are the recommended way to build page columns today.
+        answer: false
+        why: "Use Flexbox and Grid; floats are for wrapping text."
+      - type: mcq
+        prompt: A sticky header scrolls away normally. Which is the likely cause?
+        options:
+          - It has no `top` value
+          - It has a background colour
+          - It's a `<header>` element
+          - Its text is too long
+        answer: 0
+        why: "Sticky needs an offset."
+      - type: tf
+        prompt: An absolutely positioned element still takes up space in the normal flow.
+        answer: false
+        why: "It's taken out of the flow."
+      - type: code
+        prompt: |
+          Put the `.close` button in the **top-right** corner of `.panel`,
+          `8px` from the top and `8px` from the right, using positioning.
+        given:
+          index.html: |
+            <div class="panel">
+              <button class="close" aria-label="Close">✕</button>
+              <p>Your settings were saved.</p>
+            </div>
+        files:
+          style.css: |
+            .panel {
+              width: 300px;
+              padding: 24px;
+              border: 1px solid gray;
+            }
+        solution:
+          style.css: |
+            .panel {
+              width: 300px;
+              padding: 24px;
+              border: 1px solid gray;
+              position: relative;
+            }
+
+            .close {
+              position: absolute;
+              top: 8px;
+              right: 8px;
+            }
+        harness: |
+          const panel = box('.panel');
+          const close = box('.close');
+          check(Math.round(close.y - panel.y - 1), 8);
+          check(Math.round(panel.x + panel.width - 1 - (close.x + close.width)), 8);
+          check(style('.close', 'position'), 'absolute');

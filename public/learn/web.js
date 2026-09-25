@@ -855,7 +855,8 @@
       tail += scriptTag(
         'window.addEventListener("load", function () { setTimeout(async function () {\n' +
         '  try {\n' +
-        '    await (async function (' + PAGE_HELPERS.join(', ') + ') {\n' + body + '\n' +
+        // The inner block lets checks declare names like `tag` or `text`.
+        '    await (async function (' + PAGE_HELPERS.join(', ') + ') {\n{\n' + body + '\n}\n' +
         '    })(' + PAGE_HELPERS.map(function (n) { return '__au.dom.' + n; }).join(', ') + ');\n' +
         '  } catch (e) { __au.fail(e, "checks"); }\n' +
         '  __au.finish(' + Number(opts.settleMs || 1500) + ');\n' +

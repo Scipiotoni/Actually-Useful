@@ -1,0 +1,849 @@
+id: css08
+number: 8
+part: css-p2
+title: Grid
+blurb: Two-dimensional layouts — rows and columns at once — for galleries, dashboards and whole pages.
+hours: 3
+goals:
+  - Define columns and rows with `grid-template-columns`, `fr` and `repeat()`
+  - Place and span items by line numbers
+  - Lay out a page with named grid areas
+  - Build responsive grids with `auto-fit` and `minmax()`, no media queries needed
+  - Choose between Flexbox and Grid
+
+items:
+  - type: lesson
+    id: css8-basics
+    title: Grid basics
+    minutes: 25
+    objectives:
+      - Make a grid container and define its columns
+      - Use the `fr` unit and `repeat()`
+      - Space cells with `gap`
+    body: |
+      Flexbox lays things out in **one** direction. **Grid** handles rows
+      **and** columns together. You describe the columns (and optionally the
+      rows), and the children fill the cells in order:
+
+      ```html
+      <div class="grid">
+        <div>1</div><div>2</div><div>3</div>
+        <div>4</div><div>5</div><div>6</div>
+        <div>7</div>
+      </div>
+      ```
+      ```css
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
+        font-family: sans-serif;
+      }
+
+      .grid > div {
+        background-color: #9775fa;
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      ```
+
+      ## The fr unit
+
+      `fr` means "a **fraction** of the free space". `1fr 1fr 1fr` is three
+      equal columns; `2fr 1fr` gives the first column twice as much as the
+      second. You can mix units: `200px 1fr` is a fixed 200px column and a
+      flexible one.
+
+      ## repeat()
+
+      `repeat(4, 1fr)` is short for `1fr 1fr 1fr 1fr`. `repeat(2, 100px 1fr)`
+      repeats a pattern.
+
+      ## Rows
+
+      Rows are created automatically, as tall as their content. To size
+      them, use `grid-template-rows` (`100px auto 50px`) or, for all
+      automatic rows, `grid-auto-rows: 150px`.
+
+      ## gap
+
+      `gap: 12px` spaces rows and columns; `gap: 20px 12px` sets rows,
+      then columns (`row-gap` and `column-gap` separately).
+
+      > [!tip]
+      > Turn on the **grid overlay** in your browser's developer tools
+      > (click the little "grid" badge next to the element in the Elements
+      > panel) to see the lines and numbers.
+
+      {{check fr}}
+
+      {{check repeat}}
+
+      {{task gallery}}
+    checks:
+      - id: fr
+        type: mcq
+        prompt: "`grid-template-columns: 1fr 3fr;` — how is the width shared?"
+        options:
+          - Half and half
+          - A quarter and three quarters
+          - 1px and 3px
+          - A third and two thirds
+        answer: 1
+        why: "4 fractions in total: 1/4 and 3/4."
+      - id: repeat
+        type: fill
+        prompt: Five equal columns.
+        code: |
+          .grid { display: grid; grid-template-columns: repeat(___, 1fr); }
+        blanks:
+          - ["5"]
+        why: "`repeat(5, 1fr)`."
+    tasks:
+      - id: gallery
+        title: A photo grid
+        prompt: |
+          - `.photos`: a grid with **three equal columns** (use `repeat` and `fr`), a `12px` gap, and every row `100px` tall (`grid-auto-rows`)
+        given:
+          index.html: |
+            <div class="photos">
+              <div class="photo" style="background:#ff8787"></div>
+              <div class="photo" style="background:#ffa94d"></div>
+              <div class="photo" style="background:#ffd43b"></div>
+              <div class="photo" style="background:#69db7c"></div>
+              <div class="photo" style="background:#4dabf7"></div>
+              <div class="photo" style="background:#9775fa"></div>
+            </div>
+        files:
+          style.css: |
+            /* Grid of photos */
+        solution:
+          style.css: |
+            .photos {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 12px;
+              grid-auto-rows: 100px;
+            }
+        harness: |
+          const cells = $$('.photo').map((p) => p.getBoundingClientRect());
+          check(new Set(cells.map((c) => Math.round(c.left))).size, 3);
+          check(new Set(cells.map((c) => Math.round(c.top))).size, 2);
+          check(new Set(cells.map((c) => Math.round(c.width))).size, 1);
+          check(cells.every((c) => Math.round(c.height) === 100), true);
+          check(Math.round(cells[1].left - cells[0].right), 12);
+          check(Math.round(cells[3].top - cells[0].bottom), 12);
+          check(rule('.photos', 'grid-template-columns'), 'repeat(3, 1fr)');
+        hints:
+          - "`display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;`"
+          - "`grid-auto-rows: 100px;` sizes every automatic row."
+    cards:
+      - front: "What does `1fr` mean?"
+        back: One fraction of the free space in the grid.
+      - front: "Write four equal columns the short way."
+        back: "`grid-template-columns: repeat(4, 1fr);`"
+      - front: How are rows created if you don't define them?
+        back: Automatically, as tall as their content — or `grid-auto-rows` sets their size.
+
+  - type: lesson
+    id: css8-placing
+    title: Placing items
+    minutes: 25
+    objectives:
+      - Place items using grid line numbers
+      - Make an item span several columns or rows
+      - Name areas with `grid-template-areas` and put items in them
+    body: |
+      A grid's **lines** are numbered from 1, starting at the left (for
+      columns) and at the top (for rows). Three columns have lines 1, 2, 3
+      and 4; `-1` is always the last line.
+
+      ```html
+      <div class="grid">
+        <div class="wide">grid-column: 1 / 3</div>
+        <div class="tall">grid-row: span 2</div>
+        <div>3</div>
+        <div>4</div>
+        <div class="full">grid-column: 1 / -1 (the full width)</div>
+      </div>
+      ```
+      ```css
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-auto-rows: 70px;
+        gap: 8px;
+        font-family: sans-serif;
+      }
+
+      .grid > div {
+        background-color: #e5dbff;
+        padding: 8px;
+      }
+
+      .grid > .wide {
+        grid-column: 1 / 3;
+        background-color: #b197fc;
+      }
+
+      .grid > .tall {
+        grid-row: span 2;
+        background-color: #63e6be;
+      }
+
+      .grid > .full {
+        grid-column: 1 / -1;
+        background-color: #ffc078;
+      }
+      ```
+
+      - `grid-column: 1 / 3` — from line 1 to line 3: two columns.
+      - `grid-column: span 2` — two columns, wherever it lands.
+      - `grid-row` works the same way for rows.
+
+      ## Named areas
+
+      For page layouts, **draw** the layout with names — one string per
+      row, one name per column:
+
+      ```html
+      <div class="page">
+        <header>Header</header>
+        <nav>Menu</nav>
+        <main>Main content</main>
+        <footer>Footer</footer>
+      </div>
+      ```
+      ```css
+      .page {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        grid-template-areas:
+          "header header"
+          "nav    main"
+          "footer footer";
+        gap: 8px;
+        font-family: sans-serif;
+      }
+
+      header { grid-area: header; }
+      nav    { grid-area: nav; }
+      main   { grid-area: main; }
+      footer { grid-area: footer; }
+
+      .page > * {
+        background-color: #d3f9d8;
+        padding: 16px;
+      }
+
+      main {
+        min-height: 120px;
+      }
+      ```
+
+      A name repeated across a row spans those columns. A `.` leaves a cell
+      empty. The CSS reads like a picture of the page!
+
+      {{check lines}}
+
+      {{check areas}}
+
+      {{task layout}}
+    checks:
+      - id: lines
+        type: mcq
+        prompt: "In a 4-column grid, what does `grid-column: 2 / 4` cover?"
+        options:
+          - Columns 2, 3 and 4
+          - Columns 2 and 3
+          - Column 2 only
+          - Columns 1 to 4
+        answer: 1
+        why: "From line 2 to line 4 — two columns."
+      - id: areas
+        type: tf
+        prompt: "In `grid-template-areas`, repeating a name across a row makes that area span the columns."
+        answer: true
+        why: "`\"header header\"` makes the header two columns wide."
+    tasks:
+      - id: layout
+        title: A page from areas
+        prompt: |
+          Lay out `.page` as a grid:
+
+          - two columns: `200px` and `1fr`
+          - areas: `header` across the top, then `sidebar` and `content` side by side, then `footer` across the bottom
+          - a `10px` gap
+          - put `header`, `aside`, `main` and `footer` in the areas `header`, `sidebar`, `content` and `footer`
+        given:
+          index.html: |
+            <div class="page">
+              <header>Site title</header>
+              <aside>Links</aside>
+              <main>Welcome to the page.</main>
+              <footer>Contact</footer>
+            </div>
+        files:
+          style.css: |
+            /* Grid areas */
+        solution:
+          style.css: |
+            .page {
+              display: grid;
+              grid-template-columns: 200px 1fr;
+              grid-template-areas:
+                "header header"
+                "sidebar content"
+                "footer footer";
+              gap: 10px;
+            }
+
+            header { grid-area: header; }
+            aside  { grid-area: sidebar; }
+            main   { grid-area: content; }
+            footer { grid-area: footer; }
+        harness: |
+          const page = box('.page');
+          const head = box('header');
+          const side = box('aside');
+          const main = box('main');
+          const foot = box('footer');
+          check([head.x, head.width], [page.x, page.width]);
+          check([foot.x, foot.width], [page.x, page.width]);
+          check([side.x, side.width], [page.x, 200]);
+          check(main.x, page.x + 210);
+          check(main.y, side.y);
+          check(side.y > head.y && foot.y > main.y, true);
+          check(style('main', 'grid-area').startsWith('content'), true);
+        hints:
+          - "`grid-template-areas: \"header header\" \"sidebar content\" \"footer footer\";`"
+          - "Then `aside { grid-area: sidebar; }` and so on."
+    cards:
+      - front: "What does `grid-column: 1 / -1` do?"
+        back: Spans from the first to the last line — the full width.
+      - front: "`grid-column: 1 / 3` vs `grid-column: span 2`?"
+        back: The first starts at line 1 and ends at line 3; span 2 takes two columns from wherever the item is placed.
+      - front: How do named grid areas work?
+        back: "Draw the layout in `grid-template-areas` with strings of names; give each item `grid-area: name`."
+
+  - type: quiz
+    id: css8-quiz1
+    title: "Quiz: grid basics and placement"
+    questions:
+      - type: mcq
+        prompt: "How many column lines does a 3-column grid have?"
+        options:
+          - "3"
+          - "4"
+          - "2"
+          - "6"
+        answer: 1
+        why: "Lines are the edges: one more than the columns."
+      - type: fill
+        prompt: An item that is two rows tall.
+        code: |
+          .feature { grid-row: ___ 2; }
+        blanks:
+          - [span]
+        why: "`span 2`."
+      - type: mcq
+        prompt: "`grid-template-columns: 250px 1fr;` in an 850px grid with no gap. The second column is…"
+        options:
+          - 250px
+          - 600px
+          - 425px
+          - 1px
+        answer: 1
+        why: "1fr takes all the free space: 850 − 250."
+      - type: tf
+        prompt: "A `.` in `grid-template-areas` leaves a cell empty."
+        answer: true
+        why: "Dots are empty cells."
+
+  - type: lesson
+    id: css8-responsive
+    title: Responsive grids and alignment
+    minutes: 20
+    objectives:
+      - Build a grid that fits as many columns as there is room for
+      - Align items inside their cells
+      - Choose between Grid and Flexbox
+    body: |
+      The most useful line in modern CSS:
+
+      ```css static
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      ```
+
+      Read it as: "as many columns as fit (`auto-fit`), each **at least**
+      200px and **at most** an equal share (`minmax(200px, 1fr)`)". On a
+      wide screen you get four columns, on a phone one — **no media
+      queries** at all.
+
+      ```html
+      <div class="cards">
+        <div class="card">Alpha</div>
+        <div class="card">Beta</div>
+        <div class="card">Gamma</div>
+        <div class="card">Delta</div>
+        <div class="card">Epsilon</div>
+      </div>
+      ```
+      ```css
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        font-family: sans-serif;
+      }
+
+      .card {
+        padding: 24px;
+        background-color: #fff0f6;
+        border: 1px solid #fcc2d7;
+        border-radius: 8px;
+      }
+      ```
+
+      (`auto-fill` is similar, but keeps empty columns when there are few
+      items, instead of stretching the items.)
+
+      ## Aligning inside cells
+
+      Items fill their cells by default. To place them inside:
+
+      | Property (on the grid) | Direction |
+      |---|---|
+      | `justify-items` | horizontally in each cell |
+      | `align-items` | vertically in each cell |
+      | `place-items: center` | both at once |
+
+      On a single item: `justify-self`, `align-self`, `place-self`.
+
+      ## Grid or Flexbox?
+
+      - **Flexbox** — one direction: a row of buttons, a nav bar, items whose size comes from their content.
+      - **Grid** — two directions: page layouts, galleries, anything where rows **and** columns should line up.
+
+      They combine happily: a grid page whose header is a flex row.
+
+      {{check autofit}}
+
+      {{task auto}}
+    checks:
+      - id: autofit
+        type: mcq
+        prompt: "What does `minmax(200px, 1fr)` mean for a column?"
+        options:
+          - Exactly 200px
+          - At least 200px, at most one fraction of the free space
+          - Between 200 and 1 pixels
+          - 200px on phones, 1fr on desktops
+        answer: 1
+        why: "A minimum and a maximum size."
+    tasks:
+      - id: auto
+        title: A responsive gallery
+        prompt: |
+          - `.gallery`: a grid of as many columns as fit, each at least `180px` wide and sharing the rest equally (`repeat(auto-fit, minmax(180px, 1fr))`), with a `16px` gap
+          - `.tile`: its content centred both ways with `place-items: center` — so make `.tile` itself a grid — and `120px` tall
+
+          The checks try a wide and a narrow screen.
+        given:
+          index.html: |
+            <div class="gallery">
+              <div class="tile"><span>🌋</span></div>
+              <div class="tile"><span>🏝️</span></div>
+              <div class="tile"><span>🏔️</span></div>
+              <div class="tile"><span>🏜️</span></div>
+            </div>
+        files:
+          style.css: |
+            /* Responsive gallery */
+        solution:
+          style.css: |
+            .gallery {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+              gap: 16px;
+            }
+
+            .tile {
+              display: grid;
+              place-items: center;
+              height: 120px;
+              background-color: #e3fafc;
+            }
+        width: 800
+        harness: |
+          const lefts = () => new Set($$('.tile').map((t) => Math.round(t.getBoundingClientRect().left))).size;
+          check(lefts(), 4);
+          const t = box('.tile');
+          const s = box('.tile span');
+          check(t.height, 120);
+          check(Math.abs((s.x + s.width / 2) - (t.x + t.width / 2)) <= 1, true);
+          check(Math.abs((s.y + s.height / 2) - (t.y + t.height / 2)) <= 1, true);
+          await viewport(420);
+          check(lefts(), 2);
+          await viewport(300);
+          check(lefts(), 1);
+          await viewport(800);
+        hints:
+          - "`grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));`"
+          - "`.tile { display: grid; place-items: center; height: 120px; }`"
+    cards:
+      - front: How do you make a grid with as many columns as fit, without media queries?
+        back: "`grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));`"
+      - front: "What does `place-items: center` do on a grid?"
+        back: Centres every item in its cell, horizontally and vertically.
+      - front: Grid or Flexbox?
+        back: Flexbox for one direction (rows of things sized by content); Grid for two (rows and columns that line up).
+
+  - type: quiz
+    id: css8-quiz2
+    title: "Quiz: responsive grids"
+    questions:
+      - type: mcq
+        prompt: "`repeat(auto-fit, minmax(250px, 1fr))` in a 600px wide grid with no gap gives…"
+        options:
+          - 1 column
+          - 2 columns of 300px
+          - 3 columns of 200px
+          - 2 columns of 250px and 100px empty
+        answer: 1
+        why: "Two 250px columns fit; they stretch to share 600px."
+      - type: mcq
+        prompt: A row of social-media icons of different widths. Grid or Flexbox?
+        options:
+          - Grid
+          - Flexbox
+          - Neither
+          - Tables
+        answer: 1
+        why: "One direction, sized by content."
+      - type: fill
+        prompt: Centre every item in its cell.
+        code: |
+          .grid { display: grid; place-items: ___; }
+        blanks:
+          - [center]
+        why: "`place-items: center`."
+
+  - type: challenge
+    id: css8-ch-calendar
+    title: A month calendar
+    difficulty: 2
+    tags: [grid]
+    prompt: |
+      Lay out the calendar:
+
+      - `.month`: a grid with **7 equal columns** and a `4px` gap
+      - `.month .title`: spans all seven columns (`1 / -1`) and is centred text
+      - `.day-name`: bold, centred
+      - `.first`: this month starts on a Thursday — put the first day in column **4** with `grid-column-start`
+      - `.day`: `48px` tall
+    given:
+      index.html: |
+        <div class="month">
+          <h2 class="title">October 2026</h2>
+          <div class="day-name">Mon</div><div class="day-name">Tue</div><div class="day-name">Wed</div>
+          <div class="day-name">Thu</div><div class="day-name">Fri</div><div class="day-name">Sat</div><div class="day-name">Sun</div>
+          <div class="day first">1</div><div class="day">2</div><div class="day">3</div><div class="day">4</div>
+          <div class="day">5</div><div class="day">6</div><div class="day">7</div><div class="day">8</div>
+          <div class="day">9</div><div class="day">10</div><div class="day">11</div>
+        </div>
+    files:
+      style.css: |
+        /* A calendar grid */
+    solution:
+      style.css: |
+        .month {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 4px;
+        }
+
+        .month .title {
+          grid-column: 1 / -1;
+          text-align: center;
+        }
+
+        .day-name {
+          font-weight: bold;
+          text-align: center;
+        }
+
+        .first {
+          grid-column-start: 4;
+        }
+
+        .day {
+          height: 48px;
+          background-color: #f1f3f5;
+        }
+    harness: |
+      const month = box('.month');
+      const title = box('.month .title');
+      check(Math.round(title.width), Math.round(month.width));
+      check(style('.title', 'text-align'), 'center');
+      const names = $$('.day-name').map((d) => d.getBoundingClientRect());
+      check(new Set(names.map((n) => Math.round(n.top))).size, 1);
+      check(style('.day-name', 'font-weight'), '700');
+      const days = $$('.day').map((d) => d.getBoundingClientRect());
+      check(Math.round(days[0].left), Math.round(names[3].left));
+      check(Math.round(days[4].left), Math.round(names[0].left));
+      check(Math.round(days[3].left), Math.round(names[6].left));
+      check(days.every((d) => Math.round(d.height) === 48), true);
+      check(Math.round(names[1].left - names[0].right), 4);
+    hints:
+      - "`grid-template-columns: repeat(7, 1fr);` — and the title gets `grid-column: 1 / -1;`."
+      - "`.first { grid-column-start: 4; }` — the following days flow on from there."
+
+  - type: challenge
+    id: css8-ch-magazine
+    title: A magazine front page
+    difficulty: 3
+    tags: [grid, areas]
+    prompt: |
+      Build the layout with `grid-template-areas`:
+
+      ```text
+      +-----------+-----------+-------+
+      |   lead    |   lead    | side  |
+      +-----------+-----------+-------+
+      |   lead    |   lead    | ad    |
+      +-----------+-----------+-------+
+      |  story1   |  story2   | story3|
+      +-----------+-----------+-------+
+      ```
+
+      - `.front`: three columns `2fr 2fr 1fr`, rows `150px 150px auto`, gap `12px`
+      - areas named `lead`, `side`, `ad`, `story1`, `story2`, `story3` for the elements with those classes
+    given:
+      index.html: |
+        <div class="front">
+          <article class="lead">Lead story</article>
+          <aside class="side">Weather</aside>
+          <div class="ad">Advert</div>
+          <article class="story1">Story one</article>
+          <article class="story2">Story two</article>
+          <article class="story3">Story three</article>
+        </div>
+    files:
+      style.css: |
+        /* Magazine grid */
+    solution:
+      style.css: |
+        .front {
+          display: grid;
+          grid-template-columns: 2fr 2fr 1fr;
+          grid-template-rows: 150px 150px auto;
+          grid-template-areas:
+            "lead lead side"
+            "lead lead ad"
+            "story1 story2 story3";
+          gap: 12px;
+        }
+
+        .lead   { grid-area: lead; }
+        .side   { grid-area: side; }
+        .ad     { grid-area: ad; }
+        .story1 { grid-area: story1; }
+        .story2 { grid-area: story2; }
+        .story3 { grid-area: story3; }
+
+        .front > * {
+          background-color: #f8f9fa;
+          padding: 8px;
+        }
+    harness: |
+      const f = box('.front');
+      const lead = box('.lead');
+      const side = box('.side');
+      const ad = box('.ad');
+      const s1 = box('.story1');
+      const s3 = box('.story3');
+      check([lead.x, lead.y], [f.x, f.y]);
+      check(lead.height, 150 * 2 + 12);
+      const unit = (f.width - 24) / 5;
+      check(Math.abs(lead.width - (unit * 4 + 12)) <= 1, true);
+      check(Math.abs(side.width - unit) <= 1, true);
+      check([side.y, ad.y], [f.y, f.y + 162]);
+      check(side.x, ad.x);
+      check(s1.y, f.y + 324);
+      check(s1.x, f.x);
+      check(Math.round(s3.x + s3.width), Math.round(f.x + f.width));
+    hints:
+      - "`grid-template-areas: \"lead lead side\" \"lead lead ad\" \"story1 story2 story3\";`"
+      - "Then `.lead { grid-area: lead; }` and so on for all six."
+
+  - type: review
+    id: css8-review
+    title: "Chapter 8 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      .grid {
+        display: grid;
+        grid-template-columns: 200px 1fr 1fr;   /* or repeat(3, 1fr) */
+        grid-template-rows: auto 1fr auto;
+        grid-auto-rows: 150px;
+        gap: 16px;
+        grid-template-areas:
+          "header header header"
+          "nav    main   main"
+          "footer footer footer";
+        place-items: center;
+      }
+      header  { grid-area: header; }
+      .wide   { grid-column: 1 / 3; }     /* lines 1 to 3 */
+      .full   { grid-column: 1 / -1; }
+      .tall   { grid-row: span 2; }
+
+      .auto   { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+      ```
+
+      ## Key ideas
+
+      - Grid = two dimensions; Flexbox = one.
+      - `fr` shares free space; `repeat()` saves typing.
+      - Lines are numbered from 1; `-1` is the last line; `span n` spans cells.
+      - Named areas draw the layout in CSS.
+      - `auto-fit` + `minmax()` = responsive without media queries.
+    questions:
+      - type: mcq
+        prompt: "Which spans every column, however many there are?"
+        options:
+          - "`grid-column: 1 / 4`"
+          - "`grid-column: 1 / -1`"
+          - "`grid-column: all`"
+          - "`grid-column: span 100%`"
+        answer: 1
+        why: "`-1` is always the last line."
+      - type: mcq
+        prompt: Which is best for a page layout with a header, sidebar, main content and footer?
+        options:
+          - Grid with named areas
+          - Floats
+          - Tables
+          - Absolute positioning
+        answer: 0
+        why: "Two-dimensional layout: Grid."
+
+  - type: exam
+    id: css8-exam
+    title: "Chapter 8 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: "What does `display: grid` do to the element's children?"
+        options:
+          - Hides them
+          - Places them into the grid's cells, in order
+          - Makes them flex items
+          - Nothing until you set grid-area on each
+        answer: 1
+        why: "Items fill cells automatically."
+      - type: fill
+        prompt: Three equal columns.
+        code: |
+          .grid { display: grid; grid-template-columns: ___; }
+        blanks:
+          - ["repeat(3, 1fr)", "1fr 1fr 1fr"]
+        why: "`repeat(3, 1fr)` or `1fr 1fr 1fr`."
+      - type: mcq
+        prompt: "`grid-template-columns: 1fr 2fr 1fr;` — which column is widest?"
+        options:
+          - The first
+          - The middle
+          - The last
+          - All equal
+        answer: 1
+        why: "2 of 4 fractions."
+      - type: mcq
+        prompt: "Which property sets the size of rows created automatically?"
+        options:
+          - "`grid-template-rows`"
+          - "`grid-auto-rows`"
+          - "`row-size`"
+          - "`grid-rows`"
+        answer: 1
+        why: "`grid-auto-rows`."
+      - type: mcq
+        prompt: "In a 3-column grid, an item with `grid-column: 2 / 4`…"
+        options:
+          - covers columns 2 and 3
+          - covers columns 2, 3 and 4
+          - is 4 columns wide
+          - is invalid
+        answer: 0
+        why: "From line 2 to line 4."
+      - type: tf
+        prompt: "`gap` works in both Grid and Flexbox."
+        answer: true
+        why: "The same property."
+      - type: mcq
+        prompt: "What does `auto-fit` in `repeat(auto-fit, minmax(200px, 1fr))` do?"
+        options:
+          - Always makes 4 columns
+          - Creates as many columns as fit the width
+          - Fits the text inside each cell
+          - Makes rows automatic
+        answer: 1
+        why: "The number of columns adapts to the space."
+      - type: fill
+        prompt: Put the element in the area named `sidebar`.
+        code: |
+          aside { ___: sidebar; }
+        blanks:
+          - [grid-area]
+        why: "`grid-area`."
+      - type: mcq
+        prompt: Which layout suits Flexbox better than Grid?
+        options:
+          - A photo gallery with aligned rows and columns
+          - A whole page with header, sidebar, main and footer
+          - A row of tags of different widths that wraps
+          - A calendar
+        answer: 2
+        why: "One direction, content-sized items."
+      - type: tf
+        prompt: "In `grid-template-areas`, every row string must have the same number of names."
+        answer: true
+        why: "Each string is one row of the same grid."
+      - type: code
+        prompt: |
+          Make `.grid` a grid with four equal columns and a `10px` gap.
+          The `.big` item spans **two columns and two rows**.
+        given:
+          index.html: |
+            <div class="grid">
+              <div class="big">Big</div>
+              <div>2</div><div>3</div><div>4</div><div>5</div>
+            </div>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            .grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 10px;
+            }
+
+            .big {
+              grid-column: span 2;
+              grid-row: span 2;
+            }
+        harness: |
+          const g = box('.grid');
+          const big = box('.big');
+          const cells = $$('.grid > div:not(.big)').map((c) => c.getBoundingClientRect());
+          const col = (g.width - 30) / 4;
+          check(Math.abs(big.width - (col * 2 + 10)) <= 1, true);
+          check(Math.round(big.height), Math.round(cells[0].height * 2 + 10));
+          check(Math.round(cells[0].left), Math.round(big.x + big.width + 10));
+          check(Math.round(cells[2].top), Math.round(cells[0].bottom + 10));

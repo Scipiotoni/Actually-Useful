@@ -1,0 +1,873 @@
+id: css10
+number: 10
+part: css-p3
+title: Responsive Design
+blurb: One page that works on a phone, a tablet and a wide screen — fluid layouts, media queries, fluid type and user preferences.
+hours: 3
+goals:
+  - Build fluid layouts and images that adapt to any width
+  - Write mobile-first media queries with sensible breakpoints
+  - Size text and containers fluidly with `clamp()`, `min()` and `max()`
+  - Keep proportions with `aspect-ratio` and `object-fit`
+  - Respect the reader's preferences for dark mode and reduced motion
+
+items:
+  - type: lesson
+    id: css10-fluid
+    title: Every screen
+    minutes: 20
+    objectives:
+      - Explain why pages must adapt to the screen
+      - Make layouts and images fluid
+      - Test a page at different widths
+    body: |
+      More than half of all web traffic comes from phones. A **responsive**
+      page adapts its layout to the width of the screen — it's one page,
+      not a separate "mobile site".
+
+      ## The foundations
+
+      1. The **viewport meta tag** in every page's head (you met it in the HTML course). Without it, phones pretend to be 980px wide and shrink everything:
+
+         ```html static
+         <meta name="viewport" content="width=device-width, initial-scale=1">
+         ```
+
+      2. **Fluid widths**: `%`, `fr`, `max-width` — not fixed pixel widths that can't shrink.
+
+      3. **Flexible images**:
+
+         ```css static
+         img, video {
+           max-width: 100%;
+           height: auto;
+         }
+         ```
+
+      4. **Layouts that wrap**: `flex-wrap` and `repeat(auto-fit, minmax(…))` already adapt with no extra code (Chapters 7 and 8).
+
+      ## Test it
+
+      Drag your browser window narrower and wider. Better: open the
+      developer tools and switch on **device mode** (the phone-and-tablet
+      icon) to try common phone sizes.
+
+      The page below is fluid: resize your window and watch the box and the
+      image follow.
+
+      ```html
+      <div class="wrap">
+        <h2>Fluid box</h2>
+        <img alt="" width="1200" height="300" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='300'%3E%3Crect width='1200' height='300' fill='%2374c0fc'/%3E%3C/svg%3E">
+        <p>Never wider than 600px, never wider than the screen.</p>
+      </div>
+      ```
+      ```css
+      .wrap {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 0 16px;
+        font-family: sans-serif;
+      }
+
+      img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+      }
+      ```
+
+      > [!warning]
+      > The most common responsive bug is something too wide — a fixed
+      > `width: 800px`, a huge image, a long URL — that makes the whole page
+      > scroll sideways on a phone.
+
+      {{check viewport}}
+    checks:
+      - id: viewport
+        type: mcq
+        prompt: "What happens on a phone if a page has no viewport meta tag?"
+        options:
+          - Nothing
+          - The phone pretends to be about 980px wide and shrinks the page
+          - The page doesn't load
+          - Images are hidden
+        answer: 1
+        why: "The tag tells the phone to use its real width."
+    cards:
+      - front: What is responsive design?
+        back: One page whose layout adapts to the screen width — phone, tablet, desktop.
+      - front: How do you make images flexible?
+        back: "`img { max-width: 100%; height: auto; }`"
+      - front: What's the most common responsive bug?
+        back: Something too wide (fixed width, big image, long word) making the page scroll sideways.
+
+  - type: lesson
+    id: css10-media
+    title: Media queries
+    minutes: 30
+    objectives:
+      - Write a media query
+      - Work mobile first with `min-width`
+      - Choose breakpoints based on the content
+    body: |
+      A **media query** applies rules only when a condition is true — most
+      often, when the screen is at least a certain width:
+
+      ```css static
+      @media (min-width: 700px) {
+        /* these rules apply only on screens 700px wide or more */
+        .columns { display: flex; }
+      }
+      ```
+
+      ## Mobile first
+
+      Write the **simple, narrow** layout first, with no media query. Then
+      add `min-width` queries that **enhance** the layout as space grows:
+
+      ```html
+      <nav class="menu">
+        <a href="#">Home</a>
+        <a href="#">Menu</a>
+        <a href="#">Book a table</a>
+      </nav>
+      <div class="cols">
+        <section>Starters</section>
+        <section>Mains</section>
+        <section>Desserts</section>
+      </div>
+      ```
+      ```css
+      /* Phones: everything stacked */
+      .menu, .cols {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-family: sans-serif;
+      }
+
+      .menu a {
+        padding: 12px;
+        background-color: #e7f5ff;
+      }
+
+      section {
+        padding: 16px;
+        background-color: #fff4e6;
+      }
+
+      /* Wider screens: side by side */
+      @media (min-width: 600px) {
+        .menu, .cols {
+          flex-direction: row;
+        }
+
+        .cols section {
+          flex: 1;
+        }
+      }
+      ```
+
+      Resize your browser window across 600px (or change the number in the
+      example to below the preview's width) to see it switch.
+
+      Why mobile first? Phones are the tightest space, so their layout is
+      the simplest; extra rules only get added where there's room. The CSS
+      comes out shorter and easier to follow.
+
+      ## Breakpoints
+
+      The widths where the layout changes are called **breakpoints**. Don't
+      chase particular devices — there are thousands. Make the window
+      narrower until the design **looks broken**, and put a breakpoint
+      there. Common round numbers are 600px, 900px and 1200px.
+
+      ## More conditions
+
+      ```css static
+      @media (max-width: 599px) { … }                        /* below 600px */
+      @media (min-width: 600px) and (max-width: 899px) { … } /* a range */
+      @media (orientation: landscape) { … }
+      @media print { nav { display: none; } }                /* when printing */
+      ```
+
+      Media queries don't add specificity: put them **after** the rules they
+      override.
+
+      {{check first}}
+
+      {{task nav}}
+    checks:
+      - id: first
+        type: mcq
+        prompt: In a mobile-first stylesheet, the rules outside any media query are for…
+        options:
+          - Desktops
+          - The narrowest screens — then min-width queries add to them
+          - Printers
+          - Tablets only
+        answer: 1
+        why: "Start small, enhance upwards."
+    tasks:
+      - id: nav
+        title: Stack, then row
+        prompt: |
+          Mobile first:
+
+          - `.links`: a flex container stacked as a **column** with an `8px` gap
+          - from `600px` wide (`@media (min-width: 600px)`), `.links` becomes a **row**
+          - `body` text is `16px`; from `600px` it is `18px`
+
+          The checks look at the page at 400px and at 800px.
+        given:
+          index.html: |
+            <nav class="links">
+              <a href="#">Shop</a>
+              <a href="#">Journal</a>
+              <a href="#">About</a>
+            </nav>
+        files:
+          style.css: |
+            /* Phones first */
+        solution:
+          style.css: |
+            body {
+              font-size: 16px;
+            }
+
+            .links {
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            }
+
+            @media (min-width: 600px) {
+              body {
+                font-size: 18px;
+              }
+
+              .links {
+                flex-direction: row;
+              }
+            }
+        harness: |
+          const tops = () => new Set($$('.links a').map((a) => Math.round(a.getBoundingClientRect().top))).size;
+          await viewport(400);
+          check(tops(), 3);
+          check(style('body', 'font-size'), '16px');
+          check(style('.links', 'row-gap'), '8px');
+          await viewport(800);
+          check(tops(), 1);
+          check(style('body', 'font-size'), '18px');
+        hints:
+          - "Outside any query: `.links { display: flex; flex-direction: column; gap: 8px; }`."
+          - "`@media (min-width: 600px) { .links { flex-direction: row; } body { font-size: 18px; } }`"
+    cards:
+      - front: What does `@media (min-width: 700px) { … }` do?
+        back: Applies the rules inside only when the viewport is at least 700px wide.
+      - front: What is mobile first?
+        back: Write the narrow-screen layout without queries, then add min-width queries to enhance it on wider screens.
+      - front: How should you choose breakpoints?
+        back: Where your design starts to look broken — not by device sizes.
+
+  - type: quiz
+    id: css10-quiz1
+    title: "Quiz: fluid layouts and media queries"
+    questions:
+      - type: fill
+        prompt: Apply rules on screens at least 900px wide.
+        code: |
+          @media (___: 900px) {
+            .sidebar { display: block; }
+          }
+        blanks:
+          - [min-width]
+        why: "`min-width` — mobile first."
+      - type: mcq
+        prompt: Which rule hides the navigation when printing?
+        options:
+          - "`@media print { nav { display: none; } }`"
+          - "`@print { nav { hide: true; } }`"
+          - "`nav:print { display: none; }`"
+          - "`@media paper { nav { display: none; } }`"
+        answer: 0
+        why: "The `print` media type."
+      - type: tf
+        prompt: A media query adds specificity to the rules inside it.
+        answer: false
+        why: "It doesn't — order still matters, so put queries after the rules they override."
+      - type: mcq
+        prompt: "An image is 1500px wide in a 380px wide phone screen. Which rule stops it causing sideways scrolling?"
+        options:
+          - "`img { width: 1500px; }`"
+          - "`img { max-width: 100%; height: auto; }`"
+          - "`img { overflow: hidden; }`"
+          - "`img { float: left; }`"
+        answer: 1
+        why: "It can shrink to its container, keeping its proportions."
+
+  - type: lesson
+    id: css10-functions
+    title: Fluid sizes and proportions
+    minutes: 25
+    objectives:
+      - Make font sizes grow smoothly with `clamp()`
+      - Size containers with `min()` and `max()`
+      - Keep a shape with `aspect-ratio` and crop images with `object-fit`
+    body: |
+      Media queries change things in **steps**. CSS functions can make
+      sizes change **smoothly** with the screen.
+
+      ## clamp()
+
+      `clamp(minimum, preferred, maximum)` — use the preferred value, but
+      never go below the minimum or above the maximum:
+
+      ```css static
+      h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
+      ```
+
+      The heading is 5% of the window's width, but at least 2rem (so it's
+      readable on phones) and at most 3.5rem (so it's not absurd on huge
+      screens). No media query needed.
+
+      ## min() and max()
+
+      `min()` picks the smallest of its values; `max()` the largest. A
+      classic content container:
+
+      ```css static
+      .container {
+        width: min(100% - 32px, 960px);  /* 960px, or the screen minus 16px each side */
+        margin-inline: auto;             /* left and right margins auto */
+      }
+      ```
+
+      You can do maths inside them — `100% - 32px` — as you can with
+      `calc()`: `width: calc(100% - 200px)`.
+
+      ## aspect-ratio and object-fit
+
+      ```html
+      <div class="grid">
+        <img class="thumb" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='600'%3E%3Crect width='300' height='600' fill='%23f783ac'/%3E%3Ccircle cx='150' cy='300' r='120' fill='%23fff'/%3E%3C/svg%3E">
+        <img class="thumb" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='300'%3E%3Crect width='800' height='300' fill='%2363e6be'/%3E%3Ccircle cx='400' cy='150' r='120' fill='%23fff'/%3E%3C/svg%3E">
+        <div class="video">16 : 9 box</div>
+      </div>
+      ```
+      ```css
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        font-family: sans-serif;
+      }
+
+      .thumb {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+      }
+
+      .video {
+        aspect-ratio: 16 / 9;
+        background-color: #343a40;
+        color: white;
+        display: grid;
+        place-items: center;
+      }
+      ```
+
+      - `aspect-ratio: 16 / 9` keeps a box's shape as its width changes — perfect for video embeds and cards.
+      - `object-fit: cover` makes an image fill its box, cropping instead of squashing. (`contain` fits the whole image inside.)
+
+      {{check clamp}}
+
+      {{task fluid}}
+    checks:
+      - id: clamp
+        type: mcq
+        prompt: "`font-size: clamp(1rem, 4vw, 2rem)` on a 1000px wide screen (1rem = 16px) is…"
+        options:
+          - 16px
+          - 32px — 4vw would be 40px, above the maximum
+          - 40px
+          - 4px
+        answer: 1
+        why: "4vw = 40px, clamped to the 2rem = 32px maximum."
+    tasks:
+      - id: fluid
+        title: Fluid heading and container
+        prompt: |
+          - `h1`: `font-size: clamp(2rem, 6vw, 4rem)`
+          - `.container`: `width: min(100% - 32px, 600px)`, centred with `margin-inline: auto`
+          - `.cover`: `100%` wide, `aspect-ratio: 16 / 9`, and `object-fit: cover`
+
+          The checks measure at 400px, 800px and 1200px.
+        given:
+          index.html: |
+            <div class="container">
+              <h1>Big ideas</h1>
+              <img class="cover" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23ffd43b'/%3E%3C/svg%3E">
+            </div>
+        files:
+          style.css: |
+            body {
+              margin: 0;
+            }
+
+            /* Fluid sizes */
+        solution:
+          style.css: |
+            body {
+              margin: 0;
+            }
+
+            h1 {
+              font-size: clamp(2rem, 6vw, 4rem);
+            }
+
+            .container {
+              width: min(100% - 32px, 600px);
+              margin-inline: auto;
+            }
+
+            .cover {
+              width: 100%;
+              aspect-ratio: 16 / 9;
+              object-fit: cover;
+            }
+        harness: |
+          await viewport(400);
+          check(style('h1', 'font-size'), '32px');
+          check(box('.container').width, document.documentElement.clientWidth - 32);
+          await viewport(800);
+          check(Math.round(parseFloat(style('h1', 'font-size'))), Math.round(document.documentElement.clientWidth * 0.06));
+          check(box('.container').width, 600);
+          const c = box('.container');
+          check(Math.round(c.x), Math.round((document.documentElement.clientWidth - 600) / 2));
+          const img = box('.cover');
+          check(Math.abs(img.height - img.width * 9 / 16) <= 1, true);
+          check(style('.cover', 'object-fit'), 'cover');
+          await viewport(1200);
+          check(style('h1', 'font-size'), '64px');
+          await viewport(800);
+        hints:
+          - "`h1 { font-size: clamp(2rem, 6vw, 4rem); }`"
+          - "`.container { width: min(100% - 32px, 600px); margin-inline: auto; }`"
+    cards:
+      - front: "What does `clamp(1rem, 3vw, 2rem)` mean?"
+        back: 3vw, but never less than 1rem or more than 2rem.
+      - front: "What does `width: min(100% - 32px, 960px)` give?"
+        back: 960px wide, or the parent's width minus 32px if that's smaller.
+      - front: "What does `object-fit: cover` do?"
+        back: Makes an image fill its box, cropping rather than squashing.
+      - front: How do you keep a video box 16:9 at any width?
+        back: "`aspect-ratio: 16 / 9;`"
+
+  - type: lesson
+    id: css10-prefs
+    title: The reader's preferences
+    minutes: 15
+    objectives:
+      - Offer a dark theme with `prefers-color-scheme`
+      - Tone down motion with `prefers-reduced-motion`
+    body: |
+      Media queries can also ask about the **reader's settings**:
+
+      ## Dark mode
+
+      Many people set their device to dark mode. With custom properties,
+      supporting it is a few lines:
+
+      ```css static
+      :root {
+        --bg: #ffffff;
+        --text: #1b1b1b;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #121212;
+          --text: #e9ecef;
+        }
+      }
+
+      body {
+        background-color: var(--bg);
+        color: var(--text);
+      }
+      ```
+
+      Also add `color-scheme: light dark;` on `:root`, so form controls and
+      scrollbars follow too.
+
+      ## Less motion
+
+      Animations can make some people dizzy or sick. They can ask for less
+      motion in their system settings, and you can respect that:
+
+      ```css static
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+      ```
+
+      (One of the rare good uses of `!important`: it must beat everything.)
+
+      > [!tip]
+      > In the developer tools, the **Rendering** panel can emulate dark
+      > mode and reduced motion, so you can test both.
+
+      {{check dark}}
+    checks:
+      - id: dark
+        type: fill
+        prompt: Apply rules only when the reader prefers dark mode.
+        code: |
+          @media (prefers-color-scheme: ___) { … }
+        blanks:
+          - [dark]
+        why: "`prefers-color-scheme: dark`."
+    cards:
+      - front: How do you style a page for readers who use dark mode?
+        back: "`@media (prefers-color-scheme: dark) { … }` — ideally by redefining colour variables."
+      - front: How do you respect readers who want less motion?
+        back: "`@media (prefers-reduced-motion: reduce) { … }` — remove or tone down animations."
+
+  - type: quiz
+    id: css10-quiz2
+    title: "Quiz: fluid sizes and preferences"
+    questions:
+      - type: mcq
+        prompt: "`width: min(90%, 700px)` in a 500px wide parent is…"
+        options:
+          - 700px
+          - 450px
+          - 500px
+          - 90px
+        answer: 1
+        why: "90% of 500 = 450, smaller than 700."
+      - type: mcq
+        prompt: "A square thumbnail from a wide photo, without squashing it:"
+        options:
+          - "`aspect-ratio: 1; object-fit: cover;`"
+          - "`width: 100px; height: 100px;` only"
+          - "`object-fit: fill;`"
+          - "`transform: square;`"
+        answer: 0
+        why: "A square box, and the image cropped to fill it."
+      - type: tf
+        prompt: Supporting dark mode is easiest when your colours are custom properties.
+        answer: true
+        why: "The media query only has to redefine the variables."
+
+  - type: challenge
+    id: css10-ch-grid
+    title: One, two, three columns
+    difficulty: 2
+    tags: [media queries, grid]
+    prompt: |
+      Mobile first:
+
+      - `.cards`: a grid with **one** column and a `16px` gap
+      - from `600px`: **two** equal columns
+      - from `900px`: **three** equal columns
+      - `.card`: `16px` padding and a `1px solid #dee2e6` border
+
+      The checks look at 400px, 700px and 1000px.
+    given:
+      index.html: |
+        <div class="cards">
+          <div class="card">One</div>
+          <div class="card">Two</div>
+          <div class="card">Three</div>
+          <div class="card">Four</div>
+          <div class="card">Five</div>
+          <div class="card">Six</div>
+        </div>
+    files:
+      style.css: |
+        /* 1, 2, 3 columns */
+    solution:
+      style.css: |
+        .cards {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+
+        .card {
+          padding: 16px;
+          border: 1px solid #dee2e6;
+        }
+
+        @media (min-width: 600px) {
+          .cards {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (min-width: 900px) {
+          .cards {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+    harness: |
+      const cols = () => new Set($$('.card').map((c) => Math.round(c.getBoundingClientRect().left))).size;
+      await viewport(400);
+      check(cols(), 1);
+      await viewport(700);
+      check(cols(), 2);
+      await viewport(1000);
+      check(cols(), 3);
+      check(style('.card', 'padding-top'), '16px');
+      check(style('.card', 'border-top-color'), color('#dee2e6'));
+      await viewport(800);
+    hints:
+      - "Start with `grid-template-columns: 1fr;` outside any query."
+      - "Two queries, in order: `@media (min-width: 600px)` then `@media (min-width: 900px)`."
+
+  - type: challenge
+    id: css10-ch-dark
+    title: Dark mode ready
+    difficulty: 3
+    tags: [preferences, variables]
+    prompt: |
+      Make the page support dark mode with variables:
+
+      - `:root`: `--bg: #ffffff`, `--text: #212529`, `--link: #1971c2`, and `color-scheme: light dark`
+      - inside `@media (prefers-color-scheme: dark)`, a `:root` rule sets `--bg: #121212`, `--text: #e9ecef`, `--link: #74c0fc`
+      - `body` uses `var(--bg)` and `var(--text)` for its background colour and colour; `a` uses `var(--link)`
+      - inside `@media (prefers-reduced-motion: reduce)`, `*` gets `transition: none`
+
+      The checks read your stylesheet, since they can't change your
+      device's settings.
+    given:
+      index.html: |
+        <h1>Night Owl</h1>
+        <p>Read at any hour. <a href="#">Settings</a></p>
+    files:
+      style.css: |
+        /* Light by default, dark on request */
+    solution:
+      style.css: |
+        :root {
+          --bg: #ffffff;
+          --text: #212529;
+          --link: #1971c2;
+          color-scheme: light dark;
+        }
+
+        @media (prefers-color-scheme: dark) {
+          :root {
+            --bg: #121212;
+            --text: #e9ecef;
+            --link: #74c0fc;
+          }
+        }
+
+        body {
+          background-color: var(--bg);
+          color: var(--text);
+        }
+
+        a {
+          color: var(--link);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          * {
+            transition: none;
+          }
+        }
+    harness: |
+      const rules = [...document.styleSheets].flatMap((s) => [...s.cssRules]);
+      const media = (cond) => rules.find((r) => r.conditionText && r.conditionText.replace(/\s+/g, '').includes(cond));
+      const dark = media('prefers-color-scheme:dark');
+      check(Boolean(dark), true);
+      const darkRoot = dark ? [...dark.cssRules].find((r) => r.selectorText === ':root') : null;
+      check(darkRoot ? ['--bg', '--text', '--link'].map((p) => darkRoot.style.getPropertyValue(p).trim()) : null, ['#121212', '#e9ecef', '#74c0fc']);
+      check(rule(':root', 'color-scheme'), 'light dark');
+      const light = matchMedia('(prefers-color-scheme: dark)').matches ? ['#121212', '#e9ecef', '#74c0fc'] : ['#ffffff', '#212529', '#1971c2'];
+      check(style('body', 'background-color'), color(light[0]));
+      check(style('body', 'color'), color(light[1]));
+      check(style('a', 'color'), color(light[2]));
+      check(rule('body', 'background-color'), 'var(--bg)');
+      const motion = media('prefers-reduced-motion:reduce');
+      check(Boolean(motion && [...motion.cssRules].some((r) => r.selectorText === '*' && r.style.getPropertyValue('transition').includes('none'))), true);
+    hints:
+      - "Light values on `:root`; the same variable names redefined in `@media (prefers-color-scheme: dark) { :root { … } }`."
+      - "`body` and `a` only ever use `var(…)`."
+
+  - type: review
+    id: css10-review
+    title: "Chapter 10 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      img, video { max-width: 100%; height: auto; }
+
+      .menu { display: flex; flex-direction: column; }      /* phones */
+      @media (min-width: 600px) { .menu { flex-direction: row; } }
+      @media (min-width: 900px) { … }
+      @media print { nav { display: none; } }
+
+      h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
+      .container { width: min(100% - 32px, 960px); margin-inline: auto; }
+      .sidebar { width: calc(100% - 200px); }
+      .video { aspect-ratio: 16 / 9; }
+      .thumb { aspect-ratio: 1; object-fit: cover; }
+
+      :root { color-scheme: light dark; --bg: white; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #121212; } }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+      ```
+
+      ## Key ideas
+
+      - Viewport meta tag + fluid widths + flexible images = the foundation.
+      - Mobile first: simple layout first, `min-width` queries add to it.
+      - Breakpoints go where the design breaks.
+      - `clamp()`, `min()` and `max()` make sizes fluid without queries.
+      - Respect dark mode and reduced-motion preferences.
+    questions:
+      - type: mcq
+        prompt: "Mobile first: which query do you mostly write?"
+        options:
+          - "`max-width`"
+          - "`min-width`"
+          - "`orientation`"
+          - "`print`"
+        answer: 1
+        why: "Enhance as the screen grows."
+      - type: fill
+        prompt: A heading between 1.5rem and 3rem, 4% of the window width in between.
+        code: |
+          h1 { font-size: ___(1.5rem, 4vw, 3rem); }
+        blanks:
+          - [clamp]
+        why: "`clamp(min, preferred, max)`."
+
+  - type: exam
+    id: css10-exam
+    title: "Chapter 10 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: What does a responsive page do?
+        options:
+          - Loads faster
+          - Adapts its layout to the screen width
+          - Responds to clicks
+          - Works without CSS
+        answer: 1
+        why: "One page, every screen."
+      - type: mcq
+        prompt: "Which rules apply at 500px wide?"
+        code: |
+          .a { color: red; }
+          @media (min-width: 600px) { .a { color: blue; } }
+        options:
+          - red
+          - blue
+          - both
+          - neither
+        answer: 0
+        why: "500 < 600, so the query doesn't apply."
+      - type: fill
+        prompt: Rules for screens up to 599px wide.
+        code: |
+          @media (___: 599px) { … }
+        blanks:
+          - [max-width]
+        why: "`max-width`."
+      - type: tf
+        prompt: Breakpoints should match the exact widths of popular phones.
+        answer: false
+        why: "Put them where your design breaks."
+      - type: mcq
+        prompt: "`clamp(16px, 2vw, 24px)` on a 600px wide screen is…"
+        options:
+          - 12px
+          - 16px
+          - 24px
+          - 2px
+        answer: 1
+        why: "2vw = 12px, below the 16px minimum."
+      - type: mcq
+        prompt: Which keeps an image from being squashed when its box has a different shape?
+        options:
+          - "`object-fit: cover`"
+          - "`background-size: cover`"
+          - "`aspect-ratio: auto`"
+          - "`image-rendering: crisp`"
+        answer: 0
+        why: "`object-fit` is for `<img>`; `background-size` for backgrounds."
+      - type: mcq
+        prompt: How do you respond to a reader who uses dark mode?
+        options:
+          - "`@media (prefers-color-scheme: dark)`"
+          - "`@media (theme: dark)`"
+          - "`@dark { … }`"
+          - "`body:dark`"
+        answer: 0
+        why: "`prefers-color-scheme`."
+      - type: tf
+        prompt: Media queries add specificity to the rules inside them.
+        answer: false
+        why: "They don't — later rules win ties as usual."
+      - type: mcq
+        prompt: "`aspect-ratio: 16 / 9` on a 320px wide box makes it…"
+        options:
+          - 180px tall
+          - 320px tall
+          - 16px tall
+          - 569px tall
+        answer: 0
+        why: "320 × 9 / 16 = 180."
+      - type: mcq
+        prompt: Which is the right order for a mobile-first stylesheet?
+        options:
+          - "Rules for phones, then `@media (min-width: 600px)`, then `@media (min-width: 900px)`"
+          - "`@media (min-width: 900px)` first, then smaller ones"
+          - "Only media queries, no rules outside"
+          - "Any order"
+        answer: 0
+        why: "Base first, then growing breakpoints, so later rules override."
+      - type: code
+        prompt: |
+          Mobile first: `.side` is hidden (`display: none`) on small
+          screens, and from `800px` wide it is shown (`display: block`) and
+          exactly `250px` wide.
+        given:
+          index.html: |
+            <aside class="side">Filters</aside>
+            <main>Results</main>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            .side {
+              display: none;
+            }
+
+            @media (min-width: 800px) {
+              .side {
+                display: block;
+                width: 250px;
+              }
+            }
+        harness: |
+          await viewport(500);
+          check(style('.side', 'display'), 'none');
+          await viewport(900);
+          check(style('.side', 'display'), 'block');
+          check(box('.side').width, 250);
+          await viewport(800);

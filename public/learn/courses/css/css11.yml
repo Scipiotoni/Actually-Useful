@@ -1,0 +1,859 @@
+id: css11
+number: 11
+part: css-p3
+title: Transforms, Transitions and Animations
+blurb: Move, rotate and scale elements, make changes glide smoothly, and bring pages to life with keyframe animations — kindly.
+hours: 2.5
+goals:
+  - Move, rotate, scale and skew elements with `transform`
+  - Animate changes between states with `transition`
+  - Write keyframe animations with `@keyframes` and `animation`
+  - Keep motion fast, smooth and respectful of reduced-motion settings
+
+items:
+  - type: lesson
+    id: css11-transforms
+    title: Transforms
+    minutes: 20
+    objectives:
+      - Use `translate`, `rotate`, `scale` and `skew`
+      - Change the point a transform happens around
+      - Explain why transforms don't disturb the layout
+    body: |
+      `transform` changes how an element is **drawn** — moved, turned,
+      resized — without changing the layout around it.
+
+      ```html
+      <div class="row">
+        <div class="box move">translate</div>
+        <div class="box turn">rotate</div>
+        <div class="box grow">scale</div>
+        <div class="box lean">skew</div>
+      </div>
+      ```
+      ```css
+      .row {
+        display: flex;
+        gap: 24px;
+        padding: 24px;
+        font-family: sans-serif;
+      }
+
+      .box {
+        width: 90px;
+        height: 90px;
+        display: grid;
+        place-items: center;
+        background-color: #748ffc;
+        color: white;
+      }
+
+      .move { transform: translate(10px, 20px); }
+      .turn { transform: rotate(20deg); }
+      .grow { transform: scale(1.2); }
+      .lean { transform: skewX(-12deg); }
+      ```
+
+      | Function | Does |
+      |---|---|
+      | `translate(x, y)` · `translateX()` · `translateY()` | moves |
+      | `rotate(45deg)` | turns clockwise (`turn` units work too: `0.25turn`) |
+      | `scale(1.5)` · `scale(x, y)` | resizes (1 = normal size) |
+      | `skewX(10deg)` | slants |
+
+      - Several at once, separated by spaces: `transform: translateY(-4px) scale(1.05);` — they apply right to left, so order matters.
+      - `transform-origin` sets the pivot: `center` (default), `top left`, `50% 100%`…
+      - The element keeps its **original space** in the layout; neighbours don't move. That also makes transforms very cheap for the browser to animate.
+
+      A classic: centring an absolute element on a point —
+      `top: 50%; left: 50%; transform: translate(-50%, -50%);` (percentages
+      in `translate` refer to the element's **own** size).
+
+      {{check scale}}
+
+      {{task transforms}}
+    checks:
+      - id: scale
+        type: mcq
+        prompt: "An element has `transform: scale(2)`. What happens to the elements around it?"
+        options:
+          - They move out of the way
+          - Nothing — the element keeps its original space and draws over them
+          - They shrink
+          - They scale too
+        answer: 1
+        why: "Transforms don't affect layout."
+    tasks:
+      - id: transforms
+        title: Tilted, lifted, bigger
+        prompt: |
+          - `.stamp`: rotated `-8deg`
+          - `.card:hover`: moved up by `4px` (`translateY(-4px)`)
+          - `.zoom`: scaled to `1.1`
+          - `.stamp`: rotates around its `top left` corner (`transform-origin`)
+        given:
+          index.html: |
+            <span class="stamp">APPROVED</span>
+            <div class="card">Hover me</div>
+            <img class="zoom" alt="" width="80" height="80" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23ff922b'/%3E%3C/svg%3E">
+        files:
+          style.css: |
+            .stamp {
+              display: inline-block;
+              border: 3px solid crimson;
+              color: crimson;
+              padding: 4px 8px;
+            }
+
+            /* Transforms */
+        solution:
+          style.css: |
+            .stamp {
+              display: inline-block;
+              border: 3px solid crimson;
+              color: crimson;
+              padding: 4px 8px;
+              transform: rotate(-8deg);
+              transform-origin: top left;
+            }
+
+            .card:hover {
+              transform: translateY(-4px);
+            }
+
+            .zoom {
+              transform: scale(1.1);
+            }
+        harness: |
+          const stamp = new DOMMatrix(style('.stamp', 'transform'));
+          check(Math.round(Math.atan2(stamp.b, stamp.a) * 180 / Math.PI), -8);
+          check(style('.stamp', 'transform-origin'), '0px 0px');
+          const zoom = new DOMMatrix(style('.zoom', 'transform'));
+          check(Math.round(zoom.a * 100) / 100, 1.1);
+          check(hover('.card', 'transform'), 'translateY(-4px)');
+        hints:
+          - "`transform: rotate(-8deg);` and `transform-origin: top left;` on `.stamp`."
+          - "`.card:hover { transform: translateY(-4px); }` and `.zoom { transform: scale(1.1); }`."
+    cards:
+      - front: Name four transform functions.
+        back: translate(), rotate(), scale(), skew().
+      - front: Do transforms move the elements around them?
+        back: No — the element keeps its original space; it's only drawn differently.
+      - front: How do you centre an absolute element on a point?
+        back: "`top: 50%; left: 50%; transform: translate(-50%, -50%);`"
+
+  - type: lesson
+    id: css11-transitions
+    title: Transitions
+    minutes: 25
+    objectives:
+      - Animate a change of state with `transition`
+      - Choose durations and timing functions
+      - Know which properties animate smoothly
+    body: |
+      When a hover changes a colour, the change is instant. A **transition**
+      makes it glide:
+
+      ```html
+      <button class="btn">Hover me</button>
+      <button class="btn slow">Slow and bouncy</button>
+      ```
+      ```css
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        background-color: #4263eb;
+        color: white;
+        font-size: 1rem;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+      }
+
+      .btn:hover {
+        background-color: #364fc7;
+        transform: translateY(-3px);
+      }
+
+      .slow {
+        transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .slow:hover {
+        transform: scale(1.15);
+      }
+      ```
+
+      ```css static
+      transition: property duration timing-function delay;
+      ```
+
+      - **property** — what to animate (`background-color`, `transform`…) or `all`.
+      - **duration** — `0.3s` or `300ms`.
+      - **timing function** — the speed curve: `ease` (default), `linear`, `ease-in`, `ease-out`, `ease-in-out`, or a custom `cubic-bezier(…)`.
+      - **delay** — wait before starting.
+
+      Put the transition on the **normal** state (`.btn`), not on `:hover` —
+      then it animates both ways, in and out.
+
+      ## What to animate
+
+      Numbers and colours animate: sizes, colours, opacity, transforms,
+      shadows. Things like `display` or `font-family` just switch.
+
+      For smooth motion, prefer **`transform` and `opacity`**: the browser
+      can animate them without recalculating the layout. Animating `width`,
+      `top` or `margin` makes it redo the layout every frame.
+
+      > [!tip]
+      > Keep interface transitions short: 150–300ms feels responsive.
+      > Longer feels sluggish.
+
+      {{check where}}
+
+      {{task button}}
+    checks:
+      - id: where
+        type: mcq
+        prompt: "Why put `transition` on `.btn` rather than `.btn:hover`?"
+        options:
+          - It's required syntax
+          - Then it animates when the hover starts **and** when it ends
+          - "`:hover` doesn't support transitions"
+          - It's faster
+        answer: 1
+        why: "On :hover only, the change back would be instant."
+    tasks:
+      - id: button
+        title: A smooth button
+        prompt: |
+          - `.cta`: transitions `background-color` over `0.3s` and `transform` over `0.2s` (one `transition` declaration, comma-separated)
+          - `.cta:hover`: background colour `#e8590c` and `transform: scale(1.05)`
+        given:
+          index.html: |
+            <a class="cta" href="#">Start free trial</a>
+        files:
+          style.css: |
+            .cta {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #fd7e14;
+              color: white;
+              text-decoration: none;
+              border-radius: 8px;
+            }
+
+            /* Transitions */
+        solution:
+          style.css: |
+            .cta {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #fd7e14;
+              color: white;
+              text-decoration: none;
+              border-radius: 8px;
+              transition: background-color 0.3s, transform 0.2s;
+            }
+
+            .cta:hover {
+              background-color: #e8590c;
+              transform: scale(1.05);
+            }
+        harness: |
+          check(style('.cta', 'transition-property'), 'background-color, transform');
+          check(style('.cta', 'transition-duration'), '0.3s, 0.2s');
+          check(color(hover('.cta', 'background-color')), color('#e8590c'));
+          check(hover('.cta', 'transform'), 'scale(1.05)');
+          check(rule('.cta:hover', 'transition'), '');
+        hints:
+          - "`transition: background-color 0.3s, transform 0.2s;` on `.cta`."
+          - "`.cta:hover { background-color: #e8590c; transform: scale(1.05); }`"
+    cards:
+      - front: What are the parts of `transition`?
+        back: property, duration, timing function, delay — e.g. `transition: opacity 0.3s ease 0s`.
+      - front: Which properties are cheapest to animate?
+        back: transform and opacity — they don't make the browser recalculate the layout.
+      - front: Where should `transition` go — the normal state or `:hover`?
+        back: The normal state, so it animates both into and out of the hover.
+
+  - type: quiz
+    id: css11-quiz1
+    title: "Quiz: transforms and transitions"
+    questions:
+      - type: fill
+        prompt: Turn the arrow upside down.
+        code: |
+          .arrow { transform: ___(180deg); }
+        blanks:
+          - [rotate]
+        why: "`rotate(180deg)`."
+      - type: mcq
+        prompt: "`transition: all 2s;` — what's wrong with it for a button?"
+        options:
+          - It's invalid
+          - Two seconds is far too slow for an interface
+          - "`all` doesn't exist"
+          - Nothing
+        answer: 1
+        why: "Interface transitions should be quick: 150–300ms."
+      - type: tf
+        prompt: "`display` can be smoothly transitioned from `none` to `block` with a plain transition."
+        answer: false
+        why: "It switches instantly. Fade with opacity instead."
+      - type: mcq
+        prompt: Which is smoothest to animate?
+        options:
+          - "`width`"
+          - "`margin-left`"
+          - "`transform: translateX()`"
+          - "`top`"
+        answer: 2
+        why: "Transforms don't trigger layout."
+
+  - type: lesson
+    id: css11-animations
+    title: Keyframe animations
+    minutes: 25
+    objectives:
+      - Define an animation with `@keyframes`
+      - Run it with the `animation` properties
+      - Turn animations off for readers who prefer less motion
+    body: |
+      A transition goes from A to B when something changes. An
+      **animation** runs by itself, through as many steps as you like, as
+      often as you like.
+
+      **1. Define the steps** with `@keyframes` and a name:
+
+      ```css static
+      @keyframes pulse {
+        from { transform: scale(1); }      /* same as 0% */
+        50%  { transform: scale(1.2); }
+        to   { transform: scale(1); }      /* same as 100% */
+      }
+      ```
+
+      **2. Run it** on an element:
+
+      ```html
+      <div class="row">
+        <div class="spinner"></div>
+        <div class="heart">❤</div>
+        <p class="fade">Fading in…</p>
+      </div>
+      ```
+      ```css
+      .row {
+        display: flex;
+        gap: 40px;
+        align-items: center;
+        padding: 20px;
+        font-family: sans-serif;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 5px solid #dee2e6;
+        border-top-color: #4263eb;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes pulse {
+        50% { transform: scale(1.3); }
+      }
+
+      .heart {
+        font-size: 2rem;
+        color: crimson;
+        animation: pulse 0.8s ease-in-out infinite;
+      }
+
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: none; }
+      }
+
+      .fade {
+        animation: fade-in 1.5s ease-out both;
+      }
+      ```
+
+      ```css static
+      animation: name duration timing-function delay iteration-count direction fill-mode;
+      ```
+
+      | Property | Values |
+      |---|---|
+      | `animation-name` | the `@keyframes` name |
+      | `animation-duration` | `1s`, `500ms` |
+      | `animation-timing-function` | `ease`, `linear`, `steps(4)`… |
+      | `animation-delay` | wait first |
+      | `animation-iteration-count` | `3`, `infinite` |
+      | `animation-direction` | `normal`, `alternate` (back and forth), `reverse` |
+      | `animation-fill-mode` | `forwards` keeps the last frame; `both` also applies the first frame during the delay |
+
+      ## Be kind
+
+      Motion should **help** — show that something is loading, draw the eye
+      to a change — not distract. And turn it down for people who asked:
+
+      ```css static
+      @media (prefers-reduced-motion: reduce) {
+        .spinner { animation-duration: 3s; }  /* slower */
+        .heart   { animation: none; }         /* or none at all */
+      }
+      ```
+
+      {{check parts}}
+
+      {{task spinner}}
+    checks:
+      - id: parts
+        type: mcq
+        prompt: "`animation: bounce 2s ease-in-out infinite alternate;` — what does `alternate` do?"
+        options:
+          - Plays the animation backwards only
+          - Plays forwards, then backwards, and so on
+          - Alternates between two animations
+          - Pauses between runs
+        answer: 1
+        why: "Every other cycle runs in reverse."
+    tasks:
+      - id: spinner
+        title: A loading spinner
+        prompt: |
+          - Define `@keyframes spin` that goes **to** `transform: rotate(360deg)`
+          - `.loader`: runs `spin` over `1s`, `linear`, `infinite`ly
+          - In `@media (prefers-reduced-motion: reduce)`, `.loader` gets `animation-duration: 4s` (slower, gentler)
+        given:
+          index.html: |
+            <div class="loader" role="status" aria-label="Loading"></div>
+        files:
+          style.css: |
+            .loader {
+              width: 48px;
+              height: 48px;
+              border: 6px solid #e9ecef;
+              border-top-color: #12b886;
+              border-radius: 50%;
+            }
+
+            /* Keyframes and animation */
+        solution:
+          style.css: |
+            .loader {
+              width: 48px;
+              height: 48px;
+              border: 6px solid #e9ecef;
+              border-top-color: #12b886;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+              to {
+                transform: rotate(360deg);
+              }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .loader {
+                animation-duration: 4s;
+              }
+            }
+        harness: |
+          check(rule('@keyframes spin'), true);
+          const frames = [...document.styleSheets].flatMap((s) => [...s.cssRules]).find((r) => r.type === 7 && r.name === 'spin');
+          check(frames ? [...frames.cssRules].some((k) => /(to|100%)/.test(k.keyText) && k.style.transform.replace(/\s/g, '') === 'rotate(360deg)') : false, true);
+          check(style('.loader', 'animation-name'), 'spin');
+          check(style('.loader', 'animation-timing-function'), 'linear');
+          check(style('.loader', 'animation-iteration-count'), 'infinite');
+          const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          check(style('.loader', 'animation-duration'), reduced ? '4s' : '1s');
+          const media = [...document.styleSheets].flatMap((s) => [...s.cssRules]).find((r) => r.conditionText && r.conditionText.replace(/\s/g, '').includes('prefers-reduced-motion:reduce'));
+          check(Boolean(media && [...media.cssRules].some((r) => r.selectorText === '.loader' && r.style.getPropertyValue('animation-duration') === '4s')), true);
+        hints:
+          - "`@keyframes spin { to { transform: rotate(360deg); } }`"
+          - "`animation: spin 1s linear infinite;` on `.loader`, then the media query with `animation-duration: 4s;`."
+    cards:
+      - front: How do you define and run a keyframe animation?
+        back: "`@keyframes name { from { … } to { … } }`, then `animation: name 1s …;` on the element."
+      - front: "What does `animation-fill-mode: forwards` do?"
+        back: Keeps the last keyframe's styles after the animation ends.
+      - front: How do you make an animation run forever?
+        back: "`animation-iteration-count: infinite` (or `infinite` in the shorthand)."
+      - front: How do you respect people who prefer less motion?
+        back: "`@media (prefers-reduced-motion: reduce) { … }` — slow down or remove animations."
+
+  - type: quiz
+    id: css11-quiz2
+    title: "Quiz: animations"
+    questions:
+      - type: fill
+        prompt: Define the keyframes.
+        code: |
+          ___ fade {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+          }
+        blanks:
+          - ["@keyframes"]
+        why: "`@keyframes name`."
+      - type: mcq
+        prompt: "`from` and `to` in keyframes are the same as…"
+        options:
+          - "`start` and `end`"
+          - "`0%` and `100%`"
+          - "`0s` and `1s`"
+          - "`first` and `last`"
+        answer: 1
+        why: "Percentages of the duration."
+      - type: tf
+        prompt: An animation needs a hover or other state change to start.
+        answer: false
+        why: "Animations run by themselves; transitions need a change."
+
+  - type: challenge
+    id: css11-ch-card
+    title: A lifting card
+    difficulty: 2
+    tags: [transitions, transforms]
+    prompt: |
+      - `.card`: transitions `transform` and `box-shadow`, both over `0.25s` with `ease-out`
+      - `.card:hover`: lifted `6px` (`translateY(-6px)`) with the shadow `0 12px 24px rgb(0 0 0 / 15%)`
+      - `.card:hover img`: `scale(1.05)` (the image's container `.frame` hides the overflow)
+      - `.card img`: transitions `transform` over `0.4s`
+    given:
+      index.html: |
+        <div class="card">
+          <div class="frame">
+            <img alt="" width="240" height="140" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='140'%3E%3Crect width='240' height='140' fill='%2338d9a9'/%3E%3C/svg%3E">
+          </div>
+          <h3>Green Valley</h3>
+        </div>
+    files:
+      style.css: |
+        .card {
+          width: 240px;
+          border-radius: 8px;
+          box-shadow: 0 2px 6px rgb(0 0 0 / 10%);
+        }
+
+        .frame {
+          overflow: hidden;
+        }
+
+        .card img {
+          display: block;
+        }
+
+        /* Lift on hover */
+    solution:
+      style.css: |
+        .card {
+          width: 240px;
+          border-radius: 8px;
+          box-shadow: 0 2px 6px rgb(0 0 0 / 10%);
+          transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+        }
+
+        .card:hover {
+          transform: translateY(-6px);
+          box-shadow: 0 12px 24px rgb(0 0 0 / 15%);
+        }
+
+        .frame {
+          overflow: hidden;
+        }
+
+        .card img {
+          display: block;
+          transition: transform 0.4s;
+        }
+
+        .card:hover img {
+          transform: scale(1.05);
+        }
+    harness: |
+      check(style('.card', 'transition-property'), 'transform, box-shadow');
+      check(style('.card', 'transition-duration'), '0.25s, 0.25s');
+      check(style('.card', 'transition-timing-function'), 'ease-out, ease-out');
+      check(hover('.card', 'transform'), 'translateY(-6px)');
+      check(hover('.card', 'box-shadow').replace(/\s+/g, ' ').includes('0px 12px 24px') || hover('.card', 'box-shadow').includes('0 12px 24px'), true);
+      check(hover('.card img', 'transform'), 'scale(1.05)');
+      check(style('.card img', 'transition-duration'), '0.4s');
+    hints:
+      - "`transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;`"
+      - "`.card:hover img { transform: scale(1.05); }` — a hover on the card, applied to its image."
+
+  - type: challenge
+    id: css11-ch-dots
+    title: Typing dots
+    difficulty: 3
+    tags: [animations]
+    prompt: |
+      Make the three dots bounce one after another, like a chat app's
+      "typing…" indicator:
+
+      - `@keyframes bounce`: at `0%` and `100%` no transform, at `50%` `translateY(-8px)`
+      - `.dot`: runs `bounce` over `0.9s`, `ease-in-out`, `infinite`
+      - the second dot (`.dot:nth-child(2)`) has an `animation-delay` of `0.15s`, the third (`.dot:nth-child(3)`) `0.3s`
+      - with reduced motion: `.dot` has `animation: none`
+    given:
+      index.html: |
+        <div class="typing" aria-label="Someone is typing">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+    files:
+      style.css: |
+        .typing {
+          display: flex;
+          gap: 6px;
+          padding: 24px;
+        }
+
+        .dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background-color: #868e96;
+        }
+
+        /* Bounce them */
+    solution:
+      style.css: |
+        .typing {
+          display: flex;
+          gap: 6px;
+          padding: 24px;
+        }
+
+        .dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background-color: #868e96;
+          animation: bounce 0.9s ease-in-out infinite;
+        }
+
+        .dot:nth-child(2) {
+          animation-delay: 0.15s;
+        }
+
+        .dot:nth-child(3) {
+          animation-delay: 0.3s;
+        }
+
+        @keyframes bounce {
+          0%, 100% {
+            transform: none;
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .dot {
+            animation: none;
+          }
+        }
+    harness: |
+      const frames = [...document.styleSheets].flatMap((s) => [...s.cssRules]).find((r) => r.type === 7 && r.name === 'bounce');
+      check(Boolean(frames), true);
+      check(frames ? [...frames.cssRules].some((k) => k.keyText.includes('50%') && k.style.transform.replace(/\s/g, '') === 'translateY(-8px)') : false, true);
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduced) {
+        check($$('.dot').map((d) => getComputedStyle(d).animationName), ['bounce', 'bounce', 'bounce']);
+        check($$('.dot').map((d) => getComputedStyle(d).animationDelay), ['0s', '0.15s', '0.3s']);
+        check(style('.dot', 'animation-duration'), '0.9s');
+        check(style('.dot', 'animation-iteration-count'), 'infinite');
+      }
+      const media = [...document.styleSheets].flatMap((s) => [...s.cssRules]).find((r) => r.conditionText && r.conditionText.replace(/\s/g, '').includes('prefers-reduced-motion:reduce'));
+      check(Boolean(media && [...media.cssRules].some((r) => r.selectorText === '.dot' && r.style.getPropertyValue('animation-name') === 'none')), true);
+    hints:
+      - "`@keyframes bounce { 0%, 100% { transform: none; } 50% { transform: translateY(-8px); } }`"
+      - "`.dot:nth-child(2) { animation-delay: 0.15s; }` and the same with 0.3s for the third."
+
+  - type: review
+    id: css11-review
+    title: "Chapter 11 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      .x { transform: translate(10px, 0) rotate(15deg) scale(1.1); transform-origin: top left; }
+
+      .btn {
+        transition: background-color 0.2s ease, transform 0.2s ease;
+      }
+      .btn:hover { background-color: navy; transform: translateY(-2px); }
+
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .spinner { animation: spin 1s linear infinite; }
+
+      @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+      .intro { animation: fade-in 0.6s ease-out both; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .spinner { animation-duration: 3s; }
+        .intro { animation: none; }
+      }
+      ```
+
+      ## Key ideas
+
+      - Transforms change the drawing, not the layout.
+      - Transitions animate between two states; put them on the normal state.
+      - Animations run on their own through keyframes.
+      - Animate `transform` and `opacity`; keep UI motion short (150–300ms).
+      - Always respect `prefers-reduced-motion`.
+    questions:
+      - type: mcq
+        prompt: "A tooltip should fade in on hover. Which approach?"
+        options:
+          - "`transition: opacity 0.2s` with opacity 0 → 1 on hover"
+          - "`display: none` → `block` with a transition"
+          - A 3-second keyframe animation
+          - "`transform: fade(1)`"
+        answer: 0
+        why: "Opacity transitions smoothly; display doesn't."
+      - type: tf
+        prompt: Every animation should also have a reduced-motion alternative.
+        answer: true
+        why: "Some readers get dizzy or ill from motion."
+
+  - type: exam
+    id: css11-exam
+    title: "Chapter 11 exam"
+    minutes: 20
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: Which moves an element 20px to the right without affecting other elements?
+        options:
+          - "`margin-left: 20px`"
+          - "`transform: translateX(20px)`"
+          - "`left: 20px` on a static element"
+          - "`padding-left: 20px`"
+        answer: 1
+        why: "Transforms don't touch the layout."
+      - type: mcq
+        prompt: "`transform: scale(0.5)` makes the element…"
+        options:
+          - half as big
+          - twice as big
+          - 0.5px wide
+          - invisible
+        answer: 0
+        why: "1 is normal size."
+      - type: fill
+        prompt: Animate opacity over a quarter of a second.
+        code: |
+          .toast { transition: opacity ___; }
+        blanks:
+          - ["0.25s", "250ms", ".25s"]
+        why: "Durations use s or ms."
+      - type: mcq
+        prompt: Which timing function has a constant speed?
+        options:
+          - "`ease`"
+          - "`ease-in`"
+          - "`linear`"
+          - "`ease-out`"
+        answer: 2
+        why: "`linear`."
+      - type: tf
+        prompt: A transition needs `@keyframes`.
+        answer: false
+        why: "Keyframes are for animations."
+      - type: mcq
+        prompt: "What does `animation-iteration-count: 3` do?"
+        options:
+          - Runs the animation three times
+          - Makes it three times faster
+          - Waits three seconds
+          - Uses three keyframes
+        answer: 0
+        why: "Three cycles."
+      - type: mcq
+        prompt: Which is the correct keyframes syntax?
+        options:
+          - "`@keyframes grow { from { width: 0; } to { width: 100%; } }`"
+          - "`keyframes: grow { 0 → 100 }`"
+          - "`@animation grow { … }`"
+          - "`.grow:keyframes { … }`"
+        answer: 0
+        why: "`@keyframes name { steps }`."
+      - type: mcq
+        prompt: "An element fades in with an animation, then snaps back to invisible when it ends. What's missing?"
+        options:
+          - "`animation-fill-mode: forwards` (or `both`)"
+          - "`animation-delay`"
+          - "`transition`"
+          - "`z-index`"
+        answer: 0
+        why: "Without it, the styles return to the element's normal ones after the last frame."
+      - type: mcq
+        prompt: "In `transform: translateX(100px) rotate(45deg)`, which applies first?"
+        options:
+          - translateX — reading left to right
+          - rotate — transforms apply right to left
+          - They apply at the same time
+          - Whichever is shorter
+        answer: 1
+        why: "The rightmost function is applied first; order changes the result."
+      - type: tf
+        prompt: Interface transitions of about 2 seconds feel responsive.
+        answer: false
+        why: "150–300ms feels responsive; 2 seconds feels slow."
+      - type: code
+        prompt: |
+          `.link` transitions `color` over `0.2s`. On hover it's `crimson`.
+          Also define `@keyframes wiggle` with `rotate(-5deg)` at `25%` and
+          `rotate(5deg)` at `75%`, and run it on `.bell` over `0.5s`, `3` times.
+        given:
+          index.html: |
+            <a class="link" href="#">Notifications</a> <span class="bell">🔔</span>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            .link {
+              transition: color 0.2s;
+            }
+
+            .link:hover {
+              color: crimson;
+            }
+
+            @keyframes wiggle {
+              25% {
+                transform: rotate(-5deg);
+              }
+              75% {
+                transform: rotate(5deg);
+              }
+            }
+
+            .bell {
+              display: inline-block;
+              animation: wiggle 0.5s 3;
+            }
+        harness: |
+          check(style('.link', 'transition-property'), 'color');
+          check(style('.link', 'transition-duration'), '0.2s');
+          check(color(hover('.link', 'color')), color('crimson'));
+          const frames = [...document.styleSheets].flatMap((s) => [...s.cssRules]).find((r) => r.type === 7 && r.name === 'wiggle');
+          check(frames ? [...frames.cssRules].map((k) => k.keyText + ' ' + k.style.transform.replace(/\s/g, '')).sort() : null, ['25% rotate(-5deg)', '75% rotate(5deg)']);
+          check(style('.bell', 'animation-name'), 'wiggle');
+          check(style('.bell', 'animation-duration'), '0.5s');
+          check(style('.bell', 'animation-iteration-count'), '3');

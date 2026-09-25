@@ -1,0 +1,878 @@
+id: css06
+number: 6
+part: css-p2
+title: The Box Model
+blurb: Every element is a box — content, padding, border and margin. Size boxes precisely, space them, round them, and control how they display.
+hours: 3
+goals:
+  - Name the four layers of the box model and calculate a box's size
+  - Use `box-sizing: border-box` so widths mean what you expect
+  - Add padding, margins, borders, rounded corners and shadows
+  - Centre a block, and understand collapsing margins
+  - Choose between `block`, `inline`, `inline-block` and `none`, and handle overflow
+
+items:
+  - type: lesson
+    id: css6-box
+    title: Every element is a box
+    minutes: 25
+    objectives:
+      - Name the content, padding, border and margin of a box
+      - Calculate how wide a box really is
+      - Make `width` include padding and border with `box-sizing`
+    body: |
+      To the browser, every element is a rectangle made of four layers, from
+      the inside out:
+
+      1. **Content** — the text or image.
+      2. **Padding** — space *inside* the border, around the content. It has the element's background.
+      3. **Border** — a line around the padding.
+      4. **Margin** — space *outside* the border, pushing other elements away. It's always transparent.
+
+      ```html
+      <div class="box">Content</div>
+      <div class="box">Another box</div>
+      ```
+      ```css
+      .box {
+        width: 200px;
+        padding: 20px;
+        border: 5px solid steelblue;
+        margin: 30px;
+        background-color: lightblue;
+        font-family: sans-serif;
+      }
+      ```
+
+      Right-click a box → **Inspect**: the developer tools draw exactly these
+      layers in a diagram, with every size.
+
+      ## How wide is it?
+
+      By default, `width` sets only the **content**. Padding and border are
+      **added** to it:
+
+      > 200 (content) + 2 × 20 (padding) + 2 × 5 (border) = **250px** wide
+
+      That surprises everyone: set `width: 100%` and add padding, and the box
+      sticks out of its parent.
+
+      ## box-sizing: border-box
+
+      With `box-sizing: border-box`, `width` means the **whole** box —
+      content, padding and border together. The content shrinks to make
+      room:
+
+      ```html
+      <div class="a">content-box: 200 + padding + border = 250px</div>
+      <div class="b">border-box: exactly 200px</div>
+      ```
+      ```css
+      div {
+        width: 200px;
+        padding: 20px;
+        border: 5px solid tomato;
+        margin-bottom: 10px;
+        font: 14px sans-serif;
+      }
+
+      .b {
+        box-sizing: border-box;
+      }
+      ```
+
+      So nearly every stylesheet begins with this rule:
+
+      ```css static
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+      ```
+
+      {{check layers}}
+
+      {{check width}}
+
+      {{task card}}
+    checks:
+      - id: layers
+        type: order
+        prompt: Order the layers from the inside out.
+        lines:
+          - content
+          - padding
+          - border
+          - margin
+        why: "Padding is inside the border, margin outside."
+      - id: width
+        type: mcq
+        prompt: "`width: 300px; padding: 10px; border: 1px solid;` with the default box-sizing. How wide is the box (border to border)?"
+        options:
+          - 300px
+          - 311px
+          - 322px
+          - 320px
+        answer: 2
+        why: "300 + 2 × 10 + 2 × 1 = 322."
+    tasks:
+      - id: card
+        title: An exact card
+        prompt: |
+          - Add the `border-box` rule for **every** element (`*, *::before, *::after`)
+          - `.card`: `width: 300px`, `padding: 24px`, a `2px solid` border in `#ced4da`, and a margin of `16px`
+
+          The card should then be exactly 300px wide, border to border.
+        given:
+          index.html: |
+            <div class="card">
+              <h2>Pro plan</h2>
+              <p>Everything you need.</p>
+            </div>
+        files:
+          style.css: |
+            /* Box model */
+        solution:
+          style.css: |
+            *, *::before, *::after {
+              box-sizing: border-box;
+            }
+
+            .card {
+              width: 300px;
+              padding: 24px;
+              border: 2px solid #ced4da;
+              margin: 16px;
+            }
+        harness: |
+          check(box('.card').width, 300);
+          check(style('.card', 'padding-top'), '24px');
+          check(style('.card', 'border-top-width'), '2px');
+          check(style('.card', 'border-top-style'), 'solid');
+          check(style('.card', 'border-top-color'), color('#ced4da'));
+          check(style('.card', 'margin-left'), '16px');
+          check(style('h2', 'box-sizing'), 'border-box');
+        hints:
+          - "`*, *::before, *::after { box-sizing: border-box; }`"
+          - "`border: 2px solid #ced4da;` sets width, style and colour at once."
+    cards:
+      - front: What are the four layers of the box model?
+        back: Content, padding, border, margin — from the inside out.
+      - front: Padding vs margin?
+        back: Padding is space inside the border (with the background); margin is transparent space outside, pushing other elements away.
+      - front: "What does `box-sizing: border-box` do?"
+        back: Makes width and height include padding and border, so a 200px box is 200px wide whatever its padding.
+
+  - type: lesson
+    id: css6-spacing
+    title: Padding, margins and borders
+    minutes: 25
+    objectives:
+      - Write padding and margin shorthands with 1 to 4 values
+      - Centre a block with `margin: 0 auto`
+      - Explain collapsing margins
+      - Style borders, rounded corners and shadows
+    body: |
+      ## Shorthands
+
+      `padding` and `margin` take 1 to 4 values, going **clockwise from
+      the top**:
+
+      | Written | Means |
+      |---|---|
+      | `padding: 10px;` | all four sides |
+      | `padding: 10px 20px;` | top & bottom 10, left & right 20 |
+      | `padding: 10px 20px 30px;` | top 10, left & right 20, bottom 30 |
+      | `padding: 10px 20px 30px 40px;` | top, right, bottom, left |
+
+      Or one side at a time: `margin-top`, `padding-left`…
+
+      ## Centring a block
+
+      A block with a width (or `max-width`) and `auto` left and right
+      margins sits in the middle of its parent:
+
+      ```html
+      <div class="container">I'm centred, and never wider than 400px.</div>
+      ```
+      ```css
+      .container {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 16px;
+        background-color: lavender;
+        font-family: sans-serif;
+      }
+      ```
+
+      ## Collapsing margins
+
+      When two **vertical** margins meet, they don't add up — the **larger**
+      one wins. A paragraph with `margin-bottom: 20px` followed by one with
+      `margin-top: 30px` are 30px apart, not 50px. (Horizontal margins never
+      collapse, and neither do margins inside flex or grid layouts.)
+
+      ## Borders, corners and shadows
+
+      ```html
+      <div class="note">A rounded note with a shadow</div>
+      <img class="avatar" alt="" width="80" height="80" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23748ffc'/%3E%3C/svg%3E">
+      <div class="left">Accent on one side only</div>
+      ```
+      ```css
+      body {
+        font-family: sans-serif;
+      }
+
+      .note {
+        padding: 16px;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+        margin-bottom: 16px;
+      }
+
+      .avatar {
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #748ffc;
+      }
+
+      .left {
+        border-left: 6px solid gold;
+        padding-left: 12px;
+        margin-top: 16px;
+      }
+      ```
+
+      - `border: width style colour` — styles include `solid`, `dashed`, `dotted`, `double`. Sides: `border-top`, `border-left`…
+      - `border-radius` rounds the corners; `50%` on a square makes a circle.
+      - `box-shadow: x y blur colour` — a soft shadow lifts a card off the page. A fourth length (the *spread*) grows it.
+      - `outline` is like a border that **doesn't take up space** — used for focus rings.
+
+      {{check shorthand}}
+
+      {{check collapse}}
+
+      {{task centre}}
+    checks:
+      - id: shorthand
+        type: mcq
+        prompt: "`margin: 5px 10px 15px 20px;` — what is the left margin?"
+        options:
+          - 5px
+          - 10px
+          - 15px
+          - 20px
+        answer: 3
+        why: "Clockwise from the top: top 5, right 10, bottom 15, left 20."
+      - id: collapse
+        type: mcq
+        prompt: "An `h2` has `margin-bottom: 24px`; the next paragraph has `margin-top: 16px`. How far apart are they?"
+        options:
+          - 40px
+          - 24px
+          - 16px
+          - 8px
+        answer: 1
+        why: "Vertical margins collapse to the larger one."
+    tasks:
+      - id: centre
+        title: A centred profile
+        prompt: |
+          - `.profile`: at most `480px` wide, centred with `margin: 0 auto`, padding `16px` top and bottom and `24px` left and right (one `padding` shorthand), rounded corners of `12px`, and the shadow `0 2px 8px rgb(0 0 0 / 20%)`
+          - `.avatar`: a circle (`border-radius: 50%`)
+          - `.bio`: a `4px solid` left border in `teal`
+        given:
+          index.html: |
+            <div class="profile">
+              <img class="avatar" alt="Sam" width="64" height="64" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='teal'/%3E%3C/svg%3E">
+              <h2>Sam Rivera</h2>
+              <p class="bio">Designer who loves maps and trains.</p>
+            </div>
+        files:
+          style.css: |
+            /* Centre and decorate the profile */
+        solution:
+          style.css: |
+            .profile {
+              max-width: 480px;
+              margin: 0 auto;
+              padding: 16px 24px;
+              border-radius: 12px;
+              box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+            }
+
+            .avatar {
+              border-radius: 50%;
+            }
+
+            .bio {
+              border-left: 4px solid teal;
+            }
+        width: 800
+        harness: |
+          const p = box('.profile');
+          const b = box('body');
+          check(Math.round(parseFloat(style('.profile', 'max-width'))), 480);
+          check(Math.abs((p.x - b.x) - (b.x + b.width - p.x - p.width)) <= 1, true);
+          check([style('.profile', 'padding-top'), style('.profile', 'padding-right'), style('.profile', 'padding-bottom'), style('.profile', 'padding-left')], ['16px', '24px', '16px', '24px']);
+          check(style('.profile', 'border-top-left-radius'), '12px');
+          check(style('.profile', 'box-shadow').includes('0px 2px 8px'), true);
+          check(style('.avatar', 'border-top-left-radius'), '50%');
+          check(style('.bio', 'border-left-width'), '4px');
+          check(style('.bio', 'border-left-color'), color('teal'));
+          check(style('.bio', 'border-top-width'), '0px');
+        hints:
+          - "`padding: 16px 24px;` — vertical first, then horizontal."
+          - "Only the left border: `border-left: 4px solid teal;`."
+    cards:
+      - front: "What does `padding: 10px 20px;` mean?"
+        back: 10px top and bottom, 20px left and right.
+      - front: How do you centre a block horizontally?
+        back: "Give it a width or max-width and `margin: 0 auto;`."
+      - front: What are collapsing margins?
+        back: Two touching vertical margins merge into the larger one instead of adding up.
+      - front: How do you make a square image round?
+        back: "`border-radius: 50%;`"
+
+  - type: quiz
+    id: css6-quiz1
+    title: "Quiz: the box and spacing"
+    questions:
+      - type: tf
+        prompt: The padding shows the element's background colour.
+        answer: true
+        why: "Padding is inside the border; margin is transparent."
+      - type: mcq
+        prompt: "With `box-sizing: border-box`, `width: 200px; padding: 20px;` gives a box…"
+        options:
+          - 240px wide
+          - 200px wide, with 160px for content
+          - 200px wide, with 200px for content
+          - 220px wide
+        answer: 1
+        why: "The padding comes out of the 200px."
+      - type: fill
+        prompt: "Top 0, right and left auto, bottom 0."
+        code: |
+          .page { max-width: 960px; margin: ___; }
+        blanks:
+          - ["0 auto", "0px auto"]
+        why: "Two values: vertical, then horizontal."
+      - type: mcq
+        prompt: Which property draws a line that takes up **no** space?
+        options:
+          - "`border`"
+          - "`outline`"
+          - "`box-shadow` with spread"
+          - "`padding`"
+        answer: 1
+        why: "An outline is drawn over, outside the border, without affecting layout. (A shadow doesn't take space either, but it isn't meant as a line.)"
+
+  - type: lesson
+    id: css6-display
+    title: Display and overflow
+    minutes: 25
+    objectives:
+      - Choose between `block`, `inline`, `inline-block` and `none`
+      - Hide elements correctly
+      - Control content that doesn't fit with `overflow`
+      - Keep images inside their containers
+    body: |
+      The `display` property decides how a box takes part in the layout:
+
+      | `display` | Behaves like | Width & height | Vertical margins |
+      |---|---|---|---|
+      | `block` | `<div>`, `<p>`: new line, full width | ✓ | ✓ |
+      | `inline` | `<span>`, `<a>`: flows in the text | ✗ ignored | ✗ ignored |
+      | `inline-block` | flows in the text, but is a real box | ✓ | ✓ |
+      | `none` | removed from the page entirely | — | — |
+
+      (Part II goes on with `flex` and `grid`, the two big layout modes.)
+
+      ```html
+      <nav>
+        <a href="#">Home</a>
+        <a href="#">Blog</a>
+        <a href="#">About</a>
+      </nav>
+      <p>Links are inline, so padding makes them no taller in the flow. As inline-blocks they become proper boxes.</p>
+      <p class="secret">You can't see me.</p>
+      ```
+      ```css
+      nav a {
+        display: inline-block;
+        padding: 8px 16px;
+        margin: 4px;
+        background-color: #364fc7;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+      }
+
+      .secret {
+        display: none;
+      }
+      ```
+
+      ## Hiding things
+
+      - `display: none` — gone: takes no space, and screen readers skip it.
+      - `visibility: hidden` — invisible, but still takes up its space.
+      - `opacity: 0` — invisible, takes space, and can still be clicked!
+
+      ## When content doesn't fit: overflow
+
+      A box with a fixed height and too much content lets it spill out.
+      `overflow` decides what happens:
+
+      ```html
+      <div class="box">A box with a fixed height and a lot of text. It keeps going and going, far more than fits in sixty pixels, so something has to give.</div>
+      ```
+      ```css
+      .box {
+        height: 60px;
+        width: 220px;
+        overflow: auto;
+        border: 1px solid gray;
+        padding: 8px;
+        font-family: sans-serif;
+      }
+      ```
+
+      - `visible` (default) — spills out.
+      - `hidden` — cut off.
+      - `auto` — a scrollbar appears when needed.
+      - `scroll` — scrollbars always.
+
+      Better still, avoid fixed heights for text: use `min-height`, and let
+      boxes grow. And with `max-width`, images never burst out of their
+      container:
+
+      ```css static
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+      ```
+
+      {{check inline}}
+
+      {{task display}}
+    checks:
+      - id: inline
+        type: mcq
+        prompt: "You set `width: 200px` on a `<span>` and nothing happens. Why?"
+        options:
+          - Spans can't be styled
+          - Inline elements ignore width and height
+          - The width needs `!important`
+          - 200px is too small
+        answer: 1
+        why: "Make it `inline-block` or `block` to give it a width."
+    tasks:
+      - id: display
+        title: Tags, a hidden hint and a scroll box
+        prompt: |
+          - `.tag` elements (spans) become `inline-block`, with `padding: 4px 8px`, a `margin-right` of `8px` and the background colour `#e7f5ff`
+          - `.hint` is removed from the page with `display`
+          - `.terms` is `120px` tall and shows a scrollbar only when needed
+          - images are never wider than their container (`max-width: 100%`)
+        given:
+          index.html: |
+            <p><span class="tag">css</span><span class="tag">layout</span><span class="tag">boxes</span></p>
+            <p class="hint">Hint: this shouldn't be visible.</p>
+            <div class="terms">
+              <p>1. Be kind.</p><p>2. Share what you learn.</p><p>3. Don't copy homework.</p>
+              <p>4. Ask questions.</p><p>5. Take breaks.</p><p>6. Have fun.</p>
+            </div>
+            <img alt="Wide banner" width="2000" height="100" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='100'%3E%3Crect width='2000' height='100' fill='%23339af0'/%3E%3C/svg%3E">
+        files:
+          style.css: |
+            /* Display and overflow */
+        solution:
+          style.css: |
+            .tag {
+              display: inline-block;
+              padding: 4px 8px;
+              margin-right: 8px;
+              background-color: #e7f5ff;
+            }
+
+            .hint {
+              display: none;
+            }
+
+            .terms {
+              height: 120px;
+              overflow: auto;
+            }
+
+            img {
+              max-width: 100%;
+            }
+        harness: |
+          check(style('.tag', 'display'), 'inline-block');
+          check(style('.tag', 'padding-top'), '4px');
+          check(style('.tag', 'margin-right'), '8px');
+          check(style('.tag', 'background-color'), color('#e7f5ff'));
+          check(style('.hint', 'display'), 'none');
+          check(box('.terms').height, 120);
+          check(style('.terms', 'overflow-y'), 'auto');
+          check(box('img').width <= box('body').width, true);
+        hints:
+          - "`.tag { display: inline-block; … }` and `.hint { display: none; }`."
+          - "`.terms { height: 120px; overflow: auto; }` and `img { max-width: 100%; }`."
+    cards:
+      - front: What does `inline-block` give you?
+        back: A box that flows in a line of text like inline, but respects width, height, padding and margins like a block.
+      - front: "`display: none` vs `visibility: hidden`?"
+        back: none removes the element (no space, hidden from screen readers); hidden makes it invisible but keeps its space.
+      - front: "What does `overflow: auto` do?"
+        back: Shows scrollbars only when the content doesn't fit.
+      - front: How do you stop images overflowing their container?
+        back: "`img { max-width: 100%; height: auto; }`"
+
+  - type: quiz
+    id: css6-quiz2
+    title: "Quiz: display and overflow"
+    questions:
+      - type: mcq
+        prompt: Which elements are `inline` by default?
+        options:
+          - "`<p>` and `<div>`"
+          - "`<a>` and `<span>`"
+          - "`<h1>` and `<ul>`"
+          - "`<section>` and `<nav>`"
+        answer: 1
+        why: "Links and spans flow inside text."
+      - type: mcq
+        prompt: "Which hides an element **but keeps its space**?"
+        options:
+          - "`display: none`"
+          - "`visibility: hidden`"
+          - "`overflow: hidden`"
+          - "`position: hidden`"
+        answer: 1
+        why: "The box is still laid out, just not painted."
+      - type: fill
+        prompt: Cut off anything that doesn't fit.
+        code: |
+          .thumb { width: 100px; height: 100px; overflow: ___; }
+        blanks:
+          - [hidden]
+        why: "`hidden` clips the overflow."
+
+  - type: challenge
+    id: css6-ch-pricing
+    title: A pricing card
+    difficulty: 2
+    tags: [box model]
+    prompt: |
+      Style the pricing card (use `border-box` sizing everywhere):
+
+      - `.plan`: exactly `280px` wide (border to border), centred with auto margins, padding `32px` on all sides, a `1px solid #dee2e6` border, `16px` rounded corners and a shadow of `0 8px 24px rgb(0 0 0 / 12%)`
+      - `.price`: `2.5rem`, and a bottom margin of `24px`
+      - `.plan ul`: no bullets and no padding
+      - `.plan li`: `8px` padding top and bottom (`padding: 8px 0`), and a `1px solid #f1f3f5` bottom border
+      - `.buy`: a `block` element, `100%` wide, padding `12px`, centred text
+    given:
+      index.html: |
+        <div class="plan">
+          <h2>Pro</h2>
+          <p class="price">€12</p>
+          <ul>
+            <li>Unlimited projects</li>
+            <li>Priority support</li>
+            <li>Custom domain</li>
+          </ul>
+          <a class="buy" href="#">Choose Pro</a>
+        </div>
+    files:
+      style.css: |
+        /* Style the plan */
+    solution:
+      style.css: |
+        *, *::before, *::after {
+          box-sizing: border-box;
+        }
+
+        .plan {
+          width: 280px;
+          margin: 0 auto;
+          padding: 32px;
+          border: 1px solid #dee2e6;
+          border-radius: 16px;
+          box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+        }
+
+        .price {
+          font-size: 2.5rem;
+          margin-bottom: 24px;
+        }
+
+        .plan ul {
+          list-style: none;
+          padding: 0;
+        }
+
+        .plan li {
+          padding: 8px 0;
+          border-bottom: 1px solid #f1f3f5;
+        }
+
+        .buy {
+          display: block;
+          width: 100%;
+          padding: 12px;
+          text-align: center;
+        }
+    harness: |
+      const plan = box('.plan');
+      const page = box('body');
+      check(plan.width, 280);
+      check(Math.abs((plan.x - page.x) - (page.x + page.width - plan.x - plan.width)) <= 1, true);
+      check(style('.plan', 'padding-left'), '32px');
+      check(style('.plan', 'border-top-color'), color('#dee2e6'));
+      check(style('.plan', 'border-top-right-radius'), '16px');
+      check(style('.plan', 'box-shadow').includes('0px 8px 24px'), true);
+      check(style('.price', 'font-size'), '40px');
+      check(style('.price', 'margin-bottom'), '24px');
+      check(style('.plan ul', 'list-style-type'), 'none');
+      check(style('.plan ul', 'padding-left'), '0px');
+      check(style('.plan li', 'padding-top'), '8px');
+      check(style('.plan li', 'border-bottom-style'), 'solid');
+      check(style('.buy', 'display'), 'block');
+      check(box('.buy').width, 280 - 2 * 32 - 2);
+      check(style('.buy', 'text-align'), 'center');
+    hints:
+      - "Start with the `*, *::before, *::after { box-sizing: border-box; }` rule."
+      - "The button fills the content area: 280 − 2 × 32 padding − 2 × 1 border = 214px."
+
+  - type: challenge
+    id: css6-ch-overflow
+    title: Why is there a sideways scrollbar?
+    difficulty: 3
+    tags: [box model, debugging]
+    prompt: |
+      This layout sticks out of its container: the `.panel` is `width: 100%`
+      **plus** padding and border, and the long URL doesn't wrap. Fix it
+      **without changing any width, padding or border values**:
+
+      - make every element use `border-box` sizing
+      - let the long word break with `overflow-wrap: anywhere` on `.panel`
+      - the page should then have no horizontal overflow: the panel fits inside `.container`
+    given:
+      index.html: |
+        <div class="container">
+          <div class="panel">
+            <p>Download it from https://downloads.example.com/releases/2026/very-long-file-name-for-the-installer.zip today.</p>
+          </div>
+        </div>
+    files:
+      style.css: |
+        .container {
+          width: 400px;
+          border: 1px solid gray;
+        }
+
+        .panel {
+          width: 100%;
+          padding: 24px;
+          border: 4px solid teal;
+        }
+    solution:
+      style.css: |
+        *, *::before, *::after {
+          box-sizing: border-box;
+        }
+
+        .container {
+          width: 400px;
+          border: 1px solid gray;
+        }
+
+        .panel {
+          width: 100%;
+          padding: 24px;
+          border: 4px solid teal;
+          overflow-wrap: anywhere;
+        }
+    harness: |
+      const c = box('.container');
+      const p = box('.panel');
+      check(p.x + p.width <= c.x + c.width, true);
+      check($('.panel p').scrollWidth <= $('.panel p').clientWidth, true);
+      check(rule('.panel', 'padding'), '24px');
+      check(rule('.panel', 'width'), '100%');
+      check(rule('.container', 'width'), '400px');
+    hints:
+      - "The `border-box` rule makes `width: 100%` include the padding and border."
+      - "`overflow-wrap: anywhere;` lets a long word break wherever it must."
+
+  - type: review
+    id: css6-review
+    title: "Chapter 6 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      *, *::before, *::after { box-sizing: border-box; }
+
+      .card {
+        width: 300px;            /* whole box, thanks to border-box */
+        max-width: 100%;
+        padding: 16px 24px;      /* vertical horizontal */
+        margin: 0 auto;          /* centred */
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+      }
+      .avatar { border-radius: 50%; }
+      .tag    { display: inline-block; }
+      .hidden { display: none; }
+      .scroll { height: 200px; overflow: auto; }
+      img     { max-width: 100%; height: auto; }
+      ```
+
+      ## Key ideas
+
+      - Content → padding → border → margin.
+      - Use `border-box` so width means the whole box.
+      - Shorthands go clockwise from the top.
+      - Vertical margins collapse to the larger one.
+      - `inline` ignores width/height; `inline-block` doesn't.
+      - Prefer growing boxes (`min-height`, `max-width`) to fixed sizes.
+    questions:
+      - type: mcq
+        prompt: "`padding: 8px 16px 24px;` — what is the bottom padding?"
+        options:
+          - 8px
+          - 16px
+          - 24px
+          - 0
+        answer: 2
+        why: "Three values: top, left & right, bottom."
+      - type: tf
+        prompt: Margins have the element's background colour.
+        answer: false
+        why: "Margins are always transparent."
+
+  - type: exam
+    id: css6-exam
+    title: "Chapter 6 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: Which layer is between the padding and the margin?
+        options:
+          - Content
+          - Border
+          - Outline
+          - Shadow
+        answer: 1
+        why: "Content, padding, border, margin."
+      - type: mcq
+        prompt: "Default box-sizing: `width: 100px; padding: 10px; border: 2px solid;`. The box is…"
+        options:
+          - 100px wide
+          - 112px wide
+          - 124px wide
+          - 120px wide
+        answer: 2
+        why: "100 + 20 + 4."
+      - type: fill
+        prompt: Make width include padding and border.
+        code: |
+          * { box-sizing: ___; }
+        blanks:
+          - [border-box]
+        why: "`border-box`."
+      - type: mcq
+        prompt: "`margin: 10px 20px;` sets…"
+        options:
+          - top 10, bottom 20
+          - top & bottom 10, left & right 20
+          - left 10, right 20
+          - all sides 15
+        answer: 1
+        why: "Vertical, horizontal."
+      - type: mcq
+        prompt: Two paragraphs, one with `margin-bottom: 40px`, the next with `margin-top: 10px`. The gap is…
+        options:
+          - 50px
+          - 40px
+          - 10px
+          - 30px
+        answer: 1
+        why: "Collapsing margins: the larger wins."
+      - type: tf
+        prompt: "`margin: 0 auto` centres a block that has no width set."
+        answer: false
+        why: "A block without a width already fills its parent — there's nothing to centre."
+      - type: mcq
+        prompt: Which makes a 100×100 image a circle?
+        options:
+          - "`border-radius: 50%;`"
+          - "`border: circle;`"
+          - "`shape: round;`"
+          - "`border-radius: 100px 0;`"
+        answer: 0
+        why: "50% on each corner."
+      - type: mcq
+        prompt: "Which `display` lets a span have a width but stay in the line of text?"
+        options:
+          - "`block`"
+          - "`inline`"
+          - "`inline-block`"
+          - "`none`"
+        answer: 2
+        why: "`inline-block`."
+      - type: mcq
+        prompt: A box has a fixed height and too much text. Which shows a scrollbar only when needed?
+        options:
+          - "`overflow: visible`"
+          - "`overflow: hidden`"
+          - "`overflow: auto`"
+          - "`overflow: scroll`"
+        answer: 2
+        why: "`auto`."
+      - type: tf
+        prompt: An element with `opacity: 0` can still be clicked.
+        answer: true
+        why: "It's invisible but still there."
+      - type: code
+        prompt: |
+          Using `border-box` sizing, make `.box` exactly `200px` wide and
+          `100px` tall (border to border), with `20px` padding, a
+          `5px dashed` border in `orange`, `8px` rounded corners, centred
+          with auto margins.
+        given:
+          index.html: |
+            <div class="box">Hello</div>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            * {
+              box-sizing: border-box;
+            }
+
+            .box {
+              width: 200px;
+              height: 100px;
+              padding: 20px;
+              border: 5px dashed orange;
+              border-radius: 8px;
+              margin: 0 auto;
+            }
+        harness: |
+          const b = box('.box');
+          const page = box('body');
+          check([b.width, b.height], [200, 100]);
+          check(style('.box', 'padding-top'), '20px');
+          check(style('.box', 'border-top-style'), 'dashed');
+          check(style('.box', 'border-top-color'), color('orange'));
+          check(style('.box', 'border-bottom-left-radius'), '8px');
+          check(Math.abs((b.x - page.x) - (page.x + page.width - b.x - b.width)) <= 1, true);

@@ -1,0 +1,910 @@
+id: css07
+number: 7
+part: css-p2
+title: Flexbox
+blurb: Lay things out in a row or a column — spaced, aligned, centred and flexible — with the most useful layout tool in CSS.
+hours: 3
+goals:
+  - Turn an element into a flex container and explain main and cross axes
+  - Space items with `justify-content` and `gap`, align them with `align-items`
+  - Make items grow, shrink and wrap with `flex` and `flex-wrap`
+  - Build navigation bars, sidebars, card rows and sticky footers
+
+items:
+  - type: lesson
+    id: css7-container
+    title: Flex containers
+    minutes: 25
+    objectives:
+      - Make a flex container with `display: flex`
+      - Tell the main axis from the cross axis
+      - Distribute items with `justify-content` and align them with `align-items`
+      - Centre anything, horizontally and vertically
+    body: |
+      Put `display: flex` on an element and its **children** line up in a
+      row. The parent is the **flex container**; its children are **flex
+      items**.
+
+      ```html
+      <div class="row">
+        <div class="item">One</div>
+        <div class="item">Two</div>
+        <div class="item">Three</div>
+      </div>
+      ```
+      ```css
+      .row {
+        display: flex;
+        gap: 12px;
+        background-color: #f1f3f5;
+        padding: 12px;
+      }
+
+      .item {
+        background-color: #4dabf7;
+        color: white;
+        padding: 16px;
+        font-family: sans-serif;
+      }
+      ```
+
+      `gap` puts space **between** the items (not around the edges) — no
+      margins needed.
+
+      ## Two axes
+
+      - The **main axis** is the direction the items flow: left to right by default. `flex-direction: column` makes it top to bottom.
+      - The **cross axis** is the other one.
+
+      ## justify-content: along the main axis
+
+      ```html
+      <div class="row start"><span>A</span><span>B</span><span>C</span></div>
+      <div class="row center"><span>A</span><span>B</span><span>C</span></div>
+      <div class="row between"><span>A</span><span>B</span><span>C</span></div>
+      <div class="row evenly"><span>A</span><span>B</span><span>C</span></div>
+      <div class="row end"><span>A</span><span>B</span><span>C</span></div>
+      ```
+      ```css
+      .row {
+        display: flex;
+        background-color: #f1f3f5;
+        margin-bottom: 8px;
+        font-family: sans-serif;
+      }
+
+      .row span {
+        background-color: #845ef7;
+        color: white;
+        padding: 8px 16px;
+      }
+
+      .start   { justify-content: flex-start; }
+      .center  { justify-content: center; }
+      .between { justify-content: space-between; }
+      .evenly  { justify-content: space-evenly; }
+      .end     { justify-content: flex-end; }
+      ```
+
+      ## align-items: across
+
+      `align-items` places items on the cross axis: `stretch` (the default —
+      items fill the container's height), `flex-start`, `center`,
+      `flex-end` or `baseline` (text lines up).
+
+      ## Centring anything
+
+      The famous trick — two lines centre a child both ways:
+
+      ```html
+      <div class="stage">
+        <p class="badge">Perfectly centred</p>
+      </div>
+      ```
+      ```css
+      .stage {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 160px;
+        background-color: #fff3bf;
+      }
+
+      .badge {
+        margin: 0;
+        padding: 12px 20px;
+        background-color: #fab005;
+        font-family: sans-serif;
+      }
+      ```
+
+      {{check axis}}
+
+      {{check between}}
+
+      {{task navbar}}
+    checks:
+      - id: axis
+        type: mcq
+        prompt: "In a container with `flex-direction: column`, which property positions the items **vertically**?"
+        options:
+          - "`align-items`"
+          - "`justify-content`"
+          - "`vertical-align`"
+          - "`text-align`"
+        answer: 1
+        why: "justify-content always works along the main axis — here, vertical."
+      - id: between
+        type: mcq
+        prompt: Which puts the first item at the start, the last at the end, and spreads the rest evenly?
+        options:
+          - "`justify-content: center`"
+          - "`justify-content: space-between`"
+          - "`align-items: stretch`"
+          - "`justify-content: flex-end`"
+        answer: 1
+        why: "`space-between`: no space at the edges, equal space between."
+    tasks:
+      - id: navbar
+        title: A navigation bar
+        prompt: |
+          - `header`: a flex container with the logo on the left and the links on the right (`space-between`), vertically centred (`align-items: center`), `16px` padding and the background colour `#212529`
+          - `header nav`: also a flex container, with a `24px` gap between links
+          - links in the header: `white`, no underline
+        given:
+          index.html: |
+            <header>
+              <a class="logo" href="#">Nimbus</a>
+              <nav>
+                <a href="#">Features</a>
+                <a href="#">Pricing</a>
+                <a href="#">Log in</a>
+              </nav>
+            </header>
+        files:
+          style.css: |
+            /* Flex navigation */
+        solution:
+          style.css: |
+            header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 16px;
+              background-color: #212529;
+            }
+
+            header nav {
+              display: flex;
+              gap: 24px;
+            }
+
+            header a {
+              color: white;
+              text-decoration: none;
+            }
+        harness: |
+          const head = box('header');
+          const logo = box('.logo');
+          const nav = box('header nav');
+          check(style('header', 'display'), 'flex');
+          check(style('header', 'justify-content'), 'space-between');
+          check(style('header', 'align-items'), 'center');
+          check(Math.round(logo.x - head.x), 16);
+          check(Math.round(head.x + head.width - (nav.x + nav.width)), 16);
+          check(style('header nav', 'display'), 'flex');
+          check(style('header nav', 'column-gap'), '24px');
+          const links = $$('nav a').map((a) => a.getBoundingClientRect());
+          check(Math.round(links[1].left - links[0].right), 24);
+          check(new Set(links.map((r) => Math.round(r.top))).size, 1);
+          check($$('header a').every((a) => getComputedStyle(a).color === color('white') && getComputedStyle(a).textDecorationLine === 'none'), true);
+        hints:
+          - "`header { display: flex; justify-content: space-between; align-items: center; … }`"
+          - "The nav is a flex container too: `header nav { display: flex; gap: 24px; }`."
+    cards:
+      - front: What does `display: flex` do?
+        back: Makes the element a flex container; its children become flex items laid out along the main axis (a row by default).
+      - front: "`justify-content` vs `align-items`?"
+        back: justify-content distributes items along the main axis; align-items aligns them on the cross axis.
+      - front: How do you centre a child both ways?
+        back: "Parent: `display: flex; justify-content: center; align-items: center;` (and a height)."
+      - front: What does `gap` do in flexbox?
+        back: Adds space between items — not at the edges.
+
+  - type: lesson
+    id: css7-items
+    title: Flexible items
+    minutes: 25
+    objectives:
+      - Make items grow and shrink with `flex`
+      - Give an item a fixed size with `flex: 0 0 …`
+      - Wrap items onto several lines
+      - Align or push a single item
+    body: |
+      By default, flex items are as wide as their content. The `flex`
+      property on an **item** says how it shares the free space:
+
+      ```css static
+      flex: grow shrink basis;
+      ```
+
+      - **grow** — how much of the leftover space it takes (0 = none).
+      - **shrink** — how much it gives up when space is short (0 = never).
+      - **basis** — its starting size before growing or shrinking (`auto` = its content or `width`).
+
+      | Shorthand | Means |
+      |---|---|
+      | `flex: 1` | grow and shrink equally from zero — **equal columns** |
+      | `flex: 2` | take twice as much as a `flex: 1` sibling |
+      | `flex: 0 0 200px` | exactly 200px, never grow or shrink |
+      | `flex: 1 1 250px` | start at 250px, then grow or shrink |
+
+      ```html
+      <div class="layout">
+        <aside class="side">Sidebar: flex 0 0 160px</aside>
+        <main class="main">Main: flex 1 — takes all the rest</main>
+      </div>
+      <div class="layout">
+        <div class="a">flex: 1</div>
+        <div class="b">flex: 2</div>
+        <div class="a">flex: 1</div>
+      </div>
+      ```
+      ```css
+      .layout {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-family: sans-serif;
+      }
+
+      .layout > * {
+        padding: 16px;
+        background-color: #d0ebff;
+      }
+
+      .side { flex: 0 0 160px; background-color: #ffe066; }
+      .main { flex: 1; }
+      .a { flex: 1; }
+      .b { flex: 2; background-color: #b2f2bb; }
+      ```
+
+      ## Wrapping
+
+      Items normally squeeze onto one line. `flex-wrap: wrap` lets them
+      move to the next line when they don't fit — combined with a basis,
+      that's a responsive card row with no media queries:
+
+      ```css static
+      .cards { display: flex; flex-wrap: wrap; gap: 16px; }
+      .card  { flex: 1 1 220px; }   /* at least ~220px, sharing the rest */
+      ```
+
+      ## One item on its own
+
+      - `align-self` overrides `align-items` for one item.
+      - `margin-left: auto` on an item takes all the free space on its left — pushing it (and everything after it) to the right end. Great for a "Log in" button at the far right of a nav bar.
+      - `order` changes the visual order — but screen readers and the Tab key follow the HTML order, so use it sparingly.
+
+      {{check flex1}}
+
+      {{check fixed}}
+
+      {{task sidebar}}
+    checks:
+      - id: flex1
+        type: mcq
+        prompt: "Three items all have `flex: 1`. How do they share the row?"
+        options:
+          - The first gets all the space
+          - Equally — three equal columns
+          - By content length
+          - They wrap onto three lines
+        answer: 1
+        why: "Equal grow values, zero basis: equal widths."
+      - id: fixed
+        type: fill
+        prompt: A sidebar that is always exactly 250px wide.
+        code: |
+          .sidebar { flex: 0 0 ___; }
+        blanks:
+          - [250px]
+        why: "No grow, no shrink, basis 250px."
+    tasks:
+      - id: sidebar
+        title: Sidebar and content
+        prompt: |
+          - `.page`: a flex container with a `20px` gap
+          - `.sidebar`: always exactly `200px` wide (`flex: 0 0 200px`)
+          - `.content`: takes all the remaining space (`flex: 1`)
+          - `.toolbar`: a flex container; its `.logout` button is pushed to the far right with `margin-left: auto`
+        given:
+          index.html: |
+            <div class="toolbar">
+              <button>New</button>
+              <button>Open</button>
+              <button class="logout">Log out</button>
+            </div>
+            <div class="page">
+              <aside class="sidebar">Folders</aside>
+              <main class="content">Your documents appear here.</main>
+            </div>
+        files:
+          style.css: |
+            /* Flexible items */
+        solution:
+          style.css: |
+            .page {
+              display: flex;
+              gap: 20px;
+            }
+
+            .sidebar {
+              flex: 0 0 200px;
+            }
+
+            .content {
+              flex: 1;
+            }
+
+            .toolbar {
+              display: flex;
+            }
+
+            .logout {
+              margin-left: auto;
+            }
+        harness: |
+          const page = box('.page');
+          check(box('.sidebar').width, 200);
+          check(box('.content').width, page.width - 200 - 20);
+          check(box('.content').y, box('.sidebar').y);
+          const bar = box('.toolbar');
+          const out = box('.logout');
+          check(Math.round(out.x + out.width), Math.round(bar.x + bar.width));
+          check(box('.toolbar button').x, bar.x);
+        hints:
+          - "`.sidebar { flex: 0 0 200px; }` and `.content { flex: 1; }`."
+          - "`.toolbar { display: flex; }` and `.logout { margin-left: auto; }`."
+    cards:
+      - front: "What are the three parts of `flex`?"
+        back: grow, shrink, basis — e.g. `flex: 1 1 200px`.
+      - front: "What does `flex: 1` on every item give you?"
+        back: Equal-width columns sharing all the space.
+      - front: How do you push one flex item to the far end?
+        back: "`margin-left: auto` on it (in a row)."
+      - front: "What does `flex-wrap: wrap` do?"
+        back: Lets items move to a new line when they don't fit.
+
+  - type: quiz
+    id: css7-quiz1
+    title: "Quiz: flex containers and items"
+    questions:
+      - type: mcq
+        prompt: "Where do you write `display: flex`?"
+        options:
+          - On each item
+          - On the parent (the container)
+          - On `body` only
+          - On the first item
+        answer: 1
+        why: "The container; its children become items."
+      - type: mcq
+        prompt: "`flex: 2` next to a `flex: 1` sibling (both basis 0) takes…"
+        options:
+          - Half as much space
+          - The same space
+          - Twice as much space
+          - All the space
+        answer: 2
+        why: "Grow values are ratios: 2 : 1."
+      - type: tf
+        prompt: "`gap` adds space around the outside edges of the container too."
+        answer: false
+        why: "Only between items."
+      - type: mcq
+        prompt: "Which property lets items move to a second line?"
+        options:
+          - "`flex-direction: column`"
+          - "`flex-wrap: wrap`"
+          - "`overflow: wrap`"
+          - "`white-space: wrap`"
+        answer: 1
+        why: "`flex-wrap`."
+
+  - type: lesson
+    id: css7-patterns
+    title: Flexbox patterns
+    minutes: 20
+    objectives:
+      - Build a responsive row of cards that wraps
+      - Lay out a card as a column with its button at the bottom
+      - Keep a footer at the bottom of short pages
+    body: |
+      A handful of patterns cover most everyday layouts.
+
+      ## Cards that wrap
+
+      ```html
+      <div class="cards">
+        <article class="card"><h3>Hiking</h3><p>Trails for every level.</p><a href="#">Explore</a></article>
+        <article class="card"><h3>Cycling</h3><p>Routes along the river and through the hills, with maps.</p><a href="#">Explore</a></article>
+        <article class="card"><h3>Kayaking</h3><p>Calm water.</p><a href="#">Explore</a></article>
+      </div>
+      ```
+      ```css
+      .cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        font-family: sans-serif;
+      }
+
+      .card {
+        flex: 1 1 180px;
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        border: 1px solid #ced4da;
+        border-radius: 8px;
+      }
+
+      .card h3 {
+        margin-top: 0;
+      }
+
+      .card a {
+        margin-top: auto;
+      }
+      ```
+
+      Two ideas at once:
+
+      1. The row: each card starts at 180px and grows; when there's no room they wrap. Make the preview narrow in your mind — on a phone they'd stack.
+      2. Each card is itself a **column** flex container. Cards in a row stretch to the same height, and `margin-top: auto` pushes the link to the bottom, so the buttons line up even when the texts differ in length.
+
+      ## A footer that stays down
+
+      On a short page, the footer floats halfway up the screen. A column
+      layout on `body` fixes that:
+
+      ```css static
+      body {
+        margin: 0;
+        min-height: 100vh;       /* at least the window's height */
+        display: flex;
+        flex-direction: column;
+      }
+
+      main {
+        flex: 1;                 /* grows to fill the gap */
+      }
+      ```
+
+      ## Media object
+
+      An image beside text — comments, notifications, contacts:
+
+      ```css static
+      .media { display: flex; gap: 12px; align-items: flex-start; }
+      .media img { flex: 0 0 48px; }
+      ```
+
+      {{check wrapcheck}}
+
+      {{task cards}}
+    checks:
+      - id: wrapcheck
+        type: mcq
+        prompt: "Why does `margin-top: auto` on the last item of a column card push it down?"
+        options:
+          - Auto margins take all the free space on that side
+          - It's a special flexbox keyword
+          - It sets the margin to 100%
+          - It doesn't — it centres the item
+        answer: 0
+        why: "In flexbox, an auto margin absorbs the free space."
+    tasks:
+      - id: cards
+        title: A wrapping card row
+        prompt: |
+          - `.products`: a flex container that **wraps**, with a `16px` gap
+          - `.product`: `flex: 1 1 200px`, and itself a **column** flex container
+          - `.product button`: pushed to the bottom with `margin-top: auto`
+
+          The checks try a wide screen (three cards in a row, buttons lined up)
+          and a narrow one (the cards stack).
+        given:
+          index.html: |
+            <div class="products">
+              <div class="product"><h3>Lamp</h3><p>Warm light.</p><button>Add</button></div>
+              <div class="product"><h3>Chair</h3><p>Solid oak, hand finished, with a curved back that is comfortable for hours.</p><button>Add</button></div>
+              <div class="product"><h3>Rug</h3><p>Soft wool.</p><button>Add</button></div>
+            </div>
+        files:
+          style.css: |
+            /* Wrapping cards */
+        solution:
+          style.css: |
+            .products {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 16px;
+            }
+
+            .product {
+              flex: 1 1 200px;
+              display: flex;
+              flex-direction: column;
+            }
+
+            .product button {
+              margin-top: auto;
+            }
+        width: 800
+        harness: |
+          const tops = () => $$('.product').map((p) => Math.round(p.getBoundingClientRect().top));
+          check(new Set(tops()).size, 1);
+          const widths = $$('.product').map((p) => Math.round(p.getBoundingClientRect().width));
+          check(Math.max(...widths) - Math.min(...widths) <= 1, true);
+          check(new Set($$('.product button').map((b) => Math.round(b.getBoundingClientRect().top))).size, 1);
+          await viewport(380);
+          check(new Set(tops()).size, 3);
+          await viewport(800);
+        hints:
+          - "`.products { display: flex; flex-wrap: wrap; gap: 16px; }`"
+          - "Each `.product` is a column: `display: flex; flex-direction: column;` — then `margin-top: auto` on its button."
+    cards:
+      - front: How do you make a row of cards that wraps on small screens?
+        back: "Container: `display: flex; flex-wrap: wrap; gap: …`. Cards: `flex: 1 1 200px`."
+      - front: How do you line up buttons at the bottom of cards of different lengths?
+        back: "Each card is `display: flex; flex-direction: column;` and the button gets `margin-top: auto`."
+      - front: How do you keep a footer at the bottom of a short page?
+        back: "`body { min-height: 100vh; display: flex; flex-direction: column; margin: 0; }` and `main { flex: 1; }`."
+
+  - type: quiz
+    id: css7-quiz2
+    title: "Quiz: flex patterns"
+    questions:
+      - type: mcq
+        prompt: "Why do cards in a flex row end up the same height?"
+        options:
+          - "`align-items` is `stretch` by default"
+          - Flex items are always square
+          - Because of `gap`
+          - They don't
+        answer: 0
+        why: "Stretch makes items fill the row's height."
+      - type: fill
+        prompt: A footer at the bottom of short pages.
+        code: |
+          body { min-height: 100vh; display: flex; flex-direction: ___; }
+          main { flex: ___; }
+        blanks:
+          - [column]
+          - ["1"]
+        why: "A column, with main growing to fill the space."
+      - type: tf
+        prompt: "`order` changes the order the Tab key visits links."
+        answer: false
+        why: "It only changes the visual order — keyboard and screen readers follow the HTML."
+
+  - type: challenge
+    id: css7-ch-footer
+    title: Sticky footer page
+    difficulty: 2
+    tags: [flexbox, layout]
+    prompt: |
+      This page is short, so its footer floats up. Fix it with flexbox:
+
+      - `body`: no margin, at least the window's height (`min-height: 100vh`), a column flex container
+      - `main`: grows to fill the space
+      - `header` and `footer`: `16px` padding, background colour `#343a40`, `white` text
+      - `header`: a flex container with the title and the menu button on opposite ends, vertically centred
+
+      The footer's bottom edge should touch the bottom of the window.
+    given:
+      index.html: |
+        <header>
+          <strong>Daily Notes</strong>
+          <button>Menu</button>
+        </header>
+        <main>
+          <p>Only a little content today.</p>
+        </main>
+        <footer>© 2026 Daily Notes</footer>
+    files:
+      style.css: |
+        /* Keep the footer down */
+    solution:
+      style.css: |
+        body {
+          margin: 0;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+
+        main {
+          flex: 1;
+        }
+
+        header, footer {
+          padding: 16px;
+          background-color: #343a40;
+          color: white;
+        }
+
+        header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+    harness: |
+      const f = box('footer');
+      check(Math.round(f.y + f.height), innerHeight);
+      check(box('header').y, 0);
+      check(style('footer', 'background-color'), color('#343a40'));
+      check(style('header', 'color'), color('white'));
+      check(style('footer', 'padding-top'), '16px');
+      const h = box('header');
+      const b = box('header button');
+      check(Math.round(h.x + h.width - (b.x + b.width)), 16);
+      check(Math.abs((b.y + b.height / 2) - (h.y + h.height / 2)) <= 1, true);
+    hints:
+      - "`body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; }` and `main { flex: 1; }`."
+      - "The header: `display: flex; justify-content: space-between; align-items: center;`."
+
+  - type: challenge
+    id: css7-ch-profile
+    title: Profile card
+    difficulty: 3
+    tags: [flexbox, alignment]
+    prompt: |
+      Build this card with flexbox only:
+
+      - `.card`: a row flex container with a `16px` gap, items vertically centred, `16px` padding, and a `1px solid #dee2e6` border
+      - `.card img`: always `64px` wide — it must never shrink (`flex: 0 0 64px`)
+      - `.info`: takes the remaining space
+      - `.info` is itself a **column** with a `4px` gap
+      - `.stats`: a row with `space-around` between its three items, each centred text
+    given:
+      index.html: |
+        <div class="card">
+          <img alt="Robin" width="64" height="64" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%2320c997'/%3E%3C/svg%3E">
+          <div class="info">
+            <strong>Robin Okafor</strong>
+            <span>Photographer · Lisbon</span>
+            <div class="stats">
+              <span>120<br>posts</span>
+              <span>4.2k<br>followers</span>
+              <span>180<br>following</span>
+            </div>
+          </div>
+        </div>
+    files:
+      style.css: |
+        /* Flexbox card */
+    solution:
+      style.css: |
+        .card {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px;
+          border: 1px solid #dee2e6;
+        }
+
+        .card img {
+          flex: 0 0 64px;
+        }
+
+        .info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .stats {
+          display: flex;
+          justify-content: space-around;
+        }
+
+        .stats span {
+          text-align: center;
+        }
+    harness: |
+      const card = box('.card');
+      const img = box('.card img');
+      const info = box('.info');
+      check(img.width, 64);
+      check(Math.round(info.x - (img.x + img.width)), 16);
+      check(Math.round(info.x + info.width), Math.round(card.x + card.width - 16 - 1));
+      check(Math.abs((img.y + img.height / 2) - (card.y + card.height / 2)) <= 1, true);
+      check(style('.info', 'flex-direction'), 'column');
+      check(style('.info', 'row-gap'), '4px');
+      check(style('.stats', 'justify-content'), 'space-around');
+      check(new Set($$('.stats span').map((s) => Math.round(s.getBoundingClientRect().top))).size, 1);
+      check(style('.stats span', 'text-align'), 'center');
+    hints:
+      - "The card is a row; `.info` is a column (`flex-direction: column`) that grows (`flex: 1`)."
+      - "`.stats { display: flex; justify-content: space-around; }`"
+
+  - type: review
+    id: css7-review
+    title: "Chapter 7 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      .container {
+        display: flex;
+        flex-direction: row;          /* or column */
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-between;  /* main axis: flex-start center flex-end space-between space-around space-evenly */
+        align-items: center;             /* cross axis: stretch flex-start center flex-end baseline */
+      }
+
+      .item      { flex: 1; }            /* share the space equally */
+      .sidebar   { flex: 0 0 250px; }    /* fixed */
+      .card      { flex: 1 1 200px; }    /* start at 200px, grow and shrink */
+      .push-end  { margin-left: auto; }
+      .odd-one   { align-self: flex-end; }
+      ```
+
+      ## Key ideas
+
+      - `display: flex` goes on the **parent**; the children are laid out.
+      - justify-content = main axis; align-items = cross axis.
+      - `gap` for spacing between items.
+      - `flex` shares space: grow, shrink, basis.
+      - Patterns: nav bar, sidebar + content, wrapping cards, column cards with bottom buttons, sticky footer, centring.
+    questions:
+      - type: mcq
+        prompt: "Which pair centres a child in a flex container, both ways?"
+        options:
+          - "`text-align: center; vertical-align: middle;`"
+          - "`justify-content: center; align-items: center;`"
+          - "`margin: auto; padding: auto;`"
+          - "`align-content: center; order: 0;`"
+        answer: 1
+        why: "One per axis."
+      - type: mcq
+        prompt: "What does `flex: 0 0 300px` mean?"
+        options:
+          - Grow 0, shrink 0, basis 300px — a fixed 300px item
+          - A 300px gap
+          - At most 300px
+          - Grow to 300px
+        answer: 0
+        why: "grow shrink basis."
+
+  - type: exam
+    id: css7-exam
+    title: "Chapter 7 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: What are the direct children of a flex container called?
+        options:
+          - Flex rows
+          - Flex items
+          - Flex cells
+          - Flex boxes
+        answer: 1
+        why: "Items."
+      - type: mcq
+        prompt: What is the default `flex-direction`?
+        options:
+          - "`column`"
+          - "`row`"
+          - "`wrap`"
+          - "`row-reverse`"
+        answer: 1
+        why: "Left to right."
+      - type: mcq
+        prompt: "In a row, which property aligns items **vertically**?"
+        options:
+          - "`justify-content`"
+          - "`align-items`"
+          - "`flex-wrap`"
+          - "`gap`"
+        answer: 1
+        why: "The cross axis of a row is vertical."
+      - type: fill
+        prompt: Put space between the items only.
+        code: |
+          .row { display: flex; ___: 12px; }
+        blanks:
+          - [gap]
+        why: "`gap`."
+      - type: mcq
+        prompt: "`justify-content: space-evenly` gives…"
+        options:
+          - Equal space between items and at both ends
+          - Items packed at the start
+          - Space only between items
+          - Items stretched to fill
+        answer: 0
+        why: "Evenly: the edges get the same space as the gaps."
+      - type: tf
+        prompt: "Items with `flex: 1` all end up the same width."
+        answer: true
+        why: "Equal grow from a zero basis."
+      - type: mcq
+        prompt: Which lets a row of cards move onto several lines?
+        options:
+          - "`flex-wrap: wrap`"
+          - "`flex-direction: column`"
+          - "`overflow: auto`"
+          - "`display: block`"
+        answer: 0
+        why: "Wrapping."
+      - type: mcq
+        prompt: "In a nav bar (a flex row), how do you push the last link to the far right?"
+        options:
+          - "`float: right`"
+          - "`margin-left: auto` on it"
+          - "`text-align: right`"
+          - "`order: 99`"
+        answer: 1
+        why: "An auto margin swallows the free space."
+      - type: mcq
+        prompt: "Which `align-items` value is the default?"
+        options:
+          - "`center`"
+          - "`flex-start`"
+          - "`stretch`"
+          - "`baseline`"
+        answer: 2
+        why: "Items stretch to fill the cross axis."
+      - type: tf
+        prompt: "The CSS `order` property is a good way to fix the reading order for screen readers."
+        answer: false
+        why: "Screen readers follow the HTML. Fix the HTML instead."
+      - type: code
+        prompt: |
+          Make `.row` a flex container with a `10px` gap, and make its three
+          `.col` children share the width equally (`flex: 1`). Centre the
+          `.hero` child both ways in `.hero-box`, which is `200px` tall.
+        given:
+          index.html: |
+            <div class="row">
+              <div class="col">A</div>
+              <div class="col">B</div>
+              <div class="col">C</div>
+            </div>
+            <div class="hero-box"><p class="hero">Hi!</p></div>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            .row {
+              display: flex;
+              gap: 10px;
+            }
+
+            .col {
+              flex: 1;
+            }
+
+            .hero-box {
+              height: 200px;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
+        harness: |
+          const cols = $$('.col').map((c) => c.getBoundingClientRect());
+          const row = box('.row');
+          check(new Set(cols.map((c) => Math.round(c.width))).size, 1);
+          check(Math.round(cols[0].width * 3 + 20), row.width);
+          check(Math.round(cols[1].left - cols[0].right), 10);
+          const stage = box('.hero-box');
+          const hero = box('.hero');
+          check(stage.height, 200);
+          check(Math.abs((hero.x + hero.width / 2) - (stage.x + stage.width / 2)) <= 1, true);
+          check(Math.abs((hero.y + hero.height / 2) - (stage.y + stage.height / 2)) <= 1, true);
