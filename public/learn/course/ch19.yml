@@ -2975,6 +2975,186 @@ items:
               return best;
           }
 
+  - type: build
+    id: cpp-build-program
+    title: "Final project: a console program of your own"
+    minutes: 150
+    body: |
+      Write a complete C++ program about **anything you like** — from an
+      empty file, with no steps to follow. A game, a calculator, a tracker,
+      a quiz, a simulation: it's yours.
+
+      The only rule: it must use the ingredients below. Plan it first
+      (what data, what functions, what it prints), then build it a piece at
+      a time, running it as you go.
+    ideas:
+      - A text adventure with a few rooms and an inventory
+      - A grade book that stores students and prints averages
+      - A budget tracker that reads expenses and prints a report
+      - A number-guessing game with a limited number of tries
+      - A times-table quiz that keeps score
+    requirements:
+      - text: "At least one function you wrote, besides `main`"
+        code: "\\b(?!main\\b|if\\b|for\\b|while\\b|switch\\b|catch\\b|return\\b)[A-Za-z_]\\w*\\s*\\([^;{}()]*\\)\\s*(const\\s*)?\\{[\\s\\S]*\\bint\\s+main\\s*\\("
+        hint: "Write a function above `main`, like `int total(const std::vector<int>& v) { … }`, and call it."
+      - text: "A container: `std::vector`, `std::map`, `std::array`…"
+        code: "\\b(std::)?(vector|map|unordered_map|set|array|deque|list)\\s*<"
+      - text: "A `struct` or `class` of your own"
+        code: "\\b(struct|class)\\s+[A-Za-z_]\\w*\\s*(:[^{;]*)?\\{"
+      - text: "A loop (`for` or `while`)"
+        code: "\\b(for|while)\\s*\\("
+      - text: "A decision (`if` or `switch`)"
+        code: "\\b(if|switch)\\s*\\("
+      - text: "It prints something"
+        output: "\\S"
+        hint: "Print your results with `std::cout`."
+    starter: |
+      #include <iostream>
+
+      int main() {
+          // Your program
+          return 0;
+      }
+    example: |
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      struct Expense {
+          std::string what;
+          double amount;
+      };
+
+      double total(const std::vector<Expense>& expenses) {
+          double sum = 0;
+          for (const Expense& e : expenses) {
+              sum += e.amount;
+          }
+          return sum;
+      }
+
+      int main() {
+          std::vector<Expense> expenses = {{"Rent", 650}, {"Food", 220.5}, {"Bus pass", 40}};
+          double budget = 1000;
+          for (const Expense& e : expenses) {
+              std::cout << e.what << ": " << e.amount << "\n";
+          }
+          double spent = total(expenses);
+          std::cout << "Total: " << spent << "\n";
+          if (spent > budget) {
+              std::cout << "Over budget!\n";
+          } else {
+              std::cout << "Left: " << budget - spent << "\n";
+          }
+          return 0;
+      }
+
+  - type: build
+    id: cpp-build-system
+    title: "Final project: a modern C++ system"
+    minutes: 180
+    body: |
+      Build something bigger, designed like real software: a library
+      system, a bank, a zoo, a playlist manager, an RPG battle — anything
+      with a few kinds of objects working together.
+
+      Use classes to model it, the standard library to do the heavy
+      lifting, and exceptions for things that go wrong. Just use the
+      ingredients below — the design is yours.
+    ideas:
+      - A library system with books, members and loans
+      - A turn-based battle between characters of different classes
+      - A zoo with animals that make different sounds (inheritance!)
+      - An online shop with a cart, products and discounts
+      - A school timetable that detects clashes
+    requirements:
+      - text: "A `class` with private data and public member functions"
+        code: "\\bclass\\s+\\w+[^;{]*\\{[\\s\\S]*\\b(private|public)\\s*:"
+      - text: "Inheritance or a `virtual` function"
+        code: "\\b(class|struct)\\s+\\w+\\s*:\\s*(public|protected|private)\\s+\\w+|\\bvirtual\\b"
+      - text: "A standard algorithm or a lambda (`std::sort`, `std::find_if`, `[&](…) { … }`…)"
+        code: "std::(sort|stable_sort|find|find_if|count_if|accumulate|transform|for_each|any_of|all_of|max_element|min_element|remove_if)\\b|\\[[^\\]\\n]*\\]\\s*\\([^)]*\\)\\s*(->\\s*[\\w:<>]+\\s*)?\\{"
+      - text: "Passes objects by `const` reference"
+        code: "\\bconst\\s+[\\w:<>,\\s]+&\\s*\\w+"
+      - text: "Handles errors with exceptions: `throw` and `try`/`catch`"
+        code: "\\bthrow\\b[\\s\\S]*\\btry\\s*\\{|\\btry\\s*\\{[\\s\\S]*\\bthrow\\b"
+      - text: "It prints something"
+        output: "\\S"
+    starter: |
+      #include <iostream>
+
+      int main() {
+          // Your system
+          return 0;
+      }
+    example: |
+      #include <algorithm>
+      #include <iostream>
+      #include <memory>
+      #include <stdexcept>
+      #include <string>
+      #include <vector>
+
+      class Animal {
+      public:
+          explicit Animal(std::string name) : name_(std::move(name)) {}
+          virtual ~Animal() = default;
+          const std::string& name() const { return name_; }
+          virtual std::string sound() const = 0;
+
+      private:
+          std::string name_;
+      };
+
+      class Lion : public Animal {
+      public:
+          using Animal::Animal;
+          std::string sound() const override { return "Roar"; }
+      };
+
+      class Parrot : public Animal {
+      public:
+          using Animal::Animal;
+          std::string sound() const override { return "Hello!"; }
+      };
+
+      class Zoo {
+      public:
+          void add(std::unique_ptr<Animal> animal) { animals_.push_back(std::move(animal)); }
+
+          const Animal& find(const std::string& name) const {
+              auto it = std::find_if(animals_.begin(), animals_.end(),
+                                     [&](const std::unique_ptr<Animal>& a) { return a->name() == name; });
+              if (it == animals_.end()) {
+                  throw std::out_of_range("No animal called " + name);
+              }
+              return **it;
+          }
+
+          void tour() const {
+              for (const auto& a : animals_) {
+                  std::cout << a->name() << " says " << a->sound() << "\n";
+              }
+          }
+
+      private:
+          std::vector<std::unique_ptr<Animal>> animals_;
+      };
+
+      int main() {
+          Zoo zoo;
+          zoo.add(std::make_unique<Lion>("Leo"));
+          zoo.add(std::make_unique<Parrot>("Polly"));
+          zoo.tour();
+          try {
+              std::cout << zoo.find("Polly").sound() << "\n";
+              zoo.find("Nemo");
+          } catch (const std::out_of_range& e) {
+              std::cout << "Oops: " << e.what() << "\n";
+          }
+          return 0;
+      }
+
   - type: lesson
     id: c19-next
     title: Where to go from here

@@ -1306,6 +1306,185 @@ items:
           check(count('#log li'), 0);
           check(text('#total'), '0');
 
+  - type: build
+    id: js-build-app
+    title: "Final project: an interactive app of your own"
+    minutes: 150
+    body: |
+      Build a small interactive web app — **your idea**, from an empty page.
+      A calculator, a quiz, a shopping list, a mood tracker, a random
+      recipe picker: anything that reacts when someone uses it.
+
+      Write the HTML, the JavaScript, and (if you like) the CSS. The only
+      rule is to use the ingredients below — how you combine them is up to
+      you. Remember the pattern from the to-do project: keep the data in
+      variables, change it in event handlers, and render the page from it.
+    ideas:
+      - A tip calculator that updates as you type
+      - A "random dinner" button that picks from your favourite recipes
+      - A flashcard quiz that counts your score
+      - A budget tracker: add expenses, see the total and the biggest one
+      - A reaction-time game — click as soon as the box turns green
+    requirements:
+      - text: "A function you wrote (a `function` or an arrow function)"
+        code: "\\bfunction\\s+[\\w$]+\\s*\\(|\\b(const|let)\\s+[\\w$]+\\s*=\\s*(async\\s*)?(\\([^)]*\\)|[\\w$]+)\\s*=>"
+        in: js
+      - text: "Your data in an array or an object"
+        code: "=\\s*\\[|=\\s*\\{|\\[\\s*\\{"
+        in: js
+      - text: "A loop or an array method (`for`, `while`, `forEach`, `map`, `filter`, `reduce`…)"
+        code: "\\b(for|while)\\s*\\(|\\.(forEach|map|filter|reduce|find|some|every|sort)\\s*\\("
+        in: js
+      - text: "A decision with `if` (or a ternary `? :`)"
+        code: "\\bif\\s*\\(|\\?[^:?]+:"
+        in: js
+      - text: "It reacts to the user with `addEventListener`"
+        code: "addEventListener\\s*\\(\\s*['\"`](click|input|change|submit|keydown|keyup|pointerdown|mousedown|mouseover)"
+        in: js
+      - text: "It changes the page from JavaScript, and shows something"
+        code: "\\.(textContent|innerHTML|append|prepend|replaceChildren|classList|hidden|value)\\b|createElement"
+        in: js
+        check: "document.body.innerText.trim().length > 0"
+    files:
+      index.html: |
+        <!-- Your app's page -->
+      script.js: |
+        // Your app's code
+    example:
+      index.html: |
+        <h1>Tip calculator</h1>
+        <label for="bill">Bill (€)</label>
+        <input id="bill" type="number" value="40">
+        <div id="tips">
+          <button data-tip="10">10%</button>
+          <button data-tip="15">15%</button>
+          <button data-tip="20">20%</button>
+        </div>
+        <p id="result"></p>
+      script.js: |
+        const state = { bill: 40, tip: 15 };
+        const result = document.querySelector('#result');
+
+        const render = () => {
+          const tip = state.bill * state.tip / 100;
+          result.textContent = `Tip ${tip.toFixed(2)} € — total ${(state.bill + tip).toFixed(2)} €`;
+          for (const button of document.querySelectorAll('[data-tip]')) {
+            button.classList.toggle('active', Number(button.dataset.tip) === state.tip);
+          }
+        };
+
+        document.querySelector('#bill').addEventListener('input', (event) => {
+          const value = Number(event.target.value);
+          if (value >= 0) {
+            state.bill = value;
+          }
+          render();
+        });
+
+        document.querySelector('#tips').addEventListener('click', (event) => {
+          const button = event.target.closest('[data-tip]');
+          if (button) {
+            state.tip = Number(button.dataset.tip);
+            render();
+          }
+        });
+
+        render();
+
+  - type: build
+    id: js-build-game
+    title: "Final project: a game or tool with classes"
+    minutes: 180
+    body: |
+      Build a **game** or a **tool** that's a little more ambitious: a memory
+      game, a typing speed test, a pomodoro timer, a dice roller, a quiz with
+      a countdown — your choice.
+
+      This time, organise your code with a **class**, and use timing or
+      asynchronous code. Everything else is up to you — just use the
+      ingredients below.
+    ideas:
+      - A typing test — how many words per minute can you type?
+      - A memory card game with a move counter
+      - A pomodoro timer with work and break sessions
+      - "Guess the number" with a class that keeps the game's state
+      - A dice roller for board games, with a history of rolls
+    requirements:
+      - text: "A `class` with a `constructor` and at least one method"
+        code: "\\bclass\\s+[\\w$]+[^{]*\\{[\\s\\S]*\\bconstructor\\s*\\([\\s\\S]*\\}\\s*[\\w$]+\\s*\\([^)]*\\)\\s*\\{"
+        in: js
+      - text: "Timing or async code: `setTimeout`, `setInterval`, `await` or `.then()`"
+        code: "\\b(setTimeout|setInterval)\\s*\\(|\\bawait\\b|\\.then\\s*\\("
+        in: js
+      - text: "Builds elements with `document.createElement`"
+        code: "createElement\\s*\\("
+        in: js
+      - text: "A template literal with `${…}`"
+        code: "`[^`]*\\$\\{"
+        in: js
+      - text: "Handles the keyboard or a form (`keydown`, `keyup` or `submit`)"
+        code: "addEventListener\\s*\\(\\s*['\"`](keydown|keyup|submit)"
+        in: js
+      - text: "Guards against bad input or errors: `throw`, `try`/`catch`, or a validation `return`"
+        code: "\\bthrow\\b|\\btry\\s*\\{|\\bif\\s*\\([^)]*\\)\\s*(\\{\\s*)?return\\b"
+        in: js
+    files:
+      index.html: |
+        <!-- Your game or tool -->
+      script.js: |
+        // Your code
+    example:
+      index.html: |
+        <h1>Guess the number</h1>
+        <form id="guess-form">
+          <label for="guess">Your guess (1–100)</label>
+          <input id="guess" type="number">
+          <button>Guess</button>
+        </form>
+        <p id="message">I'm thinking of a number…</p>
+        <ol id="history"></ol>
+      script.js: |
+        class Game {
+          constructor(max) {
+            this.max = max;
+            this.secret = 1 + Math.floor(Math.random() * max);
+            this.guesses = [];
+          }
+
+          guess(n) {
+            if (!Number.isInteger(n) || n < 1 || n > this.max) {
+              throw new RangeError(`Pick a whole number from 1 to ${this.max}`);
+            }
+            this.guesses.push(n);
+            if (n === this.secret) return 'correct';
+            return n < this.secret ? 'higher' : 'lower';
+          }
+        }
+
+        const game = new Game(100);
+        const message = document.querySelector('#message');
+
+        document.querySelector('#guess-form').addEventListener('submit', (event) => {
+          event.preventDefault();
+          const input = document.querySelector('#guess');
+          try {
+            const answer = game.guess(Number(input.value));
+            const li = document.createElement('li');
+            li.textContent = `${input.value}: ${answer}`;
+            document.querySelector('#history').append(li);
+            message.textContent = answer === 'correct'
+              ? `Yes! It took you ${game.guesses.length} guesses.`
+              : `Go ${answer}…`;
+          } catch (error) {
+            message.textContent = error.message;
+          }
+          input.value = '';
+        });
+
+        setTimeout(() => {
+          if (game.guesses.length === 0) message.textContent = 'Go on — type a number!';
+        }, 5000);
+
   - type: lesson
     id: js14-next
     title: What next?

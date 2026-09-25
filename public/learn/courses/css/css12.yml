@@ -1232,6 +1232,204 @@ items:
           check(style('.card', 'transition-property'), 'transform');
           check(hover('.card', 'transform'), 'translateY(-4px)');
 
+  - type: build
+    id: css-build-design
+    title: "Final project: design a page your way"
+    minutes: 120
+    body: |
+      Design a page from scratch — any subject, any style. Write both the
+      HTML and the CSS yourself: a portfolio, a product launch, a poster for
+      an event, a recipe, a band — whatever you like.
+
+      The only rule: your design must use the ingredients below. How it
+      looks is completely your call. Tip: sketch it on paper first.
+    ideas:
+      - A launch page for an imaginary app, with a big hero and three feature cards
+      - A poster-style page for a concert, in bold colours
+      - A calm, readable recipe page with a sidebar of ingredients
+      - Your personal site from the HTML course, redesigned from zero
+    requirements:
+      - text: "Colours (or sizes) kept in CSS variables: `--name: …` used with `var(--name)`"
+        code: "--[\\w-]+\\s*:[\\s\\S]*var\\(\\s*--"
+        in: css
+      - text: "A Flexbox or Grid layout"
+        code: "display\\s*:\\s*(flex|grid|inline-flex|inline-grid)"
+        in: css
+        check: "$$('body *').some((el) => /flex|grid/.test(getComputedStyle(el).display))"
+      - text: "Your own font choice: a `font-family` stack ending with a generic family"
+        code: "font-family\\s*:[^;}]*\\b(serif|sans-serif|monospace|system-ui|cursive)\\b"
+        in: css
+      - text: "A hover or focus effect"
+        code: ":(hover|focus|focus-visible|focus-within)\\b"
+        in: css
+      - text: "A transition or an animation"
+        code: "\\b(transition|animation)(-[a-z]+)?\\s*:"
+        in: css
+      - text: "It adapts to phones: a media query on the width"
+        code: "@media[^{]*\\((min|max)-width"
+        in: css
+    files:
+      index.html: |
+        <!-- Your page -->
+      style.css: |
+        /* Your design */
+    example:
+      index.html: |
+        <header class="hero">
+          <h1>Nimbus Notes</h1>
+          <p>Write it down. Find it later. Anywhere.</p>
+          <a class="button" href="#get">Get it free</a>
+        </header>
+        <main class="features">
+          <article class="card"><h2>Fast</h2><p>Opens before you finish the thought.</p></article>
+          <article class="card"><h2>Private</h2><p>Your notes stay on your device.</p></article>
+          <article class="card"><h2>Everywhere</h2><p>Phone, tablet and laptop, always in sync.</p></article>
+        </main>
+      style.css: |
+        :root {
+          --brand: #5f3dc4;
+          --ink: #1f2933;
+          --radius: 12px;
+        }
+
+        body {
+          margin: 0;
+          font-family: "Inter", system-ui, sans-serif;
+          color: var(--ink);
+        }
+
+        .hero {
+          padding: 48px 24px;
+          text-align: center;
+          background: linear-gradient(135deg, var(--brand), #15aabf);
+          color: white;
+        }
+
+        .button {
+          display: inline-block;
+          padding: 12px 24px;
+          border-radius: 999px;
+          background: white;
+          color: var(--brand);
+          text-decoration: none;
+          transition: transform 0.2s;
+        }
+
+        .button:hover,
+        .button:focus-visible {
+          transform: translateY(-2px);
+        }
+
+        .features {
+          display: grid;
+          gap: 16px;
+          padding: 24px;
+        }
+
+        .card {
+          padding: 16px;
+          border-radius: var(--radius);
+          box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+        }
+
+        @media (min-width: 700px) {
+          .features {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+
+  - type: build
+    id: css-build-gallery
+    title: "Final project: a responsive gallery or dashboard"
+    minutes: 120
+    body: |
+      Build a page that shows a **collection** — photos, products, games,
+      stats, team members, anything — as cards in a layout that works from
+      a phone to a wide screen.
+
+      Your subject, your style. Just use the ingredients below.
+    ideas:
+      - A gallery of your favourite games, each card with a badge in the corner
+      - A weather dashboard with a card per city
+      - A team page with a card per person and a round photo
+      - A shop page with product cards and "Sale" labels
+    requirements:
+      - text: "A grid with flexible columns (`fr`, `repeat()` or `minmax()`)"
+        code: "grid-template-columns\\s*:[^;}]*(\\bfr\\b|repeat\\(|minmax\\()"
+        in: css
+      - text: "At least four cards laid out by that grid"
+        check: "$$('body *').some((el) => getComputedStyle(el).display === 'grid' && el.children.length >= 4)"
+      - text: "Rounded corners and a shadow"
+        code: "border-radius[\\s\\S]*box-shadow|box-shadow[\\s\\S]*border-radius"
+        in: css
+      - text: "Positioning: something `relative`, `absolute`, `sticky` or `fixed`"
+        code: "position\\s*:\\s*(relative|absolute|sticky|fixed)"
+        in: css
+      - text: "A fluid size with `clamp()`, `min()` or `max()`"
+        code: "\\b(clamp|min|max)\\("
+        in: css
+      - text: "Respects the reader: a `prefers-color-scheme` or `prefers-reduced-motion` media query"
+        code: "prefers-(color-scheme|reduced-motion)"
+        in: css
+    files:
+      index.html: |
+        <!-- Your page -->
+      style.css: |
+        /* Your design */
+    example:
+      index.html: |
+        <h1>Games I love</h1>
+        <main class="gallery">
+          <article class="card"><span class="badge">New</span><h2>Celeste</h2><p>A mountain, a climber, a lot of retries.</p></article>
+          <article class="card"><h2>Tetris</h2><p>Still perfect after forty years.</p></article>
+          <article class="card"><h2>Portal</h2><p>Thinking with holes in the wall.</p></article>
+          <article class="card"><h2>Stardew Valley</h2><p>Farming, fishing, and friends.</p></article>
+        </main>
+      style.css: |
+        body {
+          margin: 0;
+          padding: 16px;
+          font-family: system-ui, sans-serif;
+        }
+
+        h1 {
+          font-size: clamp(1.8rem, 5vw, 3rem);
+        }
+
+        .gallery {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 16px;
+        }
+
+        .card {
+          position: relative;
+          padding: 16px;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+          transition: transform 0.2s;
+        }
+
+        .card:hover {
+          transform: translateY(-4px);
+        }
+
+        .badge {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: crimson;
+          color: white;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .card {
+            transition: none;
+          }
+        }
+
   - type: lesson
     id: css12-next
     title: What next?

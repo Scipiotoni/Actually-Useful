@@ -375,6 +375,7 @@
     challenge: [0, 30, 50, 80],
     exam: 100,
     milestone: 40,
+    build: 250,
     review: 2
   };
 
@@ -407,10 +408,13 @@
     };
   }
 
-  /** Consecutive active days ending today (or yesterday, if today is still open). */
-  function streak(days, now) {
+  /**
+   * Consecutive active days ending today (or yesterday, if today is still
+   * open). Days saved by a streak freeze count as active.
+   */
+  function streak(days, now, frozen) {
     var today = dayKey(now);
-    var active = function (key) { return Boolean(days && days[key] > 0); };
+    var active = function (key) { return Boolean((days && days[key] > 0) || (frozen && frozen[key])); };
     var cursor = active(today) ? today : addDays(today, -1);
     var count = 0;
     while (active(cursor)) {
@@ -418,6 +422,24 @@
       cursor = addDays(cursor, -1);
     }
     return count;
+  }
+
+  /**
+   * The days a streak freeze would cover: the one or two days just missed,
+   * right before yesterday's end, when there was a streak going before them.
+   * Empty when nothing was missed or too much was.
+   */
+  function missedDays(days, frozen, now) {
+    var active = function (key) { return Boolean((days && days[key] > 0) || (frozen && frozen[key])); };
+    var today = dayKey(now);
+    if (active(today) && active(addDays(today, -1))) return [];
+    var cursor = addDays(today, -1);
+    var gap = [];
+    while (!active(cursor) && gap.length < 3) {
+      gap.push(cursor);
+      cursor = addDays(cursor, -1);
+    }
+    return gap.length && gap.length <= 2 && active(cursor) ? gap : [];
   }
 
   // ------------------------------------------------------------ progress
@@ -435,6 +457,7 @@
       mistakes: {},   // question id -> {count, streak, cleared, at}
       days: {},       // YYYY-MM-DD -> xp earned
       unlocked: {},   // chapter id -> at
+      frozen: {},     // YYYY-MM-DD -> at: days a streak freeze covered
       badges: {},     // badge id -> at
       stats: {},      // counter -> number
       settings: {},
@@ -518,6 +541,7 @@
       }).sort(function (p, q) { return stamp(p).localeCompare(stamp(q)); }).slice(-50);
     });
     out.unlocked = mergeMaps(keep(a.unlocked), keep(b.unlocked), earliest);
+    out.frozen = mergeMaps(keep(a.frozen), keep(b.frozen), earliest);
     out.badges = mergeMaps(keep(a.badges), keep(b.badges), earliest);
 
     // Counters and daily XP only grow; a reset starts them again from zero.
@@ -592,6 +616,7 @@
     LEVELS: LEVELS,
     levelFor: levelFor,
     streak: streak,
+    missedDays: missedDays,
     emptyProgress: emptyProgress,
     mergeProgress: mergeProgress,
     totalXp: totalXp,

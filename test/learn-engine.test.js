@@ -249,3 +249,22 @@ test('answers typed with phone or autocorrect punctuation are still marked right
   // A difference is reported as it was really written.
   assert.deepStrictEqual(Engine.compareOutput('A — B\nx', 'A — B\ny'), { ok: false, line: 2, got: 'x', want: 'y' });
 });
+
+test('streak freezes cover one or two missed days, and count towards the streak', () => {
+  const now = new Date('2026-09-25T12:00:00');
+  const key = (n) => Engine.addDays('2026-09-25', -n);
+  const days = {};
+  [2, 3, 4, 5, 6, 7, 8].forEach((n) => { days[key(n)] = 10; });
+  assert.strictEqual(Engine.streak(days, now), 0, 'yesterday was missed: the streak is broken');
+  assert.deepStrictEqual(Engine.missedDays(days, {}, now), [key(1)]);
+  const frozen = { [key(1)]: 'x' };
+  assert.strictEqual(Engine.streak(days, now, frozen), 8);
+  assert.deepStrictEqual(Engine.missedDays(days, frozen, now), []);
+  // Three missed days is too many to save; nothing ever done has nothing to save.
+  const old = { [key(4)]: 5, [key(5)]: 5 };
+  assert.deepStrictEqual(Engine.missedDays(old, {}, now), []);
+  assert.deepStrictEqual(Engine.missedDays({}, {}, now), []);
+  // Freezes merge from two devices like the rest of the progress.
+  const merged = Engine.mergeProgress({ frozen: { a: '2026-01-02' } }, { frozen: { a: '2026-01-01', b: '2026-01-03' } });
+  assert.deepStrictEqual(merged.frozen, { a: '2026-01-01', b: '2026-01-03' });
+});

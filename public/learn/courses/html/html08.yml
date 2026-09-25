@@ -867,6 +867,162 @@ items:
           check($$('thead th').map((t) => t.textContent.trim() + '/' + t.getAttribute('scope')), ['Name/col', 'Points/col']);
           check($$('tbody tr').map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' ')), ['Ana 12', 'Ben 9']);
 
+  - type: build
+    id: html-build-page
+    title: "Final project: a page about anything you love"
+    minutes: 90
+    body: |
+      No step-by-step instructions this time. Pick **any** topic you care
+      about — a hobby, a place, a band, a game, a person you admire — and
+      build a complete web page about it, from an empty file.
+
+      There's only one rule: your page must use the ingredients below.
+      What it says, how it's organised and how long it is are entirely up to
+      you. Check as often as you like: each ingredient turns green when your
+      page has it.
+    ideas:
+      - A fan page for your favourite band, with their albums in a list and a photo
+      - A guide to your town for visitors — what to see, where to eat
+      - A page about an animal, with facts, pictures and links to learn more
+      - Your top five films or books, each with a short review
+    requirements:
+      - text: "A complete document: `<!DOCTYPE html>`, `<html lang=\"…\">` and a `<title>`"
+        code: "<!doctype\\s+html"
+        in: html
+        check: "document.documentElement.lang !== '' && document.title.trim() !== '' && document.title !== 'Preview'"
+        hint: "Start from the page skeleton of lesson 1.3, and give the `<html>` a `lang`."
+      - text: "Page landmarks: a `<header>`, a `<main>` and a `<footer>`"
+        check: "exists('header') && exists('main') && exists('footer')"
+      - text: "A heading outline: exactly one `<h1>` and at least two `<h2>`"
+        check: "count('h1') === 1 && count('h2') >= 2"
+      - text: "A list with at least three items"
+        check: "count('ul > li, ol > li') >= 3"
+      - text: "An image with a meaningful `alt` text"
+        check: "$$('img').some((img) => (img.getAttribute('alt') || '').trim().length >= 3)"
+      - text: "At least two links"
+        check: "count('a[href]') >= 2"
+    files:
+      index.html: |
+        <!-- Build your page here. Anything you like! -->
+    example:
+      index.html: |
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Octopuses — the cleverest animals in the sea</title>
+          </head>
+          <body>
+            <header>
+              <h1>Octopuses</h1>
+              <p>Eight arms, three hearts, and a brain in every arm.</p>
+            </header>
+            <main>
+              <section>
+                <h2>Why they are amazing</h2>
+                <ul>
+                  <li>They change colour in a fraction of a second.</li>
+                  <li>They can squeeze through any gap bigger than their beak.</li>
+                  <li>They open jars — from the inside.</li>
+                </ul>
+                <img src="octopus.jpg" alt="A red octopus curled around a rock" width="400" height="260">
+              </section>
+              <section>
+                <h2>Learn more</h2>
+                <p>
+                  Read <a href="https://en.wikipedia.org/wiki/Octopus">the Wikipedia article</a>
+                  or watch <a href="https://www.youtube.com/results?search_query=octopus">octopus videos</a>.
+                </p>
+              </section>
+            </main>
+            <footer>
+              <p>Made by me, 2026.</p>
+            </footer>
+          </body>
+        </html>
+
+  - type: build
+    id: html-build-club
+    title: "Final project: a page with data and a form"
+    minutes: 90
+    body: |
+      Make a page for **something people can join, buy, book or sign up
+      for** — a club, a shop, an event, a class — with real information in a
+      table and a form to get in touch.
+
+      It's your design and your content. The only rule is to use the
+      ingredients below.
+    ideas:
+      - A chess club with a table of meeting times and a sign-up form
+      - A bakery with a price list and an order form
+      - A football tournament with the fixtures and a team registration form
+      - A school trip with a timetable and a permission form
+    requirements:
+      - text: "Navigation: a `<nav>` with at least three links"
+        check: "count('nav a[href]') >= 3"
+      - text: "At least two `<section>` or `<article>` elements, each with a heading"
+        check: "$$('section, article').filter((s) => s.querySelector('h2, h3, h4')).length >= 2"
+      - text: "A data table with a `<caption>` and header cells (`<th>`)"
+        check: "exists('table caption') && count('table th') >= 2 && count('table td') >= 2"
+      - text: "A form with at least two labelled fields"
+        check: "$$('form input, form select, form textarea').filter((f) => f.type !== 'submit' && f.labels && f.labels.length).length >= 2"
+      - text: "At least one field is `required`"
+        check: "count('form [required]') >= 1"
+      - text: "A button to send the form"
+        check: "exists('form button, form input[type=submit]')"
+    files:
+      index.html: |
+        <!-- Build your page here. Anything you like! -->
+    example:
+      index.html: |
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>Riverside Chess Club</title>
+          </head>
+          <body>
+            <header>
+              <h1>Riverside Chess Club</h1>
+              <nav>
+                <a href="#times">Meetings</a>
+                <a href="#about">About</a>
+                <a href="#join">Join</a>
+              </nav>
+            </header>
+            <main>
+              <section id="about">
+                <h2>About us</h2>
+                <p>Friendly games for every level, every week since 1998.</p>
+              </section>
+              <section id="times">
+                <h2>When we meet</h2>
+                <table>
+                  <caption>Weekly meetings</caption>
+                  <thead>
+                    <tr><th scope="col">Day</th><th scope="col">Time</th><th scope="col">Level</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Tuesday</td><td>18:00</td><td>Beginners</td></tr>
+                    <tr><td>Thursday</td><td>19:30</td><td>Everyone</td></tr>
+                  </tbody>
+                </table>
+              </section>
+              <section id="join">
+                <h2>Join us</h2>
+                <form method="post">
+                  <p><label for="name">Name</label> <input id="name" name="name" required></p>
+                  <p><label for="email">Email</label> <input type="email" id="email" name="email" required></p>
+                  <p><label for="level">Level</label>
+                    <select id="level" name="level"><option>Beginner</option><option>Club player</option></select></p>
+                  <button>Sign up</button>
+                </form>
+              </section>
+            </main>
+          </body>
+        </html>
+
   - type: lesson
     id: html8-next
     title: What next?

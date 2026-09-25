@@ -14,6 +14,8 @@ const fs = require('fs');
 const path = require('path');
 const Course = require('../public/learn/course.js');
 const Engine = require('../public/learn/engine.js');
+const Build = require('../public/learn/build.js');
+const Explain = require('../public/learn/explain.js');
 
 const DIR = path.join(__dirname, '..', 'public', 'learn', 'course');
 
@@ -85,6 +87,11 @@ function jobs(course) {
       const task = Object.assign({}, m, { starter: m.starter || (i === 0 ? m.starter : '') });
       taskJobs(task, m.id);
     });
+    if (item.build) {
+      // A build-anything project: the example meets every ingredient; the starter doesn't.
+      list.push({ where: item.id + ' example', std: 'c++20', source: item.build.example, build: item.build, expect: 'pass' });
+      list.push({ where: item.id + ' starter', std: 'c++20', source: item.build.starter, build: item.build, expect: 'not-pass' });
+    }
   });
   return list;
 }
@@ -97,6 +104,26 @@ function cut(s, n = 300) {
 /** Runs one job; returns a problem string or null. */
 async function runJob(runners, job) {
   const runner = runners[job.std] || runners['c++17'];
+  if (job.build) {
+    const data = await runner.run({ source: job.source, inputs: [job.build.stdin || ''], timeoutMs: 8000 });
+    let passed = false;
+    let detail = '';
+    if (data.compile.ok) {
+      const run = data.runs[0];
+      const problem = Explain.runtime(run);
+      const clean = !run.timedOut && !run.signal && !problem;
+      const g = Build.grade(job.build.requirements, [{ name: 'main.cpp', content: job.source }], { clean, output: run.stdout || '', problem });
+      passed = g.ok;
+      detail = g.checks.filter((c) => !c.ok).map((c) => c.expr).join('; ');
+    } else {
+      detail = 'does not compile: ' + cut(data.compile.output, 600);
+    }
+    if (job.expect === 'pass' && !passed) return `${job.where}: misses ${detail}`;
+    if (job.expect === 'not-pass' && passed) return `${job.where}: already meets every requirement`;
+    const warnings = (data.compile.output || '').split('\n').filter((l) => /warning:/.test(l));
+    if (job.expect === 'pass' && warnings.length) return `${job.where}: compiles with warnings\n  ${warnings.slice(0, 3).join('\n  ')}`;
+    return null;
+  }
   if (job.task) {
     const task = job.task;
     let data;

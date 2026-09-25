@@ -174,6 +174,7 @@ body.learn {
 .ol-items a.t-exam .ol-kind { color: var(--gold); }
 .ol-items a.t-project .ol-kind { color: var(--violet); }
 .ol-items a.t-challenge .ol-kind { color: var(--teal); }
+.ol-items a.t-build .ol-kind { color: var(--accent); }
 .ol-empty { padding: 20px 16px; color: var(--text-dim); font-size: 13px; }
 
 /* ---------- Pages ---------- */
@@ -1108,4 +1109,53 @@ body.learn {
   color: var(--text-dim);
   font-size: 10.5px;
   text-align: center;
+}
+
+/* ---------- build-anything projects ---------- */
+.build-reqs { list-style: none; padding: 0; margin: 0 0 16px; }
+.build-reqs li { position: relative; padding: 8px 12px 8px 36px; margin: 0 0 6px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, .02); }
+.build-reqs li::before { content: '○'; position: absolute; left: 12px; top: 8px; color: var(--text-dim); }
+.build-reqs li.is-met { border-color: var(--ok); }
+.build-reqs li.is-met::before { content: '✓'; color: var(--ok); font-weight: 700; }
+.build-ideas { margin: 0 0 14px; }
+.build-ideas summary { cursor: pointer; color: var(--accent); }
+
+/* ---------- free extras: goals, freezes, certificates, portfolio, cheat sheets ---------- */
+.goal-select { margin-top: 8px; width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; font: inherit; font-size: 13px; }
+.goal-select option { color: #111; }
+.freeze-line { font-size: 13px; color: var(--text-dim); margin-top: 6px; }
+.hero-extras { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; font-size: 14px; }
+.hero-extras a { color: var(--text-dim); text-decoration: none; }
+.hero-extras a:hover { color: var(--accent); text-decoration: underline; }
+
+.keep-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.keep-card { display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(255, 255, 255, .02); color: inherit; text-decoration: none; font: inherit; text-align: left; cursor: pointer; }
+.keep-card span { font-size: 13px; color: var(--text-dim); }
+.keep-card:hover:not([disabled]) { border-color: var(--accent); }
+.keep-card.is-earned { border-color: var(--gold); }
+.keep-card[disabled] { opacity: .55; cursor: default; }
+
+.cert-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 16px; }
+.cert-name-input { margin-left: 8px; padding: 8px 10px; min-width: min(280px, 70vw); border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; font: inherit; }
+.cert-holder svg { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 8px 30px rgba(0, 0, 0, .35); }
+
+.portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.portfolio-card { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+.portfolio-card.is-done { border-color: rgba(74, 222, 128, .45); }
+.portfolio-frame { width: 100%; height: 190px; border: 0; background: white; pointer-events: none; }
+.portfolio-code { margin: 0; height: 190px; overflow: hidden; padding: 10px 12px; font-size: 12px; background: rgba(0, 0, 0, .25); }
+.portfolio-body { padding: 12px 14px 14px; }
+.portfolio-body h3 { margin: 4px 0 10px; font-size: 16px; }
+.portfolio-course { font-size: 12px; color: var(--text-dim); }
+
+.cheat-chapter { break-inside: avoid-page; margin-bottom: 26px; }
+.cheat-chapter h2 { border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+
+@media print {
+  body.print-only * { visibility: hidden !important; }
+  body.print-only .printable, body.print-only .printable * { visibility: visible !important; }
+  body.print-only .printable { position: absolute; left: 0; top: 0; width: 100%; }
+  body.print-only { background: white !important; }
+  .cheatsheet.printable, .cheatsheet.printable * { color: #111 !important; background: white !important; }
+  .no-print { display: none !important; }
 }

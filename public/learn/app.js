@@ -15,11 +15,20 @@
   const MD = window.LearnMarkdown;
   const Explain = window.LearnExplain;
   const Web = window.LearnWeb;
+  const Build = window.LearnBuild;
   const MiniEditor = window.MiniEditor;
 
   const STORE_KEY = 'au-learn-progress-v1';
   const LINE_PX = 21.6;
-  const DAILY_GOAL = 60;
+  // Daily goals to choose from (XP a day), as in paid learning apps — free here.
+  const GOALS = [[30, 'Casual'], [60, 'Regular'], [120, 'Serious'], [200, 'Intense']];
+  function dailyGoal() {
+    const g = Number((P.settings || {}).dailyGoal);
+    return GOALS.some(([xp]) => xp === g) ? g : 60;
+  }
+  function setting(key, value) {
+    P.settings = Object.assign({}, P.settings, { [key]: value, at: iso() });
+  }
 
   const main = document.getElementById('main');
   const outline = document.getElementById('outline');
@@ -120,11 +129,11 @@
   }
 
   function typeIcon(type) {
-    return { lesson: '📖', quiz: '❓', challenge: '🧩', review: '🔁', exam: '🎓', project: '🏗️' }[type] || '•';
+    return { lesson: '📖', quiz: '❓', challenge: '🧩', review: '🔁', exam: '🎓', project: '🏗️', build: '🚀' }[type] || '•';
   }
 
   function typeName(type) {
-    return { lesson: 'Lesson', quiz: 'Quiz', challenge: 'Challenge', review: 'Review', exam: 'Exam', project: 'Project' }[type] || type;
+    return { lesson: 'Lesson', quiz: 'Quiz', challenge: 'Challenge', review: 'Review', exam: 'Exam', project: 'Project', build: 'Build' }[type] || type;
   }
 
   function stars(n) {
@@ -270,7 +279,32 @@
 
   function addDayXp(xp) {
     const key = today();
+    const firstToday = !P.days[key];
     P.days[key] = (P.days[key] || 0) + xp;
+    // Every 7 days of streak earns a streak freeze (you can hold two).
+    if (firstToday) {
+      const s = Engine.streak(P.days, undefined, P.frozen);
+      if (s > 0 && s % 7 === 0 && freezesHeld() < 2) {
+        bump('freezesEarned');
+        setTimeout(() => toast('<b>🧊 ' + s + '-day streak!</b> You earned a streak freeze: miss a day and it keeps your streak alive.', 'ok', 6000), 800);
+      }
+    }
+  }
+
+  /** Streak freezes earned and not used yet. */
+  function freezesHeld() {
+    return Math.max(0, (Number(P.stats.freezesEarned) || 0) - Object.keys(P.frozen || {}).length);
+  }
+
+  /** Uses streak freezes for the days just missed, if there are enough. */
+  function applyFreezes() {
+    P.frozen = P.frozen || {};
+    const gap = Engine.missedDays(P.days, P.frozen);
+    if (!gap.length || gap.length > freezesHeld()) return;
+    gap.forEach((day) => { P.frozen[day] = iso(); });
+    save({ quiet: true });
+    const s = Engine.streak(P.days, undefined, P.frozen);
+    setTimeout(() => toast('<b>🧊 Streak saved!</b> ' + (gap.length === 1 ? 'A streak freeze covered the day you missed' : 'Two streak freezes covered the days you missed') + ' — your ' + s + '-day streak lives on.', 'ok', 7000), 1200);
   }
 
   function bump(stat, by) {
@@ -300,7 +334,7 @@
     const lessons = of('lesson');
     const quizzes = of('quiz').concat(of('review'));
     const challenges = of('challenge');
-    const projects = of('project');
+    const projects = of('project').concat(of('build'));
     const exam = examOf(ch);
     const examRec = exam ? rec(exam.id) : null;
     const examScore = exam ? (isDone(exam.id) ? 1 : ((examRec && examRec.best) || 0) * 0.6) : null;
@@ -377,9 +411,10 @@
       lessons: done('lesson').length,
       challenges: done('challenge'),
       projects: done('project').length,
+      builds: done('build').length,
       exams: done('exam').length,
       perfect: exams.some((e) => (P.exams[e.id] || []).some((a) => a.score >= 1)),
-      streak: Engine.streak(P.days),
+      streak: Engine.streak(P.days, undefined, P.frozen),
       reviews: Number(P.stats.reviews) || 0,
       runs: Number(P.stats.runs) || 0,
       compileErrors: Number(P.stats.compileErrors) || 0,
@@ -392,6 +427,7 @@
     const list = [
       { id: 'hello', icon: '👋', name: 'Hello, World', desc: 'Ran your first program', test: (c) => c.runs >= 1 },
       { id: 'polyglot', icon: '🌍', name: 'Polyglot', desc: 'Completed lessons in three different courses', test: () => courses.filter((cr) => cr.items.some((i) => i.type === 'lesson' && isDone(i.id))).length >= 3 },
+      { id: 'builder', icon: '🚀', name: 'Builder', desc: 'Finished a build-anything final project', test: (c) => c.builds >= 1 },
       { id: 'first-error', icon: '🧯', name: 'Met an Error', desc: 'Got your first error message — every programmer does, daily', test: (c) => c.compileErrors >= 1 },
       { id: 'lesson-1', icon: '📘', name: 'First Lesson', desc: 'Completed a lesson', test: (c) => c.lessons >= 1 },
       { id: 'lesson-10', icon: '📚', name: 'Bookworm', desc: 'Completed 10 lessons', test: (c) => c.lessons >= 10 },
@@ -465,7 +501,7 @@
     const lv = document.getElementById('level');
     lv.textContent = 'Lv ' + level.level + ' · ' + level.xp + ' XP';
     lv.title = level.title + (level.next ? ' — ' + (level.next - level.xp) + ' XP to the next level' : '');
-    const s = Engine.streak(P.days);
+    const s = Engine.streak(P.days, undefined, P.frozen);
     const streakEl = document.getElementById('streak');
     streakEl.textContent = '🔥 ' + s;
     streakEl.classList.toggle('is-hot', s > 0 && Boolean(P.days[today()]));
@@ -1419,7 +1455,8 @@
    * Runs a task's tests against some code.
    * @returns {Promise<{ok, data?, web?, tests?, checks?, crashed?, output?}>}
    */
-  async function gradeTask(task, code) {
+  async function gradeTask(task, code, extra) {
+    if (task.requirements) return gradeBuild(task, code, extra || {});
     if (task.kind === 'js') return webGrade(await runJs(code, task.harness));
     if (task.kind === 'page') {
       const mine = parseFiles(code, task.files);
@@ -1444,6 +1481,28 @@
     return { ok: tests.every((t) => t.ok), data, tests };
   }
 
+  /** A build-anything project: its ingredients, and whether it runs cleanly. */
+  async function gradeBuild(task, code, extra) {
+    const reqs = task.requirements;
+    if (task.kind === 'page' || task.kind === 'js') {
+      const mine = task.kind === 'page' ? parseFiles(code, task.files) : [{ name: 'main.js', content: code }];
+      const r = task.kind === 'page'
+        ? await runPage(mergeFiles(task.given, mine), Build.harness(reqs), task.width)
+        : await runJs(code, Build.harness(reqs));
+      const output = Web.allOutputText(r);
+      const clean = r.done && !r.timedOut && !r.errors.length;
+      const g = Build.grade(reqs, mine, { checks: r.checks, clean, output });
+      return { ok: g.ok, checks: g.checks, web: r, output, build: true };
+    }
+    const data = await runCpp({ source: code, inputs: [extra.stdin || (task.build && task.build.stdin) || ''] });
+    if (!data.compile.ok) return { ok: false, data, compileFailed: true };
+    const run = data.runs[0] || {};
+    const problem = Explain.runtime(run);
+    const clean = !run.timedOut && !run.signal && !problem;
+    const g = Build.grade(reqs, [{ name: 'main.cpp', content: code }], { clean, output: run.stdout || '', problem });
+    return { ok: g.ok, checks: g.checks, data, run, output: run.stdout || '', build: true };
+  }
+
   function ioBox(label, text, bad) {
     return h('div', { class: 'io-box' + (bad ? ' is-bad' : '') }, h('b', null, label), h('pre', null, text === '' ? ' ' : text));
   }
@@ -1465,7 +1524,8 @@
     const list = result.checks || result.tests || [];
     const passed = list.filter((x) => x.ok).length;
     wrap.append(h('div', { class: 'summary-bar ' + (result.ok ? 'is-ok' : 'is-bad') },
-      result.ok ? '✓ All ' + list.length + ' tests pass'
+      result.build ? (result.ok ? '✓ Your project has everything on the list' : '✗ ' + passed + ' of ' + list.length + ' done so far')
+        : result.ok ? '✓ All ' + list.length + ' tests pass'
         : result.crashed ? '✗ The ' + (result.web ? 'code' : 'program') + ' stopped before finishing — ' + passed + ' of the ' + plural(list.length, 'check') + ' that ran passed'
           : '✗ ' + passed + ' of ' + list.length + ' tests pass'));
     const ul = h('ul', { class: 'results' });
@@ -1473,8 +1533,10 @@
     if (result.checks) {
       list.forEach((c) => {
         const li = h('li', null, h('div', { class: 'res-row ' + (c.ok ? 'is-ok' : 'is-bad') },
-          h('span', { class: 'res-icon' }, c.ok ? '✓' : '✗'), h('code', null, c.expr)));
-        if (!c.ok) {
+          h('span', { class: 'res-icon' }, c.ok ? '✓' : '✗'), c.label ? h('span', { html: MD.inline(c.expr) }) : h('code', null, c.expr)));
+        if (!c.ok && c.note !== undefined) {
+          li.append(h('div', { class: 'res-detail' }, h('div', { class: 'out-note', style: { margin: 0 }, html: MD.inline(c.note) })));
+        } else if (!c.ok) {
           li.append(h('div', { class: 'res-detail' }, h('div', { class: 'io-pair' },
             ioBox('Expected', c.want), ioBox('Your code gave', c.got, true))));
         }
@@ -1600,7 +1662,7 @@
     let saveTimer = null;
     let locked = false;
 
-    const kindLabel = { task: 'Your turn', challenge: 'Challenge', milestone: 'Milestone', exam: 'Coding question' }[opts.kind] || 'Exercise';
+    const kindLabel = { task: 'Your turn', challenge: 'Challenge', milestone: 'Milestone', exam: 'Coding question', build: 'Your project' }[opts.kind] || 'Exercise';
     const kickerText = () => (isDone(task.id) ? '✓ Solved — ' : '') + kindLabel;
     const kicker = h('div', { class: 'task-kicker' }, kickerText());
     const head = h('div', { class: 'task-head' }, kicker);
@@ -1651,7 +1713,7 @@
     const runBtn = h('button', { class: 'mini-btn is-run', title: runTitle }, runLabel);
     const checkBtn = h('button', { class: 'mini-btn is-primary', title: 'Run all the tests' }, task.harness ? '✓ Run the tests' : '✓ Check');
     const hintBtn = h('button', { class: 'mini-btn' });
-    const solutionBtn = h('button', { class: 'mini-btn' }, 'Solution');
+    const solutionBtn = h('button', { class: 'mini-btn' }, task.requirements ? 'See an example' : 'Solution');
     const resetBtn = h('button', { class: 'mini-btn', title: 'Start again from the starter code' }, 'Reset');
     const bar = h('div', { class: 'task-bar' });
     if (!(isCpp && task.harness)) bar.append(runBtn);
@@ -1755,7 +1817,7 @@
       results.replaceChildren(spinner('Running the tests…'));
       let result;
       try {
-        result = await gradeTask(task, ed.value());
+        result = await gradeTask(task, ed.value(), { stdin: stdin ? stdin.value : '' });
       } catch (err) {
         results.replaceChildren();
         showRunError(out, err);
@@ -1845,6 +1907,7 @@
       h('p', { html: MD.inline(gate ? 'To open it, pass **' + esc(gate.title) + '**.' : 'Finish the previous chapter to open it.') }),
       h('div', { class: 'row-actions' },
         gate ? h('a', { class: 'btn btn-primary', href: '#/i/' + gate.id }, 'Go to the exam') : null,
+        examOf(ch) ? h('a', { class: 'btn', href: '#/i/' + examOf(ch).id, title: 'Already know this chapter? Pass its exam to open it straight away.' }, '🧪 Test out') : null,
         h('button', {
           class: 'btn',
           onclick: () => {
@@ -1858,6 +1921,24 @@
   }
 
   // ================================================================ views: home
+
+  /** Today's XP against the goal the learner picked. */
+  function goalCard(xpToday) {
+    const goal = dailyGoal();
+    const select = h('select', { class: 'goal-select', 'aria-label': 'Daily goal' },
+      GOALS.map(([xp, name]) => h('option', { value: xp, selected: xp === goal ? true : null }, name + ' · ' + xp + ' XP a day')));
+    select.addEventListener('change', () => {
+      setting('dailyGoal', Number(select.value));
+      save({ quiet: true });
+      route();
+    });
+    return h('div', { class: 'stat-card' },
+      h('h3', null, 'Today\'s goal'),
+      h('div', { class: 'big' }, xpToday + ' / ' + goal + ' XP'),
+      h('div', { class: 'bar ok', style: { margin: '10px 0' } }, h('i', { style: { width: pct(Math.min(1, xpToday / goal)) } })),
+      h('p', null, xpToday >= goal ? 'Goal reached — great work.' : goal <= 30 ? 'About one lesson.' : goal <= 60 ? 'About one lesson and a few exercises.' : 'A solid session: lessons, exercises and a challenge.'),
+      select);
+  }
 
   function homeView() {
     const p = page('page-wide');
@@ -1883,7 +1964,11 @@
         h('div', { class: 'row-actions' },
           up ? h('a', { class: 'btn btn-primary btn-big', href: '#/i/' + up.id }, startedHere ? 'Continue →' : 'Start the course →')
             : h('a', { class: 'btn btn-primary btn-big', href: '#/progress' }, 'See your progress'),
-          h('a', { class: 'btn btn-big', href: '#/method' }, 'How this course works'))),
+          h('a', { class: 'btn btn-big', href: '#/method' }, 'How this course works')),
+        h('div', { class: 'hero-extras' },
+          h('a', { href: '#/cheatsheet/' + course.id }, '📄 Cheat sheet'),
+          h('a', { href: '#/certificate/' + course.id }, certificateEarned(course) ? '🎓 Your certificate' : '🎓 Certificate'),
+          h('a', { href: '#/portfolio' }, '🗂 Portfolio'))),
       h('div', { class: 'level-card' },
         h('div', { class: 'lv' }, 'Level ' + level.level),
         h('div', { class: 'lv-title' }, level.title),
@@ -1894,7 +1979,7 @@
     const due = dueCards().length;
     const mistakes = openMistakes().length;
     const xpToday = P.days[today()] || 0;
-    const s = Engine.streak(P.days);
+    const s = Engine.streak(P.days, undefined, P.frozen);
     const practice = dailyChallenge();
     p.append(h('div', { class: 'cards-row' },
       h('div', { class: 'stat-card' + (due ? ' is-action' : '') },
@@ -1902,15 +1987,13 @@
         h('div', { class: 'big' }, String(due)),
         h('p', null, due ? 'Spaced review moves what you learned into long-term memory.' : 'Nothing due. Cards appear as you finish lessons.'),
         due ? h('a', { class: 'btn btn-primary', href: '#/review' }, 'Review now') : null),
-      h('div', { class: 'stat-card' },
-        h('h3', null, 'Today\'s goal'),
-        h('div', { class: 'big' }, xpToday + ' / ' + DAILY_GOAL + ' XP'),
-        h('div', { class: 'bar ok', style: { margin: '10px 0' } }, h('i', { style: { width: pct(Math.min(1, xpToday / DAILY_GOAL)) } })),
-        h('p', null, xpToday >= DAILY_GOAL ? 'Goal reached — great work.' : 'About one lesson and a few exercises.')),
+      goalCard(xpToday),
       h('div', { class: 'stat-card' },
         h('h3', null, 'Streak'),
         h('div', { class: 'big' }, '🔥 ' + s + (s === 1 ? ' day' : ' days')),
-        h('p', null, P.days[today()] ? 'You have studied today.' : s ? 'Study today to keep it going.' : 'Study today to start one.')),
+        h('p', null, P.days[today()] ? 'You have studied today.' : s ? 'Study today to keep it going.' : 'Study today to start one.'),
+        h('p', { class: 'freeze-line', title: 'Every 7 days in a row earns a streak freeze (you can hold two). If you miss a day, one is used automatically so your streak survives.' },
+          '🧊 ' + plural(freezesHeld(), 'streak freeze') + (freezesHeld() ? ' ready' : ' — earn one with a 7-day streak'))),
       mistakes ? h('div', { class: 'stat-card is-action' },
         h('h3', null, 'Mistakes to revisit'),
         h('div', { class: 'big' }, String(mistakes)),
@@ -1989,6 +2072,7 @@
       if (item.type === 'exam') sub = (isFinal(item) ? 'Final exam · ' : 'Chapter exam · ') + (item.pick || item.questions.length) + ' questions · pass with ' + pct(item.pass);
       if (item.type === 'challenge') sub = 'Challenge · ' + ['', 'warm-up', 'solid', 'hard'][item.difficulty];
       if (item.type === 'project') sub = 'Project · ' + plural(item.milestones.length, 'milestone');
+      if (item.type === 'build') sub = 'Final project · build anything with ' + plural(item.build.requirements.length, 'ingredient');
       let side = done ? '✓ Done' : r ? 'In progress' : '';
       if ((item.type === 'quiz' || item.type === 'exam') && r && r.best) side = (done ? '✓ ' : '') + 'best ' + pct(r.best);
       list.append(h('li', null, h('a', { class: 'item-row' + (done ? ' is-done' : ''), href: '#/i/' + item.id },
@@ -2246,6 +2330,9 @@
       h('span', { class: 'tag' }, count + ' questions'),
       item.minutes ? h('span', { class: 'tag' }, '⏱ ' + item.minutes + ' min') : null,
       passedBefore ? h('span', { class: 'tag tag-ok' }, '✓ Passed') : null));
+    if (!isUnlocked(item.chapter)) {
+      p.append(h('div', { class: 'callout callout-try', style: { paddingBottom: '12px' }, html: MD.inline('**🧪 Testing out.** This chapter is still locked. If you already know it, pass this exam and the chapter opens — along with the next one.') }));
+    }
 
     const stage = h('div');
     p.append(stage);
@@ -2352,6 +2439,8 @@
           }
         });
         const wasUnlocked = nextChapterUnlocked(item);
+        // Testing out: passing a locked chapter's exam opens the chapter too.
+        if (passed && !isUnlocked(item.chapter)) P.unlocked[item.chapter.id] = iso();
         let gained = 0;
         if (passed) gained = complete(item.id, { xp: Engine.XP.exam + (ratio >= 1 ? 50 : 0), best: ratio });
         else touch(item.id, { best: Math.max((rec(item.id) || {}).best || 0, ratio) });
@@ -2368,7 +2457,10 @@
           h('button', { class: 'btn', onclick: () => { stage.replaceChildren(); intro(); main.scrollTop = 0; } }, 'Back to the exam page'),
           n ? h('a', { class: 'btn btn-primary', href: '#/i/' + n.id }, 'Continue: ' + n.title + ' →') : null));
         main.scrollTop = 0;
-        if (passed && !wasUnlocked) {
+        if (passed && isFinal(item) && !passedBefore) {
+          celebrate('🎓', 'Course complete!', 'You passed the final exam of **' + item.chapter.course.title + '**. Your certificate is ready.',
+            { label: 'Get my certificate', run: () => { location.hash = '#/certificate/' + item.chapter.course.id; } });
+        } else if (passed && !wasUnlocked) {
           const nextCh = chapterAfter(item.chapter, 1);
           if (nextCh) {
             celebrate('🔓', 'Chapter ' + nextCh.number + ' unlocked', '**' + nextCh.title + '** is open. ' + (ratio >= 1 ? 'And a perfect score!' : ''),
@@ -2470,6 +2562,303 @@
           const n = neighbours(item).next;
           celebrate('🧩', 'Challenge solved!', (gained ? '**+' + gained + ' XP.** ' : '') + 'Compare your code with the solution — seeing another approach is part of the lesson.',
             n ? { label: 'Next: ' + n.title, run: () => { location.hash = '#/i/' + n.id; } } : null);
+        }
+      }
+    });
+    p.append(h('div', { class: 'split' }, left, widget.el));
+    p.append(pager(item));
+    return p;
+  }
+
+
+  // ================================================================ free extras
+  // Things paid learning apps charge for, here for everyone: certificates,
+  // a portfolio of your projects, printable cheat sheets, notes export,
+  // streak freezes and offline use.
+
+  /** Saves some text as a file on the learner's computer. */
+  function downloadText(name, text, type) {
+    const url = URL.createObjectURL(new Blob([text], { type: type || 'text/plain' }));
+    const a = h('a', { href: url, download: name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  /** Prints just one part of the page (a certificate, a cheat sheet). */
+  function printOnly(el) {
+    el.classList.add('printable');
+    document.body.classList.add('print-only');
+    const done = () => {
+      document.body.classList.remove('print-only');
+      el.classList.remove('printable');
+      window.removeEventListener('afterprint', done);
+    };
+    window.addEventListener('afterprint', done);
+    window.print();
+    setTimeout(done, 1000);
+  }
+
+  function courseById(id) {
+    return courses.find((c) => c.id === id) || course;
+  }
+
+  /** A short, stable code for a certificate (FNV-1a of what it certifies). */
+  function certificateCode(parts) {
+    let hash = 0x811c9dc5;
+    const text = parts.join('|');
+    for (let i = 0; i < text.length; i += 1) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return 'AU-' + hash.toString(16).toUpperCase().padStart(8, '0');
+  }
+
+  function courseTotals(c) {
+    const of = (type) => c.items.filter((i) => i.type === type);
+    const doneOf = (type) => of(type).filter((i) => isDone(i.id)).length;
+    const tasks = c.items.reduce((n, i) => n + (i.tasks || []).filter((t) => isDone(t.id)).length, 0);
+    return {
+      lessons: [doneOf('lesson'), of('lesson').length],
+      exercises: tasks + doneOf('challenge'),
+      projects: doneOf('project') + doneOf('build'),
+      hours: c.chapters.reduce((n, ch) => n + (Number(ch.hours) || 0), 0)
+    };
+  }
+
+  function certificateEarned(c) {
+    return Boolean(c.final && c.byId[c.final] && isDone(c.final));
+  }
+
+  function certificateView(courseId) {
+    const c = courseById(courseId);
+    setCourse(c);
+    const p = page('page-wide');
+    p.append(crumbs([{ label: c.short, href: courseHome(c) }, { label: 'Certificate' }]));
+    p.append(h('h1', null, '🎓 ' + c.title + ' certificate'));
+    const final = c.final ? c.byId[c.final] : null;
+    const totals = courseTotals(c);
+    if (!certificateEarned(c)) {
+      p.append(h('div', { class: 'lock-box' },
+        h('h2', null, 'Your certificate is waiting'),
+        h('p', { html: MD.inline('Pass the **final exam** of ' + esc(c.title) + ' and your certificate of completion appears here, with your name, the date and what you achieved. You can print it, save it as a PDF or download it as an image — free.') }),
+        h('p', null, 'So far: ' + totals.lessons[0] + ' of ' + totals.lessons[1] + ' lessons, ' + plural(totals.exercises, 'exercise') + ' and ' + plural(totals.projects, 'project') + '.'),
+        h('div', { class: 'row-actions' },
+          final ? h('a', { class: 'btn btn-primary', href: '#/i/' + final.id }, 'Go to the final exam') : null,
+          h('a', { class: 'btn', href: courseHome(c) }, 'Back to the course'))));
+      return p;
+    }
+    const rec = P.items[final.id] || {};
+    const date = String(rec.doneAt || rec.at || iso()).slice(0, 10);
+    const nameInput = h('input', { class: 'cert-name-input', value: (P.settings || {}).name || '', placeholder: 'Your name, as it should appear', 'aria-label': 'Your name on the certificate', autocomplete: 'name' });
+    const holder = h('div', { class: 'cert-holder' });
+    let svgText = '';
+    const draw = () => {
+      const name = nameInput.value.trim() || 'Your Name';
+      const code = certificateCode([name, c.id, date]);
+      const score = Math.round((rec.best || 1) * 100);
+      const nice = new Date(date + 'T12:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+      const x = (t) => esc(String(t));
+      svgText = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700" font-family="Georgia, serif">' +
+        '<rect width="1000" height="700" fill="#fffdf6"/>' +
+        '<rect x="24" y="24" width="952" height="652" fill="none" stroke="#b08d3c" stroke-width="6"/>' +
+        '<rect x="40" y="40" width="920" height="620" fill="none" stroke="#b08d3c" stroke-width="1.5"/>' +
+        '<text x="500" y="130" text-anchor="middle" font-size="22" letter-spacing="6" fill="#7a6124">CERTIFICATE OF COMPLETION</text>' +
+        '<text x="500" y="200" text-anchor="middle" font-size="20" fill="#444">This certifies that</text>' +
+        '<text x="500" y="275" text-anchor="middle" font-size="56" fill="#1f2933" font-style="italic">' + x(name) + '</text>' +
+        '<line x1="250" y1="300" x2="750" y2="300" stroke="#b08d3c" stroke-width="1.5"/>' +
+        '<text x="500" y="350" text-anchor="middle" font-size="20" fill="#444">has successfully completed the course</text>' +
+        '<text x="500" y="410" text-anchor="middle" font-size="40" fill="#1f2933" font-weight="bold">' + x(c.title) + '</text>' +
+        '<text x="500" y="460" text-anchor="middle" font-size="17" fill="#555">' + x(c.chapters.length + ' chapters · ' + totals.lessons[1] + ' lessons · about ' + totals.hours + ' hours of study · final exam ' + score + '%') + '</text>' +
+        '<text x="500" y="492" text-anchor="middle" font-size="17" fill="#555">' + x(totals.exercises + ' exercises and challenges solved · ' + totals.projects + ' projects built') + '</text>' +
+        '<text x="200" y="590" text-anchor="middle" font-size="18" fill="#1f2933">' + x(nice) + '</text>' +
+        '<line x1="100" y1="600" x2="300" y2="600" stroke="#999"/>' +
+        '<text x="200" y="622" text-anchor="middle" font-size="13" fill="#777">Date</text>' +
+        '<text x="800" y="590" text-anchor="middle" font-size="18" fill="#1f2933">Actually Useful · Learn</text>' +
+        '<line x1="700" y1="600" x2="900" y2="600" stroke="#999"/>' +
+        '<text x="800" y="622" text-anchor="middle" font-size="13" fill="#777">Issued by</text>' +
+        '<circle cx="500" cy="585" r="42" fill="#b08d3c"/><circle cx="500" cy="585" r="34" fill="none" stroke="#fffdf6" stroke-width="2"/>' +
+        '<text x="500" y="594" text-anchor="middle" font-size="26" fill="#fffdf6">★</text>' +
+        '<text x="500" y="650" text-anchor="middle" font-size="12" fill="#999" font-family="monospace">Certificate ' + code + '</text>' +
+        '</svg>';
+      holder.innerHTML = svgText;
+    };
+    nameInput.addEventListener('input', () => {
+      draw();
+      setting('name', nameInput.value.trim());
+      save({ quiet: true });
+    });
+    draw();
+    p.append(h('div', { class: 'cert-controls' },
+      h('label', null, 'Name on the certificate ', nameInput),
+      h('div', { class: 'row-actions' },
+        h('button', { class: 'btn btn-primary', onclick: () => printOnly(holder) }, '🖨 Print or save as PDF'),
+        h('button', { class: 'btn', onclick: () => downloadText(c.id + '-certificate.svg', svgText, 'image/svg+xml') }, '⬇ Download image'))),
+      holder,
+      h('p', { style: { color: 'var(--text-dim)', fontSize: '13px' } }, 'Your certificate records what you did in this course. The code at the bottom is made from your name, the course and the date, so the same certificate always has the same code.'));
+    return p;
+  }
+
+  /** The files a build project holds right now: saved code, or the starter. */
+  function buildFiles(item) {
+    const b = item.build;
+    const saved = P.code[item.id] ? P.code[item.id].src : null;
+    if (b.kind === 'page') return mergeFiles(b.given, parseFiles(saved !== null ? saved : JSON.stringify(b.files), b.files));
+    return [{ name: b.kind === 'cpp' ? 'main.cpp' : 'main.js', content: saved !== null ? saved : b.starter }];
+  }
+
+  /** A page project as one HTML file, with its CSS and JavaScript inside. */
+  function singleHtml(files, title) {
+    const entry = Compose.entryOf(files) || 'index.html';
+    return Compose.inlineLocal(Compose.composeFile(files, entry, { title }), files);
+  }
+
+  function downloadBuild(item) {
+    const files = buildFiles(item);
+    const base = Compose.slugify ? Compose.slugify(item.title) || item.id : item.id;
+    if (item.build.kind === 'page') downloadText(base + '.html', singleHtml(files, item.title), 'text/html');
+    else downloadText(base + (item.build.kind === 'cpp' ? '.cpp' : '.js'), files[0].content);
+  }
+
+  function portfolioView() {
+    const p = page('page-wide');
+    p.append(h('h1', null, '🗂 Your portfolio'));
+    p.append(h('p', { class: 'lead' }, 'Everything you built from scratch in the final projects — kept here, ready to show and to download. Pages download as a single HTML file you can open anywhere or publish with the editor.'));
+    const builds = ALL.items.filter((i) => i.type === 'build');
+    const started = builds.filter((i) => isDone(i.id) || P.code[i.id]);
+    if (!started.length) {
+      p.append(h('div', { class: 'lock-box' },
+        h('h2', null, 'Nothing here yet'),
+        h('p', null, 'Each course ends with "build anything" projects: you choose what to make, and only the ingredients are set. Finished ones appear here.')));
+    }
+    const grid = h('div', { class: 'portfolio-grid' });
+    started.forEach((item) => {
+      const done = isDone(item.id);
+      const files = buildFiles(item);
+      let preview;
+      if (item.build.kind === 'page') {
+        const frame = h('iframe', { class: 'portfolio-frame', title: item.title, sandbox: 'allow-scripts', loading: 'lazy' });
+        frame.srcdoc = singleHtml(files, item.title);
+        preview = frame;
+      } else {
+        preview = h('pre', { class: 'portfolio-code', html: highlight(files[0].content.split('\n').slice(0, 14).join('\n'), item.build.kind === 'cpp' ? 'cpp' : 'js') });
+      }
+      grid.append(h('article', { class: 'portfolio-card' + (done ? ' is-done' : '') },
+        preview,
+        h('div', { class: 'portfolio-body' },
+          h('div', { class: 'portfolio-course' }, item.chapter.course.icon + ' ' + item.chapter.course.short + (done ? ' · ✓ Finished' : ' · In progress')),
+          h('h3', null, item.title.replace(/^Final project:\s*/i, '')),
+          h('div', { class: 'row-actions' },
+            h('a', { class: 'btn btn-small', href: '#/i/' + item.id }, done ? 'Open' : 'Keep building'),
+            h('button', { class: 'btn btn-small', onclick: () => downloadBuild(item) }, '⬇ Download')))));
+    });
+    p.append(grid);
+    const todo = builds.filter((i) => !started.includes(i));
+    if (todo.length) {
+      p.append(h('div', { class: 'section-title' }, 'Projects waiting for you'));
+      const list = h('ul', { class: 'item-list' });
+      todo.forEach((item) => list.append(h('li', null, h('a', { class: 'item-row', href: '#/i/' + item.id },
+        h('span', { class: 'ir-icon' }, '🚀'),
+        h('span', { class: 'ir-main' }, h('div', { class: 'ir-title' }, item.title), h('div', { class: 'ir-sub' }, item.chapter.course.title + ' · ' + plural(item.build.requirements.length, 'ingredient'))),
+        h('span', { class: 'ir-side' }, isUnlocked(item.chapter) ? 'Start' : '🔒')))));
+      p.append(list);
+    }
+    return p;
+  }
+
+  function cheatsheetView(courseId) {
+    const c = courseById(courseId);
+    setCourse(c);
+    const p = page();
+    p.append(crumbs([{ label: c.short, href: courseHome(c) }, { label: 'Cheat sheet' }]));
+    const sheet = h('div', { class: 'cheatsheet' });
+    sheet.append(h('h1', null, c.icon + ' ' + c.title + ' — cheat sheet'));
+    sheet.append(h('p', { class: 'lead' }, 'Every chapter\'s summary on one page. Print it or save it as a PDF to keep beside you while you code.'));
+    c.chapters.forEach((ch) => {
+      const review = ch.items.find((i) => i.type === 'review');
+      if (!review || !review.body) return;
+      sheet.append(h('section', { class: 'cheat-chapter' },
+        h('h2', null, 'Chapter ' + ch.number + ' — ' + ch.title),
+        md(review.body)));
+    });
+    p.append(h('div', { class: 'row-actions no-print', style: { margin: '0 0 16px' } },
+      h('button', { class: 'btn btn-primary', onclick: () => printOnly(sheet) }, '🖨 Print or save as PDF')));
+    p.append(sheet);
+    return p;
+  }
+
+  /** All the learner's notes as one Markdown file, in course order. */
+  function notesMarkdown() {
+    const out = ['# My notes', ''];
+    courses.forEach((c) => {
+      const lines = [];
+      c.items.forEach((item) => {
+        const note = P.notes[item.id];
+        if (note && String(note.text || '').trim()) {
+          lines.push('## ' + item.chapter.number + '. ' + item.chapter.title + ' — ' + item.title, '', String(note.text).trim(), '');
+        }
+      });
+      if (lines.length) out.push('# ' + c.title, '', ...lines);
+    });
+    return out.length > 2 ? out.join('\n') : '';
+  }
+
+  /** Learn keeps working without internet (except running C++, which needs the server). */
+  function registerOffline() {
+    if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+    navigator.serviceWorker.register('sw.js').catch(() => { /* offline use is a bonus */ });
+  }
+
+  // ================================================================ views: build anything
+
+  /** A build-anything project as an exercise the task widget can edit, run and check. */
+  function buildTask(item) {
+    const b = item.build;
+    return {
+      kind: b.kind, id: item.id, title: item.title, prompt: '',
+      starter: b.starter, files: b.files, given: b.given,
+      solutionFiles: b.exampleFiles, solution: b.example,
+      tests: [], harness: '', harnessPre: '', hints: [], explain: '', difficulty: 0, tags: [], std: '',
+      width: b.width, mode: 'program', requirements: b.requirements, build: b, _raw: {}
+    };
+  }
+
+  function buildView(item) {
+    const p = page('page-wide');
+    p.append(itemCrumbs(item));
+    const b = item.build;
+    const left = h('div');
+    left.append(h('h1', null, item.title));
+    left.append(h('div', { class: 'meta-row' },
+      h('span', { class: 'tag' }, '🚀 Build anything'),
+      h('span', { class: 'tag' }, '+' + Engine.XP.build + ' XP'),
+      isDone(item.id) ? h('span', { class: 'tag tag-ok' }, '✓ Built — in your portfolio') : null));
+    const banner = compilerBanner(item.chapter.course);
+    if (banner) left.append(banner);
+    left.append(md(item.body));
+    left.append(h('h3', null, 'Your project must use'));
+    const reqs = b.requirements.map((r) => h('li', { html: MD.inline(r.text) }));
+    left.append(h('ul', { class: 'build-reqs' }, reqs));
+    if (b.ideas.length) {
+      left.append(h('details', { class: 'build-ideas' }, h('summary', null, '💡 Stuck for an idea?'),
+        h('ul', null, b.ideas.map((idea) => h('li', { html: MD.inline(idea) })))));
+    }
+    left.append(h('p', { style: { color: 'var(--text-dim)', fontSize: '13px' } }, b.kind === 'cpp'
+      ? 'The check looks for each ingredient in your code and runs your program. If it reads input, type some in the input box first — the check uses it.'
+      : 'The check looks for each ingredient in your code and on the running ' + (b.kind === 'page' ? 'page' : 'program') + '. What you build with them is entirely up to you.'));
+    const widget = taskWidget(buildTask(item), {
+      kind: 'build',
+      showPrompt: false,
+      onChecked: (result) => {
+        (result.checks || []).forEach((c, i) => { if (reqs[i]) reqs[i].classList.toggle('is-met', Boolean(c.ok)); });
+      },
+      onSolved: (result, wasDone) => {
+        const gained = complete(item.id, { xp: Engine.XP.build });
+        save();
+        if (!wasDone) {
+          celebrate('🚀', 'You built it!', (gained ? '**+' + gained + ' XP.** ' : '') + 'Something of your own, from nothing but what you learned. It is saved in your portfolio, where you can download it.',
+            { label: 'Open my portfolio', run: () => { location.hash = '#/portfolio'; } });
         }
       }
     });
@@ -2975,6 +3364,19 @@
       h('div', { class: 'stat-card' }, h('h3', null, 'Programs run'), h('div', { class: 'big' }, String(c.runs)),
         h('p', null, plural(c.compileErrors, 'error') + ' met and fixed along the way'))));
 
+    // Free extras: certificates, portfolio, cheat sheets, notes.
+    const notes = notesMarkdown();
+    p.append(h('div', { class: 'section-title' }, 'Yours to keep'));
+    p.append(h('div', { class: 'keep-row' },
+      h('a', { class: 'keep-card', href: '#/portfolio' }, h('b', null, '🗂 Portfolio'), h('span', null, plural(c.builds, 'project') + ' built from scratch')),
+      courses.map((cc) => h('a', { class: 'keep-card' + (certificateEarned(cc) ? ' is-earned' : ''), href: '#/certificate/' + cc.id },
+        h('b', null, '🎓 ' + cc.short + ' certificate'), h('span', null, certificateEarned(cc) ? 'Earned — print or download it' : 'Pass the final exam to earn it'))),
+      courses.map((cc) => h('a', { class: 'keep-card', href: '#/cheatsheet/' + cc.id }, h('b', null, '📄 ' + cc.short + ' cheat sheet'), h('span', null, 'Every chapter summary, printable'))),
+      h('button', {
+        class: 'keep-card', type: 'button', disabled: notes ? null : true,
+        onclick: () => downloadText('learn-notes.md', notes, 'text/markdown')
+      }, h('b', null, '📝 Download my notes'), h('span', null, notes ? 'All your lesson notes, as a Markdown file' : 'Notes you write in lessons appear here'))));
+
     p.append(h('div', { class: 'section-title' }, 'Activity — last 20 weeks'));
     const heat = h('div', { class: 'heatmap', 'aria-label': 'Daily activity' });
     const end = today();
@@ -3230,11 +3632,12 @@
       if (parts[0] === 'i' && ALL.byId[parts[1]]) {
         const item = ALL.byId[parts[1]];
         setCourse(item.chapter.course);
-        if (!isUnlocked(item.chapter)) node = lockedView(item, item.chapter);
+        // Exams stay open, so anyone who already knows a chapter can test out of it.
+        if (!isUnlocked(item.chapter) && item.type !== 'exam') node = lockedView(item, item.chapter);
         else {
           node = {
             lesson: lessonView, quiz: quizView, exam: examView, review: reviewItemView,
-            challenge: challengeView, project: projectView
+            challenge: challengeView, project: projectView, build: buildView
           }[item.type](item);
           touchVisit(item);
         }
@@ -3249,6 +3652,9 @@
       else if (parts[0] === 'playground') node = playgroundView(parts[1]);
       else if (parts[0] === 'glossary') node = glossaryView(parts[1]);
       else if (parts[0] === 'progress') node = progressView();
+      else if (parts[0] === 'certificate') node = certificateView(parts[1]);
+      else if (parts[0] === 'portfolio') node = portfolioView();
+      else if (parts[0] === 'cheatsheet') node = cheatsheetView(parts[1]);
       else if (parts[0] === 'method') node = methodView();
       else {
         catalog = courses.length > 1;
@@ -3398,6 +3804,8 @@
     route();
     const before = JSON.stringify(P);
     await Promise.all([pull(), statusDone]);
+    applyFreezes();
+    registerOffline();
     lastLevel = Engine.levelFor(totalXp()).level;
     refreshChrome();
     // Re-render once the server's copy (maybe from another device) is merged in.

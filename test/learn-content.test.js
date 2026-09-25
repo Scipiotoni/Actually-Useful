@@ -167,6 +167,7 @@ test('every course in courses.yml is complete, and ids are unique across courses
     assert.deepStrictEqual(Course.validate(course), [], `${course.id} is valid`);
     assert.ok(course.final && course.byId[course.final], `${course.id}'s final exam exists`);
     assert.ok(course.glossary.length >= 50, `${course.id} has a glossary`);
+    assert.ok(course.items.filter((i) => i.type === 'build').length >= 2, `${course.id} ends with build-anything projects`);
     course.glossary.forEach((term) => {
       if (term.chapter) assert.ok(course.chapters.some((c) => c.id === term.chapter), `${course.id}: ${term.term} links to a real chapter`);
     });

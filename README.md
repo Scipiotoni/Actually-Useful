@@ -273,6 +273,31 @@ Every course works the same way:
 - XP, levels, streaks, badges (including a Graduate badge per course), notes
   per lesson, a searchable glossary per course (485 terms) and a Playground.
 
+Each course ends with two **build-anything final projects**: no steps to
+follow, just a brief and a list of ingredients to use ("a function, an array,
+a loop, events…"). You build whatever you like; the check looks for each
+ingredient in your code (comments don't count) and on the running page or
+program, and ticks them off as you go. Finished projects go to your
+**portfolio**, where pages download as a single HTML file.
+
+**Free extras** that learning apps usually charge for:
+
+- **Certificates of completion** for each course (after its final exam), with
+  your name, the date and what you did — print them, save them as PDF or
+  download them as an image.
+- **Portfolio** of everything you built, with live previews and downloads.
+- **Streak freezes**: every 7-day streak earns one (hold up to two); a missed
+  day uses one automatically. **Daily goal** of 30, 60, 120 or 200 XP.
+- **Test out** of any chapter by passing its exam, even while it's locked.
+- **Printable cheat sheets** for each course, made from the chapter summaries.
+- **Notes export**: all your lesson notes as one Markdown file.
+- **Works offline**: after one visit online, Learn keeps working without
+  internet (except running C++, which needs the server).
+- **Forgiving answers**: typed answers are compared after undoing phone
+  "smart punctuation" (curly quotes, long dashes, invisible spaces), any quote
+  style is accepted where the language allows it, and case is ignored in HTML
+  and CSS.
+
 Progress for all courses is one record, kept in the browser and synced to the
 server, merged so two devices never overwrite each other. With GitHub storage
 on, it is committed to its own branch (`au-learn`), so saving progress never
@@ -328,6 +353,12 @@ questions and exercises.
   `starter`, a `solution` and a `harness` of `check(expression, expected);`
   lines (`checkThrows(expression)` for errors); `printed()` and `capture(fn)`
   read what the code logged.
+- **Build-anything projects** (`type: build`): a brief, `ideas`, `files` or a
+  `starter`, an `example` that must meet everything, and `requirements`, each
+  with a `text` and one or more tests — `code` (a regular expression over the
+  learner's code, `in: html|css|js|cpp`), `check` (an expression that must be
+  true on the running page) or `output` (a regular expression over what the
+  program prints).
 - **Pages**: an ` ```html ` block, optionally followed by ` ```css ` and ` ```js `,
   runs as a live preview. Page exercises list their `files` (what the learner
   edits), `given` files (shown read-only) and `solution` files, and check the
@@ -592,6 +623,8 @@ public/backup.js   Backup files: the editor project and Learn progress in one JS
 public/learn/      Learn: the app, its engine, the C++ course in course/ and the
                    HTML, CSS and JavaScript courses in courses/
 public/learn/web.js  Runs HTML, CSS and JavaScript for Learn, in a worker or a sandboxed frame
+public/learn/build.js  Checks the ingredients of build-anything projects
+public/learn/sw.js   Keeps Learn working offline
 test/learn-*.test.js, test/cpp-runner.test.js, test/course.test.js  Learn mode tests
 test/course-lib.js, test/web-course-lib.js  Check every example and exercise (C++ / web)
 ```

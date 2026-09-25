@@ -16,6 +16,7 @@ const path = require('path');
 const os = require('os');
 const Course = require('../public/learn/course.js');
 const Engine = require('../public/learn/engine.js');
+const Build = require('../public/learn/build.js');
 
 const LEARN = path.join(__dirname, '..', 'public', 'learn');
 
@@ -110,6 +111,19 @@ function webJobs(course) {
     (item.questions || []).forEach(questionJobs);
     (item.tasks || []).forEach((t) => taskJobs(t, t.id));
     if (item.task) taskJobs(item.task, item.id);
+    if (item.build) {
+      // A build-anything project: the example meets every ingredient; the starter doesn't.
+      const b = item.build;
+      const example = b.kind === 'page' ? merge(b.files, b.exampleFiles) : [{ name: 'main.js', content: b.example }];
+      const starter = b.kind === 'page' ? b.files : [{ name: 'main.js', content: b.starter }];
+      [['example', example, 'pass'], ['starter', starter, 'not-pass']].forEach(([label, mine, expect]) => {
+        list.push({
+          where: item.id + ' ' + label, kind: b.kind === 'page' ? 'page' : 'js', build: b, mine, expect,
+          files: merge(b.given, mine), code: b.kind === 'page' ? undefined : mine[0].content,
+          harness: Build.harness(b.requirements), width: b.width
+        });
+      });
+    }
     (item.milestones || []).forEach((m, i) => {
       taskJobs(m, m.id, i > 0 ? item.milestones[0] : null);
       // Each milestone must ask for something new: the previous one's
@@ -178,6 +192,13 @@ async function runWebJob(page, job) {
     return { output: W.outputText(res), all: W.allOutputText(res), errors: res.errors, checks: res.checks, done: res.done, timedOut: res.timedOut };
   }, job);
   const errs = r.errors.map((e) => `${e.message}${e.line ? ' (line ' + e.line + ')' : ''}`).join('; ');
+  if (job.build) {
+    const g = Build.grade(job.build.requirements, job.mine, { checks: r.checks, clean: r.done && !r.timedOut && !r.errors.length, output: r.all });
+    const missing = g.checks.filter((c) => !c.ok).map((c) => c.expr).join('; ');
+    if (job.expect === 'pass' && !g.ok) return `${job.where}: misses ${missing}${errs ? ' | errors: ' + cut(errs) : ''}`;
+    if (job.expect === 'not-pass' && g.ok) return `${job.where}: already meets every requirement`;
+    return null;
+  }
   if (job.expect === 'pass' || job.expect === 'not-pass') {
     const syntax = r.errors.some((e) => e.where === 'syntax');
     const passed = !syntax && r.done && r.checks.length > 0 && r.checks.every((c) => c.ok) && !r.errors.some((e) => e.where === 'checks');

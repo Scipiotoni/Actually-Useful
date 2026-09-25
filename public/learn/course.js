@@ -183,7 +183,7 @@
 
   // ------------------------------------------------------------ course
 
-  var ITEM_TYPES = ['lesson', 'quiz', 'challenge', 'review', 'exam', 'project'];
+  var ITEM_TYPES = ['lesson', 'quiz', 'challenge', 'review', 'exam', 'project', 'build'];
   var QUESTION_TYPES = ['mcq', 'tf', 'output', 'fill', 'order', 'spot', 'code'];
   var ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -374,6 +374,28 @@
     } else if (item.type === 'challenge') {
       item.task = normalizeTask(raw, id);
       item.difficulty = item.task.difficulty || 1;
+    } else if (item.type === 'build') {
+      // Build anything, as long as it uses these ingredients (see build.js).
+      var page = CTX.lang === 'web' && (isMap(raw.files) || isMap(raw.given) || isMap(raw.example));
+      item.build = {
+        kind: CTX.lang === 'web' ? (page ? 'page' : 'js') : 'cpp',
+        files: fileList(raw.files),
+        given: fileList(raw.given),
+        starter: raw.starter === undefined ? '' : text(raw.starter),
+        exampleFiles: isMap(raw.example) ? fileList(raw.example) : [],
+        example: isMap(raw.example) || raw.example === undefined ? '' : text(raw.example),
+        stdin: raw.stdin === undefined ? '' : text(raw.stdin),
+        width: Number(raw.width) || 0,
+        ideas: list(raw.ideas).map(text),
+        requirements: list(raw.requirements).map(function (r) {
+          r = r || {};
+          var req = { text: text(r.text), hint: text(r.hint) };
+          ['code', 'in', 'flags', 'check', 'output'].forEach(function (k) {
+            if (r[k] !== undefined && r[k] !== null) req[k] = text(r[k]);
+          });
+          return req;
+        })
+      };
     } else if (item.type === 'project') {
       item.milestones = list(raw.milestones).map(function (m, i) {
         return normalizeTask(m || {}, id + '/m' + (i + 1));
@@ -581,6 +603,22 @@
         }
         if (item.type === 'review' && !item.body) report(at, 'a review needs a body');
         if (item.type === 'challenge') checkTask(item.task, at);
+        if (item.type === 'build') {
+          var b = item.build;
+          if (b.requirements.length < 3) report(at, 'a build project needs at least three requirements');
+          if (!b.example && !b.exampleFiles.length) report(at, 'a build project needs an example');
+          b.requirements.forEach(function (r, n) {
+            var where = at + ' requirement ' + (n + 1);
+            if (!r.text) report(where, 'missing text');
+            if (!r.code && !r.check && !r.output) report(where, 'needs a code, check or output test');
+            if (r.check && b.kind === 'cpp') report(where, 'C++ projects can only use code and output tests');
+            if (r.in && ['html', 'css', 'js', 'cpp'].indexOf(r.in) === -1) report(where, 'in must be html, css, js or cpp');
+            ['code', 'output'].forEach(function (k) {
+              if (!r[k]) return;
+              try { new RegExp(r[k], r.flags || ''); } catch (e) { report(where, k + ' is not a valid regular expression'); }
+            });
+          });
+        }
         if (item.type === 'project') {
           if (!item.milestones.length) report(at, 'a project needs milestones');
           item.milestones.forEach(function (m) { checkTask(m, m.id); });
