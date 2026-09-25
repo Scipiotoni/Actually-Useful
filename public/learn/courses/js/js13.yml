@@ -1,0 +1,1083 @@
+id: js13
+number: 13
+part: js-p3
+title: Asynchronous JavaScript
+blurb: Work with things that take time — timers, promises, async/await — and fetch data from the network.
+hours: 3
+goals:
+  - Explain why JavaScript doesn't wait, and what runs when
+  - Schedule code with `setTimeout` and `setInterval`
+  - Create and use promises with `then`, `catch` and `Promise.all`
+  - Write clear asynchronous code with `async` and `await`
+  - Fetch JSON with `fetch`, handling loading and errors
+
+items:
+  - type: lesson
+    id: js13-timers
+    title: Timers and the event loop
+    minutes: 20
+    objectives:
+      - Run code later with `setTimeout`
+      - Repeat code with `setInterval` and stop it
+      - Predict the order in which asynchronous code runs
+    body: |
+      Some things take time: a timer, a download, a user's click.
+      JavaScript never **stops and waits** for them — the page would
+      freeze. Instead, you give it a function to call **later**, and it
+      carries on.
+
+      ```js
+      console.log('1. Start');
+      setTimeout(() => {
+        console.log('3. Half a second later');
+      }, 500);
+      console.log('2. Right away');
+      ```
+      ```output
+      1. Start
+      2. Right away
+      3. Half a second later
+      ```
+
+      `setTimeout(fn, ms)` calls `fn` once, after at least `ms`
+      milliseconds. Even with `0`, the function waits until the current
+      code has finished: JavaScript runs one thing at a time, and waiting
+      callbacks queue up. This is the **event loop**.
+
+      ## Repeating
+
+      ```js
+      let n = 3;
+      const id = setInterval(() => {
+        console.log(n);
+        n--;
+        if (n === 0) {
+          clearInterval(id);
+          console.log('Go!');
+        }
+      }, 200);
+      ```
+      ```output
+      3
+      2
+      1
+      Go!
+      ```
+
+      `setInterval(fn, ms)` calls `fn` every `ms` milliseconds until
+      `clearInterval(id)` stops it. (`clearTimeout` cancels a timeout that
+      hasn't fired yet.)
+
+      ## Callbacks
+
+      A function that finishes later can't `return` its result — the
+      caller has already moved on. The old way is to pass a **callback**
+      to call when it's done. When callbacks nest inside callbacks it gets
+      messy — "callback hell" — which is why promises were invented.
+
+      {{check order}}
+
+      {{task ticker}}
+    checks:
+      - id: order
+        type: output
+        prompt: What does this print?
+        code: |
+          setTimeout(() => console.log('A'), 0);
+          console.log('B');
+          setTimeout(() => console.log('C'), 0);
+          console.log('D');
+        answer: |
+          B
+          D
+          A
+          C
+        why: "The code finishes first; then the timers run in order."
+    tasks:
+      - id: ticker
+        title: A countdown with callbacks
+        prompt: |
+          Write `countdown(from, onTick, onDone)` using `setInterval` with
+          a **10 ms** interval:
+
+          - every tick, call `onTick` with the current number: `from`, then `from - 1`, … down to `1`
+          - after the tick for `1`, stop the interval and call `onDone()`
+
+          `countdown(3, …)` calls `onTick(3)`, `onTick(2)`, `onTick(1)`, then
+          `onDone()`. For `from` of 0 or less, call `onDone()` straight away.
+        starter: |
+          function countdown(from, onTick, onDone) {
+          }
+        solution: |
+          function countdown(from, onTick, onDone) {
+            if (from <= 0) {
+              onDone();
+              return;
+            }
+            let n = from;
+            const id = setInterval(() => {
+              onTick(n);
+              n--;
+              if (n === 0) {
+                clearInterval(id);
+                onDone();
+              }
+            }, 10);
+          }
+        harness: |
+          const run = (from) => new Promise((resolve) => {
+            const ticks = [];
+            countdown(from, (n) => ticks.push(n), () => resolve(ticks));
+            setTimeout(() => resolve(['timed out', ...ticks]), 1500);
+          });
+          check(run(3), [3, 2, 1]);
+          check(run(1), [1]);
+          check(run(0), []);
+        hints:
+          - "`const id = setInterval(() => { … }, 10);` — keep the id to stop it with `clearInterval(id)`."
+          - "Inside: call `onTick(n)`, decrease n, and when it reaches 0, clear the interval and call `onDone()`."
+    cards:
+      - front: Does JavaScript wait for a setTimeout to finish?
+        back: No — it carries on, and calls the function later, once the current code has finished.
+      - front: How do you stop a setInterval?
+        back: "`clearInterval(id)` with the id setInterval returned."
+      - front: What is the event loop?
+        back: JavaScript runs one thing at a time; callbacks from timers and events wait in a queue until the current code finishes.
+
+  - type: lesson
+    id: js13-promises
+    title: Promises
+    minutes: 25
+    objectives:
+      - Explain what a promise is and its three states
+      - Use a promise with `then`, `catch` and `finally`
+      - Create a promise with `new Promise`
+      - Run promises together with `Promise.all`
+    body: |
+      A **promise** is an object representing a result that isn't ready
+      yet — like a receipt for a coffee you've ordered. It's **pending**,
+      then either **fulfilled** (with a value) or **rejected** (with an
+      error).
+
+      ## Creating one
+
+      ```js
+      function sleep(ms) {
+        return new Promise((resolve) => {
+          setTimeout(resolve, ms);
+        });
+      }
+
+      function rollDice() {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            const n = 4;   // pretend this was random
+            if (n > 0) {
+              resolve(n);
+            } else {
+              reject(new Error('The dice fell off the table'));
+            }
+          }, 100);
+        });
+      }
+      ```
+
+      `new Promise((resolve, reject) => { … })` — call `resolve(value)` when
+      it succeeds, or `reject(error)` when it fails.
+
+      ## Using one
+
+      ```js
+      function rollDice() {
+        return new Promise((resolve) => setTimeout(() => resolve(4), 100));
+      }
+
+      rollDice()
+        .then((n) => {
+          console.log('Rolled ' + n);
+          return n * 2;
+        })
+        .then((doubled) => console.log('Doubled ' + doubled))
+        .catch((error) => console.log('Failed: ' + error.message))
+        .finally(() => console.log('Done'));
+
+      console.log('Waiting for the dice…');
+      ```
+      ```output
+      Waiting for the dice…
+      Rolled 4
+      Doubled 8
+      Done
+      ```
+
+      - `.then(fn)` runs `fn` with the value when the promise is fulfilled. Whatever `fn` returns feeds the **next** `.then` — a chain.
+      - `.catch(fn)` handles a rejection anywhere earlier in the chain.
+      - `.finally(fn)` runs either way.
+
+      ## Several at once
+
+      `Promise.all([p1, p2, p3])` waits for **all** of them and gives an
+      array of their values (in order) — or rejects as soon as one fails.
+
+      ```js
+      const later = (value, ms) => new Promise((resolve) => setTimeout(() => resolve(value), ms));
+
+      Promise.all([later('a', 300), later('b', 100), later('c', 200)])
+        .then((values) => console.log(values));
+      ```
+      ```output
+      ['a', 'b', 'c']
+      ```
+
+      They run **at the same time**, so the total wait is about 300ms, not
+      600ms.
+
+      {{check states}}
+
+      {{task users}}
+    checks:
+      - id: states
+        type: mcq
+        prompt: What are the three states of a promise?
+        options:
+          - started, running, stopped
+          - pending, fulfilled, rejected
+          - waiting, done, failed forever
+          - open, closed, broken
+        answer: 1
+        why: "Pending, then fulfilled or rejected."
+    tasks:
+      - id: users
+        title: A pretend database
+        prompt: |
+          `USERS` is a pretend database. Write:
+
+          - `sleep(ms)` — returns a promise that resolves after `ms` milliseconds
+          - `findUser(id)` — returns a promise that, after **20 ms**, resolves with the user whose `id` matches — or **rejects** with `new Error('User 9 not found')` (with the real id)
+        starter: |
+          const USERS = [
+            { id: 1, name: 'Ana', age: 34 },
+            { id: 2, name: 'Ben', age: 27 },
+            { id: 3, name: 'Cy', age: 41 },
+          ];
+
+          function sleep(ms) {
+          }
+
+          function findUser(id) {
+          }
+        solution: |
+          const USERS = [
+            { id: 1, name: 'Ana', age: 34 },
+            { id: 2, name: 'Ben', age: 27 },
+            { id: 3, name: 'Cy', age: 41 },
+          ];
+
+          function sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          }
+
+          function findUser(id) {
+            return new Promise((resolve, reject) => {
+              setTimeout(() => {
+                const user = USERS.find((u) => u.id === id);
+                if (user) {
+                  resolve(user);
+                } else {
+                  reject(new Error(`User ${id} not found`));
+                }
+              }, 20);
+            });
+          }
+        harness: |
+          const started = Date.now();
+          await sleep(50);
+          check(Date.now() - started >= 45, true);
+          check(sleep(1) instanceof Promise, true);
+          check(findUser(2) instanceof Promise, true);
+          check(findUser(2).then((u) => u.name), 'Ben');
+          check(findUser(9).then(() => 'resolved', (e) => e.message), 'User 9 not found');
+        hints:
+          - "`return new Promise((resolve) => setTimeout(resolve, ms));`"
+          - "In `findUser`, inside a `setTimeout(…, 20)`: find the user, then call `resolve(user)` or `reject(new Error(…))`."
+    cards:
+      - front: What is a promise?
+        back: An object representing a future result — pending, then fulfilled with a value or rejected with an error.
+      - front: What do then, catch and finally do?
+        back: then handles the value, catch handles an error anywhere earlier in the chain, finally runs either way.
+      - front: "What does `Promise.all([...])` do?"
+        back: Waits for all the promises (running together) and gives an array of their values — or rejects if one fails.
+
+  - type: quiz
+    id: js13-quiz1
+    title: "Quiz: timers and promises"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('one');
+          Promise.resolve('two').then((v) => console.log(v));
+          console.log('three');
+        answer: |
+          one
+          three
+          two
+        why: "then callbacks always run after the current code."
+      - type: output
+        prompt: What does this print?
+        code: |
+          Promise.reject(new Error('nope'))
+            .then(() => console.log('then'))
+            .catch((e) => console.log('caught ' + e.message))
+            .finally(() => console.log('finally'));
+        answer: |
+          caught nope
+          finally
+        why: "A rejection skips then and lands in catch."
+      - type: mcq
+        prompt: "Inside `new Promise((resolve, reject) => …)`, how do you signal success with the value 5?"
+        options:
+          - "`return 5`"
+          - "`resolve(5)`"
+          - "`then(5)`"
+          - "`reject(5)`"
+        answer: 1
+        why: "resolve fulfils the promise."
+
+  - type: lesson
+    id: js13-async
+    title: async and await
+    minutes: 25
+    objectives:
+      - Write `async` functions
+      - Wait for promises with `await`
+      - Handle errors with `try`/`catch`
+      - Choose between waiting in sequence and in parallel
+    body: |
+      `async`/`await` lets you write promise code that reads like normal,
+      top-to-bottom code:
+
+      ```js
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      async function makeTea() {
+        console.log('Boiling water…');
+        await sleep(300);
+        console.log('Steeping…');
+        await sleep(200);
+        return 'Tea is ready';
+      }
+
+      makeTea().then((message) => console.log(message));
+      console.log('(meanwhile, the page stays responsive)');
+      ```
+      ```output
+      Boiling water…
+      (meanwhile, the page stays responsive)
+      Steeping…
+      Tea is ready
+      ```
+
+      - `async function` always returns a **promise**.
+      - Inside it, `await promise` **pauses that function** until the promise settles, then gives its value. The rest of the program keeps running.
+      - `await` only works inside `async` functions (and at the top level of modules — including the examples here).
+
+      ## Errors
+
+      A rejected promise makes `await` **throw**, so you use ordinary
+      `try`/`catch`:
+
+      ```js
+      const failSoon = () => new Promise((_, reject) => setTimeout(() => reject(new Error('Server busy')), 100));
+
+      async function load() {
+        try {
+          const data = await failSoon();
+          console.log(data);
+        } catch (error) {
+          console.log('Could not load: ' + error.message);
+        }
+      }
+
+      load();
+      ```
+      ```output
+      Could not load: Server busy
+      ```
+
+      ## In sequence or in parallel?
+
+      ```js static
+      // One after the other: ~2 × the time
+      const a = await getUser(1);
+      const b = await getUser(2);
+
+      // At the same time: ~1 × the time
+      const [c, d] = await Promise.all([getUser(1), getUser(2)]);
+      ```
+
+      Use sequence when the second step **needs** the first's result;
+      otherwise start them together with `Promise.all`.
+
+      {{check await}}
+
+      {{task asyncusers}}
+    checks:
+      - id: await
+        type: mcq
+        prompt: "What does an `async` function return?"
+        options:
+          - Its return value, directly
+          - A promise of its return value
+          - undefined
+          - An array
+        answer: 1
+        why: "Always a promise."
+    tasks:
+      - id: asyncusers
+        title: async user lookups
+        prompt: |
+          `findUser(id)` is given (it returns a promise, rejecting for unknown
+          ids). Using `async`/`await`, write:
+
+          - `userName(id)` — resolves with the user's name, or with `'unknown'` if `findUser` rejects
+          - `namesInOrder(ids)` — resolves with an array of names, looking users up **one after another** (unknown ones as `'unknown'`)
+          - `totalAge(ids)` — looks users up **in parallel** with `Promise.all` and resolves with the sum of their ages (assume all ids exist)
+        starter: |
+          const USERS = [
+            { id: 1, name: 'Ana', age: 34 },
+            { id: 2, name: 'Ben', age: 27 },
+            { id: 3, name: 'Cy', age: 41 },
+          ];
+
+          function findUser(id) {
+            return new Promise((resolve, reject) => {
+              setTimeout(() => {
+                const user = USERS.find((u) => u.id === id);
+                if (user) {
+                  resolve(user);
+                } else {
+                  reject(new Error(`User ${id} not found`));
+                }
+              }, 20);
+            });
+          }
+
+          async function userName(id) {
+          }
+
+          async function namesInOrder(ids) {
+          }
+
+          async function totalAge(ids) {
+          }
+        solution: |
+          const USERS = [
+            { id: 1, name: 'Ana', age: 34 },
+            { id: 2, name: 'Ben', age: 27 },
+            { id: 3, name: 'Cy', age: 41 },
+          ];
+
+          function findUser(id) {
+            return new Promise((resolve, reject) => {
+              setTimeout(() => {
+                const user = USERS.find((u) => u.id === id);
+                if (user) {
+                  resolve(user);
+                } else {
+                  reject(new Error(`User ${id} not found`));
+                }
+              }, 20);
+            });
+          }
+
+          async function userName(id) {
+            try {
+              const user = await findUser(id);
+              return user.name;
+            } catch (error) {
+              return 'unknown';
+            }
+          }
+
+          async function namesInOrder(ids) {
+            const names = [];
+            for (const id of ids) {
+              names.push(await userName(id));
+            }
+            return names;
+          }
+
+          async function totalAge(ids) {
+            const users = await Promise.all(ids.map((id) => findUser(id)));
+            return users.reduce((sum, u) => sum + u.age, 0);
+          }
+        harness: |
+          check(userName(1), 'Ana');
+          check(userName(7), 'unknown');
+          check(namesInOrder([3, 9, 1]), ['Cy', 'unknown', 'Ana']);
+          check(namesInOrder([]), []);
+          // Count how many lookups are running at the same moment.
+          const original = findUser;
+          let active = 0;
+          let peak = 0;
+          findUser = (id) => {
+            active++;
+            peak = Math.max(peak, active);
+            return original(id).finally(() => { active--; });
+          };
+          check(totalAge([1, 2, 3]), 102);
+          check(peak, 3);
+          peak = 0;
+          check(namesInOrder([1, 2]), ['Ana', 'Ben']);
+          check(peak, 1);
+        hints:
+          - "`try { const user = await findUser(id); return user.name; } catch (e) { return 'unknown'; }`"
+          - "In sequence: a `for...of` loop with `await` inside."
+          - "In parallel: `await Promise.all(ids.map((id) => findUser(id)))` — then add up the ages."
+    cards:
+      - front: What does `await` do?
+        back: Pauses the async function until the promise settles, then gives its value (or throws its error).
+      - front: How do you handle errors with await?
+        back: With try/catch around the await.
+      - front: How do you run two async lookups at the same time?
+        back: "`const [a, b] = await Promise.all([getA(), getB()]);`"
+
+  - type: quiz
+    id: js13-quiz2
+    title: "Quiz: async and await"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          async function f() {
+            return 42;
+          }
+          f().then((v) => console.log(v));
+          console.log(typeof f());
+        answer: |
+          object
+          42
+        why: "f() is a promise (an object); its value arrives afterwards."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const wait = (ms, v) => new Promise((r) => setTimeout(() => r(v), ms));
+          async function main() {
+            const a = await wait(50, 'a');
+            console.log(a);
+            const b = await wait(10, 'b');
+            console.log(b);
+          }
+          main();
+          console.log('start');
+        answer: |
+          start
+          a
+          b
+        why: "main pauses at the first await; 'start' prints meanwhile."
+      - type: tf
+        prompt: You can use `await` inside any ordinary (non-async) function.
+        answer: false
+        why: "Only in async functions (and at the top level of modules)."
+
+  - type: lesson
+    id: js13-fetch
+    title: Fetching data
+    minutes: 30
+    objectives:
+      - Request data with `fetch` and read JSON
+      - Check `response.ok` and handle network errors
+      - Show loading and error states on a page
+    body: |
+      `fetch(url)` asks a server for something and returns a promise of a
+      **response**. Reading the body (for example as JSON) is **another**
+      promise:
+
+      ```js static
+      async function getWeather(city) {
+        const response = await fetch(`https://api.example.com/weather?city=${city}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}`);
+        }
+        const data = await response.json();
+        return data.temperature;
+      }
+      ```
+
+      - `response.ok` is `true` for successful status codes (200–299). A `404` or `500` **doesn't** reject the promise — you must check `ok` yourself.
+      - `fetch` only rejects when the request couldn't happen at all (no network, a blocked address).
+      - `await response.json()` parses the body as JSON; `response.text()` gives plain text.
+
+      ## Trying it here
+
+      These lessons run without internet access, so the examples fetch
+      from a **data: URL**: the data is written into the address itself.
+      `fetch` handles it exactly like a server's reply. In your own
+      projects, use a real `https://` API.
+
+      ```js
+      const API = 'data:application/json,' + encodeURIComponent(JSON.stringify([
+        { id: 1, title: 'Learn fetch', done: true },
+        { id: 2, title: 'Build an app', done: false },
+      ]));
+
+      async function loadTodos() {
+        const response = await fetch(API);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      }
+
+      const todos = await loadTodos();
+      for (const todo of todos) {
+        console.log(`${todo.done ? '✓' : '·'} ${todo.title}`);
+      }
+      ```
+      ```output
+      ✓ Learn fetch
+      · Build an app
+      ```
+
+      ## Loading and error states
+
+      Networks are slow and fail. A good page always shows **what's
+      happening**:
+
+      ```html
+      <p id="status">Loading…</p>
+      <ul id="list"></ul>
+      ```
+      ```js
+      const API = 'data:application/json,' + encodeURIComponent(JSON.stringify(['Oslo', 'Lima', 'Pune']));
+
+      async function show() {
+        const status = document.querySelector('#status');
+        try {
+          const response = await fetch(API);
+          const cities = await response.json();
+          for (const city of cities) {
+            const li = document.createElement('li');
+            li.textContent = city;
+            document.querySelector('#list').append(li);
+          }
+          status.textContent = `${cities.length} cities`;
+        } catch (error) {
+          status.textContent = 'Could not load the cities. Try again later.';
+        }
+      }
+
+      show();
+      ```
+
+      ## Sending data
+
+      To send data, pass options: the method, headers, and a JSON body:
+
+      ```js static
+      await fetch('https://api.example.com/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'New task' }),
+      });
+      ```
+
+      > [!note]
+      > Browsers also let a page keep small amounts of data with
+      > `localStorage.setItem(key, text)` and `localStorage.getItem(key)` —
+      > strings only, so store objects with `JSON.stringify`. (It's not
+      > available inside these sandboxed exercises.)
+
+      {{check ok}}
+
+      {{task weather}}
+    checks:
+      - id: ok
+        type: tf
+        prompt: "`fetch` rejects its promise when the server answers with 404 Not Found."
+        answer: false
+        why: "It resolves with response.ok false — check it yourself."
+    tasks:
+      - id: weather
+        title: Show the forecast
+        prompt: |
+          `FORECAST_URL` points at JSON like
+          `[{ "day": "Mon", "high": 21 }, …]`. Write `loadForecast()`, an
+          `async` function that:
+
+          - fetches the URL and reads the JSON
+          - fills `#days` with one `<li>` per day: `Mon: 21°`
+          - writes the **warmest** day's name into `#best`: `Warmest: Wed`
+          - replaces `Loading…` in `#status` with an empty string when done — or, if anything fails, with `Could not load the forecast`
+
+          Then call it. (The checks also try a broken address.)
+        given:
+          index.html: |
+            <p id="status">Loading…</p>
+            <ul id="days"></ul>
+            <p id="best"></p>
+        files:
+          script.js: |
+            let FORECAST_URL = 'data:application/json,' + encodeURIComponent(JSON.stringify([
+              { day: 'Mon', high: 21 },
+              { day: 'Tue', high: 19 },
+              { day: 'Wed', high: 24 },
+              { day: 'Thu', high: 22 },
+            ]));
+
+            async function loadForecast() {
+            }
+        solution:
+          script.js: |
+            let FORECAST_URL = 'data:application/json,' + encodeURIComponent(JSON.stringify([
+              { day: 'Mon', high: 21 },
+              { day: 'Tue', high: 19 },
+              { day: 'Wed', high: 24 },
+              { day: 'Thu', high: 22 },
+            ]));
+
+            async function loadForecast() {
+              const status = document.querySelector('#status');
+              const list = document.querySelector('#days');
+              try {
+                const response = await fetch(FORECAST_URL);
+                if (!response.ok) {
+                  throw new Error(`HTTP ${response.status}`);
+                }
+                const days = await response.json();
+                list.replaceChildren();
+                for (const { day, high } of days) {
+                  const li = document.createElement('li');
+                  li.textContent = `${day}: ${high}°`;
+                  list.append(li);
+                }
+                const warmest = days.reduce((best, d) => (d.high > best.high ? d : best));
+                document.querySelector('#best').textContent = `Warmest: ${warmest.day}`;
+                status.textContent = '';
+              } catch (error) {
+                status.textContent = 'Could not load the forecast';
+              }
+            }
+
+            loadForecast();
+        harness: |
+          await wait(100);
+          check($$('#days li').map((li) => li.textContent), ['Mon: 21°', 'Tue: 19°', 'Wed: 24°', 'Thu: 22°']);
+          check(text('#best'), 'Warmest: Wed');
+          check(text('#status'), '');
+          FORECAST_URL = 'data:application/json,{this is not json';
+          await loadForecast();
+          check(text('#status'), 'Could not load the forecast');
+        hints:
+          - "`const response = await fetch(FORECAST_URL); const days = await response.json();` inside a `try`."
+          - "Find the warmest with `reduce((best, d) => (d.high > best.high ? d : best))`."
+          - "Put the error message in the `catch` block."
+    cards:
+      - front: How do you fetch JSON?
+        back: "`const res = await fetch(url); if (!res.ok) throw …; const data = await res.json();`"
+      - front: Does fetch reject on a 404 or 500?
+        back: No — check `response.ok`. It rejects only if the request couldn't be made at all.
+      - front: What should a page show while data loads?
+        back: A loading state, then the data — or a clear error message if it fails.
+      - front: How do you send JSON with fetch?
+        back: "`fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })`"
+
+  - type: challenge
+    id: js13-ch-retry
+    title: Try again
+    difficulty: 3
+    tags: [async, errors]
+    prompt: |
+      Networks fail now and then. Write `retry(task, attempts)`:
+
+      - `task` is a function that returns a promise
+      - call it; if it rejects, **try again**, up to `attempts` tries in total
+      - resolve with the first successful value
+      - if every attempt fails, reject with the **last** error
+
+      (The checks give you a flaky task that fails a set number of times.)
+    starter: |
+      async function retry(task, attempts) {
+      }
+    solution: |
+      async function retry(task, attempts) {
+        let lastError;
+        for (let i = 0; i < attempts; i++) {
+          try {
+            return await task();
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        throw lastError;
+      }
+    harness: |
+      const flaky = (failures) => {
+        let calls = 0;
+        const task = async () => {
+          calls++;
+          if (calls <= failures) {
+            throw new Error(`fail ${calls}`);
+          }
+          return `ok after ${calls}`;
+        };
+        task.calls = () => calls;
+        return task;
+      };
+      check(retry(flaky(0), 3), 'ok after 1');
+      check(retry(flaky(2), 3), 'ok after 3');
+      const t = flaky(5);
+      check(retry(t, 3).then(() => 'resolved', (e) => e.message), 'fail 3');
+      check(t.calls(), 3);
+    hints:
+      - "A `for` loop with `try { return await task(); } catch (error) { lastError = error; }`."
+      - "`return await` inside try matters: without `await`, the rejection would escape the catch."
+      - "After the loop, `throw lastError;`."
+
+  - type: challenge
+    id: js13-ch-search
+    title: Search as you type
+    difficulty: 3
+    tags: [async, events, dom]
+    prompt: |
+      Make a search box that filters a list of fruits **fetched** from
+      `FRUITS_URL`:
+
+      - on load, fetch the fruits (an array of names), keep them in a variable, and show them all in `#results` as `<li>`s
+      - on every `input` in `#search`, show only the fruits that **include** the typed text, ignoring case
+      - `#count` always shows how many fruits are listed
+    given:
+      index.html: |
+        <label for="search">Search fruit</label>
+        <input id="search">
+        <p><span id="count">0</span> found</p>
+        <ul id="results"></ul>
+    files:
+      script.js: |
+        const FRUITS_URL = 'data:application/json,' + encodeURIComponent(JSON.stringify([
+          'Apple', 'Apricot', 'Banana', 'Blackberry', 'Cherry', 'Grape', 'Pineapple',
+        ]));
+    solution:
+      script.js: |
+        const FRUITS_URL = 'data:application/json,' + encodeURIComponent(JSON.stringify([
+          'Apple', 'Apricot', 'Banana', 'Blackberry', 'Cherry', 'Grape', 'Pineapple',
+        ]));
+
+        let fruits = [];
+        const search = document.querySelector('#search');
+
+        function show(list) {
+          const results = document.querySelector('#results');
+          results.replaceChildren();
+          for (const name of list) {
+            const li = document.createElement('li');
+            li.textContent = name;
+            results.append(li);
+          }
+          document.querySelector('#count').textContent = list.length;
+        }
+
+        search.addEventListener('input', () => {
+          const q = search.value.trim().toLowerCase();
+          show(fruits.filter((f) => f.toLowerCase().includes(q)));
+        });
+
+        async function start() {
+          const response = await fetch(FRUITS_URL);
+          fruits = await response.json();
+          show(fruits);
+        }
+
+        start();
+    harness: |
+      await wait(100);
+      const names = () => $$('#results li').map((li) => li.textContent);
+      check(names().length, 7);
+      check(text('#count'), '7');
+      typeInto('#search', 'ap');
+      check(names(), ['Apple', 'Apricot', 'Grape', 'Pineapple']);
+      check(text('#count'), '4');
+      typeInto('#search', 'BERRY');
+      check(names(), ['Blackberry']);
+      typeInto('#search', 'zzz');
+      check(names(), []);
+      check(text('#count'), '0');
+      typeInto('#search', '');
+      check(names().length, 7);
+    hints:
+      - "A `show(list)` function that renders any array keeps things simple."
+      - "Filter with `fruits.filter((f) => f.toLowerCase().includes(query.toLowerCase()))`."
+
+  - type: review
+    id: js13-review
+    title: "Chapter 13 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      setTimeout(fn, 500);   const id = setInterval(fn, 1000);   clearInterval(id);
+
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      new Promise((resolve, reject) => { … resolve(value) … reject(new Error('x')) … });
+
+      promise.then((v) => …).catch((e) => …).finally(() => …);
+      const values = await Promise.all([p1, p2]);
+
+      async function load() {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+        } catch (error) {
+          showError();
+        }
+      }
+      ```
+
+      ## Key ideas
+
+      - JavaScript never blocks: slow work finishes later, via callbacks or promises.
+      - Code after a timer or promise runs **first**.
+      - async/await makes promise code read top to bottom; use try/catch for errors.
+      - Parallel with Promise.all when steps don't depend on each other.
+      - fetch: check `ok`, parse with `json()`, always show loading and error states.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          async function a() {
+            console.log('in a');
+            return 'result';
+          }
+          const p = a();
+          console.log('after a');
+          p.then(console.log);
+        answer: |
+          in a
+          after a
+          result
+        why: "The async function runs synchronously until its first await (there is none); the value is delivered later."
+      - type: mcq
+        prompt: "Why use `Promise.all` for three independent requests?"
+        options:
+          - They run at the same time, so it's faster
+          - It's required by fetch
+          - It retries failures
+          - It sorts the results
+        answer: 0
+        why: "Parallel instead of one after another."
+
+  - type: exam
+    id: js13-exam
+    title: "Chapter 13 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          setTimeout(() => console.log('timer'), 0);
+          Promise.resolve().then(() => console.log('promise'));
+          console.log('sync');
+        answer: |
+          sync
+          promise
+          timer
+        why: "Synchronous code first; promise callbacks run before timers."
+      - type: mcq
+        prompt: "What does `setTimeout(fn, 1000)` return?"
+        options:
+          - The result of fn
+          - An id you can pass to clearTimeout
+          - A promise
+          - Nothing
+        answer: 1
+        why: "An id for cancelling."
+      - type: output
+        prompt: What does this print?
+        code: |
+          new Promise((resolve) => resolve(3))
+            .then((n) => n + 1)
+            .then((n) => console.log(n));
+        answer: |
+          4
+        why: "Each then gets the previous return value."
+      - type: tf
+        prompt: An async function always returns a promise.
+        answer: true
+        why: "Even if you return a plain value."
+      - type: mcq
+        prompt: How do you handle an error from `await fetch(url)`?
+        options:
+          - "`if (error)` after the line"
+          - "Wrap it in try/catch"
+          - "It can't fail"
+          - "Use `.ok()` instead"
+        answer: 1
+        why: "A rejected await throws."
+      - type: fill
+        prompt: Parse the response body as JSON.
+        code: |
+          const data = await response.___();
+        blanks:
+          - [json]
+        why: "`response.json()`."
+      - type: mcq
+        prompt: "A fetch gets a 500 error from the server. What is `response.ok`?"
+        options:
+          - "`true`"
+          - "`false`"
+          - "undefined — fetch threw"
+          - "500"
+        answer: 1
+        why: "ok is only true for 200–299."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const later = (v, ms) => new Promise((r) => setTimeout(() => r(v), ms));
+          Promise.all([later(1, 30), later(2, 10)]).then((v) => console.log(v));
+        answer: |
+          [1, 2]
+        why: "Results keep the order of the array, not the finishing order."
+      - type: mcq
+        prompt: Which is the parallel version?
+        options:
+          - "`const a = await f(); const b = await g();`"
+          - "`const [a, b] = await Promise.all([f(), g()]);`"
+          - "`const a = f(); const b = await g();`"
+          - "`await f(); await g();`"
+        answer: 1
+        why: "Both start before either is awaited."
+      - type: tf
+        prompt: "`await` pauses the whole page until the promise settles."
+        answer: false
+        why: "It only pauses that async function; the page stays responsive."
+      - type: code
+        prompt: |
+          Write `async function firstDone(tasks)`, where `tasks` is an array
+          of functions that each return a promise. Call them **one at a
+          time**, in order, and resolve with an array of their results.
+          If one rejects, stop and resolve with the string
+          `'failed at 2'` (the index of the task that failed).
+        starter: |
+          async function firstDone(tasks) {
+          }
+        solution: |
+          async function firstDone(tasks) {
+            const results = [];
+            for (let i = 0; i < tasks.length; i++) {
+              try {
+                results.push(await tasks[i]());
+              } catch (error) {
+                return `failed at ${i}`;
+              }
+            }
+            return results;
+          }
+        harness: |
+          const ok = (v) => () => new Promise((r) => setTimeout(() => r(v), 5));
+          const bad = () => Promise.reject(new Error('x'));
+          check(firstDone([ok('a'), ok('b')]), ['a', 'b']);
+          check(firstDone([ok(1), ok(2), bad, ok(4)]), 'failed at 2');
+          check(firstDone([]), []);

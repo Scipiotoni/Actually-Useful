@@ -1,0 +1,770 @@
+id: js11
+number: 11
+part: js-p3
+title: The DOM
+blurb: Reach into the page from JavaScript — find elements, read and change their text, classes and attributes, and build new ones from data.
+hours: 3
+goals:
+  - Explain what the DOM is
+  - Find elements with `querySelector` and `querySelectorAll`
+  - Change text, classes, attributes and styles safely
+  - Create, insert and remove elements
+  - Render a list on the page from an array of data
+
+items:
+  - type: lesson
+    id: js11-select
+    title: Finding elements
+    minutes: 25
+    objectives:
+      - Describe the DOM as a tree of objects
+      - Select elements with CSS selectors
+      - Read text, values and attributes
+    body: |
+      When the browser reads your HTML, it builds the **DOM** (Document
+      Object Model): a tree of objects, one per element, that JavaScript
+      can read and change. Change the DOM, and the page on screen changes
+      instantly.
+
+      `document` is the entry point. Find elements with the **same
+      selectors as CSS**:
+
+      ```html
+      <h1 id="title">Groceries</h1>
+      <ul class="list">
+        <li data-price="1.20">Bread</li>
+        <li data-price="0.90">Milk</li>
+        <li data-price="2.50">Cheese</li>
+      </ul>
+      <p>Link: <a href="https://example.com/shop">the shop</a></p>
+      ```
+      ```js
+      const title = document.querySelector('#title');
+      console.log(title.textContent);
+
+      const items = document.querySelectorAll('.list li');
+      console.log(items.length);
+
+      for (const item of items) {
+        console.log(item.textContent, item.dataset.price);
+      }
+
+      const link = document.querySelector('a');
+      console.log(link.getAttribute('href'));
+      console.log(document.querySelector('.missing'));
+      ```
+
+      | Method | Returns |
+      |---|---|
+      | `document.querySelector(sel)` | the **first** matching element, or `null` |
+      | `document.querySelectorAll(sel)` | **all** matches (a NodeList — loop it with `for...of` or `forEach`, or spread it into an array with `[...list]`) |
+      | `document.getElementById('x')` | the element with that id |
+
+      You can also search **inside** an element:
+      `list.querySelector('li')`.
+
+      ## Reading from elements
+
+      - `el.textContent` — its text.
+      - `el.value` — what's typed in an `<input>`, `<textarea>` or `<select>` (always a string).
+      - `el.getAttribute('href')` — any attribute. Common ones are properties too: `el.id`, `el.src`.
+      - `el.dataset.price` — the `data-price` attribute. `data-*` attributes are how HTML hands data to scripts.
+
+      > [!tip]
+      > If `querySelector` returns `null`, the next line fails with
+      > "Cannot read properties of null". Check the selector — and that the
+      > script runs **after** the element exists (`defer`, or at the end of
+      > the body).
+
+      {{check missing}}
+
+      {{task total}}
+    checks:
+      - id: missing
+        type: mcq
+        prompt: "`document.querySelector('.card')` when no element has the class card returns…"
+        options:
+          - An empty array
+          - "`null`"
+          - "`undefined`"
+          - An error
+        answer: 1
+        why: "null — so check before using it."
+    tasks:
+      - id: total
+        title: Add up the basket
+        prompt: |
+          Each item in the basket has a `data-price` attribute. Write a
+          script that adds up all the prices and writes the total into the
+          `#total` element with two decimals and a euro sign: `4.60 €`.
+        given:
+          index.html: |
+            <ul class="basket">
+              <li data-price="1.20">Bread</li>
+              <li data-price="0.90">Milk</li>
+              <li data-price="2.50">Cheese</li>
+            </ul>
+            <p>Total: <strong id="total">?</strong></p>
+        files:
+          script.js: |
+            // Add up the data-price of every basket item
+        solution:
+          script.js: |
+            let sum = 0;
+            for (const item of document.querySelectorAll('.basket li')) {
+              sum += Number(item.dataset.price);
+            }
+            document.querySelector('#total').textContent = `${sum.toFixed(2)} €`;
+        harness: |
+          check(text('#total'), '4.60 €');
+        hints:
+          - "Loop over `document.querySelectorAll('.basket li')` and add `Number(item.dataset.price)`."
+          - "`document.querySelector('#total').textContent = `${sum.toFixed(2)} €`;`"
+    cards:
+      - front: What is the DOM?
+        back: The tree of objects the browser builds from the HTML; changing it changes the page.
+      - front: "`querySelector` vs `querySelectorAll`?"
+        back: The first match (or null) vs all matches (a NodeList).
+      - front: How do you read `data-price="3"` in JavaScript?
+        back: "`el.dataset.price` — a string."
+      - front: What type is an input's `.value`?
+        back: Always a string.
+
+  - type: lesson
+    id: js11-change
+    title: Changing elements
+    minutes: 25
+    objectives:
+      - Change text safely with `textContent`
+      - Add, remove and toggle classes
+      - Set attributes, styles and states
+      - Explain why `innerHTML` with user input is dangerous
+    body: |
+      ## Text
+
+      ```js static
+      el.textContent = 'New text';
+      ```
+
+      There's also `innerHTML`, which **parses HTML**:
+      `el.innerHTML = '<strong>Bold</strong>'`. Never put **user input**
+      into `innerHTML`: a name like `<img src=x onerror="stealCookies()">`
+      would run as code. That attack is called **XSS** (cross-site
+      scripting). Use `textContent` for text; build elements (next lesson)
+      for structure.
+
+      ## Classes
+
+      The cleanest way to change how something looks: keep the looks in
+      CSS, and let JavaScript switch classes.
+
+      ```html
+      <p class="note">A note.</p>
+      <button>Highlight it</button>
+      <p id="status">Waiting…</p>
+      ```
+      ```css
+      .note { padding: 8px; }
+      .highlight { background-color: gold; font-weight: bold; }
+      .ok { color: green; }
+      ```
+      ```js
+      const note = document.querySelector('.note');
+      note.classList.add('highlight');
+      console.log(note.classList.contains('highlight'));
+      note.classList.toggle('highlight');
+      console.log(note.classList.contains('highlight'));
+      note.classList.toggle('highlight');
+
+      const status = document.querySelector('#status');
+      status.textContent = 'All good';
+      status.classList.add('ok');
+      ```
+
+      | | |
+      |---|---|
+      | `el.classList.add('x')` / `.remove('x')` | add or remove a class |
+      | `el.classList.toggle('x')` | add if missing, remove if present |
+      | `el.classList.contains('x')` | test for a class |
+
+      ## Attributes, styles and states
+
+      ```js static
+      img.src = 'cat.jpg';                  // common attributes are properties
+      link.setAttribute('target', '_blank');
+      el.dataset.state = 'open';            // sets data-state="open"
+      button.disabled = true;               // grey out a button
+      panel.hidden = true;                  // hide (the hidden attribute)
+      bar.style.width = '40%';              // one inline style
+      ```
+
+      Setting `el.style.…` is fine for values calculated in JavaScript
+      (a progress bar's width); for everything else, prefer classes.
+
+      {{check xss}}
+
+      {{task progress}}
+    checks:
+      - id: xss
+        type: mcq
+        prompt: A comment box shows what users type. Which line is safe?
+        options:
+          - "`box.innerHTML = userText;`"
+          - "`box.textContent = userText;`"
+          - "`box.outerHTML = userText;`"
+          - "`document.write(userText);`"
+        answer: 1
+        why: "textContent never interprets the text as HTML."
+    tasks:
+      - id: progress
+        title: Progress on a to-do list
+        prompt: |
+          Each task has `data-done="true"` or `"false"`. Write a script that:
+
+          - adds the class `done` to every finished task
+          - writes `2 of 5 done` (the real numbers) into `#summary`
+          - sets the width of `#bar` to the finished percentage: `bar.style.width = '40%'`
+          - if every task is done, shows `#cheer` by setting its `hidden` property to `false`
+        given:
+          index.html: |
+            <ul id="tasks">
+              <li data-done="true">Buy paint</li>
+              <li data-done="false">Sand the door</li>
+              <li data-done="true">Tape the edges</li>
+              <li data-done="false">Paint</li>
+              <li data-done="false">Clean up</li>
+            </ul>
+            <p id="summary"></p>
+            <div class="track"><div id="bar"></div></div>
+            <p id="cheer" hidden>All done! 🎉</p>
+          style.css: |
+            .done { text-decoration: line-through; color: gray; }
+            .track { background: #eee; height: 12px; width: 300px; }
+            #bar { background: seagreen; height: 12px; width: 0; }
+        files:
+          script.js: |
+            // Mark done tasks, write the summary, size the bar
+        solution:
+          script.js: |
+            const tasks = [...document.querySelectorAll('#tasks li')];
+            const done = tasks.filter((li) => li.dataset.done === 'true');
+
+            for (const li of done) {
+              li.classList.add('done');
+            }
+
+            document.querySelector('#summary').textContent = `${done.length} of ${tasks.length} done`;
+            document.querySelector('#bar').style.width = `${(done.length / tasks.length) * 100}%`;
+
+            if (done.length === tasks.length) {
+              document.querySelector('#cheer').hidden = false;
+            }
+        harness: |
+          check($$('#tasks li').map((li) => li.classList.contains('done')), [true, false, true, false, false]);
+          check(text('#summary'), '2 of 5 done');
+          check($('#bar').style.width, '40%');
+          check(box('#bar').width, 120);
+          check($('#cheer').hidden, true);
+        hints:
+          - "`[...document.querySelectorAll('#tasks li')]` gives a real array, so you can `filter` it."
+          - "`data-done` values are **strings**: compare with `=== 'true'`."
+          - "`bar.style.width = `${percent}%`;`"
+    cards:
+      - front: Why is `innerHTML` with user input dangerous?
+        back: The input is parsed as HTML, so it can run scripts (XSS). Use textContent for text.
+      - front: How do you add, remove and flip a class?
+        back: "`el.classList.add('x')`, `.remove('x')`, `.toggle('x')`."
+      - front: How do you hide an element from JavaScript?
+        back: "`el.hidden = true` (or toggle a class that hides it)."
+
+  - type: quiz
+    id: js11-quiz1
+    title: "Quiz: selecting and changing"
+    questions:
+      - type: mcq
+        prompt: Which selects every button inside the form with the id `signup`?
+        options:
+          - "`document.querySelector('#signup button')`"
+          - "`document.querySelectorAll('#signup button')`"
+          - "`document.getElementById('signup button')`"
+          - "`document.querySelectorAll('signup > button')`"
+        answer: 1
+        why: "All matches, with a CSS descendant selector."
+      - type: fill
+        prompt: Give the card the class `selected` if it doesn't have it, or remove it if it does.
+        code: |
+          card.classList.___('selected');
+        blanks:
+          - [toggle]
+        why: "`toggle`."
+      - type: tf
+        prompt: "`el.dataset.userId` reads the attribute `data-user-id`."
+        answer: true
+        why: "Dashes in data attributes become camelCase in dataset."
+      - type: mcq
+        prompt: "`input.value` for a number field containing 5 is…"
+        options:
+          - "the number 5"
+          - "the string '5'"
+          - "undefined"
+          - "NaN"
+        answer: 1
+        why: "Values are always strings — convert with Number()."
+
+  - type: lesson
+    id: js11-create
+    title: Creating and removing elements
+    minutes: 25
+    objectives:
+      - Create elements with `createElement` and add them to the page
+      - Remove elements
+      - Render a list from an array of data
+    body: |
+      ## Create, fill, insert
+
+      ```html
+      <ul id="list">
+        <li class="old">Remove me</li>
+      </ul>
+      ```
+      ```js
+      const list = document.querySelector('#list');
+
+      const li = document.createElement('li');
+      li.textContent = 'Fresh item';
+      li.classList.add('new');
+      list.append(li);                     // add at the end
+
+      const first = document.createElement('li');
+      first.textContent = 'Now first';
+      list.prepend(first);                 // add at the start
+
+      document.querySelector('.old').remove();
+      console.log(list.children.length);
+      ```
+
+      1. `document.createElement('li')` makes a new, detached element.
+      2. Fill it: `textContent`, classes, attributes.
+      3. Put it in the page: `parent.append(el)` (end) or `parent.prepend(el)` (start). `el.before(x)` and `el.after(x)` insert next to an element.
+      4. `el.remove()` takes an element out.
+
+      ## Rendering data
+
+      Most apps keep their data in **arrays of objects**, and **render**
+      the page from it. Change the data, render again:
+
+      ```html
+      <ul id="menu"></ul>
+      ```
+      ```js
+      const dishes = [
+        { name: 'Soup', price: 4 },
+        { name: 'Pasta', price: 9, vegan: true },
+        { name: 'Cake', price: 5 },
+      ];
+
+      function render(items) {
+        const menu = document.querySelector('#menu');
+        menu.replaceChildren();              // empty it first
+        for (const dish of items) {
+          const li = document.createElement('li');
+          li.textContent = `${dish.name} — ${dish.price} €`;
+          if (dish.vegan) {
+            const badge = document.createElement('span');
+            badge.textContent = ' 🌱 vegan';
+            li.append(badge);
+          }
+          menu.append(li);
+        }
+      }
+
+      render(dishes);
+      ```
+
+      `replaceChildren()` with no arguments removes everything inside, so
+      rendering twice doesn't duplicate the list.
+
+      {{check create}}
+
+      {{task products}}
+    checks:
+      - id: create
+        type: mcq
+        prompt: "After `const p = document.createElement('p'); p.textContent = 'Hi';` — is the paragraph on the page?"
+        options:
+          - Yes, at the end of the body
+          - No — it must be inserted with append (or similar)
+          - Yes, at the top
+          - Only after a reload
+        answer: 1
+        why: "New elements are detached until you insert them."
+    tasks:
+      - id: products
+        title: Render the products
+        prompt: |
+          The script already has a `products` array. Write `render()` so
+          that it:
+
+          - removes everything inside `#products` first
+          - adds one `<li>` per product, whose text is `Lamp: 30 €`
+          - for products with `sale: true`, appends a `<span class="sale">` with the text `Sale!` inside the `<li>` (after the text)
+          - writes the number of products into `#count`
+
+          Then call `render()`.
+        given:
+          index.html: |
+            <p><span id="count">0</span> products</p>
+            <ul id="products">
+              <li class="placeholder">Loading…</li>
+            </ul>
+        files:
+          script.js: |
+            const products = [
+              { name: 'Lamp', price: 30 },
+              { name: 'Chair', price: 85, sale: true },
+              { name: 'Rug', price: 60 },
+            ];
+
+            function render() {
+            }
+        solution:
+          script.js: |
+            const products = [
+              { name: 'Lamp', price: 30 },
+              { name: 'Chair', price: 85, sale: true },
+              { name: 'Rug', price: 60 },
+            ];
+
+            function render() {
+              const list = document.querySelector('#products');
+              list.replaceChildren();
+              for (const product of products) {
+                const li = document.createElement('li');
+                li.textContent = `${product.name}: ${product.price} €`;
+                if (product.sale) {
+                  const tag = document.createElement('span');
+                  tag.className = 'sale';
+                  tag.textContent = 'Sale!';
+                  li.append(tag);
+                }
+                list.append(li);
+              }
+              document.querySelector('#count').textContent = products.length;
+            }
+
+            render();
+        harness: |
+          check(count('.placeholder'), 0);
+          check(count('#products > li'), 3);
+          check($$('#products > li').map((li) => li.firstChild.textContent.trim()), ['Lamp: 30 €', 'Chair: 85 €', 'Rug: 60 €']);
+          check($$('#products > li').map((li) => li.querySelector('span.sale') !== null), [false, true, false]);
+          check(text('#products li:nth-child(2) .sale'), 'Sale!');
+          check(text('#count'), '3');
+          render();
+          check(count('#products > li'), 3);
+        hints:
+          - "`list.replaceChildren();` empties it; then loop, `createElement('li')`, set `textContent`, `append`."
+          - "For the sale label, create a `span`, give it the class `sale`, and `li.append(span)`."
+    cards:
+      - front: What are the steps to add a new element?
+        back: createElement, fill it (text, classes, attributes), then insert it with append/prepend/before/after.
+      - front: How do you empty an element?
+        back: "`el.replaceChildren()`"
+      - front: What does "render from data" mean?
+        back: Keep the data in arrays/objects and rebuild the page from it whenever it changes.
+
+  - type: quiz
+    id: js11-quiz2
+    title: "Quiz: creating elements"
+    questions:
+      - type: order
+        prompt: Put the steps in order to add an item to a list.
+        lines:
+          - "const li = document.createElement('li');"
+          - "li.textContent = 'Milk';"
+          - "document.querySelector('ul').append(li);"
+        why: "Create, fill, insert."
+      - type: mcq
+        prompt: "Which removes an element `el` from the page?"
+        options:
+          - "`el.delete()`"
+          - "`el.remove()`"
+          - "`el.hidden()`"
+          - "`document.remove(el)`"
+        answer: 1
+        why: "`remove()`."
+      - type: tf
+        prompt: "`append` adds an element at the start of its parent."
+        answer: false
+        why: "At the end — prepend adds at the start."
+
+  - type: challenge
+    id: js11-ch-table
+    title: A table from data
+    difficulty: 3
+    tags: [dom]
+    prompt: |
+      Build a table inside `#table-slot` from the `people` array:
+
+      - a `<table>` with a `<thead>` row of `<th>` headers — the **keys** of the first object (`name`, `city`, `age`)
+      - a `<tbody>` with one `<tr>` per person, one `<td>` per value
+      - rows of people **under 18** get the class `minor`
+    given:
+      index.html: |
+        <div id="table-slot"></div>
+    files:
+      script.js: |
+        const people = [
+          { name: 'Ana', city: 'Porto', age: 34 },
+          { name: 'Leo', city: 'Lyon', age: 15 },
+          { name: 'Mia', city: 'Oslo', age: 27 },
+        ];
+    solution:
+      script.js: |
+        const people = [
+          { name: 'Ana', city: 'Porto', age: 34 },
+          { name: 'Leo', city: 'Lyon', age: 15 },
+          { name: 'Mia', city: 'Oslo', age: 27 },
+        ];
+
+        const table = document.createElement('table');
+        const head = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        for (const key of Object.keys(people[0])) {
+          const th = document.createElement('th');
+          th.textContent = key;
+          headRow.append(th);
+        }
+        head.append(headRow);
+
+        const body = document.createElement('tbody');
+        for (const person of people) {
+          const tr = document.createElement('tr');
+          if (person.age < 18) {
+            tr.classList.add('minor');
+          }
+          for (const value of Object.values(person)) {
+            const td = document.createElement('td');
+            td.textContent = value;
+            tr.append(td);
+          }
+          body.append(tr);
+        }
+
+        table.append(head, body);
+        document.querySelector('#table-slot').append(table);
+    harness: |
+      check($$('#table-slot table thead th').map((th) => th.textContent), ['name', 'city', 'age']);
+      check($$('#table-slot tbody tr').map((tr) => [...tr.cells].map((td) => td.textContent).join('|')), ['Ana|Porto|34', 'Leo|Lyon|15', 'Mia|Oslo|27']);
+      check($$('#table-slot tbody tr').map((tr) => tr.classList.contains('minor')), [false, true, false]);
+    hints:
+      - "`Object.keys(people[0])` gives the header names; `Object.values(person)` each row's cells."
+      - "`table.append(head, body)` — append takes several elements."
+
+  - type: challenge
+    id: js11-ch-toc
+    title: A table of contents
+    difficulty: 3
+    tags: [dom, strings]
+    prompt: |
+      Generate a table of contents for the article:
+
+      - for every `h2` inside `article`, make sure it has an `id`: if it has none, create one from its text — lower case, spaces replaced with `-` (`'Getting started'` → `'getting-started'`)
+      - fill `#toc` with a `<ul>` containing one `<li><a href="#id">heading text</a></li>` per heading, in order
+    given:
+      index.html: |
+        <nav id="toc"></nav>
+        <article>
+          <h2>Getting started</h2>
+          <p>…</p>
+          <h2 id="setup">Installing tools</h2>
+          <p>…</p>
+          <h2>Your first project</h2>
+          <p>…</p>
+        </article>
+    files:
+      script.js: |
+        // Build the table of contents
+    solution:
+      script.js: |
+        const list = document.createElement('ul');
+        for (const heading of document.querySelectorAll('article h2')) {
+          if (!heading.id) {
+            heading.id = heading.textContent.trim().toLowerCase().replaceAll(' ', '-');
+          }
+          const li = document.createElement('li');
+          const link = document.createElement('a');
+          link.href = `#${heading.id}`;
+          link.textContent = heading.textContent;
+          li.append(link);
+          list.append(li);
+        }
+        document.querySelector('#toc').append(list);
+    harness: |
+      check($$('article h2').map((h) => h.id), ['getting-started', 'setup', 'your-first-project']);
+      check($$('#toc ul > li > a').map((a) => a.getAttribute('href')), ['#getting-started', '#setup', '#your-first-project']);
+      check($$('#toc a').map((a) => a.textContent), ['Getting started', 'Installing tools', 'Your first project']);
+    hints:
+      - "`if (!heading.id) heading.id = …` — an element without an id has `id === ''`."
+      - "Create `ul`, then for each heading an `li` holding an `a` with `href` and `textContent`."
+
+  - type: review
+    id: js11-review
+    title: "Chapter 11 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      document.querySelector('#id .class')     // first or null
+      document.querySelectorAll('li')          // all (NodeList)
+      [...document.querySelectorAll('li')]     // real array
+
+      el.textContent = 'text';      // safe
+      el.innerHTML = '<b>x</b>';    // parses HTML — never with user input
+      el.value                      // form fields: a string
+      el.dataset.price              // data-price
+      el.classList.add('x')  .remove('x')  .toggle('x')  .contains('x')
+      el.setAttribute('href', '#')  el.hidden = true  el.style.width = '40%'
+
+      const li = document.createElement('li');
+      li.textContent = 'New';
+      list.append(li);   list.prepend(li);   el.before(x);   el.after(x);
+      el.remove();       list.replaceChildren();
+      ```
+
+      ## Key ideas
+
+      - The DOM is the page as objects; change it and the page changes.
+      - Select with CSS selectors; `null` means nothing matched.
+      - Keep looks in CSS; switch classes from JavaScript.
+      - `textContent` for text — never user input in `innerHTML`.
+      - Render the page from data.
+    questions:
+      - type: mcq
+        prompt: Which is the best way to make a card look selected?
+        options:
+          - "`card.style.border = '2px solid blue'; card.style.background = '#eef';`"
+          - "`card.classList.add('selected')` with the looks in CSS"
+          - "`card.innerHTML = '<div class=selected>' + card.innerHTML + '</div>'`"
+          - "`card.setAttribute('selected', 'yes')` only"
+        answer: 1
+        why: "Looks stay in the stylesheet; JavaScript just switches the class."
+      - type: tf
+        prompt: "`querySelectorAll` returns an array with `map` and `filter`."
+        answer: false
+        why: "It returns a NodeList; spread it into an array first."
+
+  - type: exam
+    id: js11-exam
+    title: "Chapter 11 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: What is the DOM?
+        options:
+          - A CSS framework
+          - The browser's tree of objects representing the page
+          - A database
+          - A kind of HTML file
+        answer: 1
+        why: "Document Object Model."
+      - type: mcq
+        prompt: "Which finds the element `<p id=\"intro\">`?"
+        options:
+          - "`document.querySelector('intro')`"
+          - "`document.querySelector('#intro')`"
+          - "`document.querySelector('.intro')`"
+          - "`document.getElementById('#intro')`"
+        answer: 1
+        why: "`#` for ids in selectors (getElementById takes the name without #)."
+      - type: tf
+        prompt: Setting `textContent` can never run code hidden in the text.
+        answer: true
+        why: "It's treated as plain text."
+      - type: fill
+        prompt: Read the attribute `data-id` of `row`.
+        code: |
+          const id = row.___.id;
+        blanks:
+          - [dataset]
+        why: "`dataset`."
+      - type: mcq
+        prompt: "What does `el.classList.toggle('open')` do if `el` already has the class?"
+        options:
+          - Nothing
+          - Removes it
+          - Adds it again
+          - Throws an error
+        answer: 1
+        why: "Toggle flips it."
+      - type: order
+        prompt: Put these in order to show a message on the page.
+        lines:
+          - "const msg = document.createElement('p');"
+          - "msg.textContent = 'Saved!';"
+          - "msg.classList.add('success');"
+          - "document.body.append(msg);"
+        alternatives:
+          - [0, 2, 1, 3]
+        why: "Create, fill (in any order), then insert."
+      - type: mcq
+        prompt: "Which empties `list` completely?"
+        options:
+          - "`list.remove()`"
+          - "`list.replaceChildren()`"
+          - "`list.textContent.clear()`"
+          - "`list.hidden = true`"
+        answer: 1
+        why: "remove() would remove the list itself; hidden only hides it."
+      - type: mcq
+        prompt: "`const n = document.querySelectorAll('li').length;` on a page with 4 list items gives…"
+        options:
+          - "4"
+          - "1"
+          - "0"
+          - "undefined"
+        answer: 0
+        why: "A NodeList has a length."
+      - type: tf
+        prompt: Changing the DOM from JavaScript updates the page on screen.
+        answer: true
+        why: "The screen shows the DOM."
+      - type: mcq
+        prompt: Where should a page's script be loaded so it can find the elements?
+        options:
+          - In the head, without defer
+          - With defer in the head, or at the end of the body
+          - Inside the title
+          - Anywhere — it doesn't matter
+        answer: 1
+        why: "The elements must exist when the script runs."
+      - type: code
+        prompt: |
+          The page has a list of scores. Write a script that finds the
+          **highest** score (the numbers in the `li` texts), adds the class
+          `best` to that `li`, and writes `Best: 97` into `#best`.
+        given:
+          index.html: |
+            <ul id="scores">
+              <li>72</li>
+              <li>97</li>
+              <li>85</li>
+            </ul>
+            <p id="best"></p>
+        files:
+          script.js: |
+        solution:
+          script.js: |
+            const items = [...document.querySelectorAll('#scores li')];
+            let best = items[0];
+            for (const li of items) {
+              if (Number(li.textContent) > Number(best.textContent)) {
+                best = li;
+              }
+            }
+            best.classList.add('best');
+            document.querySelector('#best').textContent = `Best: ${best.textContent}`;
+        harness: |
+          check($$('#scores li').map((li) => li.classList.contains('best')), [false, true, false]);
+          check(text('#best'), 'Best: 97');

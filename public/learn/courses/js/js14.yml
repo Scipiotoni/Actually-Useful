@@ -1,0 +1,1345 @@
+id: js14
+number: 14
+part: js-p3
+title: "Project: A To-Do App"
+blurb: Put it all together — state, rendering, events, filters and saving — in a complete app, then take the final exam.
+hours: 4
+goals:
+  - Structure an app around state and a render function
+  - Build a complete interactive app in small, tested steps
+  - Pass the JavaScript final exam
+  - Know what to learn next
+
+items:
+  - type: lesson
+    id: js14-plan
+    title: How apps are structured
+    minutes: 15
+    objectives:
+      - Separate an app's state from its display
+      - Update state in event handlers, then render
+      - Plan a feature list before coding
+    body: |
+      Almost every interactive app — from a to-do list to a spreadsheet —
+      follows the same simple loop:
+
+      1. **State**: the data, kept in plain variables — arrays and objects. For a to-do app: the list of tasks, and which filter is selected.
+      2. **Render**: a function that builds the page **from** the state. It never decides anything; it just shows what the state says.
+      3. **Events**: handlers that **change the state**, then call `render()`.
+
+      ```text
+            ┌───────────── event (click, submit, key) ─────────────┐
+            ▼                                                      │
+        update state  ──►  render()  ──►  page the user sees  ─────┘
+      ```
+
+      Why not change the page directly in each handler? Because then the
+      page and the data drift apart, and every feature has to know about
+      every other. With **one** render function, each handler only changes
+      data — and the page is always correct.
+
+      (Frameworks like React, Vue and Svelte are built around exactly this
+      idea, with clever ways to make rendering fast.)
+
+      ## The plan
+
+      The project builds a to-do app in five milestones — each one working
+      and checked before the next:
+
+      1. **Render** the tasks from an array.
+      2. **Add** tasks with a form, with validation.
+      3. **Complete and delete** tasks with one delegated listener.
+      4. **Filter** the list, and clear finished tasks.
+      5. **Polish**: an empty state, keyboard shortcut, a live page title — and **saving** so tasks survive a reload.
+
+      {{check loop}}
+    checks:
+      - id: loop
+        type: order
+        prompt: Put the steps of handling a click in a state-and-render app in order.
+        lines:
+          - "The user clicks"
+          - "The event handler changes the state"
+          - "The handler calls render()"
+          - "render() rebuilds the page from the state"
+        why: "Events change state; render shows state."
+    cards:
+      - front: What are state, render and events in an app?
+        back: State is the data; render builds the page from it; event handlers change the state and call render.
+      - front: Why render everything from state?
+        back: The page can't drift out of sync with the data, and handlers stay simple.
+
+  - type: project
+    id: js14-project
+    title: "Project: a to-do app"
+    body: |
+      Build a to-do app that you could really use. The HTML and CSS are
+      given (and locked); everything happens in `script.js`, which carries
+      over from milestone to milestone.
+
+      The checks use the app the way a person would — typing, clicking,
+      pressing keys — and read the page and your `tasks` array.
+
+      > [!tip]
+      > Use the preview (**▶ Preview**) to try your app between checks.
+    milestones:
+      - title: Render the tasks
+        prompt: |
+          `tasks` holds the state. Complete `render()` so that it:
+
+          - empties `#list`, then adds one `<li>` per task, with `data-id` set to the task's id (`li.dataset.id = task.id`) and the class `done` when the task is done
+          - puts inside each `<li>`, in order: an `<input type="checkbox" class="toggle">` (ticked when done), a `<span class="title">` with the title, and a `<button class="delete">✕</button>`
+          - writes `1 of 2 done` (the real numbers) into `#stats`
+        given:
+          index.html: |
+            <main class="app">
+              <h1>Tasks</h1>
+              <form id="new-task">
+                <label for="title">New task</label>
+                <input id="title" name="title" autocomplete="off">
+                <button>Add</button>
+              </form>
+              <p id="error" role="alert"></p>
+              <div class="filters">
+                <button type="button" data-filter="all" class="active">All</button>
+                <button type="button" data-filter="open">Open</button>
+                <button type="button" data-filter="done">Done</button>
+              </div>
+              <ul id="list"></ul>
+              <p id="stats"></p>
+              <button type="button" id="clear-done">Clear done</button>
+            </main>
+          style.css: |
+            body {
+              font-family: system-ui, sans-serif;
+              background: #f4f1fb;
+              margin: 0;
+            }
+
+            .app {
+              max-width: 420px;
+              margin: 24px auto;
+              padding: 20px;
+              background: white;
+              border-radius: 12px;
+              box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+            }
+
+            form {
+              display: flex;
+              gap: 8px;
+              align-items: center;
+            }
+
+            input#title {
+              flex: 1;
+              padding: 8px;
+            }
+
+            #error {
+              color: crimson;
+              min-height: 1.2em;
+            }
+
+            .filters .active {
+              font-weight: bold;
+              text-decoration: underline;
+            }
+
+            #list {
+              list-style: none;
+              padding: 0;
+            }
+
+            #list li {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              padding: 8px 0;
+              border-bottom: 1px solid #eee;
+            }
+
+            #list .title {
+              flex: 1;
+            }
+
+            #list .done .title {
+              text-decoration: line-through;
+              color: gray;
+            }
+
+            #list .empty {
+              color: gray;
+              font-style: italic;
+            }
+        files:
+          script.js: |
+            // ---------- State ----------
+            let tasks = [
+              { id: 1, title: 'Read the brief', done: true },
+              { id: 2, title: 'Sketch the layout', done: false },
+            ];
+            let nextId = 3;
+
+            // ---------- Rendering ----------
+            const list = document.querySelector('#list');
+
+            function render() {
+              // Build #list from tasks, and update #stats
+            }
+
+            render();
+        solution:
+          script.js: |
+            // ---------- State ----------
+            let tasks = [
+              { id: 1, title: 'Read the brief', done: true },
+              { id: 2, title: 'Sketch the layout', done: false },
+            ];
+            let nextId = 3;
+
+            // ---------- Rendering ----------
+            const list = document.querySelector('#list');
+
+            function render() {
+              list.replaceChildren();
+              for (const task of tasks) {
+                const li = document.createElement('li');
+                li.dataset.id = task.id;
+                li.classList.toggle('done', task.done);
+
+                const toggle = document.createElement('input');
+                toggle.type = 'checkbox';
+                toggle.className = 'toggle';
+                toggle.checked = task.done;
+                toggle.setAttribute('aria-label', `Done: ${task.title}`);
+
+                const title = document.createElement('span');
+                title.className = 'title';
+                title.textContent = task.title;
+
+                const remove = document.createElement('button');
+                remove.className = 'delete';
+                remove.textContent = '✕';
+                remove.setAttribute('aria-label', `Delete ${task.title}`);
+
+                li.append(toggle, title, remove);
+                list.append(li);
+              }
+
+              const doneCount = tasks.filter((t) => t.done).length;
+              document.querySelector('#stats').textContent = `${doneCount} of ${tasks.length} done`;
+            }
+
+            // ---------- Start ----------
+            render();
+        harness: |
+          check(count('#list li'), 2);
+          check($$('#list li').map((li) => li.dataset.id), ['1', '2']);
+          check($$('#list li .title').map((s) => s.textContent), ['Read the brief', 'Sketch the layout']);
+          check($$('#list li').map((li) => li.classList.contains('done')), [true, false]);
+          check($$('#list li .toggle').map((c) => `${c.type}:${c.checked}`), ['checkbox:true', 'checkbox:false']);
+          check($$('#list li').map((li) => [...li.children].map((c) => c.className).join(' ')), ['toggle title delete', 'toggle title delete']);
+          check(text('#stats'), '1 of 2 done');
+          tasks.push({ id: 7, title: 'Test the render', done: true });
+          render();
+          check(count('#list li'), 3);
+          check(text('#list li:last-child .title'), 'Test the render');
+          check(text('#stats'), '2 of 3 done');
+        hints:
+          - "Start `render()` with `list.replaceChildren();`, then loop over `tasks`."
+          - "For each task: `createElement('li')`, `li.dataset.id = task.id`, `li.classList.toggle('done', task.done)`, then create the checkbox, span and button and `li.append(…)` them."
+          - "Stats: `tasks.filter((t) => t.done).length` done out of `tasks.length`."
+      - title: Add tasks
+        prompt: |
+          Handle the `#new-task` form's **submit** (without reloading the page):
+
+          - trim the text in `#title`
+          - if it's empty, show `Please type a task` in `#error`; if it's longer than 60 characters, show `Keep it under 60 characters` — and add nothing
+          - otherwise clear `#error`, push `{ id: nextId++, title, done: false }` onto `tasks`, clear the input, and `render()`
+        solution:
+          script.js: |
+            // ---------- State ----------
+            let tasks = [
+              { id: 1, title: 'Read the brief', done: true },
+              { id: 2, title: 'Sketch the layout', done: false },
+            ];
+            let nextId = 3;
+
+            // ---------- Rendering ----------
+            const list = document.querySelector('#list');
+
+            function render() {
+              list.replaceChildren();
+              for (const task of tasks) {
+                const li = document.createElement('li');
+                li.dataset.id = task.id;
+                li.classList.toggle('done', task.done);
+
+                const toggle = document.createElement('input');
+                toggle.type = 'checkbox';
+                toggle.className = 'toggle';
+                toggle.checked = task.done;
+                toggle.setAttribute('aria-label', `Done: ${task.title}`);
+
+                const title = document.createElement('span');
+                title.className = 'title';
+                title.textContent = task.title;
+
+                const remove = document.createElement('button');
+                remove.className = 'delete';
+                remove.textContent = '✕';
+                remove.setAttribute('aria-label', `Delete ${task.title}`);
+
+                li.append(toggle, title, remove);
+                list.append(li);
+              }
+
+              const doneCount = tasks.filter((t) => t.done).length;
+              document.querySelector('#stats').textContent = `${doneCount} of ${tasks.length} done`;
+            }
+
+            // ---------- Adding ----------
+            const form = document.querySelector('#new-task');
+            const input = document.querySelector('#title');
+            const error = document.querySelector('#error');
+
+            form.addEventListener('submit', (event) => {
+              event.preventDefault();
+              const title = input.value.trim();
+              if (title === '') {
+                error.textContent = 'Please type a task';
+                return;
+              }
+              if (title.length > 60) {
+                error.textContent = 'Keep it under 60 characters';
+                return;
+              }
+              error.textContent = '';
+              tasks.push({ id: nextId++, title, done: false });
+              input.value = '';
+              render();
+            });
+
+            // ---------- Start ----------
+            render();
+        harness: |
+          typeInto('#title', '   ');
+          submit('#new-task');
+          check(text('#error'), 'Please type a task');
+          check(tasks.length, 2);
+          typeInto('#title', 'x'.repeat(61));
+          submit('#new-task');
+          check(text('#error'), 'Keep it under 60 characters');
+          check(tasks.length, 2);
+          typeInto('#title', '  Buy stamps ');
+          submit('#new-task');
+          check(text('#error'), '');
+          check($('#title').value, '');
+          check(tasks[2], { id: 3, title: 'Buy stamps', done: false });
+          check(text('#list li:last-child .title'), 'Buy stamps');
+          check(text('#stats'), '1 of 3 done');
+          typeInto('#title', 'Post letter');
+          submit('#new-task');
+          check(tasks.map((t) => t.id), [1, 2, 3, 4]);
+          check(printed().includes('[form] would send'), false);
+        hints:
+          - "`form.addEventListener('submit', (event) => { event.preventDefault(); … });`"
+          - "Two early returns for the two errors; then push, clear, render."
+      - title: Complete and delete
+        prompt: |
+          Add **one** click listener on `#list` (event delegation):
+
+          - clicking a `.toggle` checkbox flips that task's `done` in `tasks` (find it by the `li`'s `data-id` — remember it's a string), then renders
+          - clicking a `.delete` button removes that task from `tasks`, then renders
+
+          It must also work for tasks added later.
+        solution:
+          script.js: |
+            // ---------- State ----------
+            let tasks = [
+              { id: 1, title: 'Read the brief', done: true },
+              { id: 2, title: 'Sketch the layout', done: false },
+            ];
+            let nextId = 3;
+
+            // ---------- Rendering ----------
+            const list = document.querySelector('#list');
+
+            function render() {
+              list.replaceChildren();
+              for (const task of tasks) {
+                const li = document.createElement('li');
+                li.dataset.id = task.id;
+                li.classList.toggle('done', task.done);
+
+                const toggle = document.createElement('input');
+                toggle.type = 'checkbox';
+                toggle.className = 'toggle';
+                toggle.checked = task.done;
+                toggle.setAttribute('aria-label', `Done: ${task.title}`);
+
+                const title = document.createElement('span');
+                title.className = 'title';
+                title.textContent = task.title;
+
+                const remove = document.createElement('button');
+                remove.className = 'delete';
+                remove.textContent = '✕';
+                remove.setAttribute('aria-label', `Delete ${task.title}`);
+
+                li.append(toggle, title, remove);
+                list.append(li);
+              }
+
+              const doneCount = tasks.filter((t) => t.done).length;
+              document.querySelector('#stats').textContent = `${doneCount} of ${tasks.length} done`;
+            }
+
+            // ---------- Adding ----------
+            const form = document.querySelector('#new-task');
+            const input = document.querySelector('#title');
+            const error = document.querySelector('#error');
+
+            form.addEventListener('submit', (event) => {
+              event.preventDefault();
+              const title = input.value.trim();
+              if (title === '') {
+                error.textContent = 'Please type a task';
+                return;
+              }
+              if (title.length > 60) {
+                error.textContent = 'Keep it under 60 characters';
+                return;
+              }
+              error.textContent = '';
+              tasks.push({ id: nextId++, title, done: false });
+              input.value = '';
+              render();
+            });
+
+            // ---------- Done and delete ----------
+            list.addEventListener('click', (event) => {
+              const li = event.target.closest('li[data-id]');
+              if (!li) {
+                return;
+              }
+              const id = Number(li.dataset.id);
+              if (event.target.closest('.toggle')) {
+                const task = tasks.find((t) => t.id === id);
+                task.done = !task.done;
+                render();
+              } else if (event.target.closest('.delete')) {
+                tasks = tasks.filter((t) => t.id !== id);
+                render();
+              }
+            });
+
+            // ---------- Start ----------
+            render();
+        harness: |
+          click('#list li[data-id="2"] .toggle');
+          check(tasks.find((t) => t.id === 2).done, true);
+          check($('#list li[data-id="2"]').classList.contains('done'), true);
+          check(text('#stats'), '2 of 2 done');
+          click('#list li[data-id="2"] .toggle');
+          check(tasks.find((t) => t.id === 2).done, false);
+          check($('#list li[data-id="2"] .toggle').checked, false);
+          click('#list li[data-id="1"] .delete');
+          check(tasks.map((t) => t.id), [2]);
+          check(count('#list li[data-id]'), 1);
+          typeInto('#title', 'Late task');
+          submit('#new-task');
+          const late = tasks.find((t) => t.title === 'Late task');
+          click(`#list li[data-id="${late.id}"] .toggle`);
+          check(late.done, true);
+          click(`#list li[data-id="${late.id}"] .delete`);
+          check(tasks.map((t) => t.title), ['Sketch the layout']);
+        hints:
+          - "`const li = event.target.closest('li[data-id]'); if (!li) return; const id = Number(li.dataset.id);`"
+          - "Toggle: find the task and flip `task.done`. Delete: `tasks = tasks.filter((t) => t.id !== id);`. Then `render()`."
+      - title: Filters
+        prompt: |
+          - Add a state variable `let filter = 'all';`
+          - Clicking a `[data-filter]` button (one listener on `.filters`) sets `filter` to its `data-filter` (`all`, `open` or `done`) and renders
+          - `render()` shows only the matching tasks (`open` = not done), and gives the class `active` to the current filter's button only. `#stats` still counts **all** tasks.
+          - `#clear-done` removes every done task
+        solution:
+          script.js: |
+            // ---------- State ----------
+            let tasks = [
+              { id: 1, title: 'Read the brief', done: true },
+              { id: 2, title: 'Sketch the layout', done: false },
+            ];
+            let nextId = 3;
+            let filter = 'all';
+
+            // ---------- Rendering ----------
+            const list = document.querySelector('#list');
+
+            function visibleTasks() {
+              if (filter === 'open') {
+                return tasks.filter((t) => !t.done);
+              }
+              if (filter === 'done') {
+                return tasks.filter((t) => t.done);
+              }
+              return tasks;
+            }
+
+            function render() {
+              list.replaceChildren();
+              const shown = visibleTasks();
+              for (const task of shown) {
+                const li = document.createElement('li');
+                li.dataset.id = task.id;
+                li.classList.toggle('done', task.done);
+
+                const toggle = document.createElement('input');
+                toggle.type = 'checkbox';
+                toggle.className = 'toggle';
+                toggle.checked = task.done;
+                toggle.setAttribute('aria-label', `Done: ${task.title}`);
+
+                const title = document.createElement('span');
+                title.className = 'title';
+                title.textContent = task.title;
+
+                const remove = document.createElement('button');
+                remove.className = 'delete';
+                remove.textContent = '✕';
+                remove.setAttribute('aria-label', `Delete ${task.title}`);
+
+                li.append(toggle, title, remove);
+                list.append(li);
+              }
+
+              const doneCount = tasks.filter((t) => t.done).length;
+              document.querySelector('#stats').textContent = `${doneCount} of ${tasks.length} done`;
+              for (const button of document.querySelectorAll('[data-filter]')) {
+                button.classList.toggle('active', button.dataset.filter === filter);
+              }
+            }
+
+            // ---------- Adding ----------
+            const form = document.querySelector('#new-task');
+            const input = document.querySelector('#title');
+            const error = document.querySelector('#error');
+
+            form.addEventListener('submit', (event) => {
+              event.preventDefault();
+              const title = input.value.trim();
+              if (title === '') {
+                error.textContent = 'Please type a task';
+                return;
+              }
+              if (title.length > 60) {
+                error.textContent = 'Keep it under 60 characters';
+                return;
+              }
+              error.textContent = '';
+              tasks.push({ id: nextId++, title, done: false });
+              input.value = '';
+              render();
+            });
+
+            // ---------- Done and delete ----------
+            list.addEventListener('click', (event) => {
+              const li = event.target.closest('li[data-id]');
+              if (!li) {
+                return;
+              }
+              const id = Number(li.dataset.id);
+              if (event.target.closest('.toggle')) {
+                const task = tasks.find((t) => t.id === id);
+                task.done = !task.done;
+                render();
+              } else if (event.target.closest('.delete')) {
+                tasks = tasks.filter((t) => t.id !== id);
+                render();
+              }
+            });
+
+            // ---------- Filters ----------
+            document.querySelector('.filters').addEventListener('click', (event) => {
+              const button = event.target.closest('[data-filter]');
+              if (!button) {
+                return;
+              }
+              filter = button.dataset.filter;
+              render();
+            });
+
+            document.querySelector('#clear-done').addEventListener('click', () => {
+              tasks = tasks.filter((t) => !t.done);
+              render();
+            });
+
+            // ---------- Start ----------
+            render();
+        harness: |
+          const titles = () => $$('#list li .title').map((s) => s.textContent);
+          click('[data-filter=open]');
+          check(titles(), ['Sketch the layout']);
+          check($$('[data-filter]').map((b) => b.classList.contains('active')), [false, true, false]);
+          check(text('#stats'), '1 of 2 done');
+          click('[data-filter=done]');
+          check(titles(), ['Read the brief']);
+          typeInto('#title', 'Hidden while filtering done');
+          submit('#new-task');
+          check(titles(), ['Read the brief']);
+          check(tasks.length, 3);
+          click('[data-filter=all]');
+          check(titles().length, 3);
+          check($$('[data-filter]').map((b) => b.classList.contains('active')), [true, false, false]);
+          click('#clear-done');
+          check(tasks.map((t) => t.title), ['Sketch the layout', 'Hidden while filtering done']);
+          check(text('#stats'), '0 of 2 done');
+        hints:
+          - "A `visibleTasks()` function that returns `tasks` filtered by `filter` keeps `render()` tidy."
+          - "In render: `button.classList.toggle('active', button.dataset.filter === filter)` for every filter button."
+          - "Clear done: `tasks = tasks.filter((t) => !t.done); render();`"
+      - title: Polish and save
+        prompt: |
+          Finish the app:
+
+          - when no tasks are visible, `render()` adds a single `<li class="empty">Nothing here yet</li>`
+          - `#clear-done` is **disabled** when no task is done
+          - the page title (`document.title`) shows the number of **open** tasks: `(1) Tasks`
+          - pressing **Escape** in `#title` clears the input and `#error`
+          - **saving**: `save()` stores `JSON.stringify(tasks)` in `localStorage` under the key `'tasks'`; `load()` reads it back (if it's an array, it replaces `tasks` and sets `nextId` to one more than the highest id). Call `save()` at the end of every `render()`, and `load()` once before the first `render()`. Wrap both in `try`/`catch`: storage isn't always available — including in this sandbox, where the checks lend you a pretend one.
+        solution:
+          script.js: |
+            // ---------- State ----------
+            let tasks = [
+              { id: 1, title: 'Read the brief', done: true },
+              { id: 2, title: 'Sketch the layout', done: false },
+            ];
+            let nextId = 3;
+            let filter = 'all';
+
+            // ---------- Saving ----------
+            function save() {
+              try {
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+              } catch (error) {
+                // Storage can be unavailable (private windows, sandboxes); the app still works.
+              }
+            }
+
+            function load() {
+              try {
+                const saved = JSON.parse(localStorage.getItem('tasks'));
+                if (Array.isArray(saved)) {
+                  tasks = saved;
+                  nextId = Math.max(0, ...tasks.map((t) => t.id)) + 1;
+                }
+              } catch (error) {
+                // Nothing saved yet, or storage unavailable.
+              }
+            }
+
+            // ---------- Rendering ----------
+            const list = document.querySelector('#list');
+
+            function visibleTasks() {
+              if (filter === 'open') {
+                return tasks.filter((t) => !t.done);
+              }
+              if (filter === 'done') {
+                return tasks.filter((t) => t.done);
+              }
+              return tasks;
+            }
+
+            function render() {
+              list.replaceChildren();
+              const shown = visibleTasks();
+              for (const task of shown) {
+                const li = document.createElement('li');
+                li.dataset.id = task.id;
+                li.classList.toggle('done', task.done);
+
+                const toggle = document.createElement('input');
+                toggle.type = 'checkbox';
+                toggle.className = 'toggle';
+                toggle.checked = task.done;
+                toggle.setAttribute('aria-label', `Done: ${task.title}`);
+
+                const title = document.createElement('span');
+                title.className = 'title';
+                title.textContent = task.title;
+
+                const remove = document.createElement('button');
+                remove.className = 'delete';
+                remove.textContent = '✕';
+                remove.setAttribute('aria-label', `Delete ${task.title}`);
+
+                li.append(toggle, title, remove);
+                list.append(li);
+              }
+              if (shown.length === 0) {
+                const empty = document.createElement('li');
+                empty.className = 'empty';
+                empty.textContent = 'Nothing here yet';
+                list.append(empty);
+              }
+
+              const doneCount = tasks.filter((t) => t.done).length;
+              document.querySelector('#stats').textContent = `${doneCount} of ${tasks.length} done`;
+              for (const button of document.querySelectorAll('[data-filter]')) {
+                button.classList.toggle('active', button.dataset.filter === filter);
+              }
+              document.querySelector('#clear-done').disabled = doneCount === 0;
+              document.title = `(${tasks.length - doneCount}) Tasks`;
+              save();
+            }
+
+            // ---------- Adding ----------
+            const form = document.querySelector('#new-task');
+            const input = document.querySelector('#title');
+            const error = document.querySelector('#error');
+
+            form.addEventListener('submit', (event) => {
+              event.preventDefault();
+              const title = input.value.trim();
+              if (title === '') {
+                error.textContent = 'Please type a task';
+                return;
+              }
+              if (title.length > 60) {
+                error.textContent = 'Keep it under 60 characters';
+                return;
+              }
+              error.textContent = '';
+              tasks.push({ id: nextId++, title, done: false });
+              input.value = '';
+              render();
+            });
+
+            input.addEventListener('keydown', (event) => {
+              if (event.key === 'Escape') {
+                input.value = '';
+                error.textContent = '';
+              }
+            });
+
+            // ---------- Done and delete ----------
+            list.addEventListener('click', (event) => {
+              const li = event.target.closest('li[data-id]');
+              if (!li) {
+                return;
+              }
+              const id = Number(li.dataset.id);
+              if (event.target.closest('.toggle')) {
+                const task = tasks.find((t) => t.id === id);
+                task.done = !task.done;
+                render();
+              } else if (event.target.closest('.delete')) {
+                tasks = tasks.filter((t) => t.id !== id);
+                render();
+              }
+            });
+
+            // ---------- Filters ----------
+            document.querySelector('.filters').addEventListener('click', (event) => {
+              const button = event.target.closest('[data-filter]');
+              if (!button) {
+                return;
+              }
+              filter = button.dataset.filter;
+              render();
+            });
+
+            document.querySelector('#clear-done').addEventListener('click', () => {
+              tasks = tasks.filter((t) => !t.done);
+              render();
+            });
+
+            // ---------- Start ----------
+            load();
+            render();
+        harness: |
+          const titles = () => $$('#list li .title').map((s) => s.textContent);
+          check(document.title, '(1) Tasks');
+          check($('#clear-done').disabled, false);
+          click('[data-filter=done]');
+          click('#clear-done');
+          check(count('#list li'), 1);
+          check(text('#list li.empty'), 'Nothing here yet');
+          check($('#clear-done').disabled, true);
+          click('[data-filter=all]');
+          check(count('#list li.empty'), 0);
+          typeInto('#title', 'draft');
+          submit('#new-task');
+          typeInto('#title', '   ');
+          submit('#new-task');
+          check(text('#error'), 'Please type a task');
+          typeInto('#title', 'half typed');
+          press('#title', 'Escape');
+          check($('#title').value, '');
+          check(text('#error'), '');
+          check(document.title, '(2) Tasks');
+          const store = {};
+          Object.defineProperty(window, 'localStorage', {
+            configurable: true,
+            value: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } },
+          });
+          render();
+          check(JSON.parse(store.tasks).map((t) => t.title), ['Sketch the layout', 'draft']);
+          store.tasks = JSON.stringify([{ id: 8, title: 'From storage', done: false }, { id: 5, title: 'Old', done: true }]);
+          load();
+          render();
+          check(titles(), ['From storage', 'Old']);
+          check(nextId, 9);
+          store.tasks = '{broken';
+          load();
+          check(tasks.length, 2);
+        hints:
+          - "After the loop in `render()`: if nothing was shown, append the empty `li`."
+          - "`document.querySelector('#clear-done').disabled = doneCount === 0;` and `document.title = `(${open}) Tasks`;`"
+          - "`save()`: `try { localStorage.setItem('tasks', JSON.stringify(tasks)); } catch (e) {}` — `load()` is the reverse with `JSON.parse(localStorage.getItem('tasks'))` and `Array.isArray`."
+        explain: |
+          That's a complete app built on the state → render → events loop,
+          with validation, delegation, filtering and persistence. Copy the
+          three files into the main editor and publish it — on a real site,
+          `localStorage` works, so your tasks survive a reload.
+
+  - type: challenge
+    id: js14-ch-quiz
+    title: A quiz game
+    difficulty: 3
+    tags: [everything]
+    prompt: |
+      Build a tiny quiz with the state → render pattern. `questions` is
+      given. Keep the state in `current` (the question index) and `score`.
+
+      - `render()` shows the current question's text in `#question`, one `<button class="answer">` per option in `#answers`, and `Question 1 of 3` in `#progress`
+      - clicking an answer (one listener on `#answers`) adds 1 to `score` if it's right (compare the option's index with `answer`), moves to the next question, and renders
+      - after the last question, `render()` shows `You scored 2 of 3` in `#question`, empties `#answers`, and shows the `#restart` button (`hidden = false`)
+      - `#restart` resets `current` and `score` to 0, hides itself, and renders
+    given:
+      index.html: |
+        <p id="progress"></p>
+        <h2 id="question"></h2>
+        <div id="answers"></div>
+        <button id="restart" hidden>Play again</button>
+    files:
+      script.js: |
+        const questions = [
+          { text: 'Which keyword declares a constant?', options: ['let', 'const', 'var'], answer: 1 },
+          { text: 'What does [1, 2, 3].length give?', options: ['2', '3', '4'], answer: 1 },
+          { text: 'Which method adds to the end of an array?', options: ['push', 'shift', 'pop'], answer: 0 },
+        ];
+
+        let current = 0;
+        let score = 0;
+    solution:
+      script.js: |
+        const questions = [
+          { text: 'Which keyword declares a constant?', options: ['let', 'const', 'var'], answer: 1 },
+          { text: 'What does [1, 2, 3].length give?', options: ['2', '3', '4'], answer: 1 },
+          { text: 'Which method adds to the end of an array?', options: ['push', 'shift', 'pop'], answer: 0 },
+        ];
+
+        let current = 0;
+        let score = 0;
+
+        const questionEl = document.querySelector('#question');
+        const answersEl = document.querySelector('#answers');
+        const progressEl = document.querySelector('#progress');
+        const restart = document.querySelector('#restart');
+
+        function render() {
+          answersEl.replaceChildren();
+          if (current >= questions.length) {
+            questionEl.textContent = `You scored ${score} of ${questions.length}`;
+            progressEl.textContent = '';
+            restart.hidden = false;
+            return;
+          }
+          const q = questions[current];
+          questionEl.textContent = q.text;
+          progressEl.textContent = `Question ${current + 1} of ${questions.length}`;
+          q.options.forEach((option, i) => {
+            const button = document.createElement('button');
+            button.className = 'answer';
+            button.dataset.index = i;
+            button.textContent = option;
+            answersEl.append(button);
+          });
+        }
+
+        answersEl.addEventListener('click', (event) => {
+          const button = event.target.closest('.answer');
+          if (!button) {
+            return;
+          }
+          if (Number(button.dataset.index) === questions[current].answer) {
+            score++;
+          }
+          current++;
+          render();
+        });
+
+        restart.addEventListener('click', () => {
+          current = 0;
+          score = 0;
+          restart.hidden = true;
+          render();
+        });
+
+        render();
+    harness: |
+      const answers = () => $$('#answers .answer').map((b) => b.textContent);
+      check(text('#question'), 'Which keyword declares a constant?');
+      check(answers(), ['let', 'const', 'var']);
+      check(text('#progress'), 'Question 1 of 3');
+      click('#answers .answer:nth-child(2)');
+      check(text('#progress'), 'Question 2 of 3');
+      click('#answers .answer:nth-child(1)');
+      click('#answers .answer:nth-child(1)');
+      check(text('#question'), 'You scored 2 of 3');
+      check(count('#answers .answer'), 0);
+      check($('#restart').hidden, false);
+      click('#restart');
+      check([current, score], [0, 0]);
+      check($('#restart').hidden, true);
+      check(text('#question'), 'Which keyword declares a constant?');
+    hints:
+      - "Store each option's index on its button: `button.dataset.index = i`."
+      - "`render()` has two cases: finished (`current >= questions.length`) or showing a question."
+
+  - type: review
+    id: js14-review
+    title: "The whole JavaScript course on one page"
+    body: |
+      ## The language
+
+      ```js static
+      const name = 'Ada';  let n = 0;  n += 1;
+      `Hi ${name}`   '5' + 1 === '51'   Number('5') + 1 === 6
+      if (a === b && !c) { … } else if (x ?? y) { … } else { … }
+      const label = ok ? 'yes' : 'no';
+      for (let i = 0; i < n; i++) { … }   for (const x of list) { … }   while (cond) { … }
+      function f(a, b = 1) { return a + b; }   const g = (x) => x * 2;
+      ```
+
+      ## Data
+
+      ```js static
+      list.push(x)  list.map(fn)  list.filter(fn)  list.reduce(fn, 0)  list.find(fn)
+      [...list].sort((a, b) => a - b)   list.join(', ')   text.split(' ')
+      text.trim().toLowerCase().includes('x')   text.slice(0, 3)   text.replaceAll('a', 'b')
+      const user = { name, age };  user.address?.city ?? '—';  const { name } = user;
+      Object.entries(obj)   { ...obj, age: 37 }   JSON.stringify(v)  JSON.parse(s)
+      class Dog extends Animal { #secret; constructor(n) { super(n); } get x() {} static make() {} }
+      try { … } catch (e) { … } finally { … }   throw new Error('why');
+      ```
+
+      ## The browser
+
+      ```js static
+      document.querySelector('#id')   document.querySelectorAll('.item')
+      el.textContent = 'safe';   el.classList.toggle('on', flag);   el.dataset.id   el.hidden = true
+      const li = document.createElement('li');  list.append(li);  el.remove();  list.replaceChildren();
+      el.addEventListener('click', (e) => { … e.target.closest('li') … });
+      form.addEventListener('submit', (e) => { e.preventDefault(); … });
+      const res = await fetch(url);  if (!res.ok) throw …;  const data = await res.json();
+      ```
+
+      ## The big ideas
+
+      1. Programs are values, decisions, loops and functions.
+      2. Keep data in arrays and objects; transform it with map/filter/reduce.
+      3. Small, pure, well-named functions; errors thrown and caught deliberately.
+      4. In the browser: state → render → events.
+      5. Async work never blocks: promises and async/await.
+    questions:
+      - type: mcq
+        prompt: In a state-and-render app, what should a click handler do?
+        options:
+          - Change the page's HTML directly in many places
+          - Update the state, then call render()
+          - Reload the page
+          - Nothing — render handles clicks
+        answer: 1
+        why: "Events change state; render shows it."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const cart = [{ p: 2, q: 3 }, { p: 5, q: 1 }];
+          console.log(cart.reduce((sum, { p, q }) => sum + p * q, 0));
+        answer: |
+          11
+        why: "2 × 3 + 5 × 1."
+
+  - type: exam
+    id: js-final
+    title: "JavaScript final exam"
+    minutes: 50
+    pick: 22
+    body: |
+      One exam covering the **whole JavaScript course** — the language, data,
+      and the browser. Take your time.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          let x = 5;
+          x += 2;
+          x *= 2;
+          console.log(x);
+        answer: |
+          14
+        why: "5 → 7 → 14."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('3' + 4);
+          console.log('3' * 4);
+          console.log(3 + 4 + '5');
+        answer: |
+          34
+          12
+          75
+        why: "+ joins with a string; * converts; left to right."
+      - type: mcq
+        prompt: Which value is truthy?
+        options:
+          - "`0`"
+          - "`''`"
+          - "`'0'`"
+          - "`null`"
+        answer: 2
+        why: "Any non-empty string is truthy."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const n = 15;
+          if (n % 3 === 0 && n % 5 === 0) {
+            console.log('both');
+          } else if (n % 3 === 0) {
+            console.log('three');
+          } else {
+            console.log('neither');
+          }
+        answer: |
+          both
+        why: "15 is divisible by both."
+      - type: output
+        prompt: What does this print?
+        code: |
+          let s = '';
+          for (let i = 1; i <= 3; i++) {
+            s += i * i;
+          }
+          console.log(s);
+        answer: |
+          149
+        why: "Joined as text: '1' + '4' + '9'."
+      - type: output
+        prompt: What does this print?
+        code: |
+          function greet(name = 'there') {
+            return `Hello, ${name}!`;
+          }
+          console.log(greet());
+        answer: |
+          Hello, there!
+        why: "The default parameter."
+      - type: mcq
+        prompt: "What's the difference between `return` and `console.log` in a function?"
+        options:
+          - None
+          - return gives the value back to the caller; console.log only displays it
+          - console.log is faster
+          - return prints the value
+        answer: 1
+        why: "Return values can be used by the program."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const add = (a) => (b) => a + b;
+          console.log(add(2)(3));
+        answer: |
+          5
+        why: "A closure remembers a."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const nums = [5, 12, 8, 1];
+          console.log(nums.filter((n) => n > 4).map((n) => n / 2));
+        answer: |
+          [2.5, 6, 4]
+        why: "Keep 5, 12, 8, then halve."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log([3, 20, 100].sort());
+        answer: |
+          [100, 20, 3]
+        why: "The default sort compares as text."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const a = [1, 2];
+          const b = a;
+          b.push(3);
+          console.log(a);
+        answer: |
+          [1, 2, 3]
+        why: "Both names point at the same array."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const email = 'kim@site.org';
+          console.log(email.slice(0, email.indexOf('@')).toUpperCase());
+        answer: |
+          KIM
+        why: "The part before @, in capitals."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const user = { name: 'Lu', stats: { posts: 4 } };
+          console.log(user.stats?.posts, user.profile?.bio ?? 'no bio');
+        answer: |
+          4 no bio
+        why: "Optional chaining and a default."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const base = { a: 1, b: 2 };
+          const copy = { ...base, b: 3 };
+          console.log(base.b, copy.b, Object.keys(copy).length);
+        answer: |
+          2 3 2
+        why: "Spread copies; the later b wins."
+      - type: output
+        prompt: What does this print?
+        code: |
+          class Counter {
+            #n = 0;
+            inc() {
+              this.#n++;
+              return this;
+            }
+            get value() {
+              return this.#n;
+            }
+          }
+          console.log(new Counter().inc().inc().value);
+        answer: |
+          2
+        why: "Chained calls on a private field, read through a getter."
+      - type: output
+        prompt: What does this print?
+        code: |
+          try {
+            null.x;
+            console.log('A');
+          } catch (e) {
+            console.log(e.name);
+          } finally {
+            console.log('B');
+          }
+        answer: |
+          TypeError
+          B
+        why: "Reading a property of null is a TypeError; finally always runs."
+      - type: mcq
+        prompt: Which safely shows text a user typed?
+        options:
+          - "`el.innerHTML = text`"
+          - "`el.textContent = text`"
+          - "`document.write(text)`"
+          - "`el.outerHTML = text`"
+        answer: 1
+        why: "textContent never runs HTML."
+      - type: mcq
+        prompt: Which handles clicks on list items, including ones added later, with one listener?
+        options:
+          - A listener on each li when the page loads
+          - A listener on the ul using event.target.closest('li')
+          - An onclick attribute in the HTML
+          - setInterval checking for clicks
+        answer: 1
+        why: "Event delegation."
+      - type: fill
+        prompt: Stop the form from reloading the page.
+        code: |
+          form.addEventListener('submit', (e) => {
+            e.___();
+          });
+        blanks:
+          - [preventDefault]
+        why: "`preventDefault()`."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('1');
+          setTimeout(() => console.log('2'), 0);
+          Promise.resolve().then(() => console.log('3'));
+          console.log('4');
+        answer: |
+          1
+          4
+          3
+          2
+        why: "Synchronous first, then promise callbacks, then timers."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const wait = (v) => new Promise((r) => setTimeout(() => r(v), 10));
+          async function main() {
+            const [a, b] = await Promise.all([wait('x'), wait('y')]);
+            console.log(a + b);
+          }
+          main();
+        answer: |
+          xy
+        why: "Both resolve; values keep their order."
+      - type: tf
+        prompt: "`fetch` rejects its promise when the server responds with 404."
+        answer: false
+        why: "Check response.ok."
+      - type: mcq
+        prompt: How do you convert an object to text for storage?
+        options:
+          - "`String(obj)`"
+          - "`JSON.stringify(obj)`"
+          - "`obj.toText()`"
+          - "`JSON.parse(obj)`"
+        answer: 1
+        why: "stringify — and parse to go back."
+      - type: code
+        prompt: |
+          `wordFrequency(text)` returns an object counting each word in the
+          text, **ignoring case**; words are separated by spaces (ignore
+          empty pieces). `topWord(text)` returns the most frequent word (the
+          first one reached if tied), or `null` for a blank text.
+        starter: |
+          function wordFrequency(text) {
+          }
+
+          function topWord(text) {
+          }
+        solution: |
+          function wordFrequency(text) {
+            const counts = {};
+            for (const word of text.toLowerCase().split(' ')) {
+              if (word === '') {
+                continue;
+              }
+              counts[word] = (counts[word] ?? 0) + 1;
+            }
+            return counts;
+          }
+
+          function topWord(text) {
+            let best = null;
+            let bestCount = 0;
+            for (const [word, count] of Object.entries(wordFrequency(text))) {
+              if (count > bestCount) {
+                best = word;
+                bestCount = count;
+              }
+            }
+            return best;
+          }
+        harness: |
+          check(wordFrequency('The cat and the hat'), { the: 2, cat: 1, and: 1, hat: 1 });
+          check(wordFrequency('  a  b '), { a: 1, b: 1 });
+          check(topWord('The cat and the hat'), 'the');
+          check(topWord('x y'), 'x');
+          check(topWord('   '), null);
+      - type: code
+        prompt: |
+          The page has a button and a counter. Clicking `#add` adds a new
+          `<li>` to `#log` with the text `Click 1`, `Click 2`, … and updates
+          `#total` to the number of clicks. Clicking `#undo` removes the
+          **last** `li` (if any) and updates `#total`.
+        given:
+          index.html: |
+            <button id="add">Click me</button>
+            <button id="undo">Undo</button>
+            <p>Total: <span id="total">0</span></p>
+            <ul id="log"></ul>
+        files:
+          script.js: |
+        solution:
+          script.js: |
+            const log = document.querySelector('#log');
+            const total = document.querySelector('#total');
+            let clicks = 0;
+
+            function update() {
+              total.textContent = log.children.length;
+            }
+
+            document.querySelector('#add').addEventListener('click', () => {
+              clicks = log.children.length + 1;
+              const li = document.createElement('li');
+              li.textContent = `Click ${clicks}`;
+              log.append(li);
+              update();
+            });
+
+            document.querySelector('#undo').addEventListener('click', () => {
+              if (log.lastElementChild) {
+                log.lastElementChild.remove();
+              }
+              update();
+            });
+        harness: |
+          click('#add');
+          click('#add');
+          click('#add');
+          check($$('#log li').map((li) => li.textContent), ['Click 1', 'Click 2', 'Click 3']);
+          check(text('#total'), '3');
+          click('#undo');
+          check($$('#log li').map((li) => li.textContent), ['Click 1', 'Click 2']);
+          check(text('#total'), '2');
+          click('#undo');
+          click('#undo');
+          click('#undo');
+          check(count('#log li'), 0);
+          check(text('#total'), '0');
+
+  - type: lesson
+    id: js14-next
+    title: What next?
+    minutes: 10
+    objectives:
+      - Know where to go after this course
+    body: |
+      You can now program. You can read and write JavaScript, reason about
+      data and functions, debug methodically, and build interactive pages
+      and apps from scratch. That's a real, valuable skill — well done.
+
+      ## Keep building
+
+      The fastest way to improve is to **build things you want to exist**:
+
+      - A habit tracker, a recipe box, a budget calculator, a quiz about your favourite subject.
+      - A game: tic-tac-toe, memory cards, snake (on a `<canvas>`).
+      - A page that shows live data from a free public API (weather, space, books).
+
+      Publish them with the main editor of this site, and share them.
+
+      ## Where to go from here
+
+      - **MDN Web Docs** (developer.mozilla.org) — the reference for JavaScript and every browser feature.
+      - **Git and GitHub** — save the history of your code and collaborate.
+      - **TypeScript** — JavaScript with types, which catch many bugs before the code even runs.
+      - **A framework** — React, Vue or Svelte build on the state → render → events idea you used in the project.
+      - **Node.js** — JavaScript on servers: build APIs and command-line tools.
+      - **Testing** — write checks like the ones in this course for your own code.
+      - **Algorithms and data structures** — the C++ course on this site teaches them in depth, and the ideas carry over to every language.
+
+      > [!tip]
+      > Keep reviewing your flashcards for a few minutes a day, and when you
+      > get stuck on a project, go back to the lesson — it's all still here.
+    cards:
+      - front: What's the best way to keep improving at programming?
+        back: Build real projects you care about, a little at a time — and publish them.

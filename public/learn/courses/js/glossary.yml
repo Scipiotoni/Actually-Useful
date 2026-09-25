@@ -1,0 +1,304 @@
+terms:
+  - term: addEventListener
+    def: "Registers a function to run when an event happens: `button.addEventListener('click', handler)`."
+    chapter: js12
+  - term: Argument
+    def: A value passed to a function when calling it — `f(5)` passes 5.
+    chapter: js05
+  - term: Array
+    def: "An ordered list of values: `[1, 2, 3]`. Indexes start at 0."
+    chapter: js06
+  - term: Arrow function
+    def: "A short function syntax: `(a, b) => a + b`. A single expression is returned automatically."
+    chapter: js05
+  - term: async
+    def: Marks a function that can use await; it always returns a promise.
+    chapter: js13
+  - term: await
+    def: Pauses an async function until a promise settles, then gives its value (or throws its error).
+    chapter: js13
+  - term: Boolean
+    def: "`true` or `false`."
+    chapter: js03
+  - term: break
+    def: Stops a loop (or a switch) immediately.
+    chapter: js04
+  - term: Bubbling
+    def: An event travelling up from its target through every ancestor element.
+    chapter: js12
+  - term: Callback
+    def: A function passed to another function, to be called by it — like the function given to map or addEventListener.
+    chapter: js05
+  - term: camelCase
+    def: "The naming style for JavaScript variables and functions: `totalPrice`, `isOpen`."
+    chapter: js02
+  - term: catch
+    def: The block after try that runs when an error is thrown inside try.
+    chapter: js10
+  - term: Class
+    def: A blueprint for objects, with a constructor and methods. Instances are made with new.
+    chapter: js09
+  - term: classList
+    def: "An element's classes: `el.classList.add('x')`, `.remove`, `.toggle`, `.contains`."
+    chapter: js11
+  - term: closest
+    def: "`el.closest(selector)` — the nearest ancestor (or the element itself) that matches, or null."
+    chapter: js12
+  - term: Closure
+    def: A function that remembers variables from the place where it was created.
+    chapter: js05
+  - term: Comment
+    def: "Text the computer ignores: `// to the end of the line` or `/* … */`."
+    chapter: js01
+  - term: Concatenation
+    def: "Joining strings with +: `'a' + 'b'` is `'ab'`."
+    chapter: js02
+  - term: console.log
+    def: Prints values to the console.
+    chapter: js01
+  - term: const
+    def: Declares a variable that can't be reassigned. Prefer it.
+    chapter: js02
+  - term: Constructor
+    def: The method that runs when an instance of a class is created, setting up its properties.
+    chapter: js09
+  - term: continue
+    def: Skips the rest of the current loop round and goes on to the next.
+    chapter: js04
+  - term: createElement
+    def: "`document.createElement('li')` makes a new element, to be filled and inserted."
+    chapter: js11
+  - term: dataset
+    def: "An element's data-* attributes: `data-price` is `el.dataset.price` (a string)."
+    chapter: js11
+  - term: Debugger
+    def: A browser tool that pauses code at breakpoints so you can inspect variables and step through.
+    chapter: js10
+  - term: Default parameter
+    def: "A value used when an argument is missing: `function f(x = 10)`."
+    chapter: js05
+  - term: Destructuring
+    def: "Unpacking values into variables: `const { name } = user;`, `const [a, b] = list;`."
+    chapter: js08
+  - term: DOM
+    def: The Document Object Model — the page as a tree of objects that JavaScript can read and change.
+    chapter: js11
+  - term: Event
+    def: Something that happens — a click, a key press, a form submit — that code can respond to.
+    chapter: js12
+  - term: Event delegation
+    def: One listener on a parent handling events for many (even future) children, using event.target.closest().
+    chapter: js12
+  - term: Event loop
+    def: How JavaScript runs one thing at a time, with callbacks from timers, events and promises waiting their turn.
+    chapter: js13
+  - term: Exception
+    def: An error thrown while a program runs, which stops it unless caught.
+    chapter: js10
+  - term: export
+    def: Shares a value from a module so other files can import it.
+    chapter: js09
+  - term: extends
+    def: "Makes one class inherit from another: `class Cat extends Animal`."
+    chapter: js09
+  - term: Falsy
+    def: "Values treated as false in conditions: false, 0, '', null, undefined, NaN."
+    chapter: js03
+  - term: fetch
+    def: "Requests data over the network; returns a promise of a response. Check `response.ok`, then `await response.json()`."
+    chapter: js13
+  - term: filter
+    def: An array method returning a new array with only the items for which the callback returns true.
+    chapter: js06
+  - term: finally
+    def: The block after try/catch that always runs.
+    chapter: js10
+  - term: find
+    def: An array method returning the first item for which the callback is true, or undefined.
+    chapter: js06
+  - term: for loop
+    def: "A counting loop: `for (let i = 0; i < n; i++) { … }`."
+    chapter: js04
+  - term: for...of
+    def: "Loops over each item of an array or character of a string: `for (const x of list)`."
+    chapter: js04
+  - term: Function
+    def: A named, reusable block of code that takes parameters and can return a value.
+    chapter: js05
+  - term: Getter
+    def: "A method read like a property: `get area() { … }` is used as `obj.area`."
+    chapter: js09
+  - term: if / else
+    def: Runs one block of code or another depending on a condition.
+    chapter: js03
+  - term: import
+    def: "Brings in values exported by another module: `import { f } from './f.js';`."
+    chapter: js09
+  - term: Index
+    def: A position in a string or array, starting at 0.
+    chapter: js02
+  - term: Inheritance
+    def: A class taking on the properties and methods of another with extends, adding or overriding some.
+    chapter: js09
+  - term: innerHTML
+    def: An element's HTML as a string. Setting it parses HTML — never with user input (XSS).
+    chapter: js11
+  - term: Instance
+    def: An object created from a class with new.
+    chapter: js09
+  - term: JSON
+    def: A text format for data, like JavaScript objects with double-quoted keys. JSON.stringify and JSON.parse convert.
+    chapter: js08
+  - term: let
+    def: Declares a variable that can be reassigned.
+    chapter: js02
+  - term: localStorage
+    def: Browser storage for small strings that survive reloads. Store objects with JSON.stringify.
+    chapter: js13
+  - term: map
+    def: An array method returning a new array with each item transformed by the callback.
+    chapter: js06
+  - term: Method
+    def: A function stored as a property of an object, like `list.push` or `console.log`.
+    chapter: js08
+  - term: Module
+    def: A file that shares only what it exports, and imports what it needs from other modules.
+    chapter: js09
+  - term: NaN
+    def: "\"Not a Number\" — the result of invalid maths. Check it with Number.isNaN()."
+    chapter: js02
+  - term: new
+    def: Creates an instance of a class and runs its constructor.
+    chapter: js09
+  - term: null
+    def: A value meaning "intentionally empty".
+    chapter: js02
+  - term: Nullish coalescing
+    def: "`a ?? b` — a, unless it is null or undefined; then b."
+    chapter: js03
+  - term: Number()
+    def: "Converts a value to a number: `Number('42')` is 42; invalid text gives NaN."
+    chapter: js02
+  - term: Object
+    def: "A group of values under names (keys): `{ name: 'Ada', age: 36 }`."
+    chapter: js08
+  - term: Object.entries
+    def: "An object's [key, value] pairs as an array. Also Object.keys and Object.values."
+    chapter: js08
+  - term: Off-by-one
+    def: A bug where a loop or index is one too many or too few — often <= instead of <.
+    chapter: js10
+  - term: Optional chaining
+    def: "`a?.b` gives undefined instead of an error when a is null or undefined."
+    chapter: js08
+  - term: Parameter
+    def: A name in a function's definition that receives an argument.
+    chapter: js05
+  - term: preventDefault
+    def: "Stops the browser's default action for an event — like a form reloading the page."
+    chapter: js12
+  - term: Private field
+    def: "A class field named with # (like `#balance`) that only the class's own code can use."
+    chapter: js09
+  - term: Promise
+    def: An object representing a future result — pending, then fulfilled with a value or rejected with an error.
+    chapter: js13
+  - term: Promise.all
+    def: Waits for several promises running together and gives an array of their values.
+    chapter: js13
+  - term: Pure function
+    def: A function whose result depends only on its parameters, with no side effects.
+    chapter: js05
+  - term: querySelector
+    def: "Finds the first element matching a CSS selector, or null. querySelectorAll finds all."
+    chapter: js11
+  - term: reduce
+    def: "Combines an array into one value: `list.reduce((sum, x) => sum + x, 0)`."
+    chapter: js06
+  - term: Render
+    def: Building (or rebuilding) the page from the current state.
+    chapter: js11
+  - term: return
+    def: Ends a function and gives a value back to the caller.
+    chapter: js05
+  - term: Scope
+    def: Where a variable exists. let and const are local to the block or function where they're declared.
+    chapter: js05
+  - term: setInterval
+    def: Calls a function repeatedly every n milliseconds, until clearInterval.
+    chapter: js13
+  - term: setTimeout
+    def: Calls a function once, after at least n milliseconds.
+    chapter: js13
+  - term: Side effect
+    def: Something a function does besides returning a value — printing, changing outside variables or the page.
+    chapter: js05
+  - term: slice
+    def: Returns a copy of part of a string or array, from a start index up to (not including) an end index.
+    chapter: js07
+  - term: sort
+    def: "Sorts an array in place. For numbers pass a compare function: `(a, b) => a - b`."
+    chapter: js06
+  - term: split
+    def: "Turns a string into an array: `'a,b'.split(',')`. join goes back."
+    chapter: js07
+  - term: Spread
+    def: "`...` expands an array or object: `[...a, ...b]`, `{ ...obj, x: 1 }`."
+    chapter: js06
+  - term: State
+    def: The data an app keeps in variables, from which the page is rendered.
+    chapter: js14
+  - term: static
+    def: A method or property that belongs to the class itself rather than to its instances.
+    chapter: js09
+  - term: String
+    def: Text, written in quotes or backticks.
+    chapter: js01
+  - term: super
+    def: Calls the parent class's constructor (super()) or methods (super.method()).
+    chapter: js09
+  - term: switch
+    def: Compares one value against several cases with ===; break ends each case.
+    chapter: js03
+  - term: Syntax error
+    def: Code that isn't valid JavaScript, so none of it runs.
+    chapter: js01
+  - term: Template literal
+    def: "A string in backticks where ${…} inserts values: `` `Hi ${name}` ``."
+    chapter: js02
+  - term: Ternary operator
+    def: "`condition ? a : b` — chooses between two values."
+    chapter: js03
+  - term: textContent
+    def: An element's text. Setting it is always safe — it's never parsed as HTML.
+    chapter: js11
+  - term: this
+    def: Inside a method, the object the method was called on.
+    chapter: js08
+  - term: throw
+    def: Raises an error, stopping the current function until something catches it.
+    chapter: js10
+  - term: Truthy
+    def: Any value that counts as true in a condition — everything except the falsy values.
+    chapter: js03
+  - term: try
+    def: A block of code whose errors are caught by the following catch.
+    chapter: js10
+  - term: typeof
+    def: "Gives a value's type as a string: `typeof 42` is 'number'."
+    chapter: js02
+  - term: undefined
+    def: The value of something that was never given a value.
+    chapter: js02
+  - term: Variable
+    def: A name for a value, declared with const or let.
+    chapter: js02
+  - term: while loop
+    def: Repeats a block as long as its condition is true.
+    chapter: js04
+  - term: XSS
+    def: Cross-site scripting — an attack where user input is run as code, e.g. through innerHTML. Use textContent.
+    chapter: js11
+  - term: "==="
+    def: Strict equality — same value and same type. Always use it instead of ==.
+    chapter: js03

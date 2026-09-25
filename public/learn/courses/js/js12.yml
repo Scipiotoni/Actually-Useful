@@ -1,0 +1,824 @@
+id: js12
+number: 12
+part: js-p3
+title: Events
+blurb: Make pages respond — clicks, typing, forms and keys — with event listeners, the event object and event delegation.
+hours: 3
+goals:
+  - React to clicks, input, changes and keys with `addEventListener`
+  - Use the event object — `target`, `key`, `preventDefault()`
+  - Handle forms without reloading the page
+  - Handle many elements with one listener using event delegation
+
+items:
+  - type: lesson
+    id: js12-listen
+    title: Listening for events
+    minutes: 25
+    objectives:
+      - Run code when something happens with `addEventListener`
+      - Name the most common events
+      - Use the event object
+    body: |
+      Everything the user does — clicking, typing, scrolling — fires an
+      **event**. You tell an element what to do when an event happens with
+      `addEventListener(type, function)`:
+
+      ```html
+      <button id="like">👍 Like</button>
+      <p>Likes: <span id="likes">0</span></p>
+      ```
+      ```js
+      let likes = 0;
+      const button = document.querySelector('#like');
+      const counter = document.querySelector('#likes');
+
+      button.addEventListener('click', () => {
+        likes++;
+        counter.textContent = likes;
+      });
+      ```
+
+      Click the button in the preview. The function — the **event
+      handler** — runs on **every** click, not when the script loads.
+
+      ## Common events
+
+      | Event | Fires when |
+      |---|---|
+      | `click` | the element is clicked (or activated with Enter/Space on a button) |
+      | `input` | the value of a field changes, on every keystroke |
+      | `change` | a field's value is committed (a checkbox ticked, a select changed) |
+      | `submit` | a form is submitted |
+      | `keydown` / `keyup` | a key is pressed / released |
+      | `focus` / `blur` | an element gains / loses focus |
+      | `mouseenter` / `mouseleave` | the pointer moves over / off |
+
+      ## The event object
+
+      The handler receives an **event object** with details:
+
+      ```html
+      <button class="size" data-size="S">S</button>
+      <button class="size" data-size="M">M</button>
+      <button class="size" data-size="L">L</button>
+      <p id="choice">Pick a size</p>
+      ```
+      ```js
+      for (const btn of document.querySelectorAll('.size')) {
+        btn.addEventListener('click', (event) => {
+          const size = event.target.dataset.size;
+          document.querySelector('#choice').textContent = `Size ${size}`;
+          console.log(event.type, size);
+        });
+      }
+      ```
+
+      `event.target` is the element the event happened on.
+
+      > [!tip]
+      > You may see `onclick="…"` attributes in old HTML. Keep JavaScript
+      > out of the HTML: use `addEventListener` in your script.
+
+      {{check when}}
+
+      {{task counter}}
+    checks:
+      - id: when
+        type: mcq
+        prompt: "`btn.addEventListener('click', go);` — when does `go` run?"
+        options:
+          - Immediately, once
+          - Every time the button is clicked
+          - Only the first time it's clicked
+          - When the page closes
+        answer: 1
+        why: "The handler runs on every click."
+    tasks:
+      - id: counter
+        title: A counter
+        prompt: |
+          Make the three buttons work:
+
+          - `#plus` adds 1 to the count, `#minus` subtracts 1, `#reset` sets it to 0
+          - `#count` always shows the current count
+          - the count never goes **below 0**
+        given:
+          index.html: |
+            <p>People inside: <strong id="count">0</strong></p>
+            <button id="minus">−</button>
+            <button id="plus">+</button>
+            <button id="reset">Reset</button>
+        files:
+          script.js: |
+            let count = 0;
+        solution:
+          script.js: |
+            let count = 0;
+            const display = document.querySelector('#count');
+
+            function show() {
+              display.textContent = count;
+            }
+
+            document.querySelector('#plus').addEventListener('click', () => {
+              count++;
+              show();
+            });
+
+            document.querySelector('#minus').addEventListener('click', () => {
+              if (count > 0) {
+                count--;
+              }
+              show();
+            });
+
+            document.querySelector('#reset').addEventListener('click', () => {
+              count = 0;
+              show();
+            });
+        harness: |
+          click('#plus');
+          click('#plus');
+          click('#plus');
+          check(text('#count'), '3');
+          click('#minus');
+          check(text('#count'), '2');
+          click('#reset');
+          check(text('#count'), '0');
+          click('#minus');
+          check(text('#count'), '0');
+          click('#plus');
+          check(text('#count'), '1');
+        hints:
+          - "One `addEventListener('click', …)` per button."
+          - "A small `show()` function that writes `count` into `#count` avoids repeating yourself."
+    cards:
+      - front: How do you run code when a button is clicked?
+        back: "`button.addEventListener('click', () => { … });`"
+      - front: "`input` vs `change` events?"
+        back: input fires on every keystroke; change when the value is committed (e.g. leaving the field, ticking a box).
+      - front: "What is `event.target`?"
+        back: The element the event happened on.
+
+  - type: lesson
+    id: js12-forms
+    title: Forms and input
+    minutes: 25
+    objectives:
+      - React to typing with the `input` event
+      - Handle a form's `submit` without reloading the page
+      - Read, validate and clear form fields
+    body: |
+      ## Live input
+
+      ```html
+      <label for="bio">Bio</label>
+      <textarea id="bio" rows="3"></textarea>
+      <p><span id="left">100</span> characters left</p>
+      ```
+      ```js
+      const bio = document.querySelector('#bio');
+      const left = document.querySelector('#left');
+
+      bio.addEventListener('input', () => {
+        left.textContent = 100 - bio.value.length;
+      });
+      ```
+
+      ## Submitting a form
+
+      Submitting a form normally **reloads the page** (sending the data to
+      a server). To handle it in JavaScript, listen for `submit` **on the
+      form** and call `event.preventDefault()`:
+
+      ```html
+      <form id="add">
+        <label for="item">Item</label>
+        <input id="item" name="item">
+        <button>Add</button>
+      </form>
+      <p id="message"></p>
+      <ul id="items"></ul>
+      ```
+      ```js
+      const form = document.querySelector('#add');
+      const input = document.querySelector('#item');
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();                  // stay on this page
+        const value = input.value.trim();
+        const message = document.querySelector('#message');
+        if (value === '') {
+          message.textContent = 'Please type something.';
+          return;
+        }
+        message.textContent = '';
+        const li = document.createElement('li');
+        li.textContent = value;
+        document.querySelector('#items').append(li);
+        input.value = '';                        // clear the field
+        input.focus();                           // ready for the next one
+      });
+      ```
+
+      - Listen to the form's `submit`, not the button's `click` — then pressing **Enter** in a field works too.
+      - `preventDefault()` stops the browser's default action (here, sending and reloading).
+      - Always `trim()` and check what people typed.
+      - `new FormData(form)` reads all named fields at once: `Object.fromEntries(new FormData(form))` gives an object like `{ item: 'Milk' }`.
+
+      {{check prevent}}
+
+      {{task guests}}
+    checks:
+      - id: prevent
+        type: mcq
+        prompt: What does `event.preventDefault()` do in a submit handler?
+        options:
+          - Deletes the form
+          - Stops the browser sending the form and reloading the page
+          - Clears the fields
+          - Prevents other listeners from running
+        answer: 1
+        why: "It cancels the default action."
+    tasks:
+      - id: guests
+        title: A guest list
+        prompt: |
+          Handle the form's **submit**:
+
+          - don't let the page reload
+          - if the name (trimmed) is empty, show `Please enter a name` in `#error` and add nothing
+          - otherwise clear `#error`, add an `<li>` with the trimmed name to `#guests`, clear the input, and update `#total` to the number of guests
+        given:
+          index.html: |
+            <form id="rsvp">
+              <label for="name">Name</label>
+              <input id="name" name="name">
+              <button>Add guest</button>
+            </form>
+            <p id="error"></p>
+            <ul id="guests"></ul>
+            <p>Guests: <span id="total">0</span></p>
+        files:
+          script.js: |
+            // Handle the form
+        solution:
+          script.js: |
+            const form = document.querySelector('#rsvp');
+            const nameInput = document.querySelector('#name');
+            const error = document.querySelector('#error');
+            const guests = document.querySelector('#guests');
+
+            form.addEventListener('submit', (event) => {
+              event.preventDefault();
+              const name = nameInput.value.trim();
+              if (name === '') {
+                error.textContent = 'Please enter a name';
+                return;
+              }
+              error.textContent = '';
+              const li = document.createElement('li');
+              li.textContent = name;
+              guests.append(li);
+              nameInput.value = '';
+              document.querySelector('#total').textContent = guests.children.length;
+            });
+        harness: |
+          typeInto('#name', '   ');
+          submit('#rsvp');
+          check(text('#error'), 'Please enter a name');
+          check(count('#guests li'), 0);
+          typeInto('#name', '  Ana ');
+          submit('#rsvp');
+          check(text('#error'), '');
+          check($$('#guests li').map((li) => li.textContent), ['Ana']);
+          check($('#name').value, '');
+          typeInto('#name', 'Ben');
+          submit('#rsvp');
+          check($$('#guests li').map((li) => li.textContent), ['Ana', 'Ben']);
+          check(text('#total'), '2');
+          check(printed().includes('[form] would send'), false);
+        hints:
+          - "`form.addEventListener('submit', (event) => { event.preventDefault(); … });`"
+          - "`const name = input.value.trim();` — then an early `return` for the empty case."
+    cards:
+      - front: How do you handle a form in JavaScript without a page reload?
+        back: "Listen for `submit` on the form and call `event.preventDefault()`."
+      - front: Why listen to the form's submit rather than the button's click?
+        back: Submit also fires when the user presses Enter in a field.
+      - front: How do you read all named form fields as an object?
+        back: "`Object.fromEntries(new FormData(form))`"
+
+  - type: quiz
+    id: js12-quiz1
+    title: "Quiz: listeners and forms"
+    questions:
+      - type: fill
+        prompt: Run `update` whenever the user types in `field`.
+        code: |
+          field.addEventListener('___', update);
+        blanks:
+          - [input]
+        why: "The input event fires on every change."
+      - type: spot
+        prompt: Which line makes the page reload on submit?
+        code: |
+          form.addEventListener('submit', (event) => {
+            const value = input.value;
+            list.append(value);
+          });
+        answer: 1
+        why: "The handler never calls `event.preventDefault()`."
+      - type: mcq
+        prompt: "`addEventListener('click', show())` — what's wrong?"
+        options:
+          - Nothing
+          - "`show()` runs immediately, and its result (not the function) is passed"
+          - click should be onClick
+          - It needs a third argument
+        answer: 1
+        why: "Pass the function itself: `addEventListener('click', show)`."
+
+  - type: lesson
+    id: js12-delegation
+    title: Keys and event delegation
+    minutes: 25
+    objectives:
+      - React to specific keys
+      - Explain how events bubble up
+      - Handle many elements — even future ones — with one listener
+    body: |
+      ## Keys
+
+      `keydown` events carry the key in `event.key`: `'Enter'`, `'Escape'`,
+      `'ArrowUp'`, `'a'`…
+
+      ```js static
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeMenu();
+        }
+      });
+      ```
+
+      ## Bubbling
+
+      An event doesn't stop at its target: it **bubbles up** through every
+      ancestor — the `li`, the `ul`, the `body`, the `document`. A listener
+      on a parent hears events from all its children.
+
+      ## Event delegation
+
+      So instead of one listener per item, put **one** listener on the
+      parent, and find out which item was clicked with
+      `event.target.closest(selector)`:
+
+      ```html
+      <ul id="list">
+        <li>Milk <button class="remove">✕</button></li>
+        <li>Eggs <button class="remove">✕</button></li>
+      </ul>
+      <button id="add">Add bread</button>
+      ```
+      ```js
+      const list = document.querySelector('#list');
+
+      list.addEventListener('click', (event) => {
+        const button = event.target.closest('.remove');
+        if (!button) {
+          return;                      // the click wasn't on a remove button
+        }
+        button.closest('li').remove();
+      });
+
+      document.querySelector('#add').addEventListener('click', () => {
+        const li = document.createElement('li');
+        li.innerHTML = 'Bread <button class="remove">✕</button>';
+        list.append(li);
+      });
+      ```
+
+      Add bread, then remove it: its button works, though it didn't exist
+      when the listener was added. That's the big win of delegation —
+      **one listener handles current and future items**.
+
+      - `el.closest(selector)` walks up from `el` to find the nearest ancestor (or itself) that matches — or `null`.
+      - `event.currentTarget` is the element the listener is on (here, the list); `event.target` is where the click actually happened.
+
+      (Here `innerHTML` is safe: the text is fixed in the code, not typed by
+      a user.)
+
+      {{check bubble}}
+
+      {{task todo}}
+    checks:
+      - id: bubble
+        type: mcq
+        prompt: Why does a click listener on a `<ul>` hear clicks on its `<li>`s?
+        options:
+          - It doesn't
+          - Events bubble up from the target through its ancestors
+          - Because of querySelectorAll
+          - Lists are special
+        answer: 1
+        why: "Bubbling — the basis of delegation."
+    tasks:
+      - id: todo
+        title: A to-do list with delegation
+        prompt: |
+          - Pressing **Enter** in `#new` (listen for `keydown` and check `event.key`) adds a new `<li>` to `#todos` containing the trimmed text in a `<span>` and a `<button class="delete">✕</button>`, then clears the input. Ignore empty text.
+          - Use **one** click listener on `#todos` (delegation): clicking a `.delete` button removes its `li`; clicking the `span` of an item toggles the class `done` on its `li`.
+        given:
+          index.html: |
+            <input id="new" placeholder="New task, then Enter">
+            <ul id="todos">
+              <li><span>Water plants</span> <button class="delete">✕</button></li>
+            </ul>
+          style.css: |
+            .done span { text-decoration: line-through; }
+        files:
+          script.js: |
+            // Enter to add; one listener on #todos for delete and done
+        solution:
+          script.js: |
+            const input = document.querySelector('#new');
+            const todos = document.querySelector('#todos');
+
+            input.addEventListener('keydown', (event) => {
+              if (event.key !== 'Enter') {
+                return;
+              }
+              const text = input.value.trim();
+              if (text === '') {
+                return;
+              }
+              const li = document.createElement('li');
+              const span = document.createElement('span');
+              span.textContent = text;
+              const button = document.createElement('button');
+              button.className = 'delete';
+              button.textContent = '✕';
+              li.append(span, ' ', button);
+              todos.append(li);
+              input.value = '';
+            });
+
+            todos.addEventListener('click', (event) => {
+              const li = event.target.closest('li');
+              if (!li) {
+                return;
+              }
+              if (event.target.closest('.delete')) {
+                li.remove();
+              } else if (event.target.closest('span')) {
+                li.classList.toggle('done');
+              }
+            });
+        harness: |
+          typeInto('#new', '  Buy milk ');
+          press('#new', 'a');
+          check(count('#todos li'), 1);
+          press('#new', 'Enter');
+          check($$('#todos li span').map((s) => s.textContent), ['Water plants', 'Buy milk']);
+          check($('#new').value, '');
+          typeInto('#new', '   ');
+          press('#new', 'Enter');
+          check(count('#todos li'), 2);
+          click('#todos li:nth-child(2) span');
+          check($$('#todos li').map((li) => li.classList.contains('done')), [false, true]);
+          click('#todos li:nth-child(2) span');
+          check($('#todos li:nth-child(2)').classList.contains('done'), false);
+          click('#todos li:nth-child(2) .delete');
+          check($$('#todos li span').map((s) => s.textContent), ['Water plants']);
+          click('#todos li:nth-child(1) .delete');
+          check(count('#todos li'), 0);
+        hints:
+          - "`input.addEventListener('keydown', (event) => { if (event.key !== 'Enter') return; … });`"
+          - "In the list's click handler: `const li = event.target.closest('li');` then check `event.target.closest('.delete')` or `event.target.closest('span')`."
+    cards:
+      - front: How do you react to the Enter key?
+        back: "Listen for `keydown` and check `event.key === 'Enter'`."
+      - front: What is event bubbling?
+        back: An event travels up from its target through every ancestor, so parents can listen for their children's events.
+      - front: What is event delegation?
+        back: One listener on a parent handling events for many (even future) children, using `event.target.closest(…)`.
+      - front: "`event.target` vs `event.currentTarget`?"
+        back: target is where the event happened; currentTarget is the element whose listener is running.
+
+  - type: quiz
+    id: js12-quiz2
+    title: "Quiz: keys and delegation"
+    questions:
+      - type: fill
+        prompt: Close the dialog when Escape is pressed.
+        code: |
+          document.addEventListener('keydown', (e) => {
+            if (e.___ === 'Escape') {
+              dialog.close();
+            }
+          });
+        blanks:
+          - [key]
+        why: "`event.key`."
+      - type: mcq
+        prompt: "A list gets new items added later. Why is delegation better than a listener on each item?"
+        options:
+          - It's faster to type
+          - One listener on the parent also handles items added later
+          - Items can't have listeners
+          - It stops bubbling
+        answer: 1
+        why: "New items are covered automatically."
+      - type: tf
+        prompt: "`event.target.closest('li')` can return the target itself if it's an li."
+        answer: true
+        why: "closest starts with the element itself."
+
+  - type: challenge
+    id: js12-ch-tabs
+    title: Tabs
+    difficulty: 3
+    tags: [events, dom, accessibility]
+    prompt: |
+      Make the tabs work. Each tab button has `data-tab` naming the id of
+      its panel. Clicking a tab:
+
+      - shows its panel and hides the others (the `hidden` property)
+      - sets `aria-selected="true"` on the clicked tab and `"false"` on the others
+      - gives the clicked tab the class `active`, removing it from the others
+
+      Use **one** listener on `.tabs` (delegation).
+    given:
+      index.html: |
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="info" aria-selected="true" class="active">Info</button>
+          <button role="tab" data-tab="reviews" aria-selected="false">Reviews</button>
+          <button role="tab" data-tab="shipping" aria-selected="false">Shipping</button>
+        </div>
+        <section id="info" role="tabpanel">Solid oak, hand finished.</section>
+        <section id="reviews" role="tabpanel" hidden>★★★★★ "Lovely chair."</section>
+        <section id="shipping" role="tabpanel" hidden>Free delivery in 3 days.</section>
+      style.css: |
+        .active { font-weight: bold; border-bottom: 3px solid teal; }
+    files:
+      script.js: |
+        // One listener on .tabs
+    solution:
+      script.js: |
+        const tabs = document.querySelector('.tabs');
+
+        tabs.addEventListener('click', (event) => {
+          const clicked = event.target.closest('[data-tab]');
+          if (!clicked) {
+            return;
+          }
+          for (const tab of tabs.querySelectorAll('[data-tab]')) {
+            const selected = tab === clicked;
+            tab.classList.toggle('active', selected);
+            tab.setAttribute('aria-selected', String(selected));
+            document.getElementById(tab.dataset.tab).hidden = !selected;
+          }
+        });
+    harness: |
+      const state = () => $$('[role=tabpanel]').map((p) => p.hidden);
+      click('[data-tab=reviews]');
+      check(state(), [true, false, true]);
+      check($$('[role=tab]').map((t) => t.getAttribute('aria-selected')), ['false', 'true', 'false']);
+      check($$('[role=tab]').map((t) => t.classList.contains('active')), [false, true, false]);
+      click('[data-tab=shipping]');
+      check(state(), [true, true, false]);
+      click('[data-tab=info]');
+      check(state(), [false, true, true]);
+      check($$('[role=tab]').map((t) => t.getAttribute('aria-selected')), ['true', 'false', 'false']);
+    hints:
+      - "`event.target.closest('[data-tab]')` finds the clicked tab."
+      - "Loop over all tabs: `const selected = tab === clicked;` then set class, aria-selected and the panel's hidden from that."
+      - "`classList.toggle('active', selected)` — a second argument forces add (true) or remove (false)."
+
+  - type: challenge
+    id: js12-ch-limit
+    title: A tweet box
+    difficulty: 2
+    tags: [events, forms]
+    prompt: |
+      As the user types in `#message` (the `input` event):
+
+      - `#remaining` shows how many of the **140** characters are left (it can go negative)
+      - when fewer than 0 are left, `#remaining` has the class `over`; otherwise it doesn't
+      - the `#send` button is **disabled** when the message is empty (after trimming) or over the limit
+    given:
+      index.html: |
+        <label for="message">What's happening?</label>
+        <textarea id="message" rows="3"></textarea>
+        <p><span id="remaining">140</span> left</p>
+        <button id="send" disabled>Post</button>
+      style.css: |
+        .over { color: crimson; font-weight: bold; }
+    files:
+      script.js: |
+        const LIMIT = 140;
+    solution:
+      script.js: |
+        const LIMIT = 140;
+        const message = document.querySelector('#message');
+        const remaining = document.querySelector('#remaining');
+        const send = document.querySelector('#send');
+
+        message.addEventListener('input', () => {
+          const left = LIMIT - message.value.length;
+          remaining.textContent = left;
+          remaining.classList.toggle('over', left < 0);
+          send.disabled = message.value.trim() === '' || left < 0;
+        });
+    harness: |
+      typeInto('#message', 'Hello!');
+      check(text('#remaining'), '134');
+      check($('#send').disabled, false);
+      check($('#remaining').classList.contains('over'), false);
+      typeInto('#message', 'x'.repeat(150));
+      check(text('#remaining'), '-10');
+      check($('#remaining').classList.contains('over'), true);
+      check($('#send').disabled, true);
+      typeInto('#message', '    ');
+      check(text('#remaining'), '136');
+      check($('#send').disabled, true);
+      check($('#remaining').classList.contains('over'), false);
+    hints:
+      - "`message.addEventListener('input', () => { … })` — compute `LIMIT - message.value.length`."
+      - "`remaining.classList.toggle('over', left < 0)` and `send.disabled = …`."
+
+  - type: review
+    id: js12-review
+    title: "Chapter 12 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      button.addEventListener('click', (event) => { … });
+      field.addEventListener('input', () => { … field.value … });
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form));
+      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') … });
+
+      // delegation
+      list.addEventListener('click', (event) => {
+        const item = event.target.closest('li');
+        if (!item) return;
+        …
+      });
+
+      el.classList.toggle('active', isActive);   // force on/off
+      button.disabled = true;   panel.hidden = false;
+      ```
+
+      ## Key ideas
+
+      - Handlers run when the event happens, every time.
+      - Pass the function, don't call it: `addEventListener('click', go)`.
+      - Handle forms on submit with preventDefault; trim and validate input.
+      - Events bubble; delegate to a parent with `closest`.
+    questions:
+      - type: mcq
+        prompt: Which event fires on every keystroke in a text field?
+        options:
+          - "`change`"
+          - "`input`"
+          - "`submit`"
+          - "`click`"
+        answer: 1
+        why: "input — change waits until the value is committed."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const log = [];
+          const handler = () => log.push('clicked');
+          handler();
+          handler();
+          console.log(log.length);
+        answer: |
+          2
+        why: "A handler is just a function; each call runs it."
+
+  - type: exam
+    id: js12-exam
+    title: "Chapter 12 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: Which registers a click handler correctly?
+        options:
+          - "`btn.addEventListener('click', go());`"
+          - "`btn.addEventListener('click', go);`"
+          - "`btn.onClick(go);`"
+          - "`btn.addEventListener(click, go);`"
+        answer: 1
+        why: "The event name as a string, and the function itself."
+      - type: mcq
+        prompt: "In a click handler, what's `event.target`?"
+        options:
+          - The document
+          - The element that was clicked
+          - The handler function
+          - The mouse position
+        answer: 1
+        why: "Where the event happened."
+      - type: tf
+        prompt: Pressing Enter in a form field triggers the form's submit event.
+        answer: true
+        why: "That's why you listen to submit, not the button's click."
+      - type: fill
+        prompt: Stop the form from reloading the page.
+        code: |
+          form.addEventListener('submit', (event) => {
+            event.___();
+          });
+        blanks:
+          - [preventDefault]
+        why: "`preventDefault()`."
+      - type: mcq
+        prompt: What does event bubbling mean?
+        options:
+          - Events are delayed
+          - Events travel up from the target through its ancestors
+          - Events repeat
+          - Events are cancelled
+        answer: 1
+        why: "Up the tree."
+      - type: mcq
+        prompt: "Which finds the list item that contains the clicked element?"
+        options:
+          - "`event.target.parent('li')`"
+          - "`event.target.closest('li')`"
+          - "`event.target.querySelector('li')`"
+          - "`event.li`"
+        answer: 1
+        why: "closest walks up."
+      - type: mcq
+        prompt: Which key value does pressing the Escape key give?
+        options:
+          - "`'Esc'`"
+          - "`'Escape'`"
+          - "`27`"
+          - "`'escape'`"
+        answer: 1
+        why: "event.key is 'Escape'."
+      - type: tf
+        prompt: With delegation, items added to the list later also work without new listeners.
+        answer: true
+        why: "The parent's listener hears their events."
+      - type: mcq
+        prompt: "What does `el.classList.toggle('on', false)` do?"
+        options:
+          - Adds the class
+          - Removes the class (if present)
+          - Flips it
+          - Nothing ever
+        answer: 1
+        why: "The second argument forces the result."
+      - type: mcq
+        prompt: Which is best for a live character count?
+        options:
+          - "`submit` on the form"
+          - "`input` on the textarea"
+          - "`click` on the textarea"
+          - "`load` on the page"
+        answer: 1
+        why: "Updates on every change."
+      - type: code
+        prompt: |
+          Make the colour picker work: clicking one of the `.swatch`
+          buttons (use **one** listener on `#swatches`) sets the background
+          colour of `#preview` to the button's `data-color`, and writes the
+          colour name into `#name`.
+        given:
+          index.html: |
+            <div id="swatches">
+              <button class="swatch" data-color="tomato">Tomato</button>
+              <button class="swatch" data-color="gold">Gold</button>
+              <button class="swatch" data-color="teal">Teal</button>
+            </div>
+            <div id="preview" style="width: 100px; height: 60px"></div>
+            <p id="name">none</p>
+        files:
+          script.js: |
+        solution:
+          script.js: |
+            document.querySelector('#swatches').addEventListener('click', (event) => {
+              const swatch = event.target.closest('.swatch');
+              if (!swatch) {
+                return;
+              }
+              document.querySelector('#preview').style.backgroundColor = swatch.dataset.color;
+              document.querySelector('#name').textContent = swatch.dataset.color;
+            });
+        harness: |
+          click('[data-color=gold]');
+          check(style('#preview', 'background-color'), color('gold'));
+          check(text('#name'), 'gold');
+          click('[data-color=teal]');
+          check(style('#preview', 'background-color'), color('teal'));
+          check(text('#name'), 'teal');
