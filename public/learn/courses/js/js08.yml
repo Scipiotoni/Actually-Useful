@@ -1,0 +1,882 @@
+id: js08
+number: 8
+part: js-p2
+title: Objects
+blurb: Group related data under names — objects, methods, destructuring, lists of records, and JSON.
+hours: 3.5
+goals:
+  - Create objects and read, add, change and delete properties
+  - Give objects methods and use `this`
+  - Loop over an object's keys, values and entries
+  - Work with arrays of objects — filter, sort, find, group
+  - Use destructuring, spread, and JSON
+
+items:
+  - type: lesson
+    id: js8-objects
+    title: Objects and properties
+    minutes: 25
+    objectives:
+      - Create an object literal
+      - Read properties with dot and bracket notation
+      - Add, change and delete properties
+      - Handle missing properties safely with `?.`
+    body: |
+      An array is a list in order. An **object** groups values under
+      **names** — like a form with labelled fields:
+
+      ```js
+      const book = {
+        title: 'Dune',
+        author: 'Frank Herbert',
+        year: 1965,
+        tags: ['sci-fi', 'classic'],
+      };
+
+      console.log(book.title);
+      console.log(book['year']);
+      console.log(book.tags[0]);
+      console.log(book);
+      ```
+      ```output
+      Dune
+      1965
+      sci-fi
+      {title: 'Dune', author: 'Frank Herbert', year: 1965, tags: ['sci-fi', 'classic']}
+      ```
+
+      Each `name: value` pair is a **property**. The names are called
+      **keys**. Values can be anything — even arrays and other objects.
+
+      ## Dot or brackets
+
+      - `book.title` — when you know the key while writing the code.
+      - `book[key]` — when the key is in a variable or has odd characters: `const field = 'year'; book[field]`.
+
+      ## Changing objects
+
+      ```js
+      const user = { name: 'Kim', age: 29 };
+      user.age = 30;               // change
+      user.email = 'kim@mail.com'; // add
+      delete user.name;            // remove
+      console.log(user);
+      console.log(user.phone);
+      console.log('email' in user);
+      ```
+      ```output
+      {age: 30, email: 'kim@mail.com'}
+      undefined
+      true
+      ```
+
+      A missing property is `undefined` — but reading a property **of**
+      `undefined` is an error. Optional chaining `?.` stops safely:
+
+      ```js
+      const order = { id: 7, customer: { name: 'Lee' } };
+      console.log(order.customer?.name);
+      console.log(order.shipping?.city);
+      console.log(order.shipping?.city ?? 'no address');
+      ```
+      ```output
+      Lee
+      undefined
+      no address
+      ```
+
+      ## Shorthand
+
+      When a variable has the same name as the key, write it once:
+
+      ```js
+      const name = 'Ada';
+      const age = 36;
+      const person = { name, age };   // same as { name: name, age: age }
+      console.log(person);
+      ```
+      ```output
+      {name: 'Ada', age: 36}
+      ```
+
+      {{check access}}
+
+      {{task user}}
+    checks:
+      - id: access
+        type: output
+        prompt: What does this print?
+        code: |
+          const car = { make: 'Fiat', seats: 4 };
+          const key = 'seats';
+          car.color = 'red';
+          console.log(car[key]);
+          console.log(car.key);
+          console.log(car.color);
+        answer: |
+          4
+          undefined
+          red
+        why: "car.key looks for a property literally named 'key'."
+    tasks:
+      - id: user
+        title: Users
+        prompt: |
+          - `makeUser(name, age)` — returns an object `{ name, age, adult }`, where `adult` is `true` for age 18 or over
+          - `describe(user)` — returns `'Ana (34)'`
+          - `city(user)` — the user's `address.city`, or `'unknown'` if there's no address (use `?.` and `??`)
+        starter: |
+          function makeUser(name, age) {
+          }
+
+          function describe(user) {
+          }
+
+          function city(user) {
+          }
+        solution: |
+          function makeUser(name, age) {
+            return { name, age, adult: age >= 18 };
+          }
+
+          function describe(user) {
+            return `${user.name} (${user.age})`;
+          }
+
+          function city(user) {
+            return user.address?.city ?? 'unknown';
+          }
+        harness: |
+          check(makeUser('Ana', 34), { name: 'Ana', age: 34, adult: true });
+          check(makeUser('Leo', 12), { name: 'Leo', age: 12, adult: false });
+          check(describe({ name: 'Ana', age: 34 }), 'Ana (34)');
+          check(city({ name: 'Mo', address: { city: 'Lyon' } }), 'Lyon');
+          check(city({ name: 'Mo' }), 'unknown');
+        hints:
+          - "`return { name, age, adult: age >= 18 };`"
+          - "`user.address?.city ?? 'unknown'`"
+    cards:
+      - front: Dot vs bracket notation?
+        back: "`obj.key` when you know the key; `obj[variable]` when the key is in a variable."
+      - front: What do you get for a missing property?
+        back: "`undefined`."
+      - front: "What does `a?.b` do?"
+        back: Gives undefined instead of an error when a is null or undefined.
+      - front: "What is `{ name, age }` short for?"
+        back: "`{ name: name, age: age }`"
+
+  - type: lesson
+    id: js8-methods
+    title: Methods, this, and looping over objects
+    minutes: 25
+    objectives:
+      - Add methods to objects and use `this`
+      - List an object's keys, values and entries
+      - Loop over an object
+    body: |
+      ## Methods
+
+      A function stored in an object is a **method**. Inside it, `this` is
+      the object the method was called on:
+
+      ```js
+      const counter = {
+        count: 0,
+        increment() {
+          this.count++;
+          return this.count;
+        },
+        reset() {
+          this.count = 0;
+        },
+      };
+
+      counter.increment();
+      counter.increment();
+      console.log(counter.count);
+      counter.reset();
+      console.log(counter.count);
+      ```
+      ```output
+      2
+      0
+      ```
+
+      You've been using methods all along: `console.log`, `list.push`,
+      `text.toUpperCase`.
+
+      > [!warning]
+      > Arrow functions don't have their own `this` — so don't use them for
+      > methods that need `this`. Use the `name() { … }` shorthand.
+
+      ## Keys, values and entries
+
+      ```js
+      const stock = { apples: 12, pears: 0, plums: 7 };
+      console.log(Object.keys(stock));
+      console.log(Object.values(stock));
+      console.log(Object.entries(stock));
+
+      for (const [fruit, count] of Object.entries(stock)) {
+        if (count > 0) {
+          console.log(`${fruit}: ${count}`);
+        }
+      }
+      ```
+      ```output
+      ['apples', 'pears', 'plums']
+      [12, 0, 7]
+      [['apples', 12], ['pears', 0], ['plums', 7]]
+      apples: 12
+      plums: 7
+      ```
+
+      `Object.entries` gives `[key, value]` pairs; `const [fruit, count]`
+      unpacks each pair (that's **destructuring** — more in the next lesson).
+
+      ## Objects as lookup tables
+
+      Objects are perfect for "look something up by name", and for
+      **counting**:
+
+      ```js
+      const counts = {};
+      for (const word of ['a', 'b', 'a', 'c', 'a']) {
+        counts[word] = (counts[word] ?? 0) + 1;
+      }
+      console.log(counts);
+      ```
+      ```output
+      {a: 3, b: 1, c: 1}
+      ```
+
+      {{check this}}
+
+      {{task wallet}}
+    checks:
+      - id: this
+        type: output
+        prompt: What does this print?
+        code: |
+          const pet = {
+            name: 'Rex',
+            speak() {
+              return `${this.name} says woof`;
+            },
+          };
+          console.log(pet.speak());
+          console.log(Object.keys(pet).length);
+        answer: |
+          Rex says woof
+          2
+        why: "this is pet; the keys are name and speak."
+    tasks:
+      - id: wallet
+        title: A wallet and a tally
+        prompt: |
+          - Complete the `wallet` object's methods: `add(amount)` increases `balance`; `spend(amount)` decreases it **only if** there's enough money, and returns `true` if it spent, `false` if not
+          - `total(prices)` — `prices` is an object like `{ bread: 2, milk: 1.5 }`; return the sum of all values
+          - `tally(items)` — count how often each string appears in the array: `['a', 'b', 'a']` → `{ a: 2, b: 1 }`
+        starter: |
+          const wallet = {
+            balance: 0,
+            add(amount) {
+            },
+            spend(amount) {
+            },
+          };
+
+          function total(prices) {
+          }
+
+          function tally(items) {
+          }
+        solution: |
+          const wallet = {
+            balance: 0,
+            add(amount) {
+              this.balance += amount;
+            },
+            spend(amount) {
+              if (amount > this.balance) {
+                return false;
+              }
+              this.balance -= amount;
+              return true;
+            },
+          };
+
+          function total(prices) {
+            return Object.values(prices).reduce((sum, p) => sum + p, 0);
+          }
+
+          function tally(items) {
+            const counts = {};
+            for (const item of items) {
+              counts[item] = (counts[item] ?? 0) + 1;
+            }
+            return counts;
+          }
+        harness: |
+          wallet.add(20);
+          check(wallet.balance, 20);
+          check(wallet.spend(5), true);
+          check(wallet.balance, 15);
+          check(wallet.spend(50), false);
+          check(wallet.balance, 15);
+          check(total({ bread: 2, milk: 1.5 }), 3.5);
+          check(total({}), 0);
+          check(tally(['a', 'b', 'a']), { a: 2, b: 1 });
+          check(tally([]), {});
+        hints:
+          - "Inside the methods, use `this.balance`."
+          - "`Object.values(prices)` gives the prices as an array — then `reduce`."
+          - "`counts[item] = (counts[item] ?? 0) + 1;`"
+    cards:
+      - front: "What is `this` inside a method?"
+        back: The object the method was called on.
+      - front: Why not use an arrow function for a method that uses `this`?
+        back: Arrow functions don't have their own `this`.
+      - front: "What does `Object.entries({a: 1})` return?"
+        back: "`[['a', 1]]` — an array of [key, value] pairs."
+      - front: How do you count occurrences with an object?
+        back: "`counts[x] = (counts[x] ?? 0) + 1;`"
+
+  - type: quiz
+    id: js8-quiz1
+    title: "Quiz: objects and methods"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const p = { x: 1, y: 2 };
+          p.z = p.x + p.y;
+          delete p.x;
+          console.log(p);
+        answer: |
+          {y: 2, z: 3}
+        why: "z is added, x removed."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const scores = { ana: 7, ben: 9 };
+          for (const name of Object.keys(scores)) {
+            console.log(name, scores[name]);
+          }
+        answer: |
+          ana 7
+          ben 9
+        why: "Brackets with a variable key."
+      - type: mcq
+        prompt: "`const a = { n: 1 }; const b = a; b.n = 2;` — what is `a.n`?"
+        options:
+          - "1"
+          - "2"
+          - "undefined"
+          - An error
+        answer: 1
+        why: "Like arrays, objects are shared, not copied, by assignment."
+      - type: fill
+        prompt: Get the values of the object as an array.
+        code: |
+          const prices = Object.___(menu);
+        blanks:
+          - [values]
+        why: "`Object.values`."
+
+  - type: lesson
+    id: js8-records
+    title: Lists of records, destructuring and JSON
+    minutes: 30
+    objectives:
+      - Filter, sort and search arrays of objects
+      - Unpack values with destructuring
+      - Copy and merge objects with spread
+      - Convert to and from JSON
+    body: |
+      Real data is usually an **array of objects** — rows of a table:
+
+      ```js
+      const products = [
+        { name: 'Lamp', price: 30, stock: 4 },
+        { name: 'Chair', price: 85, stock: 0 },
+        { name: 'Rug', price: 60, stock: 2 },
+      ];
+
+      const available = products.filter((p) => p.stock > 0);
+      console.log(available.map((p) => p.name));
+
+      const byPrice = [...products].sort((a, b) => a.price - b.price);
+      console.log(byPrice.map((p) => `${p.name} ${p.price}`));
+
+      console.log(products.find((p) => p.name === 'Rug').price);
+      ```
+      ```output
+      ['Lamp', 'Rug']
+      ['Lamp 30', 'Rug 60', 'Chair 85']
+      60
+      ```
+
+      ## Destructuring
+
+      Unpack properties (or array items) into variables in one go:
+
+      ```js
+      const user = { name: 'Ada', age: 36, city: 'London' };
+      const { name, city } = user;
+      console.log(name, city);
+
+      const [first, second] = ['gold', 'silver', 'bronze'];
+      console.log(first, second);
+
+      function greet({ name, age }) {
+        return `${name} is ${age}`;
+      }
+      console.log(greet(user));
+      ```
+      ```output
+      Ada London
+      gold silver
+      Ada is 36
+      ```
+
+      ## Spread for objects
+
+      ```js
+      const defaults = { theme: 'light', size: 14 };
+      const saved = { size: 18 };
+      const settings = { ...defaults, ...saved };
+      console.log(settings);
+
+      const user = { name: 'Kim', age: 29 };
+      const older = { ...user, age: user.age + 1 };
+      console.log(user.age, older.age);
+      ```
+      ```output
+      {theme: 'light', size: 18}
+      29 30
+      ```
+
+      Later properties win, so this merges settings over defaults — and
+      makes an **updated copy** without changing the original.
+
+      ## JSON
+
+      **JSON** (JavaScript Object Notation) is how data travels between
+      programs — to servers, into files, into storage. It's text that looks
+      like JavaScript objects:
+
+      ```js
+      const data = { id: 1, tags: ['new'], done: false };
+      const text = JSON.stringify(data);
+      console.log(text);
+      console.log(typeof text);
+      const back = JSON.parse(text);
+      console.log(back.tags[0]);
+      ```
+      ```output
+      {"id":1,"tags":["new"],"done":false}
+      string
+      new
+      ```
+
+      In JSON, keys and strings always use **double quotes**, and there are
+      no functions or `undefined`.
+
+      {{check destructure}}
+
+      {{task shop}}
+    checks:
+      - id: destructure
+        type: output
+        prompt: What does this print?
+        code: |
+          const point = { x: 3, y: 4 };
+          const { x, y } = point;
+          const moved = { ...point, x: 10 };
+          console.log(x + y, moved.x, point.x);
+        answer: |
+          7 10 3
+        why: "Destructuring copies values; spread makes a new object."
+    tasks:
+      - id: shop
+        title: A small shop
+        prompt: |
+          Each product looks like `{ name, price, qty, category }`.
+
+          - `inStock(products)` — the **names** of products with `qty` above 0
+          - `stockValue(products)` — the total of price × qty over all products
+          - `cheapest(products)` — the **name** of the cheapest product (assume at least one)
+          - `restock(product, amount)` — a **new** product object with `qty` increased (the original unchanged)
+        starter: |
+          function inStock(products) {
+          }
+
+          function stockValue(products) {
+          }
+
+          function cheapest(products) {
+          }
+
+          function restock(product, amount) {
+          }
+        solution: |
+          function inStock(products) {
+            return products.filter((p) => p.qty > 0).map((p) => p.name);
+          }
+
+          function stockValue(products) {
+            return products.reduce((sum, p) => sum + p.price * p.qty, 0);
+          }
+
+          function cheapest(products) {
+            return [...products].sort((a, b) => a.price - b.price)[0].name;
+          }
+
+          function restock(product, amount) {
+            return { ...product, qty: product.qty + amount };
+          }
+        harness: |
+          const items = [
+            { name: 'Pen', price: 1.5, qty: 10, category: 'office' },
+            { name: 'Mug', price: 8, qty: 0, category: 'kitchen' },
+            { name: 'Pad', price: 3, qty: 4, category: 'office' },
+          ];
+          check(inStock(items), ['Pen', 'Pad']);
+          check(stockValue(items), 27);
+          check(cheapest(items), 'Pen');
+          check(items.map((p) => p.name), ['Pen', 'Mug', 'Pad']);
+          const mug = items[1];
+          check(restock(mug, 5), { name: 'Mug', price: 8, qty: 5, category: 'kitchen' });
+          check(mug.qty, 0);
+        hints:
+          - "`filter` then `map` for the names in stock."
+          - "`reduce((sum, p) => sum + p.price * p.qty, 0)`"
+          - "Sort a copy by price and take `[0].name` — or loop keeping the cheapest so far. For `restock`, spread: `{ ...product, qty: … }`."
+    cards:
+      - front: How do you sort an array of objects by a number property?
+        back: "`[...list].sort((a, b) => a.price - b.price)`"
+      - front: What does `const { name } = user;` do?
+        back: Creates a variable name with the value of user.name (destructuring).
+      - front: How do you make an updated copy of an object?
+        back: "`{ ...obj, changedKey: newValue }`"
+      - front: "`JSON.stringify` vs `JSON.parse`?"
+        back: stringify turns a value into JSON text; parse turns JSON text back into a value.
+
+  - type: quiz
+    id: js8-quiz2
+    title: "Quiz: records and JSON"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const people = [{ n: 'A', age: 30 }, { n: 'B', age: 20 }];
+          console.log(people.map(({ n }) => n).join(''));
+          console.log(people.find((p) => p.age < 25).n);
+        answer: |
+          AB
+          B
+        why: "Destructuring in the parameter; find the first under 25."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log(JSON.stringify({ a: [1, 2], b: 'x' }));
+        answer: |
+          {"a":[1,2],"b":"x"}
+        why: "Double quotes, no spaces."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const base = { a: 1, b: 2 };
+          console.log({ ...base, b: 3, c: 4 });
+        answer: |
+          {a: 1, b: 3, c: 4}
+        why: "Later properties win."
+      - type: tf
+        prompt: JSON can contain functions.
+        answer: false
+        why: "Only data: objects, arrays, strings, numbers, booleans and null."
+
+  - type: challenge
+    id: js8-ch-group
+    title: Group by category
+    difficulty: 3
+    tags: [objects, arrays]
+    prompt: |
+      `groupBy(items, key)` groups an array of objects by the value of
+      `key`, returning an object whose keys are those values and whose
+      values are arrays of the matching items, in order:
+
+      ```js static
+      groupBy([{ n: 'a', t: 'x' }, { n: 'b', t: 'y' }, { n: 'c', t: 'x' }], 't')
+      // { x: [{ n: 'a', t: 'x' }, { n: 'c', t: 'x' }], y: [{ n: 'b', t: 'y' }] }
+      ```
+    starter: |
+      function groupBy(items, key) {
+      }
+    solution: |
+      function groupBy(items, key) {
+        const groups = {};
+        for (const item of items) {
+          const value = item[key];
+          if (!groups[value]) {
+            groups[value] = [];
+          }
+          groups[value].push(item);
+        }
+        return groups;
+      }
+    harness: |
+      const list = [{ n: 'a', t: 'x' }, { n: 'b', t: 'y' }, { n: 'c', t: 'x' }];
+      check(groupBy(list, 't'), { x: [{ n: 'a', t: 'x' }, { n: 'c', t: 'x' }], y: [{ n: 'b', t: 'y' }] });
+      check(groupBy(list, 'n'), { a: [list[0]], b: [list[1]], c: [list[2]] });
+      check(groupBy([], 't'), {});
+    hints:
+      - "`item[key]` reads the property named by the variable `key`."
+      - "If `groups[value]` doesn't exist yet, set it to `[]`; then push."
+
+  - type: challenge
+    id: js8-ch-gradebook
+    title: Gradebook
+    difficulty: 3
+    tags: [objects, destructuring]
+    prompt: |
+      Each student is `{ name, scores }` (an array of numbers).
+
+      - `averages(students)` — an object mapping each name to their average score, rounded to 1 decimal: `{ Ana: 85.5, Ben: 70 }`
+      - `best(students)` — the **name** of the student with the highest average (the first one if tied)
+
+      Students with no scores have an average of `0`.
+    starter: |
+      function averages(students) {
+      }
+
+      function best(students) {
+      }
+    solution: |
+      function average(scores) {
+        if (scores.length === 0) {
+          return 0;
+        }
+        const total = scores.reduce((sum, s) => sum + s, 0);
+        return Math.round(total / scores.length * 10) / 10;
+      }
+
+      function averages(students) {
+        const result = {};
+        for (const { name, scores } of students) {
+          result[name] = average(scores);
+        }
+        return result;
+      }
+
+      function best(students) {
+        let bestName = students[0].name;
+        let bestAverage = average(students[0].scores);
+        for (const { name, scores } of students) {
+          if (average(scores) > bestAverage) {
+            bestName = name;
+            bestAverage = average(scores);
+          }
+        }
+        return bestName;
+      }
+    harness: |
+      const cls = [
+        { name: 'Ana', scores: [80, 91] },
+        { name: 'Ben', scores: [70] },
+        { name: 'Cy', scores: [] },
+      ];
+      check(averages(cls), { Ana: 85.5, Ben: 70, Cy: 0 });
+      check(best(cls), 'Ana');
+      check(best([{ name: 'X', scores: [50] }, { name: 'Y', scores: [50] }]), 'X');
+      check(averages([]), {});
+    hints:
+      - "A helper `average(scores)` keeps both functions short."
+      - "`for (const { name, scores } of students)` destructures each student."
+
+  - type: review
+    id: js8-review
+    title: "Chapter 8 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      const u = { name: 'Ada', age: 36 };
+      u.name   u['age']   u[key]   u.email = 'x'   delete u.age
+      u.address?.city ?? 'unknown'
+      const o = { name, age };                     // shorthand
+
+      const obj = {
+        count: 0,
+        inc() { this.count++; },                   // method
+      };
+
+      Object.keys(u)  Object.values(u)  Object.entries(u)
+      for (const [k, v] of Object.entries(u)) { … }
+
+      const { name, age } = u;   const [a, b] = list;
+      const copy = { ...u, age: 37 };
+      list.filter((p) => p.stock > 0).map((p) => p.name)
+      [...list].sort((a, b) => a.price - b.price)
+
+      JSON.stringify(value)   JSON.parse(text)
+      ```
+
+      ## Key ideas
+
+      - Objects group values under keys; arrays of objects are tables of records.
+      - Assignment shares objects; spread makes shallow copies.
+      - `this` in a method is the object it was called on.
+      - JSON is text for sending and storing data.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const o = { a: 1 };
+          const k = 'b';
+          o[k] = 2;
+          console.log(Object.entries(o));
+        answer: |
+          [['a', 1], ['b', 2]]
+        why: "The key comes from the variable."
+      - type: mcq
+        prompt: Which gives a copy of `user` with the name changed, leaving `user` alone?
+        options:
+          - "`user.name = 'X'`"
+          - "`const c = user; c.name = 'X';`"
+          - "`const c = { ...user, name: 'X' };`"
+          - "`const c = user.copy('X');`"
+        answer: 2
+        why: "Spread into a new object."
+
+  - type: exam
+    id: js8-exam
+    title: "Chapter 8 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const film = { title: 'Up', year: 2009 };
+          console.log(film.title, film['year']);
+        answer: |
+          Up 2009
+        why: "Dot and brackets."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const o = { a: 1 };
+          console.log(o.b);
+          console.log(o.b?.c);
+        answer: |
+          undefined
+          undefined
+        why: "Missing properties are undefined; ?. avoids the error."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const box = {
+            size: 3,
+            area() {
+              return this.size * this.size;
+            },
+          };
+          box.size = 5;
+          console.log(box.area());
+        answer: |
+          25
+        why: "this.size is 5 when area is called."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log(Object.keys({ x: 1, y: 2, z: 3 }).join(''));
+        answer: |
+          xyz
+        why: "The keys in order."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const [a, , c] = [10, 20, 30];
+          console.log(a + c);
+        answer: |
+          40
+        why: "The empty slot skips 20."
+      - type: mcq
+        prompt: "What does `JSON.parse('{\"n\": 5}').n` give?"
+        options:
+          - "`'5'`"
+          - "`5`"
+          - "`undefined`"
+          - "An error"
+        answer: 1
+        why: "Parsed back into an object with a number."
+      - type: tf
+        prompt: Arrow functions are a good choice for object methods that use `this`.
+        answer: false
+        why: "They don't have their own this."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const list = [{ v: 3 }, { v: 1 }, { v: 2 }];
+          console.log(list.map((o) => o.v).sort().join(','));
+        answer: |
+          1,2,3
+        why: "Extract, sort, join."
+      - type: fill
+        prompt: Take `name` and `age` out of `person` in one line.
+        code: |
+          const { ___, age } = person;
+        blanks:
+          - [name]
+        why: "Object destructuring."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const a = { n: 1 };
+          const b = { ...a };
+          b.n = 2;
+          console.log(a.n, b.n);
+        answer: |
+          1 2
+        why: "Spread made a separate copy."
+      - type: code
+        prompt: |
+          `countBy(words)` returns an object counting words by their
+          **first letter** (lower case): `['Apple', 'avocado', 'banana']` →
+          `{ a: 2, b: 1 }`. Also write `mostCommonLetter(words)`, which
+          returns the letter with the highest count (the first one found
+          if tied).
+        starter: |
+          function countBy(words) {
+          }
+
+          function mostCommonLetter(words) {
+          }
+        solution: |
+          function countBy(words) {
+            const counts = {};
+            for (const w of words) {
+              const letter = w[0].toLowerCase();
+              counts[letter] = (counts[letter] ?? 0) + 1;
+            }
+            return counts;
+          }
+
+          function mostCommonLetter(words) {
+            let best = '';
+            let bestCount = 0;
+            for (const [letter, count] of Object.entries(countBy(words))) {
+              if (count > bestCount) {
+                best = letter;
+                bestCount = count;
+              }
+            }
+            return best;
+          }
+        harness: |
+          check(countBy(['Apple', 'avocado', 'banana']), { a: 2, b: 1 });
+          check(countBy([]), {});
+          check(mostCommonLetter(['kiwi', 'lime', 'Kale']), 'k');
+          check(mostCommonLetter(['x', 'y']), 'x');

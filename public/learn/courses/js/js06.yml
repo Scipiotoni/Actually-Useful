@@ -1,0 +1,821 @@
+id: js06
+number: 6
+part: js-p2
+title: Arrays
+blurb: Keep lists of values in arrays — add, remove, find, loop, and transform them with map, filter and reduce.
+hours: 3.5
+goals:
+  - Create arrays, read and change items by index
+  - Add and remove items with `push`, `pop`, `shift`, `unshift`
+  - Search with `includes`, `indexOf`, `find`, `some` and `every`
+  - Transform with `map`, `filter` and `reduce`
+  - Copy, combine, slice, sort and join arrays safely
+
+items:
+  - type: lesson
+    id: js6-basics
+    title: Lists of values
+    minutes: 25
+    objectives:
+      - Create an array and read items by index
+      - Add and remove items at the end and the start
+      - Loop over an array
+    body: |
+      An **array** holds an ordered list of values:
+
+      ```js
+      const fruits = ['apple', 'banana', 'cherry'];
+      console.log(fruits);
+      console.log(fruits.length);
+      console.log(fruits[0]);
+      console.log(fruits[fruits.length - 1]);
+      fruits[1] = 'blueberry';
+      console.log(fruits);
+      ```
+      ```output
+      ['apple', 'banana', 'cherry']
+      3
+      apple
+      cherry
+      ['apple', 'blueberry', 'cherry']
+      ```
+
+      - Square brackets, items separated by commas. Items can be any type — even mixed, even other arrays.
+      - Indexes start at **0**, like strings. The last item is at `length - 1`. Reading past the end gives `undefined`.
+      - `const` stops you **replacing** the array, but you can still change what's **inside** it.
+
+      ## Adding and removing
+
+      ```js
+      const queue = ['Ana', 'Ben'];
+      queue.push('Cai');        // add to the end
+      queue.unshift('Dee');     // add to the start
+      console.log(queue);
+      const last = queue.pop();     // remove from the end
+      const first = queue.shift();  // remove from the start
+      console.log(first, last, queue);
+      ```
+      ```output
+      ['Dee', 'Ana', 'Ben', 'Cai']
+      Dee Cai ['Ana', 'Ben']
+      ```
+
+      ## Looping
+
+      ```js
+      const prices = [4, 10, 2.5];
+      let total = 0;
+      for (const price of prices) {
+        total += price;
+      }
+      console.log(total);
+
+      for (let i = 0; i < prices.length; i++) {
+        console.log(`${i + 1}. ${prices[i]} €`);
+      }
+      ```
+      ```output
+      16.5
+      1. 4 €
+      2. 10 €
+      3. 2.5 €
+      ```
+
+      ## Searching
+
+      - `list.includes(x)` — is `x` in the list? (`true`/`false`)
+      - `list.indexOf(x)` — the index of the first `x`, or `-1` if it isn't there.
+
+      {{check idx}}
+
+      {{task basics}}
+    checks:
+      - id: idx
+        type: output
+        prompt: What does this print?
+        code: |
+          const n = [10, 20, 30];
+          n.push(40);
+          console.log(n.length);
+          console.log(n[2]);
+          console.log(n.indexOf(40));
+          console.log(n.includes(25));
+        answer: |
+          4
+          30
+          3
+          false
+        why: "After push there are 4 items; 40 is at index 3."
+    tasks:
+      - id: basics
+        title: List helpers
+        prompt: |
+          Write these with loops (not with ready-made methods like
+          `Math.max`):
+
+          - `sum(numbers)` — the total of all numbers (`0` for an empty array)
+          - `largest(numbers)` — the biggest number (assume the array isn't empty)
+          - `countOf(list, value)` — how many times `value` appears
+        starter: |
+          function sum(numbers) {
+          }
+
+          function largest(numbers) {
+          }
+
+          function countOf(list, value) {
+          }
+        solution: |
+          function sum(numbers) {
+            let total = 0;
+            for (const n of numbers) {
+              total += n;
+            }
+            return total;
+          }
+
+          function largest(numbers) {
+            let best = numbers[0];
+            for (const n of numbers) {
+              if (n > best) {
+                best = n;
+              }
+            }
+            return best;
+          }
+
+          function countOf(list, value) {
+            let count = 0;
+            for (const item of list) {
+              if (item === value) {
+                count++;
+              }
+            }
+            return count;
+          }
+        harness: |
+          check(sum([1, 2, 3, 4]), 10);
+          check(sum([]), 0);
+          check(largest([3, 9, 2]), 9);
+          check(largest([-5, -2, -9]), -2);
+          check(largest([7]), 7);
+          check(countOf(['a', 'b', 'a', 'a'], 'a'), 3);
+          check(countOf([1, 2, 3], 4), 0);
+        hints:
+          - "`for (const n of numbers) { … }` visits each number."
+          - "For `largest`, start with `numbers[0]` (not 0 — the numbers might all be negative)."
+    cards:
+      - front: How do you get the last item of an array?
+        back: "`list[list.length - 1]` (or `list.at(-1)`)."
+      - front: "`push`/`pop` vs `unshift`/`shift`?"
+        back: push and pop work at the end; unshift and shift at the start.
+      - front: What does `indexOf` return when the value isn't there?
+        back: "-1"
+      - front: Can you change the items of a `const` array?
+        back: Yes — const only stops the variable being reassigned to another array.
+
+  - type: lesson
+    id: js6-transform
+    title: map, filter and reduce
+    minutes: 30
+    objectives:
+      - Make a new array from an old one with `map`
+      - Keep only some items with `filter`
+      - Combine all items into one value with `reduce`
+      - Find items with `find`, `some` and `every`
+    body: |
+      Arrays have methods that take a **callback** (Chapter 5) and call it
+      for each item. They replace most loops — and read like English.
+
+      ## map: transform every item
+
+      ```js
+      const prices = [10, 25, 40];
+      const withVat = prices.map((p) => p * 1.2);
+      const labels = prices.map((p, i) => `#${i + 1}: ${p} €`);
+      console.log(withVat);
+      console.log(labels);
+      ```
+      ```output
+      [12, 30, 48]
+      ['#1: 10 €', '#2: 25 €', '#3: 40 €']
+      ```
+
+      `map` returns a **new** array of the same length; the original is
+      unchanged. The callback gets each item (and its index, if you want it).
+
+      ## filter: keep some items
+
+      ```js
+      const scores = [55, 92, 71, 38, 88];
+      const passed = scores.filter((s) => s >= 60);
+      console.log(passed);
+      ```
+      ```output
+      [92, 71, 88]
+      ```
+
+      The callback returns `true` to keep an item.
+
+      ## reduce: combine into one value
+
+      ```js
+      const cart = [4, 10, 2.5];
+      const total = cart.reduce((sum, price) => sum + price, 0);
+      console.log(total);
+      ```
+      ```output
+      16.5
+      ```
+
+      `reduce(callback, start)`: the callback gets the result **so far**
+      (`sum`, starting at `0`) and the next item, and returns the new result
+      so far. It's the accumulator pattern in one line.
+
+      ## Finding things
+
+      | Method | Returns |
+      |---|---|
+      | `find(fn)` | the **first** item where fn is true (or `undefined`) |
+      | `findIndex(fn)` | its index (or `-1`) |
+      | `some(fn)` | `true` if fn is true for **at least one** item |
+      | `every(fn)` | `true` if fn is true for **all** items |
+
+      ## Chaining
+
+      Each method returns something you can call the next one on:
+
+      ```js
+      const words = ['sun', 'moonlight', 'sky', 'starfish'];
+      const result = words
+        .filter((w) => w.length > 3)
+        .map((w) => w.toUpperCase());
+      console.log(result);
+      ```
+      ```output
+      ['MOONLIGHT', 'STARFISH']
+      ```
+
+      {{check chain}}
+
+      {{task transform}}
+    checks:
+      - id: chain
+        type: output
+        prompt: What does this print?
+        code: |
+          const n = [1, 2, 3, 4, 5, 6];
+          console.log(n.filter((x) => x % 2 === 0).map((x) => x * 10));
+          console.log(n.reduce((a, b) => a + b, 0));
+          console.log(n.some((x) => x > 5), n.every((x) => x > 5));
+        answer: |
+          [20, 40, 60]
+          21
+          true false
+        why: "Evens × 10; the sum; 6 > 5 but not all are."
+    tasks:
+      - id: transform
+        title: Transform the data
+        prompt: |
+          Use `map`, `filter`, `reduce` or `find` (no loops):
+
+          - `squares(nums)` — each number squared
+          - `longWords(words, min)` — only the words with at least `min` characters
+          - `product(nums)` — all numbers multiplied together (`1` for an empty array)
+          - `firstNegative(nums)` — the first negative number, or `undefined`
+        starter: |
+          function squares(nums) {
+          }
+
+          function longWords(words, min) {
+          }
+
+          function product(nums) {
+          }
+
+          function firstNegative(nums) {
+          }
+        solution: |
+          function squares(nums) {
+            return nums.map((n) => n * n);
+          }
+
+          function longWords(words, min) {
+            return words.filter((w) => w.length >= min);
+          }
+
+          function product(nums) {
+            return nums.reduce((acc, n) => acc * n, 1);
+          }
+
+          function firstNegative(nums) {
+            return nums.find((n) => n < 0);
+          }
+        harness: |
+          check(squares([1, 2, 3]), [1, 4, 9]);
+          check(squares([]), []);
+          check(longWords(['a', 'tree', 'house', 'go'], 4), ['tree', 'house']);
+          check(product([2, 3, 4]), 24);
+          check(product([]), 1);
+          check(firstNegative([3, -1, -5]), -1);
+          check(firstNegative([1, 2]), undefined);
+          const original = [1, 2, 3];
+          squares(original);
+          check(original, [1, 2, 3]);
+        hints:
+          - "`return nums.map((n) => n * n);` — don't forget the `return`."
+          - "`reduce((acc, n) => acc * n, 1)` — a product starts at 1."
+    cards:
+      - front: What does `map` return?
+        back: A new array of the same length, with each item transformed by the callback.
+      - front: What does `filter` return?
+        back: A new array with only the items for which the callback returned true.
+      - front: "How does `reduce((acc, x) => acc + x, 0)` work?"
+        back: acc starts at 0; for each item x, the callback's result becomes the new acc; the final acc is returned.
+      - front: "`find` vs `filter`?"
+        back: find returns the first matching item (or undefined); filter returns an array of all matches.
+
+  - type: quiz
+    id: js6-quiz1
+    title: "Quiz: array basics and methods"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const a = ['x', 'y', 'z'];
+          console.log(a[3]);
+          console.log(a.pop());
+          console.log(a.length);
+        answer: |
+          undefined
+          z
+          2
+        why: "Index 3 doesn't exist; pop removes and returns the last item."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const ages = [12, 30, 17, 45];
+          console.log(ages.find((a) => a >= 18));
+          console.log(ages.findIndex((a) => a >= 18));
+        answer: |
+          30
+          1
+        why: "30 is the first adult, at index 1."
+      - type: mcq
+        prompt: Which gives `['A', 'B']` from `['a', 'b']`?
+        options:
+          - "`list.filter((s) => s.toUpperCase())`"
+          - "`list.map((s) => s.toUpperCase())`"
+          - "`list.reduce((s) => s.toUpperCase())`"
+          - "`list.toUpperCase()`"
+        answer: 1
+        why: "map transforms each item."
+      - type: tf
+        prompt: "`map` changes the original array."
+        answer: false
+        why: "It returns a new array."
+
+  - type: lesson
+    id: js6-more
+    title: Copying, slicing, sorting and joining
+    minutes: 25
+    objectives:
+      - Take parts of arrays with `slice`, and change them with `splice`
+      - Copy and combine arrays with the spread syntax
+      - Sort numbers and strings correctly
+      - Turn arrays into strings and back with `join` and `split`
+      - Explain why two variables can share one array
+    body: |
+      ## slice and splice
+
+      - `slice(start, end)` returns a **copy** of part of the array, from `start` up to (not including) `end`. The original is unchanged.
+      - `splice(start, count, …items)` **changes** the array: removes `count` items at `start` and inserts any new ones.
+
+      ```js
+      const letters = ['a', 'b', 'c', 'd', 'e'];
+      console.log(letters.slice(1, 3));
+      console.log(letters.slice(-2));
+      letters.splice(1, 2, 'X');
+      console.log(letters);
+      ```
+      ```output
+      ['b', 'c']
+      ['d', 'e']
+      ['a', 'X', 'd', 'e']
+      ```
+
+      ## Spread: copying and combining
+
+      `...array` spreads an array's items out:
+
+      ```js
+      const weekdays = ['Mon', 'Tue'];
+      const weekend = ['Sat', 'Sun'];
+      const all = [...weekdays, 'Wed', ...weekend];
+      const copy = [...weekdays];
+      copy.push('Fri');
+      console.log(all);
+      console.log(weekdays, copy);
+      console.log(Math.max(...[4, 9, 2]));
+      ```
+      ```output
+      ['Mon', 'Tue', 'Wed', 'Sat', 'Sun']
+      ['Mon', 'Tue'] ['Mon', 'Tue', 'Fri']
+      9
+      ```
+
+      ## Two names, one array
+
+      Assigning an array to another variable does **not** copy it — both
+      names point at the **same** array:
+
+      ```js
+      const original = [1, 2, 3];
+      const alias = original;
+      alias.push(4);
+      console.log(original);
+      ```
+      ```output
+      [1, 2, 3, 4]
+      ```
+
+      To get an independent copy, use `[...original]` (or `slice()`).
+
+      ## Sorting
+
+      `sort()` sorts **in place** (changing the array) and, by default,
+      compares items **as text** — so numbers sort wrongly:
+
+      ```js
+      console.log([10, 9, 100, 1].sort());
+      console.log([10, 9, 100, 1].sort((a, b) => a - b));
+      console.log([10, 9, 100, 1].sort((a, b) => b - a));
+      console.log(['pear', 'Apple', 'fig'].sort());
+      ```
+      ```output
+      [1, 10, 100, 9]
+      [1, 9, 10, 100]
+      [100, 10, 9, 1]
+      ['Apple', 'fig', 'pear']
+      ```
+
+      For numbers, pass a compare function: `(a, b) => a - b` sorts
+      ascending, `(a, b) => b - a` descending. To keep the original, sort a
+      copy: `[...list].sort(…)`.
+
+      ## join and split
+
+      ```js
+      console.log(['2026', '09', '25'].join('-'));
+      console.log('red,green,blue'.split(','));
+      console.log('one two three'.split(' ').length);
+      ```
+      ```output
+      2026-09-25
+      ['red', 'green', 'blue']
+      3
+      ```
+
+      {{check sort}}
+
+      {{task top}}
+    checks:
+      - id: sort
+        type: output
+        prompt: What does this print?
+        code: |
+          const a = [3, 1, 2];
+          const b = a;
+          b.sort();
+          console.log(a);
+          const c = [...a];
+          c.reverse();
+          console.log(a, c);
+        answer: |
+          [1, 2, 3]
+          [1, 2, 3] [3, 2, 1]
+        why: "b is the same array as a; c is a real copy."
+    tasks:
+      - id: top
+        title: Leaderboard
+        prompt: |
+          - `topThree(scores)` — the three highest scores, highest first. **Don't change** the array you're given.
+          - `sentence(words)` — the words joined with spaces, with a full stop at the end: `['Hi', 'there']` → `'Hi there.'`
+          - `withoutIndex(list, i)` — a **new** array without the item at index `i` (the original unchanged)
+        starter: |
+          function topThree(scores) {
+          }
+
+          function sentence(words) {
+          }
+
+          function withoutIndex(list, i) {
+          }
+        solution: |
+          function topThree(scores) {
+            return [...scores].sort((a, b) => b - a).slice(0, 3);
+          }
+
+          function sentence(words) {
+            return words.join(' ') + '.';
+          }
+
+          function withoutIndex(list, i) {
+            return [...list.slice(0, i), ...list.slice(i + 1)];
+          }
+        harness: |
+          const s = [40, 95, 12, 88, 70];
+          check(topThree(s), [95, 88, 70]);
+          check(s, [40, 95, 12, 88, 70]);
+          check(topThree([5, 100]), [100, 5]);
+          check(topThree([9, 10, 100, 1]), [100, 10, 9]);
+          check(sentence(['Hi', 'there']), 'Hi there.');
+          check(sentence(['Go']), 'Go.');
+          const l = ['a', 'b', 'c'];
+          check(withoutIndex(l, 1), ['a', 'c']);
+          check(withoutIndex(l, 0), ['b', 'c']);
+          check(l, ['a', 'b', 'c']);
+        hints:
+          - "Sort a copy: `[...scores].sort((a, b) => b - a)`, then `.slice(0, 3)`."
+          - "`withoutIndex`: the part before i and the part after i — `list.slice(0, i)` and `list.slice(i + 1)` — spread into a new array. (Or `filter((_, j) => j !== i)`.)"
+    cards:
+      - front: "`slice` vs `splice`?"
+        back: slice returns a copy of part of the array; splice changes the array by removing/inserting items.
+      - front: How do you sort numbers correctly?
+        back: "`nums.sort((a, b) => a - b)` — the default sort compares as text."
+      - front: "`const b = a;` for an array — is b a copy?"
+        back: No — both names refer to the same array. Copy with `[...a]`.
+      - front: How do you turn `'a,b,c'` into an array?
+        back: "`'a,b,c'.split(',')` — and `join(',')` goes back."
+
+  - type: quiz
+    id: js6-quiz2
+    title: "Quiz: copying and sorting"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log([5, 25, 100].sort());
+        answer: |
+          [100, 25, 5]
+        why: "Compared as text: '1' < '2' < '5'."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const x = [1, 2, 3, 4, 5];
+          console.log(x.slice(1, 4));
+          console.log(x);
+        answer: |
+          [2, 3, 4]
+          [1, 2, 3, 4, 5]
+        why: "slice doesn't change the original."
+      - type: fill
+        prompt: Combine two arrays into a new one.
+        code: |
+          const all = [___a, ___b];
+        blanks:
+          - ["..."]
+          - ["..."]
+        why: "Spread each array."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('a-b-c'.split('-').join('+'));
+        answer: |
+          a+b+c
+        why: "Split on -, join with +."
+
+  - type: challenge
+    id: js6-ch-unique
+    title: Remove duplicates
+    difficulty: 2
+    tags: [arrays]
+    prompt: |
+      `unique(list)` returns a new array with each value only **once**,
+      keeping the order in which they first appear:
+      `unique([3, 1, 3, 2, 1])` is `[3, 1, 2]`.
+
+      (Hint: build a result array and only `push` values it doesn't
+      `include` yet.)
+    starter: |
+      function unique(list) {
+      }
+    solution: |
+      function unique(list) {
+        const result = [];
+        for (const item of list) {
+          if (!result.includes(item)) {
+            result.push(item);
+          }
+        }
+        return result;
+      }
+    harness: |
+      check(unique([3, 1, 3, 2, 1]), [3, 1, 2]);
+      check(unique([]), []);
+      check(unique(['a', 'a', 'a']), ['a']);
+      check(unique(['x', 'y']), ['x', 'y']);
+      const input = [1, 1, 2];
+      unique(input);
+      check(input, [1, 1, 2]);
+    hints:
+      - "`if (!result.includes(item)) result.push(item);`"
+
+  - type: challenge
+    id: js6-ch-grades
+    title: Class statistics
+    difficulty: 3
+    tags: [map, filter, reduce]
+    prompt: |
+      `stats(scores)` returns an array of four values:
+
+      1. the **average**, rounded to 1 decimal (`Math.round(x * 10) / 10`)
+      2. how many scores are **60 or more** (passed)
+      3. the **highest** score
+      4. the scores **sorted from lowest to highest** (without changing the input)
+
+      For an **empty** array, return `[0, 0, 0, []]`.
+    starter: |
+      function stats(scores) {
+      }
+    solution: |
+      function stats(scores) {
+        if (scores.length === 0) {
+          return [0, 0, 0, []];
+        }
+        const total = scores.reduce((sum, s) => sum + s, 0);
+        const average = Math.round(total / scores.length * 10) / 10;
+        const passed = scores.filter((s) => s >= 60).length;
+        const highest = Math.max(...scores);
+        const sorted = [...scores].sort((a, b) => a - b);
+        return [average, passed, highest, sorted];
+      }
+    harness: |
+      const s = [72, 45, 90, 61, 58];
+      check(stats(s), [65.2, 3, 90, [45, 58, 61, 72, 90]]);
+      check(s, [72, 45, 90, 61, 58]);
+      check(stats([100]), [100, 1, 100, [100]]);
+      check(stats([]), [0, 0, 0, []]);
+      check(stats([1, 2]), [1.5, 0, 2, [1, 2]]);
+    hints:
+      - "Handle the empty case first with an early return."
+      - "`reduce` for the total, `filter(...).length` for the count, `Math.max(...scores)` for the highest, `[...scores].sort((a, b) => a - b)` for the sorted copy."
+
+  - type: review
+    id: js6-review
+    title: "Chapter 6 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      const a = [1, 2, 3];
+      a[0]   a.length   a[a.length - 1]
+      a.push(4)  a.pop()  a.unshift(0)  a.shift()
+      a.includes(2)  a.indexOf(2)
+
+      a.map((x) => x * 2)            // new array, same length
+      a.filter((x) => x > 1)         // new array, fewer items
+      a.reduce((sum, x) => sum + x, 0)
+      a.find((x) => x > 1)   a.findIndex(…)   a.some(…)   a.every(…)
+
+      a.slice(1, 3)                  // copy of part
+      a.splice(1, 1)                 // change in place
+      [...a, ...b]   [...a]          // combine, copy
+      [...a].sort((x, y) => x - y)   // sort numbers on a copy
+      a.join(', ')   'x,y'.split(',')
+      ```
+
+      ## Key ideas
+
+      - Indexes start at 0.
+      - `map`, `filter`, `reduce`, `find` replace most loops.
+      - Assigning an array doesn't copy it.
+      - `sort` changes the array and compares as text unless you pass a compare function.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const n = [4, 8, 15];
+          console.log(n.map((x) => x / 2).filter((x) => x > 3));
+        answer: |
+          [4, 7.5]
+        why: "[2, 4, 7.5], then keep those above 3."
+      - type: mcq
+        prompt: Which method changes the original array?
+        options:
+          - "`map`"
+          - "`slice`"
+          - "`sort`"
+          - "`filter`"
+        answer: 2
+        why: "sort works in place."
+
+  - type: exam
+    id: js6-exam
+    title: "Chapter 6 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const pets = ['cat', 'dog'];
+          pets.push('fish');
+          pets.unshift('bird');
+          console.log(pets);
+        answer: |
+          ['bird', 'cat', 'dog', 'fish']
+        why: "push adds at the end, unshift at the start."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const n = [3, 6, 9];
+          console.log(n.indexOf(9), n.indexOf(7));
+        answer: |
+          2 -1
+        why: "-1 means not found."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log([1, 2, 3].map((x) => x + 1));
+        answer: |
+          [2, 3, 4]
+        why: "Each item plus one."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const words = ['hi', 'hello', 'hey'];
+          console.log(words.filter((w) => w.startsWith('he')));
+        answer: |
+          ['hello', 'hey']
+        why: "Keep the words starting with 'he'."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log([2, 3, 4].reduce((acc, x) => acc + x * x, 0));
+        answer: |
+          29
+        why: "4 + 9 + 16."
+      - type: mcq
+        prompt: "How do you sort `[10, 2, 33]` numerically, ascending?"
+        options:
+          - "`.sort()`"
+          - "`.sort((a, b) => a - b)`"
+          - "`.sort((a, b) => b - a)`"
+          - "`.order()`"
+        answer: 1
+        why: "a - b is ascending."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const a = [1, 2];
+          const b = a;
+          const c = [...a];
+          b.push(3);
+          console.log(a.length, c.length);
+        answer: |
+          3 2
+        why: "b is the same array as a; c is a copy."
+      - type: tf
+        prompt: "`[1, 2, 3].every((x) => x > 0)` is true."
+        answer: true
+        why: "All are positive."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log(['a', 'b', 'c', 'd'].slice(-2));
+        answer: |
+          ['c', 'd']
+        why: "Negative start counts from the end."
+      - type: fill
+        prompt: Get a string `'1 / 2 / 3'`.
+        code: |
+          console.log([1, 2, 3].___(' / '));
+        blanks:
+          - [join]
+        output: "1 / 2 / 3"
+        why: "`join`."
+      - type: code
+        prompt: |
+          `evensDoubled(nums)` returns the **even** numbers of the array,
+          each **doubled**, in order — using `filter` and `map`.
+          `total(nums)` returns the sum using `reduce`.
+        starter: |
+          function evensDoubled(nums) {
+          }
+
+          function total(nums) {
+          }
+        solution: |
+          function evensDoubled(nums) {
+            return nums.filter((n) => n % 2 === 0).map((n) => n * 2);
+          }
+
+          function total(nums) {
+            return nums.reduce((sum, n) => sum + n, 0);
+          }
+        harness: |
+          check(evensDoubled([1, 2, 3, 4]), [4, 8]);
+          check(evensDoubled([1, 3]), []);
+          check(total([5, 5, 5]), 15);
+          check(total([]), 0);

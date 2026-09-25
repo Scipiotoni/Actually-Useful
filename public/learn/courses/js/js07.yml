@@ -1,0 +1,741 @@
+id: js07
+number: 7
+part: js-p2
+title: Working with Text
+blurb: Search, slice, clean up and reformat strings — the everyday work of handling names, messages, files and user input.
+hours: 2.5
+goals:
+  - Search text with `includes`, `startsWith`, `endsWith` and `indexOf`
+  - Cut text with `slice` and split it into pieces
+  - Clean and reformat text with `trim`, `replace`, `padStart` and friends
+  - Process text character by character
+  - Remember that strings never change — methods return new ones
+
+items:
+  - type: lesson
+    id: js7-search
+    title: Searching and slicing
+    minutes: 25
+    objectives:
+      - Test whether text contains, starts or ends with something
+      - Find the position of a piece of text
+      - Cut out part of a string with `slice`
+    body: |
+      ## Searching
+
+      ```js
+      const email = 'ada.lovelace@example.com';
+      console.log(email.includes('@'));
+      console.log(email.startsWith('ada'));
+      console.log(email.endsWith('.org'));
+      console.log(email.indexOf('@'));
+      console.log(email.indexOf('!'));
+      console.log(email.lastIndexOf('.'));
+      ```
+      ```output
+      true
+      true
+      false
+      12
+      -1
+      20
+      ```
+
+      All of these are **case-sensitive**: `'Hello'.includes('hello')` is
+      `false`. To ignore case, compare lower-case versions:
+      `text.toLowerCase().includes(word.toLowerCase())`.
+
+      ## slice
+
+      `slice(start, end)` returns the characters from `start` up to (not
+      including) `end`. Leave out `end` to go to the end; negative numbers
+      count from the end:
+
+      ```js
+      const text = 'JavaScript';
+      console.log(text.slice(0, 4));
+      console.log(text.slice(4));
+      console.log(text.slice(-6));
+      console.log(text.at(-1));
+
+      const email = 'ada.lovelace@example.com';
+      const at = email.indexOf('@');
+      console.log(email.slice(0, at));
+      console.log(email.slice(at + 1));
+      ```
+      ```output
+      Java
+      Script
+      Script
+      t
+      ada.lovelace
+      example.com
+      ```
+
+      Finding a position with `indexOf` and cutting with `slice` is a
+      pattern you'll use constantly.
+
+      ## Strings never change
+
+      Strings are **immutable**: no method changes a string; they all
+      **return a new one**. `name.toUpperCase()` on its own does nothing
+      useful — store or use the result: `name = name.toUpperCase()`.
+
+      {{check slice}}
+
+      {{task search}}
+    checks:
+      - id: slice
+        type: output
+        prompt: What does this print?
+        code: |
+          const s = 'sunflower';
+          console.log(s.slice(0, 3));
+          console.log(s.slice(3));
+          console.log(s.slice(-5, -2));
+        answer: |
+          sun
+          flower
+          low
+        why: "-5 is 'l' (5 from the end), up to -2 ('e', not included)."
+    tasks:
+      - id: search
+        title: File names and questions
+        prompt: |
+          - `extension(fileName)` — the part after the **last** dot, in lower case: `'Photo.JPG'` → `'jpg'`. Without a dot, return `''`.
+          - `baseName(fileName)` — the part before the last dot: `'report.final.pdf'` → `'report.final'`. Without a dot, the whole name.
+          - `isQuestion(text)` — `true` if the text, ignoring spaces at the end, ends with `?`
+        starter: |
+          function extension(fileName) {
+          }
+
+          function baseName(fileName) {
+          }
+
+          function isQuestion(text) {
+          }
+        solution: |
+          function extension(fileName) {
+            const dot = fileName.lastIndexOf('.');
+            if (dot === -1) {
+              return '';
+            }
+            return fileName.slice(dot + 1).toLowerCase();
+          }
+
+          function baseName(fileName) {
+            const dot = fileName.lastIndexOf('.');
+            return dot === -1 ? fileName : fileName.slice(0, dot);
+          }
+
+          function isQuestion(text) {
+            return text.trimEnd().endsWith('?');
+          }
+        harness: |
+          check(extension('Photo.JPG'), 'jpg');
+          check(extension('archive.tar.gz'), 'gz');
+          check(extension('README'), '');
+          check(baseName('report.final.pdf'), 'report.final');
+          check(baseName('notes.txt'), 'notes');
+          check(baseName('Makefile'), 'Makefile');
+          check(isQuestion('Are you coming?'), true);
+          check(isQuestion('Yes?  '), true);
+          check(isQuestion('I am.'), false);
+        hints:
+          - "`lastIndexOf('.')` finds the last dot; `-1` means there isn't one."
+          - "`fileName.slice(dot + 1)` is after the dot; `fileName.slice(0, dot)` before it."
+          - "`text.trimEnd()` removes spaces at the end (`trim()` removes them at both ends)."
+    cards:
+      - front: How do you get the part of a string before the `@`?
+        back: "`s.slice(0, s.indexOf('@'))`"
+      - front: "What does `s.slice(-3)` give?"
+        back: The last three characters.
+      - front: Why does `name.toUpperCase();` on its own do nothing?
+        back: Strings are immutable — the method returns a new string, which must be stored or used.
+
+  - type: lesson
+    id: js7-change
+    title: Cleaning and reformatting
+    minutes: 25
+    objectives:
+      - Remove extra spaces with `trim`
+      - Replace text with `replace` and `replaceAll`
+      - Pad and repeat strings
+      - Capitalise words and build slugs
+    body: |
+      User input is messy: extra spaces, odd capitals. These methods tidy
+      it up:
+
+      ```js
+      const raw = '   Hello World   ';
+      console.log(`[${raw.trim()}]`);
+      console.log('a-b-c'.replace('-', '+'));
+      console.log('a-b-c'.replaceAll('-', '+'));
+      console.log('7'.padStart(3, '0'));
+      console.log('Total'.padEnd(10, '.') + '12 €');
+      console.log('ab'.repeat(3));
+      ```
+      ```output
+      [Hello World]
+      a+b-c
+      a+b+c
+      007
+      Total.....12 €
+      ababab
+      ```
+
+      | Method | Does |
+      |---|---|
+      | `trim()` · `trimStart()` · `trimEnd()` | remove spaces (and tabs, new lines) at the ends |
+      | `replace(a, b)` | replace the **first** `a` with `b` |
+      | `replaceAll(a, b)` | replace **every** `a` |
+      | `padStart(n, c)` · `padEnd(n, c)` | add `c` until the string is `n` long |
+      | `repeat(n)` | the string `n` times |
+      | `split(sep)` / `join(sep)` | to an array and back |
+
+      ## Common recipes
+
+      ```js
+      function capitalize(word) {
+        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+      }
+
+      function twoDigits(n) {
+        return String(n).padStart(2, '0');
+      }
+
+      console.log(capitalize('mADRID'));
+      console.log(`${twoDigits(9)}:${twoDigits(5)}`);
+      console.log('the quick brown fox'.split(' ').map(capitalize).join(' '));
+      ```
+      ```output
+      Madrid
+      09:05
+      The Quick Brown Fox
+      ```
+
+      > [!note]
+      > `replace` and `split` also accept **regular expressions** — a small
+      > language for patterns. For example `text.replace(/\s+/g, ' ')`
+      > turns any run of spaces into one. They're worth learning later;
+      > you won't need them in this course.
+
+      {{check replace}}
+
+      {{task tidy}}
+    checks:
+      - id: replace
+        type: output
+        prompt: What does this print?
+        code: |
+          const s = 'one two two';
+          console.log(s.replace('two', '2'));
+          console.log(s.replaceAll('two', '2'));
+          console.log(s);
+        answer: |
+          one 2 two
+          one 2 2
+          one two two
+        why: "replace changes only the first; the original never changes."
+    tasks:
+      - id: tidy
+        title: Tidy text
+        prompt: |
+          - `capitalize(word)` — first letter upper case, the rest lower case: `'hELLO'` → `'Hello'`. An empty string stays empty.
+          - `slug(title)` — for web addresses: trimmed, lower case, spaces replaced with `-`: `'  My First Post '` → `'my-first-post'`
+          - `clock(hours, minutes)` — `'09:05'` style, both parts two digits
+        starter: |
+          function capitalize(word) {
+          }
+
+          function slug(title) {
+          }
+
+          function clock(hours, minutes) {
+          }
+        solution: |
+          function capitalize(word) {
+            if (word === '') {
+              return '';
+            }
+            return word[0].toUpperCase() + word.slice(1).toLowerCase();
+          }
+
+          function slug(title) {
+            return title.trim().toLowerCase().replaceAll(' ', '-');
+          }
+
+          function clock(hours, minutes) {
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+          }
+        harness: |
+          check(capitalize('hELLO'), 'Hello');
+          check(capitalize('a'), 'A');
+          check(capitalize(''), '');
+          check(slug('  My First Post '), 'my-first-post');
+          check(slug('Hello World Again'), 'hello-world-again');
+          check(clock(9, 5), '09:05');
+          check(clock(23, 59), '23:59');
+          check(clock(0, 0), '00:00');
+        hints:
+          - "`word[0].toUpperCase() + word.slice(1).toLowerCase()` — check for `''` first."
+          - "Chain: `title.trim().toLowerCase().replaceAll(' ', '-')`."
+          - "`padStart` works on strings: `String(hours).padStart(2, '0')`."
+    cards:
+      - front: "`replace` vs `replaceAll`?"
+        back: replace changes only the first match; replaceAll every match.
+      - front: How do you turn 7 into `'007'`?
+        back: "`String(7).padStart(3, '0')`"
+      - front: How do you capitalise a word?
+        back: "`w[0].toUpperCase() + w.slice(1).toLowerCase()`"
+
+  - type: quiz
+    id: js7-quiz1
+    title: "Quiz: searching and tidying"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const s = 'Hello';
+          console.log(s.includes('ell'));
+          console.log(s.includes('hell'));
+          console.log(s.toLowerCase().includes('hell'));
+        answer: |
+          true
+          false
+          true
+        why: "Searching is case-sensitive."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('  hi  '.trim().length);
+          console.log('5'.padStart(4, '*'));
+        answer: |
+          2
+          ***5
+        why: "trim leaves 'hi'; pad to four characters."
+      - type: fill
+        prompt: Get the file name after the last `/`.
+        code: |
+          const path = 'docs/2026/report.pdf';
+          console.log(path.slice(path.___('/') + 1));
+        blanks:
+          - [lastIndexOf]
+        output: report.pdf
+        why: "The last slash, then everything after it."
+      - type: tf
+        prompt: "`s.toUpperCase()` changes `s`."
+        answer: false
+        why: "It returns a new string."
+
+  - type: lesson
+    id: js7-chars
+    title: Character by character
+    minutes: 20
+    objectives:
+      - Reverse and compare strings
+      - Test for palindromes
+      - Use character codes
+      - Sort strings properly
+    body: |
+      Many text problems mean looking at one character at a time.
+
+      ## Reversing
+
+      Strings have no `reverse`, but arrays do: split into characters,
+      reverse, join back.
+
+      ```js
+      const word = 'stressed';
+      console.log(word.split('').reverse().join(''));
+      console.log([...'hello'].reverse().join(''));
+      ```
+      ```output
+      desserts
+      olleh
+      ```
+
+      ## Comparing without caring about case or spaces
+
+      ```js
+      function clean(text) {
+        return text.toLowerCase().replaceAll(' ', '');
+      }
+
+      console.log(clean('Race Car') === clean('racecar'));
+      ```
+      ```output
+      true
+      ```
+
+      ## Character codes
+
+      Every character has a number (its **code**). Letters are in order, so
+      you can do arithmetic with them:
+
+      ```js
+      console.log('a'.charCodeAt(0));
+      console.log('b'.charCodeAt(0));
+      console.log(String.fromCharCode(97 + 25));
+      ```
+      ```output
+      97
+      98
+      z
+      ```
+
+      ## Sorting words
+
+      Default sorting puts capitals first (`'Zoe'` before `'adam'`).
+      `localeCompare` sorts the way people expect — and handles accents:
+
+      ```js
+      const names = ['Zoe', 'adam', 'Émile', 'bea'];
+      console.log([...names].sort());
+      console.log([...names].sort((a, b) => a.localeCompare(b)));
+      ```
+      ```output
+      ['Zoe', 'adam', 'bea', 'Émile']
+      ['adam', 'bea', 'Émile', 'Zoe']
+      ```
+
+      {{check rev}}
+
+      {{task palindrome}}
+    checks:
+      - id: rev
+        type: output
+        prompt: What does this print?
+        code: |
+          const s = 'abc';
+          console.log(s.split(''));
+          console.log(s.split('').reverse().join('-'));
+        answer: |
+          ['a', 'b', 'c']
+          c-b-a
+        why: "split('') makes an array of characters."
+    tasks:
+      - id: palindrome
+        title: Palindromes and secret codes
+        prompt: |
+          - `reverse(text)` — the text backwards
+          - `isPalindrome(text)` — `true` if the text reads the same backwards, **ignoring case and spaces**: `'Never odd or even'` is one
+          - `shift(text, n)` — a Caesar cipher: every lowercase letter a–z moves `n` places along the alphabet, wrapping from z back to a; other characters stay. `shift('abz', 1)` is `'bca'`.
+        starter: |
+          function reverse(text) {
+          }
+
+          function isPalindrome(text) {
+          }
+
+          function shift(text, n) {
+          }
+        solution: |
+          function reverse(text) {
+            return text.split('').reverse().join('');
+          }
+
+          function isPalindrome(text) {
+            const cleaned = text.toLowerCase().replaceAll(' ', '');
+            return cleaned === reverse(cleaned);
+          }
+
+          function shift(text, n) {
+            let result = '';
+            for (const ch of text) {
+              if (ch >= 'a' && ch <= 'z') {
+                const index = (ch.charCodeAt(0) - 97 + n) % 26;
+                result += String.fromCharCode(97 + index);
+              } else {
+                result += ch;
+              }
+            }
+            return result;
+          }
+        harness: |
+          check(reverse('hello'), 'olleh');
+          check(reverse(''), '');
+          check(isPalindrome('Never odd or even'), true);
+          check(isPalindrome('racecar'), true);
+          check(isPalindrome('hello'), false);
+          check(shift('abz', 1), 'bca');
+          check(shift('hello, world!', 3), 'khoor, zruog!');
+          check(shift('xyz', 26), 'xyz');
+        hints:
+          - "`isPalindrome` can reuse `reverse` on a cleaned copy."
+          - "For a letter: its position is `ch.charCodeAt(0) - 97` (0 for a). Add n, wrap with `% 26`, and turn back with `String.fromCharCode(97 + position)`."
+    cards:
+      - front: How do you reverse a string?
+        back: "`s.split('').reverse().join('')`"
+      - front: How do you sort names the way people expect?
+        back: "`names.sort((a, b) => a.localeCompare(b))`"
+      - front: "What does `'a'.charCodeAt(0)` give?"
+        back: 97 — letters have consecutive codes.
+
+  - type: quiz
+    id: js7-quiz2
+    title: "Quiz: characters"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('level' === 'level'.split('').reverse().join(''));
+          console.log('abc' < 'abd');
+        answer: |
+          true
+          true
+        why: "A palindrome; strings compare character by character."
+      - type: mcq
+        prompt: "`['b', 'A', 'a'].sort()` gives…"
+        options:
+          - "`['a', 'A', 'b']`"
+          - "`['A', 'a', 'b']`"
+          - "`['b', 'a', 'A']`"
+          - "`['a', 'b', 'A']`"
+        answer: 1
+        why: "Capitals come before lowercase letters in the default sort."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log(String.fromCharCode('c'.charCodeAt(0) + 1));
+        answer: |
+          d
+        why: "The next code is the next letter."
+
+  - type: challenge
+    id: js7-ch-words
+    title: Word statistics
+    difficulty: 2
+    tags: [strings, arrays]
+    prompt: |
+      For a sentence (words separated by single spaces, maybe with spaces
+      at the ends):
+
+      - `wordCount(text)` — how many words (`0` for an empty or blank text)
+      - `longestWord(text)` — the longest word (the first one if there's a tie), or `''` for a blank text
+      - `acronym(text)` — the first letter of each word, in capitals: `'as soon as possible'` → `'ASAP'`
+    starter: |
+      function wordCount(text) {
+      }
+
+      function longestWord(text) {
+      }
+
+      function acronym(text) {
+      }
+    solution: |
+      function words(text) {
+        const trimmed = text.trim();
+        return trimmed === '' ? [] : trimmed.split(' ');
+      }
+
+      function wordCount(text) {
+        return words(text).length;
+      }
+
+      function longestWord(text) {
+        let best = '';
+        for (const w of words(text)) {
+          if (w.length > best.length) {
+            best = w;
+          }
+        }
+        return best;
+      }
+
+      function acronym(text) {
+        return words(text).map((w) => w[0].toUpperCase()).join('');
+      }
+    harness: |
+      check(wordCount('the cat sat'), 3);
+      check(wordCount('  hello  '), 1);
+      check(wordCount('   '), 0);
+      check(wordCount(''), 0);
+      check(longestWord('a bee sees everything'), 'everything');
+      check(longestWord('one two six'), 'one');
+      check(longestWord(''), '');
+      check(acronym('as soon as possible'), 'ASAP');
+      check(acronym(' portable network graphics '), 'PNG');
+    hints:
+      - "A helper `words(text)` that trims and splits (returning `[]` for a blank text) makes all three easy."
+      - "`''.split(' ')` is `['']` — one empty word — which is why the blank case needs care."
+
+  - type: challenge
+    id: js7-ch-mask
+    title: Hide the card number
+    difficulty: 2
+    tags: [strings]
+    prompt: |
+      `maskCard(number)` takes a card number that may contain spaces, and
+      returns it without spaces, with every digit **except the last four**
+      replaced by `*`:
+
+      `maskCard('4539 1488 0343 6467')` → `'************6467'`
+
+      Numbers of 4 digits or fewer are returned unchanged (without spaces).
+    starter: |
+      function maskCard(number) {
+      }
+    solution: |
+      function maskCard(number) {
+        const digits = number.replaceAll(' ', '');
+        if (digits.length <= 4) {
+          return digits;
+        }
+        return '*'.repeat(digits.length - 4) + digits.slice(-4);
+      }
+    harness: |
+      check(maskCard('4539 1488 0343 6467'), '************6467');
+      check(maskCard('12345'), '*2345');
+      check(maskCard('1234'), '1234');
+      check(maskCard('12'), '12');
+    hints:
+      - "Remove spaces first with `replaceAll(' ', '')`."
+      - "`'*'.repeat(length - 4) + digits.slice(-4)`"
+
+  - type: review
+    id: js7-review
+    title: "Chapter 7 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      s.includes('x')  s.startsWith('x')  s.endsWith('x')
+      s.indexOf('x')   s.lastIndexOf('x')          // -1 if missing
+      s.slice(0, 3)    s.slice(-2)    s.at(-1)
+      s.trim()  s.toUpperCase()  s.toLowerCase()
+      s.replace('a', 'b')  s.replaceAll('a', 'b')
+      s.padStart(2, '0')  s.padEnd(10, '.')  s.repeat(3)
+      s.split(' ')  words.join(' ')
+      s.split('').reverse().join('')
+      s.charCodeAt(0)  String.fromCharCode(97)
+      names.sort((a, b) => a.localeCompare(b))
+      ```
+
+      ## Key ideas
+
+      - Strings never change; methods return new strings.
+      - Searching is case-sensitive — lower-case both sides to ignore case.
+      - indexOf + slice cut text at a marker.
+      - Clean user input with trim and case changes before comparing.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const tag = '  #JavaScript ';
+          console.log(tag.trim().slice(1).toLowerCase());
+        answer: |
+          javascript
+        why: "Trim, drop the #, lower case."
+      - type: mcq
+        prompt: "What is `'a,b,,c'.split(',').length`?"
+        options:
+          - "3"
+          - "4"
+          - "5"
+          - "2"
+        answer: 1
+        why: "['a', 'b', '', 'c'] — the empty piece counts."
+
+  - type: exam
+    id: js7-exam
+    title: "Chapter 7 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const s = 'programming';
+          console.log(s.indexOf('g'), s.lastIndexOf('g'));
+        answer: |
+          3 10
+        why: "First g at 3, last at 10."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('JavaScript'.slice(4, 7));
+        answer: |
+          Scr
+        why: "Indexes 4, 5, 6."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('Hi'.padEnd(5, '!'));
+          console.log('x'.repeat(4));
+        answer: |
+          Hi!!!
+          xxxx
+        why: "Pad to 5; repeat 4 times."
+      - type: mcq
+        prompt: Which checks that a URL is secure?
+        options:
+          - "`url.startsWith('https://')`"
+          - "`url.endsWith('https://')`"
+          - "`url.slice('https://')`"
+          - "`url === 'https'`"
+        answer: 0
+        why: "It must begin with https://."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const name = 'bob';
+          name.toUpperCase();
+          console.log(name);
+        answer: |
+          bob
+        why: "The result was never stored."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('2026-09-25'.split('-').reverse().join('/'));
+        answer: |
+          25/09/2026
+        why: "Split, reverse, join."
+      - type: tf
+        prompt: "`'Apple'.includes('apple')` is true."
+        answer: false
+        why: "Case-sensitive."
+      - type: fill
+        prompt: Remove spaces at both ends.
+        code: |
+          const clean = input.___();
+        blanks:
+          - [trim]
+        why: "`trim()`."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const email = 'sam@shop.io';
+          console.log(email.slice(email.indexOf('@') + 1));
+        answer: |
+          shop.io
+        why: "Everything after the @."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('a-b-c'.replace('-', ''));
+          console.log('a-b-c'.replaceAll('-', ''));
+        answer: |
+          ab-c
+          abc
+        why: "First only vs all."
+      - type: code
+        prompt: |
+          `titleCase(text)` capitalises the first letter of every word and
+          lower-cases the rest: `'hELLO wORLD'` → `'Hello World'`. Words
+          are separated by single spaces.
+        starter: |
+          function titleCase(text) {
+          }
+        solution: |
+          function titleCase(text) {
+            return text
+              .split(' ')
+              .map((w) => (w === '' ? '' : w[0].toUpperCase() + w.slice(1).toLowerCase()))
+              .join(' ');
+          }
+        harness: |
+          check(titleCase('hELLO wORLD'), 'Hello World');
+          check(titleCase('a tale of two cities'), 'A Tale Of Two Cities');
+          check(titleCase('x'), 'X');

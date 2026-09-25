@@ -1,0 +1,1005 @@
+id: js09
+number: 9
+part: js-p2
+title: Classes and Modules
+blurb: Blueprints for objects — classes with constructors, methods, getters, private fields and inheritance — and splitting code into modules.
+hours: 3
+goals:
+  - Define classes and create instances with `new`
+  - Give classes methods, getters, setters and static methods
+  - Protect data with private fields
+  - Extend classes with `extends` and `super`
+  - Split code into modules with `import` and `export`
+
+items:
+  - type: lesson
+    id: js9-classes
+    title: Classes
+    minutes: 25
+    objectives:
+      - Define a class with a constructor and methods
+      - Create instances with `new`
+      - Explain what `this` is in a class
+    body: |
+      When you need **many** objects of the same shape — users, products,
+      enemies in a game — a **class** is the blueprint:
+
+      ```js
+      class Dog {
+        constructor(name, breed) {
+          this.name = name;
+          this.breed = breed;
+          this.tricks = [];
+        }
+
+        learn(trick) {
+          this.tricks.push(trick);
+        }
+
+        describe() {
+          return `${this.name} the ${this.breed} knows ${this.tricks.length} tricks`;
+        }
+      }
+
+      const rex = new Dog('Rex', 'collie');
+      const bo = new Dog('Bo', 'poodle');
+      rex.learn('sit');
+      rex.learn('roll');
+      console.log(rex.describe());
+      console.log(bo.describe());
+      console.log(rex instanceof Dog);
+      console.log(bo);
+      ```
+      ```output
+      Rex the collie knows 2 tricks
+      Bo the poodle knows 0 tricks
+      true
+      Dog {name: 'Bo', breed: 'poodle', tricks: []}
+      ```
+
+      - `class Dog { … }` defines the blueprint. Class names start with a **capital**.
+      - `constructor(…)` runs when an object is created; it sets up the object's properties on `this`.
+      - Methods are written like `describe() { … }` — no `function` keyword, no commas between them.
+      - `new Dog('Rex', 'collie')` creates an **instance**: a new object built from the blueprint.
+      - Each instance has its **own** properties, but shares the methods.
+
+      ## Fields
+
+      Properties with a starting value can also be declared as **fields**,
+      at the top of the class:
+
+      ```js static
+      class Counter {
+        count = 0;
+        increment() {
+          this.count++;
+        }
+      }
+      ```
+
+      {{check new}}
+
+      {{task account}}
+    checks:
+      - id: new
+        type: output
+        prompt: What does this print?
+        code: |
+          class Box {
+            constructor(size) {
+              this.size = size;
+            }
+            grow() {
+              this.size *= 2;
+            }
+          }
+          const a = new Box(2);
+          const b = new Box(5);
+          a.grow();
+          console.log(a.size, b.size);
+        answer: |
+          4 5
+        why: "Each instance has its own size."
+    tasks:
+      - id: account
+        title: A bank account
+        prompt: |
+          Complete `class BankAccount`:
+
+          - `constructor(owner)` — sets `owner` and a `balance` of `0`
+          - `deposit(amount)` — adds to the balance
+          - `withdraw(amount)` — takes money out only if there's enough, returning `true`, or returns `false` and changes nothing
+          - `summary()` — returns `'Ana: 25 €'`
+        starter: |
+          class BankAccount {
+          }
+        solution: |
+          class BankAccount {
+            constructor(owner) {
+              this.owner = owner;
+              this.balance = 0;
+            }
+
+            deposit(amount) {
+              this.balance += amount;
+            }
+
+            withdraw(amount) {
+              if (amount > this.balance) {
+                return false;
+              }
+              this.balance -= amount;
+              return true;
+            }
+
+            summary() {
+              return `${this.owner}: ${this.balance} €`;
+            }
+          }
+        harness: |
+          const acc = new BankAccount('Ana');
+          check(acc.owner, 'Ana');
+          check(acc.balance, 0);
+          acc.deposit(40);
+          check(acc.withdraw(15), true);
+          check(acc.balance, 25);
+          check(acc.withdraw(100), false);
+          check(acc.balance, 25);
+          check(acc.summary(), 'Ana: 25 €');
+          const other = new BankAccount('Ben');
+          check(other.balance, 0);
+        hints:
+          - "`constructor(owner) { this.owner = owner; this.balance = 0; }`"
+          - "Methods use `this.balance` — and there are no commas between methods in a class."
+    cards:
+      - front: What does a class's constructor do?
+        back: Runs when you create an instance with new, setting up its properties on this.
+      - front: How do you create an object from a class?
+        back: "`const x = new ClassName(args);`"
+      - front: What is an instance?
+        back: An object created from a class.
+
+  - type: lesson
+    id: js9-more
+    title: Getters, setters, static and private
+    minutes: 25
+    objectives:
+      - Compute properties with `get` and validate with `set`
+      - Add class-level helpers with `static`
+      - Hide data with private `#fields`
+    body: |
+      ## Getters and setters
+
+      A **getter** looks like a property but is computed when read; a
+      **setter** runs when a property is assigned:
+
+      ```js
+      class Rectangle {
+        constructor(width, height) {
+          this.width = width;
+          this.height = height;
+        }
+
+        get area() {
+          return this.width * this.height;
+        }
+
+        set size(value) {
+          this.width = value;
+          this.height = value;
+        }
+      }
+
+      const r = new Rectangle(3, 4);
+      console.log(r.area);
+      r.size = 5;
+      console.log(r.width, r.area);
+      ```
+      ```output
+      12
+      5 25
+      ```
+
+      Note: `r.area`, not `r.area()` — a getter is read like a property.
+
+      ## static
+
+      A **static** method belongs to the class itself, not to instances —
+      handy for alternative ways to create objects, or helpers:
+
+      ```js
+      class Temperature {
+        constructor(celsius) {
+          this.celsius = celsius;
+        }
+
+        static fromFahrenheit(f) {
+          return new Temperature((f - 32) * 5 / 9);
+        }
+      }
+
+      const t = Temperature.fromFahrenheit(212);
+      console.log(t.celsius);
+      ```
+      ```output
+      100
+      ```
+
+      ## Private fields
+
+      Fields whose names start with `#` can only be used **inside** the
+      class. Nobody outside can change them by accident:
+
+      ```js error
+      class Safe {
+        #code;
+        constructor(code) {
+          this.#code = code;
+        }
+        open(guess) {
+          return guess === this.#code;
+        }
+      }
+
+      const s = new Safe('1234');
+      console.log(s.open('0000'), s.open('1234'));
+      console.log(s.#code);
+      ```
+
+      Reading `s.#code` from outside is a syntax error — the whole program
+      is rejected. Private fields plus methods and getters let a class
+      control exactly how its data can be used.
+
+      {{check getter}}
+
+      {{task temp}}
+    checks:
+      - id: getter
+        type: output
+        prompt: What does this print?
+        code: |
+          class Person {
+            constructor(first, last) {
+              this.first = first;
+              this.last = last;
+            }
+            get full() {
+              return `${this.first} ${this.last}`;
+            }
+          }
+          const p = new Person('Ada', 'King');
+          p.last = 'Lovelace';
+          console.log(p.full);
+        answer: |
+          Ada Lovelace
+        why: "A getter is computed every time it's read."
+    tasks:
+      - id: temp
+        title: A thermometer
+        prompt: |
+          Complete `class Thermometer`:
+
+          - a **private** field `#celsius`, set by the constructor
+          - a getter `celsius` returning it
+          - a getter `fahrenheit`: `celsius × 9 / 5 + 32`
+          - a setter `fahrenheit` that stores the matching Celsius value
+          - a static method `fromFahrenheit(f)` returning a new `Thermometer`
+        starter: |
+          class Thermometer {
+          }
+        solution: |
+          class Thermometer {
+            #celsius;
+
+            constructor(celsius) {
+              this.#celsius = celsius;
+            }
+
+            get celsius() {
+              return this.#celsius;
+            }
+
+            get fahrenheit() {
+              return this.#celsius * 9 / 5 + 32;
+            }
+
+            set fahrenheit(f) {
+              this.#celsius = (f - 32) * 5 / 9;
+            }
+
+            static fromFahrenheit(f) {
+              return new Thermometer((f - 32) * 5 / 9);
+            }
+          }
+        harness: |
+          const t = new Thermometer(100);
+          check(t.celsius, 100);
+          check(t.fahrenheit, 212);
+          t.fahrenheit = 32;
+          check(t.celsius, 0);
+          check(Thermometer.fromFahrenheit(50).celsius, 10);
+          check(Object.keys(t), []);
+        hints:
+          - "Declare `#celsius;` at the top of the class, then `this.#celsius = celsius;` in the constructor."
+          - "`get fahrenheit() { … }` and `set fahrenheit(f) { … }` share a name."
+          - "`static fromFahrenheit(f) { return new Thermometer((f - 32) * 5 / 9); }`"
+    cards:
+      - front: What is a getter?
+        back: "A method written `get name() { … }` that is read like a property: `obj.name`."
+      - front: What is a static method?
+        back: One called on the class itself (`Temperature.fromFahrenheit(…)`), not on instances.
+      - front: "What does `#` do in `#balance`?"
+        back: Makes the field private — only code inside the class can use it.
+
+  - type: quiz
+    id: js9-quiz1
+    title: "Quiz: classes"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          class Counter {
+            count = 0;
+            add(n = 1) {
+              this.count += n;
+              return this;
+            }
+          }
+          const c = new Counter();
+          c.add().add(5);
+          console.log(c.count);
+        answer: |
+          6
+        why: "Returning this allows chaining: 1 + 5."
+      - type: mcq
+        prompt: "How do you call the static method `create` of class `User`?"
+        options:
+          - "`new User().create()`"
+          - "`User.create()`"
+          - "`create(User)`"
+          - "`User.prototype.create()`"
+        answer: 1
+        why: "Static methods live on the class."
+      - type: tf
+        prompt: "Code outside a class can read a private `#field`."
+        answer: false
+        why: "Only the class's own code can."
+      - type: spot
+        prompt: Which line has the error?
+        code: |
+          class Cat {
+            constructor(name) {
+              this.name = name;
+            },
+            meow() {
+              return 'Meow';
+            }
+          }
+        answer: 4
+        why: "No commas between class members."
+
+  - type: lesson
+    id: js9-inherit
+    title: Inheritance
+    minutes: 25
+    objectives:
+      - Extend a class with `extends`
+      - Call the parent constructor with `super()`
+      - Override methods and call the parent's version
+    body: |
+      A class can **extend** another, inheriting its properties and methods
+      and adding or changing some:
+
+      ```js
+      class Animal {
+        constructor(name) {
+          this.name = name;
+        }
+
+        speak() {
+          return `${this.name} makes a sound`;
+        }
+      }
+
+      class Cat extends Animal {
+        constructor(name, indoor) {
+          super(name);          // run Animal's constructor first
+          this.indoor = indoor;
+        }
+
+        speak() {               // override
+          return `${this.name} meows`;
+        }
+      }
+
+      class Lion extends Animal {
+        speak() {
+          return super.speak() + ' — a mighty roar';
+        }
+      }
+
+      const animals = [new Animal('Thing'), new Cat('Tom', true), new Lion('Leo')];
+      for (const a of animals) {
+        console.log(a.speak());
+      }
+      console.log(animals[1] instanceof Animal);
+      ```
+      ```output
+      Thing makes a sound
+      Tom meows
+      Leo makes a sound — a mighty roar
+      true
+      ```
+
+      - `class Cat extends Animal` — Cat is a **subclass** of Animal.
+      - In a subclass constructor, call `super(…)` **before** using `this`.
+      - A method with the same name **overrides** the parent's; `super.speak()` still calls the parent's version.
+      - A subclass without a constructor uses the parent's (like `Lion`).
+
+      The loop calls `speak()` on each without caring which kind of animal
+      it is — each answers in its own way. That's called **polymorphism**.
+
+      > [!tip]
+      > Use inheritance for real "is a" relationships (a cat **is an**
+      > animal), and keep hierarchies shallow. Often it's simpler for an
+      > object to **have** another (a car *has* an engine) than to inherit.
+
+      {{check super}}
+
+      {{task shapes}}
+    checks:
+      - id: super
+        type: mcq
+        prompt: "In a subclass constructor, when must you call `super(…)`?"
+        options:
+          - At the end
+          - Before using `this`
+          - Never — it's automatic
+          - Only if the parent has methods
+        answer: 1
+        why: "The parent's constructor must run before this can be used."
+    tasks:
+      - id: shapes
+        title: Shapes
+        prompt: |
+          - `class Shape`: `constructor(name)` sets `name`; `area()` returns `0`; `describe()` returns `'circle with area 12.57'` — the name, then the area rounded to **2 decimals** (`toFixed(2)`)
+          - `class Rect extends Shape`: `constructor(width, height)` calls `super('rectangle')`; `area()` returns width × height
+          - `class Circle extends Shape`: `constructor(radius)` calls `super('circle')`; `area()` returns `Math.PI` × radius²
+
+          `describe()` is written only once, in `Shape`, and works for all.
+        starter: |
+          class Shape {
+          }
+
+          class Rect extends Shape {
+          }
+
+          class Circle extends Shape {
+          }
+        solution: |
+          class Shape {
+            constructor(name) {
+              this.name = name;
+            }
+
+            area() {
+              return 0;
+            }
+
+            describe() {
+              return `${this.name} with area ${this.area().toFixed(2)}`;
+            }
+          }
+
+          class Rect extends Shape {
+            constructor(width, height) {
+              super('rectangle');
+              this.width = width;
+              this.height = height;
+            }
+
+            area() {
+              return this.width * this.height;
+            }
+          }
+
+          class Circle extends Shape {
+            constructor(radius) {
+              super('circle');
+              this.radius = radius;
+            }
+
+            area() {
+              return Math.PI * this.radius ** 2;
+            }
+          }
+        harness: |
+          const r = new Rect(3, 4);
+          const c = new Circle(2);
+          check(r.area(), 12);
+          check(r.describe(), 'rectangle with area 12.00');
+          check(Math.round(c.area() * 100) / 100, 12.57);
+          check(c.describe(), 'circle with area 12.57');
+          check(r instanceof Shape && c instanceof Shape, true);
+          check(new Shape('blob').describe(), 'blob with area 0.00');
+          check(Object.prototype.hasOwnProperty.call(Rect.prototype, 'describe'), false);
+        hints:
+          - "`describe()` in Shape calls `this.area()` — which runs the subclass's version."
+          - "`class Rect extends Shape { constructor(width, height) { super('rectangle'); … } }`"
+    cards:
+      - front: What does `class B extends A` mean?
+        back: B inherits A's properties and methods, and can add or override them.
+      - front: "What does `super.method()` do?"
+        back: Calls the parent class's version of the method.
+      - front: What is polymorphism?
+        back: Calling the same method on different kinds of objects, each responding in its own way.
+
+  - type: lesson
+    id: js9-modules
+    title: Modules
+    minutes: 15
+    objectives:
+      - Split code across files with `export` and `import`
+      - Tell named exports from default exports
+      - Load a module in a web page
+    body: |
+      Big programs are split into **modules** — files that each do one job
+      and share only what they choose to.
+
+      ```js static
+      // math.js
+      export const PI = 3.14159;
+      export function area(r) {
+        return PI * r * r;
+      }
+      function secretHelper() { … }   // not exported: private to this file
+      ```
+
+      ```js static
+      // shapes.js
+      import { area, PI } from './math.js';
+      console.log(area(2));
+      ```
+
+      - `export` in front of a declaration shares it.
+      - `import { a, b } from './file.js'` brings in **named** exports — the names must match (`import { area as circleArea }` renames).
+      - A file can have one **default** export: `export default class Cart { … }`, imported without braces and with any name: `import Cart from './cart.js'`.
+      - Everything not exported stays **private** to its file — no more name clashes between files.
+
+      ## Modules in the browser
+
+      ```html static
+      <script type="module" src="app.js"></script>
+      ```
+
+      `type="module"` lets the file use `import`, and it's deferred
+      automatically. (Modules need to be served by a web server — they
+      don't load from a file opened directly on your disk.)
+
+      > [!note]
+      > The exercises in this course each fit in one file, so they don't use
+      > modules — but every real project does.
+
+      {{check named}}
+    checks:
+      - id: named
+        type: mcq
+        prompt: "`export function total() {…}` in cart.js. How do you import it?"
+        options:
+          - "`import total from './cart.js';`"
+          - "`import { total } from './cart.js';`"
+          - "`require total from cart`"
+          - "`include './cart.js';`"
+        answer: 1
+        why: "Named exports are imported in braces."
+    cards:
+      - front: Named vs default export?
+        back: "Named exports are imported in braces with matching names (`import { a } …`); a file's single default export is imported without braces, with any name."
+      - front: How does a page load a module?
+        back: "`<script type=\"module\" src=\"app.js\"></script>`"
+
+  - type: quiz
+    id: js9-quiz2
+    title: "Quiz: inheritance and modules"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          class A {
+            hi() {
+              return 'A';
+            }
+          }
+          class B extends A {
+            hi() {
+              return super.hi() + 'B';
+            }
+          }
+          class C extends B {}
+          console.log(new C().hi());
+        answer: |
+          AB
+        why: "C inherits B's hi, which calls A's."
+      - type: tf
+        prompt: Functions in a module that aren't exported can't be used by other files.
+        answer: true
+        why: "They're private to the module."
+      - type: fill
+        prompt: Share this function with other modules.
+        code: |
+          ___ function slugify(text) { … }
+        blanks:
+          - [export]
+        why: "`export`."
+
+  - type: challenge
+    id: js9-ch-stack
+    title: Stack and queue
+    difficulty: 2
+    tags: [classes]
+    prompt: |
+      Write two classes, each storing its items in a private array
+      `#items`:
+
+      - `Stack` — `push(x)`, `pop()` (removes and returns the **last** item added, or `undefined`), `peek()` (the last item without removing it), and a getter `size`
+      - `Queue` — `enqueue(x)`, `dequeue()` (removes and returns the **first** item added, or `undefined`), and a getter `size`
+    starter: |
+      class Stack {
+      }
+
+      class Queue {
+      }
+    solution: |
+      class Stack {
+        #items = [];
+
+        push(x) {
+          this.#items.push(x);
+        }
+
+        pop() {
+          return this.#items.pop();
+        }
+
+        peek() {
+          return this.#items[this.#items.length - 1];
+        }
+
+        get size() {
+          return this.#items.length;
+        }
+      }
+
+      class Queue {
+        #items = [];
+
+        enqueue(x) {
+          this.#items.push(x);
+        }
+
+        dequeue() {
+          return this.#items.shift();
+        }
+
+        get size() {
+          return this.#items.length;
+        }
+      }
+    harness: |
+      const s = new Stack();
+      s.push(1);
+      s.push(2);
+      s.push(3);
+      check(s.size, 3);
+      check(s.peek(), 3);
+      check(s.pop(), 3);
+      check(s.pop(), 2);
+      check(s.size, 1);
+      check(new Stack().pop(), undefined);
+      const q = new Queue();
+      q.enqueue('a');
+      q.enqueue('b');
+      check(q.dequeue(), 'a');
+      check(q.size, 1);
+      check(q.dequeue(), 'b');
+      check(q.dequeue(), undefined);
+      check(Object.keys(s), []);
+    hints:
+      - "`#items = [];` as a field; a stack uses push/pop, a queue push/shift."
+
+  - type: challenge
+    id: js9-ch-employees
+    title: Staff and managers
+    difficulty: 3
+    tags: [inheritance]
+    prompt: |
+      - `class Employee`: `constructor(name, salary)`; `raise(percent)` increases the salary by that percentage; `info()` returns `'Ana earns 30000'`
+      - `class Manager extends Employee`: `constructor(name, salary)` also sets `team` to an empty array; `addToTeam(employee)`; `info()` returns the parent's info plus `' and manages 2 people'` (using `super.info()`); `teamCost()` returns the manager's salary plus all the team's salaries
+    starter: |
+      class Employee {
+      }
+
+      class Manager extends Employee {
+      }
+    solution: |
+      class Employee {
+        constructor(name, salary) {
+          this.name = name;
+          this.salary = salary;
+        }
+
+        raise(percent) {
+          this.salary += this.salary * percent / 100;
+        }
+
+        info() {
+          return `${this.name} earns ${this.salary}`;
+        }
+      }
+
+      class Manager extends Employee {
+        constructor(name, salary) {
+          super(name, salary);
+          this.team = [];
+        }
+
+        addToTeam(employee) {
+          this.team.push(employee);
+        }
+
+        info() {
+          return `${super.info()} and manages ${this.team.length} people`;
+        }
+
+        teamCost() {
+          return this.team.reduce((sum, e) => sum + e.salary, this.salary);
+        }
+      }
+    harness: |
+      const ana = new Employee('Ana', 30000);
+      const bo = new Employee('Bo', 20000);
+      ana.raise(10);
+      check(ana.salary, 33000);
+      check(ana.info(), 'Ana earns 33000');
+      const max = new Manager('Max', 50000);
+      max.addToTeam(ana);
+      max.addToTeam(bo);
+      check(max.info(), 'Max earns 50000 and manages 2 people');
+      check(max.teamCost(), 103000);
+      check(max instanceof Employee, true);
+      max.raise(2);
+      check(max.salary, 51000);
+    hints:
+      - "Manager's constructor: `super(name, salary);` then `this.team = [];`."
+      - "`info() { return `${super.info()} and manages ${this.team.length} people`; }`"
+
+  - type: review
+    id: js9-review
+    title: "Chapter 9 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      class Account {
+        #balance = 0;                       // private field
+        constructor(owner) { this.owner = owner; }
+        deposit(n) { this.#balance += n; }  // method
+        get balance() { return this.#balance; }
+        static open(owner) { return new Account(owner); }
+      }
+
+      class Savings extends Account {
+        constructor(owner, rate) {
+          super(owner);
+          this.rate = rate;
+        }
+        get interest() { return this.balance * this.rate; }   // uses the parent's getter
+      }
+
+      const a = new Account('Ana');   a instanceof Account
+
+      export function f() {}    import { f } from './f.js';
+      export default class X {} import X from './x.js';
+      ```
+
+      ## Key ideas
+
+      - A class is a blueprint; `new` makes instances with their own data and shared methods.
+      - Getters compute; setters validate; static belongs to the class; `#private` protects data.
+      - Subclasses call `super()` first, and can override methods.
+      - Modules share only what they export.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          class P {
+            constructor(x) {
+              this.x = x;
+            }
+            get double() {
+              return this.x * 2;
+            }
+          }
+          const p = new P(4);
+          console.log(p.double, p.x);
+        answer: |
+          8 4
+        why: "A getter is read like a property."
+      - type: mcq
+        prompt: Which keyword makes one class inherit from another?
+        options:
+          - "`inherits`"
+          - "`extends`"
+          - "`super`"
+          - "`implements`"
+        answer: 1
+        why: "`class B extends A`."
+
+  - type: exam
+    id: js9-exam
+    title: "Chapter 9 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          class Light {
+            on = false;
+            toggle() {
+              this.on = !this.on;
+            }
+          }
+          const l = new Light();
+          l.toggle();
+          l.toggle();
+          l.toggle();
+          console.log(l.on);
+        answer: |
+          true
+        why: "Three toggles from false."
+      - type: mcq
+        prompt: "What does `new` do?"
+        options:
+          - Copies a class
+          - Creates an instance and runs the constructor
+          - Declares a variable
+          - Imports a module
+        answer: 1
+        why: "It builds a new object from the class."
+      - type: output
+        prompt: What does this print?
+        code: |
+          class Temp {
+            static unit = 'C';
+            static label(n) {
+              return `${n}°${Temp.unit}`;
+            }
+          }
+          console.log(Temp.label(21));
+        answer: |
+          21°C
+        why: "Static members belong to the class."
+      - type: tf
+        prompt: A getter is called with brackets, like `obj.area()`.
+        answer: false
+        why: "It's read like a property: obj.area."
+      - type: output
+        prompt: What does this print?
+        code: |
+          class Base {
+            name() {
+              return 'base';
+            }
+            greet() {
+              return 'I am ' + this.name();
+            }
+          }
+          class Child extends Base {
+            name() {
+              return 'child';
+            }
+          }
+          console.log(new Child().greet());
+        answer: |
+          I am child
+        why: "this.name() uses the override."
+      - type: mcq
+        prompt: "In `class Car extends Vehicle`, the constructor uses `this` before `super()`. What happens?"
+        options:
+          - It works
+          - A ReferenceError
+          - super is called automatically
+          - this is undefined but no error
+        answer: 1
+        why: "this can't be used before super() in a subclass constructor."
+      - type: output
+        prompt: What does this print?
+        code: |
+          class Pt {
+            constructor(x, y) {
+              this.x = x;
+              this.y = y;
+            }
+          }
+          console.log(new Pt(1, 2));
+        answer: |
+          Pt {x: 1, y: 2}
+        why: "The console shows the class name and properties."
+      - type: fill
+        prompt: A private field.
+        code: |
+          class Vault {
+            ___secret = 'x';
+          }
+        blanks:
+          - ["#"]
+        why: "Private names start with #."
+      - type: mcq
+        prompt: How do you import a module's default export?
+        options:
+          - "`import { Cart } from './cart.js';`"
+          - "`import Cart from './cart.js';`"
+          - "`import default from './cart.js';`"
+          - "`export Cart from './cart.js';`"
+        answer: 1
+        why: "No braces for the default export."
+      - type: output
+        prompt: What does this print?
+        code: |
+          class Animal {}
+          class Bird extends Animal {}
+          const b = new Bird();
+          console.log(b instanceof Bird, b instanceof Animal);
+        answer: |
+          true true
+        why: "A Bird is also an Animal."
+      - type: code
+        prompt: |
+          Write `class Playlist`:
+
+          - `constructor(name)` sets `name` and an empty `songs` array
+          - `add(title, seconds)` adds `{ title, seconds }` and returns `this` (so calls can be chained)
+          - getter `duration` — total seconds
+          - `longest()` — the title of the longest song, or `null` if empty
+        starter: |
+          class Playlist {
+          }
+        solution: |
+          class Playlist {
+            constructor(name) {
+              this.name = name;
+              this.songs = [];
+            }
+
+            add(title, seconds) {
+              this.songs.push({ title, seconds });
+              return this;
+            }
+
+            get duration() {
+              return this.songs.reduce((sum, s) => sum + s.seconds, 0);
+            }
+
+            longest() {
+              if (this.songs.length === 0) {
+                return null;
+              }
+              let best = this.songs[0];
+              for (const s of this.songs) {
+                if (s.seconds > best.seconds) {
+                  best = s;
+                }
+              }
+              return best.title;
+            }
+          }
+        harness: |
+          const p = new Playlist('Road trip');
+          check(p.longest(), null);
+          check(p.duration, 0);
+          p.add('Intro', 60).add('Epic', 420).add('Outro', 90);
+          check(p.songs.length, 3);
+          check(p.duration, 570);
+          check(p.longest(), 'Epic');
+          check(p.name, 'Road trip');

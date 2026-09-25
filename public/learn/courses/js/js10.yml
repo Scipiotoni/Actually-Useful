@@ -1,0 +1,871 @@
+id: js10
+number: 10
+part: js-p2
+title: Errors and Debugging
+blurb: Throw errors on bad input, catch them gracefully, write your own error types — and find bugs methodically.
+hours: 2.5
+goals:
+  - Recognise JavaScript's error types
+  - Throw errors when something is wrong
+  - Handle errors with `try`, `catch` and `finally`
+  - Create custom error classes
+  - Debug methodically with logging, the debugger and a plan
+
+items:
+  - type: lesson
+    id: js10-throw
+    title: Throwing errors
+    minutes: 20
+    objectives:
+      - Name the common built-in error types
+      - Throw an error with a helpful message
+      - Decide when a function should throw
+    body: |
+      You've met errors JavaScript throws by itself:
+
+      | Type | Means | Example |
+      |---|---|---|
+      | `SyntaxError` | the code isn't valid JavaScript | a missing `)` |
+      | `ReferenceError` | an unknown name | `consol.log()` |
+      | `TypeError` | a value of the wrong kind | calling something that isn't a function, reading a property of `undefined` |
+      | `RangeError` | a number out of range | `(1).toFixed(200)` |
+
+      Your own functions can **throw** errors too, when they're given
+      something they can't handle:
+
+      ```js error
+      function withdraw(balance, amount) {
+        if (amount <= 0) {
+          throw new Error('The amount must be positive');
+        }
+        if (amount > balance) {
+          throw new RangeError(`Not enough money: balance ${balance}, asked ${amount}`);
+        }
+        return balance - amount;
+      }
+
+      console.log(withdraw(100, 30));
+      console.log(withdraw(100, 500));
+      console.log('never printed');
+      ```
+
+      `throw` stops the function **immediately**, and keeps stopping every
+      function up the chain — until something **catches** it (next lesson)
+      or the program ends with the message.
+
+      ## Why throw?
+
+      Returning a special value (like `-1` or `null`) is easy to ignore by
+      accident; a thrown error can't be ignored. Throw when the caller made
+      a mistake that should be fixed — invalid arguments, impossible
+      states. Write messages that say **what** was wrong and **what** was
+      expected.
+
+      Every error object has a `name` (`'RangeError'`), a `message`, and a
+      `stack` (the chain of function calls that led to it).
+
+      {{check stop}}
+
+      {{task validate}}
+    checks:
+      - id: stop
+        type: output
+        prompt: What is printed before the error ends the program?
+        code: |
+          function check(n) {
+            console.log('checking ' + n);
+            if (n < 0) {
+              throw new Error('negative');
+            }
+            console.log('ok');
+          }
+          check(1);
+          check(-1);
+          check(2);
+        answer: |
+          checking 1
+          ok
+          checking -1
+        error: true
+        why: "throw stops everything; check(2) never runs."
+    tasks:
+      - id: validate
+        title: Guard the inputs
+        prompt: |
+          - `squareRoot(n)` returns `Math.sqrt(n)`, but **throws a `RangeError`** if n is negative
+          - `parseAge(text)` converts the text to a number and returns it, but **throws an `Error`** if the result isn't a whole number from 0 to 150 (use `Number.isInteger`)
+        starter: |
+          function squareRoot(n) {
+          }
+
+          function parseAge(text) {
+          }
+        solution: |
+          function squareRoot(n) {
+            if (n < 0) {
+              throw new RangeError(`Cannot take the square root of ${n}`);
+            }
+            return Math.sqrt(n);
+          }
+
+          function parseAge(text) {
+            const age = Number(text);
+            if (!Number.isInteger(age) || age < 0 || age > 150) {
+              throw new Error(`Not a valid age: ${text}`);
+            }
+            return age;
+          }
+        harness: |
+          check(squareRoot(49), 7);
+          checkThrows(squareRoot(-4));
+          let err = null;
+          try { squareRoot(-1); } catch (e) { err = e; }
+          check(err instanceof RangeError, true);
+          check(parseAge('42'), 42);
+          check(parseAge('0'), 0);
+          checkThrows(parseAge('abc'));
+          checkThrows(parseAge('12.5'));
+          checkThrows(parseAge('-3'));
+          checkThrows(parseAge('200'));
+        hints:
+          - "`throw new RangeError('…');` — and return the square root otherwise."
+          - "`Number.isInteger(Number('abc'))` is false, since NaN isn't an integer — one check covers text and decimals."
+    cards:
+      - front: What does `throw` do?
+        back: Stops the current function immediately and passes an error up the chain until something catches it.
+      - front: TypeError vs ReferenceError?
+        back: ReferenceError — an unknown name; TypeError — a value of the wrong kind (e.g. calling something that isn't a function).
+      - front: How do you throw a helpful error?
+        back: "`throw new Error('what was wrong and what was expected');`"
+
+  - type: lesson
+    id: js10-catch
+    title: try, catch and finally
+    minutes: 25
+    objectives:
+      - Catch errors with `try` / `catch`
+      - Run clean-up code with `finally`
+      - Handle different error types differently
+      - Define a custom error class
+    body: |
+      `try` runs code that might fail; if anything in it throws, the
+      `catch` block runs with the error, and the program carries on:
+
+      ```js
+      function parse(text) {
+        try {
+          const data = JSON.parse(text);
+          return `Got ${data.name}`;
+        } catch (error) {
+          return `Bad data: ${error.name}`;
+        }
+      }
+
+      console.log(parse('{"name": "Ada"}'));
+      console.log(parse('not json'));
+      console.log('The program keeps going.');
+      ```
+      ```output
+      Got Ada
+      Bad data: SyntaxError
+      The program keeps going.
+      ```
+
+      ## finally
+
+      `finally` runs **whether or not** there was an error — for clean-up
+      like hiding a "loading" spinner:
+
+      ```js
+      function load(ok) {
+        try {
+          console.log('loading…');
+          if (!ok) {
+            throw new Error('network down');
+          }
+          console.log('loaded');
+        } catch (e) {
+          console.log('failed: ' + e.message);
+        } finally {
+          console.log('spinner hidden');
+        }
+      }
+      load(true);
+      load(false);
+      ```
+      ```output
+      loading…
+      loaded
+      spinner hidden
+      loading…
+      failed: network down
+      spinner hidden
+      ```
+
+      ## Custom errors
+
+      Your own error classes make it easy to tell problems apart:
+
+      ```js
+      class ValidationError extends Error {
+        constructor(field, message) {
+          super(message);
+          this.name = 'ValidationError';
+          this.field = field;
+        }
+      }
+
+      function register(user) {
+        if (!user.email.includes('@')) {
+          throw new ValidationError('email', 'That email looks wrong');
+        }
+        return 'registered';
+      }
+
+      try {
+        register({ email: 'nope' });
+      } catch (e) {
+        if (e instanceof ValidationError) {
+          console.log(`${e.field}: ${e.message}`);
+        } else {
+          throw e;   // not ours — let it keep going
+        }
+      }
+      ```
+      ```output
+      email: That email looks wrong
+      ```
+
+      > [!warning]
+      > Never catch errors and do nothing with them (an empty `catch {}`).
+      > The bug is still there — you've just hidden the evidence. Catch the
+      > errors you can handle, and re-`throw` the rest.
+
+      {{check flow}}
+
+      {{task safe}}
+    checks:
+      - id: flow
+        type: output
+        prompt: What does this print?
+        code: |
+          try {
+            console.log('A');
+            null.length;
+            console.log('B');
+          } catch (e) {
+            console.log('C');
+          } finally {
+            console.log('D');
+          }
+          console.log('E');
+        answer: |
+          A
+          C
+          D
+          E
+        why: "The error skips B, then catch, finally, and the program continues."
+    tasks:
+      - id: safe
+        title: Safe operations
+        prompt: |
+          - `safeParse(text)` returns the parsed JSON value, or `null` if the text isn't valid JSON
+          - `divide(a, b)` returns a ÷ b but **throws** an `Error` with the message `'Cannot divide by zero'` when b is 0
+          - `tryDivide(a, b)` calls `divide` and returns its result — or, if it throws, returns the error's **message**
+        starter: |
+          function safeParse(text) {
+          }
+
+          function divide(a, b) {
+          }
+
+          function tryDivide(a, b) {
+          }
+        solution: |
+          function safeParse(text) {
+            try {
+              return JSON.parse(text);
+            } catch (e) {
+              return null;
+            }
+          }
+
+          function divide(a, b) {
+            if (b === 0) {
+              throw new Error('Cannot divide by zero');
+            }
+            return a / b;
+          }
+
+          function tryDivide(a, b) {
+            try {
+              return divide(a, b);
+            } catch (e) {
+              return e.message;
+            }
+          }
+        harness: |
+          check(safeParse('[1, 2]'), [1, 2]);
+          check(safeParse('{"ok": true}'), { ok: true });
+          check(safeParse('{oops}'), null);
+          check(divide(10, 4), 2.5);
+          checkThrows(divide(1, 0));
+          check(tryDivide(9, 3), 3);
+          check(tryDivide(9, 0), 'Cannot divide by zero');
+        hints:
+          - "`try { return JSON.parse(text); } catch (e) { return null; }`"
+          - "In `tryDivide`, the `catch (e)` block returns `e.message`."
+    cards:
+      - front: When does a `catch` block run?
+        back: When code inside the try block throws an error.
+      - front: When does `finally` run?
+        back: Always — after try (and catch, if there was an error).
+      - front: Why is an empty `catch {}` a bad idea?
+        back: It hides errors, so bugs go unnoticed. Handle what you can and re-throw the rest.
+      - front: How do you make a custom error type?
+        back: "`class MyError extends Error { constructor(msg) { super(msg); this.name = 'MyError'; } }`"
+
+  - type: quiz
+    id: js10-quiz1
+    title: "Quiz: throwing and catching"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          function f() {
+            throw new TypeError('bad type');
+          }
+          try {
+            f();
+          } catch (e) {
+            console.log(e.name);
+            console.log(e.message);
+          }
+        answer: |
+          TypeError
+          bad type
+        why: "The error object carries its name and message."
+      - type: mcq
+        prompt: "`const x = undefined; x.name;` throws…"
+        options:
+          - "ReferenceError"
+          - "TypeError"
+          - "SyntaxError"
+          - "RangeError"
+        answer: 1
+        why: "Reading a property of undefined is a TypeError."
+      - type: tf
+        prompt: Code after a caught error, outside the try/catch, still runs.
+        answer: true
+        why: "Catching the error lets the program carry on."
+      - type: output
+        prompt: What does this print?
+        code: |
+          function test() {
+            try {
+              return 'try';
+            } finally {
+              console.log('finally');
+            }
+          }
+          console.log(test());
+        answer: |
+          finally
+          try
+        why: "finally runs even when try returns — before the value reaches the caller."
+
+  - type: lesson
+    id: js10-debug
+    title: Debugging
+    minutes: 20
+    objectives:
+      - Follow a methodical process to find bugs
+      - Inspect values with console methods and the debugger
+      - Recognise the most common bugs
+    body: |
+      A **bug** is code that runs but does the wrong thing. Guessing wastes
+      hours; a method finds bugs fast.
+
+      ## 1. Reproduce it
+
+      Find the smallest input that shows the problem, and write down what
+      you **expected** and what you **got**.
+
+      ## 2. Read the error (if there is one)
+
+      Type, message, line — and the **stack**, which lists the function
+      calls that led there.
+
+      ## 3. Look at the values
+
+      Print what's really happening, not what you think is happening:
+
+      ```js
+      function average(nums) {
+        let total = 0;
+        for (let i = 1; i < nums.length; i++) {
+          total += nums[i];
+          console.log({ i, value: nums[i], total });
+        }
+        return total / nums.length;
+      }
+      console.log(average([10, 20, 30]));
+      ```
+      ```output
+      {i: 1, value: 20, total: 20}
+      {i: 2, value: 30, total: 50}
+      16.666666666666668
+      ```
+
+      Logging `{ i, value, total }` (an object with shorthand names) labels
+      each value. The log shows it at once: the loop starts at 1 and skips
+      the first number — an **off-by-one** bug.
+
+      ## 4. Use the debugger
+
+      In the browser's developer tools (**Sources** panel) you can click a
+      line number to set a **breakpoint**: the code pauses there, and you
+      can see every variable and step through one line at a time. Writing
+      `debugger;` in your code does the same when the tools are open.
+
+      ## 5. Narrow it down
+
+      Comment out half the code, or test pieces separately. Is the bug in
+      the first half or the second? Repeat.
+
+      ## The usual suspects
+
+      - **Off-by-one**: `<=` instead of `<`, starting at 1 instead of 0.
+      - `=` instead of `===` in a condition.
+      - Strings instead of numbers (`'5' + 1` is `'51'`).
+      - Forgetting `return` (the result is `undefined`).
+      - Changing an array or object that's shared with other code.
+      - A typo in a property name — reading it gives `undefined`, silently.
+
+      > [!tip]
+      > Explain the code, line by line, out loud — to a friend or a rubber
+      > duck. Surprisingly often, you hear the bug yourself.
+
+      {{check offby}}
+
+      {{task bugs}}
+    checks:
+      - id: offby
+        type: spot
+        prompt: Which line has the off-by-one bug? (It should print every item.)
+        code: |
+          const items = ['a', 'b', 'c'];
+          for (let i = 0; i <= items.length; i++) {
+            console.log(items[i]);
+          }
+        answer: 2
+        why: "`<=` goes one past the end, printing undefined. Use `<`."
+    tasks:
+      - id: bugs
+        title: Find and fix
+        prompt: |
+          Each function has **one** bug. Fix them:
+
+          - `lastItem(list)` should return the last item
+          - `countAbove(nums, limit)` should count the numbers **greater than** `limit`
+          - `addTax(prices)` should return **new** prices with 10% added, **without changing** the original array
+          - `total(items)` should add up the `price` of each item
+        starter: |
+          function lastItem(list) {
+            return list[list.length];
+          }
+
+          function countAbove(nums, limit) {
+            let count = 0;
+            for (const n of nums) {
+              if (n = limit) {
+                count++;
+              }
+            }
+            return count;
+          }
+
+          function addTax(prices) {
+            for (let i = 0; i < prices.length; i++) {
+              prices[i] = prices[i] * 1.1;
+            }
+            return prices;
+          }
+
+          function total(items) {
+            let sum = 0;
+            for (const item of items) {
+              sum += item.prize;
+            }
+            return sum;
+          }
+        solution: |
+          function lastItem(list) {
+            return list[list.length - 1];
+          }
+
+          function countAbove(nums, limit) {
+            let count = 0;
+            for (const n of nums) {
+              if (n > limit) {
+                count++;
+              }
+            }
+            return count;
+          }
+
+          function addTax(prices) {
+            return prices.map((p) => p * 1.1);
+          }
+
+          function total(items) {
+            let sum = 0;
+            for (const item of items) {
+              sum += item.price;
+            }
+            return sum;
+          }
+        harness: |
+          check(lastItem([1, 2, 3]), 3);
+          check(countAbove([5, 10, 15, 20], 10), 2);
+          check(countAbove([1, 2], 5), 0);
+          const prices = [10, 20];
+          check(addTax(prices).map((p) => Math.round(p * 100) / 100), [11, 22]);
+          check(prices, [10, 20]);
+          check(total([{ price: 2 }, { price: 3.5 }]), 5.5);
+        hints:
+          - "The last index is `length - 1`."
+          - "`n = limit` assigns instead of comparing — and the task wants 'greater than'."
+          - "`addTax` changes the array it was given; `map` makes a new one. And look closely at the spelling of `item.prize`."
+    cards:
+      - front: What are the first steps when you find a bug?
+        back: Reproduce it with a small input, note expected vs actual, and read any error message.
+      - front: What is an off-by-one bug?
+        back: A loop or index that's one too many or too few — often `<=` instead of `<`.
+      - front: What does the `debugger;` statement do?
+        back: Pauses the code at that line when the developer tools are open, so you can inspect variables and step through.
+      - front: Why log `{ i, total }` rather than `i, total`?
+        back: The object shorthand labels each value in the output.
+
+  - type: quiz
+    id: js10-quiz2
+    title: "Quiz: debugging"
+    questions:
+      - type: spot
+        prompt: Which line has the bug? (`double([1, 2])` should be `[2, 4]`.)
+        code: |
+          function double(list) {
+            const result = [];
+            for (const x of list) {
+              result.push(x * 2);
+            }
+          }
+        answer: 5
+        why: "The function never returns the result — add `return result;` before the closing brace."
+      - type: mcq
+        prompt: "A total shows `'05102'` instead of `17`. The likely cause?"
+        options:
+          - An off-by-one loop
+          - The numbers are strings, so + joins them
+          - A missing return
+          - A syntax error
+        answer: 1
+        why: "Strings joined together — convert with Number()."
+      - type: tf
+        prompt: Setting a breakpoint pauses the program on that line so you can inspect it.
+        answer: true
+        why: "That's what breakpoints do."
+
+  - type: challenge
+    id: js10-ch-form
+    title: Validate a sign-up
+    difficulty: 3
+    tags: [errors, classes]
+    prompt: |
+      - Write `class ValidationError extends Error` whose constructor takes `(field, message)`, sets `name` to `'ValidationError'` and stores `field`
+      - `validate(form)` checks `{ name, email, age }` and **throws a `ValidationError`** for the **first** problem:
+        - `name`: at least 2 characters after trimming → field `'name'`
+        - `email`: must contain `@` → field `'email'`
+        - `age`: a number from 13 to 120 → field `'age'`
+
+        If everything is fine, it returns `true`.
+      - `checkForm(form)` returns `'ok'`, or `'email: …'` (the field, a colon, and the message) if `validate` throws a ValidationError. Any **other** error must be re-thrown.
+    starter: |
+      class ValidationError extends Error {
+      }
+
+      function validate(form) {
+      }
+
+      function checkForm(form) {
+      }
+    solution: |
+      class ValidationError extends Error {
+        constructor(field, message) {
+          super(message);
+          this.name = 'ValidationError';
+          this.field = field;
+        }
+      }
+
+      function validate(form) {
+        if (form.name.trim().length < 2) {
+          throw new ValidationError('name', 'Please enter your name');
+        }
+        if (!form.email.includes('@')) {
+          throw new ValidationError('email', 'Please enter a valid email');
+        }
+        if (typeof form.age !== 'number' || form.age < 13 || form.age > 120) {
+          throw new ValidationError('age', 'Age must be between 13 and 120');
+        }
+        return true;
+      }
+
+      function checkForm(form) {
+        try {
+          validate(form);
+          return 'ok';
+        } catch (e) {
+          if (e instanceof ValidationError) {
+            return `${e.field}: ${e.message}`;
+          }
+          throw e;
+        }
+      }
+    harness: |
+      const good = { name: 'Ana', email: 'ana@mail.com', age: 30 };
+      check(validate(good), true);
+      check(checkForm(good), 'ok');
+      let err = null;
+      try { validate({ ...good, email: 'nope' }); } catch (e) { err = e; }
+      check(err instanceof ValidationError && err instanceof Error, true);
+      check([err.name, err.field], ['ValidationError', 'email']);
+      check(checkForm({ ...good, name: ' A ' }).startsWith('name: '), true);
+      check(checkForm({ ...good, age: 10 }).startsWith('age: '), true);
+      check(checkForm({ ...good, age: '30' }).startsWith('age: '), true);
+      check(checkForm({ name: 'X', email: 'bad', age: 5 }).startsWith('name: '), true);
+      checkThrows(checkForm(null));
+    hints:
+      - "The constructor: `super(message); this.name = 'ValidationError'; this.field = field;`"
+      - "In `checkForm`'s catch, `if (e instanceof ValidationError) return …; throw e;`"
+
+  - type: review
+    id: js10-review
+    title: "Chapter 10 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      throw new Error('message');
+      throw new RangeError('out of range');
+
+      try {
+        risky();
+      } catch (error) {
+        console.log(error.name, error.message);
+      } finally {
+        cleanUp();
+      }
+
+      class NotFoundError extends Error {
+        constructor(what) {
+          super(`${what} not found`);
+          this.name = 'NotFoundError';
+        }
+      }
+      if (e instanceof NotFoundError) { … } else { throw e; }
+
+      console.log({ i, total });   // labelled values
+      debugger;                     // pause here with dev tools open
+      ```
+
+      ## Key ideas
+
+      - Throw on bad input with a clear message.
+      - Catch what you can handle; re-throw the rest; never swallow errors.
+      - `finally` always runs.
+      - Debug with a method: reproduce, read, inspect, narrow down.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          try {
+            JSON.parse('{bad');
+          } catch (e) {
+            console.log(e instanceof SyntaxError);
+          }
+        answer: |
+          true
+        why: "Invalid JSON throws a SyntaxError."
+      - type: mcq
+        prompt: Which is the best first step when a result is wrong?
+        options:
+          - Rewrite the function from scratch
+          - Reproduce it with a small input and compare expected with actual
+          - Add try/catch everywhere
+          - Ask the computer to try again
+        answer: 1
+        why: "Know exactly what's wrong before changing anything."
+
+  - type: exam
+    id: js10-exam
+    title: "Chapter 10 exam"
+    minutes: 20
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: "`undefinedFunction();` throws…"
+        options:
+          - "TypeError"
+          - "ReferenceError"
+          - "SyntaxError"
+          - "RangeError"
+        answer: 1
+        why: "The name doesn't exist."
+      - type: output
+        prompt: What does this print?
+        code: |
+          try {
+            throw new Error('boom');
+          } catch (e) {
+            console.log('caught ' + e.message);
+          }
+        answer: |
+          caught boom
+        why: "The thrown error reaches catch."
+      - type: output
+        prompt: What does this print?
+        code: |
+          function a() {
+            try {
+              throw new Error('x');
+            } finally {
+              console.log('cleanup');
+            }
+          }
+          try {
+            a();
+          } catch (e) {
+            console.log('outer ' + e.message);
+          }
+        answer: |
+          cleanup
+          outer x
+        why: "finally runs, then the error continues to the outer catch."
+      - type: tf
+        prompt: "`finally` runs only when there was an error."
+        answer: false
+        why: "It always runs."
+      - type: mcq
+        prompt: What should you do with an error you can't handle in a catch block?
+        options:
+          - Ignore it
+          - Re-throw it
+          - Print it and continue as if nothing happened
+          - Convert it to a string
+        answer: 1
+        why: "Let code that can handle it — or the programmer — see it."
+      - type: output
+        prompt: What does this print?
+        code: |
+          class AppError extends Error {
+            constructor(msg) {
+              super(msg);
+              this.name = 'AppError';
+            }
+          }
+          const e = new AppError('oops');
+          console.log(e.name, e.message, e instanceof Error);
+        answer: |
+          AppError oops true
+        why: "A subclass of Error."
+      - type: spot
+        prompt: Which line has the bug? (It should add up all the numbers.)
+        code: |
+          function sum(nums) {
+            let total = 0;
+            for (let i = 1; i < nums.length; i++) {
+              total += nums[i];
+            }
+            return total;
+          }
+        answer: 3
+        why: "It starts at 1, skipping the first number."
+      - type: fill
+        prompt: Throw an error for negative input.
+        code: |
+          if (n < 0) {
+            ___ new RangeError('n must not be negative');
+          }
+        blanks:
+          - [throw]
+        why: "`throw`."
+      - type: output
+        prompt: What does this print?
+        code: |
+          function risky(n) {
+            if (n > 2) {
+              throw new Error('too big');
+            }
+            return n;
+          }
+          let total = 0;
+          for (const n of [1, 2, 3, 4]) {
+            try {
+              total += risky(n);
+            } catch (e) {
+              total += 100;
+            }
+          }
+          console.log(total);
+        answer: |
+          203
+        why: "1 + 2 + 100 + 100."
+      - type: mcq
+        prompt: What does a breakpoint do?
+        options:
+          - Deletes a line
+          - Pauses execution at a line so you can inspect variables
+          - Throws an error
+          - Speeds up the code
+        answer: 1
+        why: "It pauses the program in the debugger."
+      - type: code
+        prompt: |
+          `readNumbers(text)` takes comma-separated values like `'4, 8,15'`
+          and returns an array of numbers. If **any** piece isn't a number,
+          throw an `Error` whose message is `'Not a number: x'` (with the
+          trimmed piece). `sumOrZero(text)` returns the sum of
+          `readNumbers(text)`, or `0` if it throws.
+        starter: |
+          function readNumbers(text) {
+          }
+
+          function sumOrZero(text) {
+          }
+        solution: |
+          function readNumbers(text) {
+            return text.split(',').map((piece) => {
+              const n = Number(piece.trim());
+              if (piece.trim() === '' || Number.isNaN(n)) {
+                throw new Error(`Not a number: ${piece.trim()}`);
+              }
+              return n;
+            });
+          }
+
+          function sumOrZero(text) {
+            try {
+              return readNumbers(text).reduce((a, b) => a + b, 0);
+            } catch (e) {
+              return 0;
+            }
+          }
+        harness: |
+          check(readNumbers('4, 8,15'), [4, 8, 15]);
+          check(readNumbers('2.5'), [2.5]);
+          let err = null;
+          try { readNumbers('1, two, 3'); } catch (e) { err = e; }
+          check(err && err.message, 'Not a number: two');
+          check(sumOrZero('1,2,3'), 6);
+          check(sumOrZero('1,x'), 0);
