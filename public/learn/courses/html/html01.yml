@@ -1,0 +1,988 @@
+id: html01
+number: 1
+part: html-p1
+title: Your First Web Page
+blurb: What the web is, what HTML does, and how to write a real page with headings and paragraphs.
+hours: 2.5
+goals:
+  - Explain what HTML, CSS and JavaScript each do in a web page
+  - Write elements with opening and closing tags, nested correctly
+  - Build the skeleton every HTML document needs
+  - Use headings and paragraphs to structure text, and know how browsers treat whitespace
+  - Spot and fix the most common HTML mistakes
+
+items:
+  - type: lesson
+    id: html1-web
+    title: How the web works
+    minutes: 12
+    objectives:
+      - Describe what happens when you open a web page
+      - Explain the jobs of HTML, CSS and JavaScript
+      - Read and change a live example in this course
+    body: |
+      Every web page you have ever seen — a news site, a shop, a video
+      page — is built from three languages, each with its own job:
+
+      | Language | Its job | Like in a house… |
+      |---|---|---|
+      | **HTML** | The **content and structure**: headings, text, images, links, forms | the walls, rooms and furniture |
+      | **CSS** | The **look**: colours, fonts, spacing, layout | the paint and decoration |
+      | **JavaScript** | The **behaviour**: things that react when you click or type | the electricity and plumbing |
+
+      This course is about the first one, HTML — **HyperText Markup
+      Language**. "Markup" means you take ordinary text and *mark it up* to say
+      what each part is: "this is a heading", "this is a paragraph", "this is
+      a link".
+
+      ## What happens when you open a page
+
+      1. You type an address (a **URL**) like `https://example.com/about` or click a link.
+      2. Your **browser** (Chrome, Firefox, Safari…) asks a **server** — a computer somewhere on the internet — for that page.
+      3. The server sends back a text file of HTML.
+      4. The browser reads the HTML and **draws the page** on your screen, fetching any images, styles and scripts it mentions.
+
+      That's the whole trick: a web page is just a text file that a browser
+      knows how to display. You can write one with any text editor.
+
+      ## Your first HTML
+
+      Here is some HTML and, below it, what a browser makes of it. Press
+      **Edit**, change the words, and watch the result update.
+
+      ```html
+      <h1>Hello, web!</h1>
+      <p>This is my very first web page.</p>
+      ```
+
+      The text between `<h1>` and `</h1>` became a big bold heading; the text
+      inside `<p>` and `</p>` became a paragraph. Those words in angle brackets
+      are **tags** — you'll learn all about them in the next lesson.
+
+      > [!tip]
+      > In this course every example like the one above is **live**. Change
+      > anything you like — you can't break it, and **Reset** puts it back.
+      > Trying things is the fastest way to learn.
+
+      {{check roles}}
+
+      {{check file}}
+    checks:
+      - id: roles
+        type: mcq
+        prompt: Which language decides that a heading is **red** and **centred**?
+        options:
+          - HTML
+          - CSS
+          - JavaScript
+          - The server
+        answer: 1
+        why: "CSS is in charge of how things look. HTML only says *what* the content is — that something is a heading."
+      - id: file
+        type: tf
+        prompt: A web page is, at heart, a text file that a browser knows how to display.
+        answer: true
+        why: "HTML is plain text. The browser reads it and draws the page."
+    cards:
+      - front: What are the jobs of HTML, CSS and JavaScript?
+        back: HTML is the content and structure, CSS is the look, JavaScript is the behaviour.
+      - front: What does HTML stand for?
+        back: HyperText Markup Language — text "marked up" with tags that say what each part is.
+      - front: What does a browser do with an HTML file?
+        back: It reads the tags and draws (renders) the page, fetching any images, styles and scripts it mentions.
+
+  - type: lesson
+    id: html1-elements
+    title: Elements and tags
+    minutes: 20
+    objectives:
+      - Write elements with an opening tag, content and a closing tag
+      - Use headings `<h1>` to `<h6>` and paragraphs `<p>`
+      - Nest elements correctly inside one another
+      - Write comments that the browser ignores
+    body: |
+      An **element** is one piece of a page — a heading, a paragraph, an
+      image. Most elements are written with an **opening tag**, some
+      **content**, and a **closing tag**:
+
+      ```text
+      <p>This is a paragraph.</p>
+      └┬┘└────────┬─────────┘└┬─┘
+      opening    content    closing tag
+       tag                  (note the /)
+      ```
+
+      The tag's name says what kind of element it is. The closing tag is the
+      same name with a `/` in front. Together, opening tag + content +
+      closing tag make the element.
+
+      ## Headings and paragraphs
+
+      HTML has six levels of heading, from `<h1>` (the most important) to
+      `<h6>` (the least), and `<p>` for paragraphs:
+
+      ```html
+      <h1>Cooking for beginners</h1>
+      <p>Everyone can learn to cook. This guide starts with the basics.</p>
+      <h2>Boiling an egg</h2>
+      <p>Put the egg in boiling water for seven minutes.</p>
+      <h3>Tip</h3>
+      <p>Cool it in cold water so it is easier to peel.</p>
+      ```
+
+      ## Elements inside elements
+
+      Elements can contain other elements. Here, `<strong>` (important text,
+      shown in bold) sits **inside** the paragraph:
+
+      ```html
+      <p>Always <strong>turn off the oven</strong> when you are done.</p>
+      ```
+
+      This is called **nesting**. The rule: close elements in the reverse
+      order you opened them — the last one opened is the first one closed,
+      like a set of boxes inside each other.
+
+      ```text
+      Right:  <p>Always <strong>turn off</strong> the oven.</p>
+      Wrong:  <p>Always <strong>turn off the oven.</p></strong>
+      ```
+
+      ## Comments
+
+      Text between `<!--` and `-->` is a **comment**: the browser ignores it.
+      Comments are notes for people reading the code.
+
+      ```html
+      <!-- This heading is the page title -->
+      <h1>My recipes</h1>
+      <!-- <p>This paragraph is switched off for now.</p> -->
+      ```
+
+      > [!remember]
+      > Tag names are not case-sensitive (`<P>` works), but everyone writes
+      > them in **lowercase**. Do the same.
+
+      {{check parts}}
+
+      {{check nesting}}
+
+      {{task first-page}}
+    checks:
+      - id: parts
+        type: fill
+        prompt: Complete the paragraph element.
+        code: |
+          <___>Welcome to my page.</___>
+        blanks:
+          - [p]
+          - [/p]
+        why: "An element opens with `<p>` and closes with `</p>` — the same name with a slash."
+      - id: nesting
+        type: spot
+        prompt: Which line has its tags closed in the wrong order?
+        code: |
+          <h1>My <em>favourite</em> films</h1>
+          <p>I love <strong>old films</strong>.</p>
+          <p>My top pick is <strong><em>Casablanca</strong></em>.</p>
+          <p>Ask me about it!</p>
+        answer: 3
+        why: "`<em>` was opened last, so it must be closed first: `<strong><em>Casablanca</em></strong>`."
+    tasks:
+      - id: first-page
+        title: Headings and paragraphs
+        prompt: |
+          Write a small page about a hobby of yours:
+
+          - a main heading (`<h1>`) with the text `My Hobby`
+          - a paragraph under it
+          - a second-level heading (`<h2>`) with the text `Why I like it`
+          - another paragraph
+
+          The paragraphs can say anything you like.
+        files:
+          index.html: |
+            <!-- Write your page here -->
+        solution:
+          index.html: |
+            <h1>My Hobby</h1>
+            <p>I play the guitar most evenings.</p>
+            <h2>Why I like it</h2>
+            <p>It helps me relax after a long day.</p>
+        harness: |
+          check(text('h1'), 'My Hobby');
+          check(count('h1'), 1);
+          check(text('h2'), 'Why I like it');
+          check(count('p'), 2);
+          check($$('p').every((p) => p.textContent.trim().length > 0), true);
+        hints:
+          - "Each part is one element: `<h1>…</h1>`, then `<p>…</p>`, then `<h2>…</h2>`, then `<p>…</p>`."
+          - "Check that every closing tag has its `/`: `</h1>`, `</p>`, `</h2>`."
+    cards:
+      - front: What are the three parts of most elements?
+        back: An opening tag (`<p>`), the content, and a closing tag (`</p>`).
+      - front: Which heading is the most important?
+        back: "`<h1>` — headings go from `<h1>` (most important) to `<h6>` (least)."
+      - front: What is **nesting**, and its rule?
+        back: Putting elements inside others. Close them in reverse order — the last opened is the first closed.
+      - front: How do you write a comment in HTML?
+        back: "`<!-- like this -->` — the browser ignores it."
+
+  - type: lesson
+    id: html1-document
+    title: The skeleton of a page
+    minutes: 20
+    objectives:
+      - Write the parts every HTML document needs
+      - Explain the difference between the head and the body
+      - Give a page a title and a language
+    body: |
+      The snippets so far were fragments. A complete HTML file has a fixed
+      **skeleton** around the content. Here it is — you'll type this at the
+      start of every page you ever write:
+
+      ```html
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>My first page</title>
+        </head>
+        <body>
+          <h1>Hello!</h1>
+          <p>Everything you see on the page goes inside the body.</p>
+        </body>
+      </html>
+      ```
+
+      Line by line:
+
+      - `<!DOCTYPE html>` tells the browser "this is a modern HTML page". Always the first line.
+      - `<html lang="en">` wraps the whole page. `lang="en"` says the page is in English, which helps screen readers pronounce it and search engines understand it (Spanish would be `lang="es"`).
+      - `<head>` holds information **about** the page — nothing in it is shown in the page itself.
+        - `<meta charset="utf-8">` lets the page use any character: `é`, `ñ`, `中`, `😀`.
+        - `<meta name="viewport" …>` makes the page display properly on phones.
+        - `<title>` is the text in the browser tab, in bookmarks and in search results.
+      - `<body>` holds **everything visible**: headings, paragraphs, images…
+
+      ## Attributes
+
+      Notice `lang="en"` inside the `<html>` tag. That is an **attribute** —
+      extra information about an element, written inside the opening tag as
+      `name="value"`. `<meta>` uses attributes too (`charset="utf-8"`).
+      You'll meet many more attributes: they're how you give a link its
+      address or an image its source.
+
+      ## Elements with no content
+
+      `<meta>` has no closing tag. Some elements can't contain anything, so
+      they don't need one; these are called **void elements**. Others you'll
+      meet soon are `<br>` (a line break), `<hr>` (a dividing line) and
+      `<img>` (an image).
+
+      > [!tip]
+      > Indenting the elements inside others, as above, isn't required — the
+      > browser doesn't care — but it makes the structure easy to see. Always
+      > indent.
+
+      {{check head-body}}
+
+      {{check order}}
+
+      {{task skeleton}}
+    checks:
+      - id: head-body
+        type: mcq
+        prompt: Where does the text of a paragraph that visitors should read belong?
+        options:
+          - In the `<head>`
+          - In the `<body>`
+          - In the `<title>`
+          - Before `<!DOCTYPE html>`
+        answer: 1
+        why: "Everything shown on the page goes in the body. The head holds information about the page."
+      - id: order
+        type: order
+        prompt: Put the skeleton in order.
+        lines:
+          - "<!DOCTYPE html>"
+          - "<html lang=\"en\">"
+          - "<head>"
+          - "<title>Recipes</title>"
+          - "</head>"
+          - "<body>"
+          - "<h1>Recipes</h1>"
+          - "</body>"
+          - "</html>"
+        why: "Doctype first, then `<html>` wrapping a `<head>` (with the title) followed by a `<body>` (with the content)."
+    tasks:
+      - id: skeleton
+        title: A complete page
+        prompt: |
+          Write a complete HTML document from scratch:
+
+          - the doctype, and `<html>` with `lang="en"`
+          - a head with `<meta charset="utf-8">` and the title `About Me`
+          - a body with an `<h1>` saying `About Me` and at least one paragraph
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>About Me</title>
+              </head>
+              <body>
+                <h1>About Me</h1>
+                <p>I am learning to build web pages.</p>
+              </body>
+            </html>
+        harness: |
+          check(document.title, 'About Me');
+          check(attr('html', 'lang'), 'en');
+          check(exists('meta[charset]'), true);
+          check(text('h1'), 'About Me');
+          check(count('body p') >= 1, true);
+        hints:
+          - "Start by copying the skeleton from the lesson, then change the title and the content."
+          - "`<title>About Me</title>` goes inside `<head>`; the `<h1>` and `<p>` go inside `<body>`."
+    cards:
+      - front: What is `<!DOCTYPE html>` for?
+        back: It tells the browser the page is modern HTML. It's always the first line.
+      - front: What's the difference between `<head>` and `<body>`?
+        back: The head holds information about the page (title, character set…); the body holds everything visible.
+      - front: What is an **attribute**?
+        back: "Extra information in an opening tag, written `name=\"value\"` — like `lang=\"en\"`."
+      - front: What is a **void element**?
+        back: An element that can't have content, so it has no closing tag — like `<meta>`, `<br>`, `<hr>`, `<img>`.
+      - front: What does `<meta charset="utf-8">` do?
+        back: Lets the page use any character — accents, other alphabets, emoji.
+
+  - type: quiz
+    id: html1-quiz1
+    title: "Quiz: elements and documents"
+    questions:
+      - type: mcq
+        prompt: What does the `/` in `</h2>` mean?
+        options:
+          - It makes the text italic
+          - It marks the closing tag
+          - It divides the heading in two
+          - Nothing; it's optional
+        answer: 1
+        why: "A closing tag is the tag name with a slash in front."
+      - type: tf
+        prompt: The text inside `<title>` appears as a big heading at the top of the page.
+        answer: false
+        why: "The title shows in the browser tab, bookmarks and search results. For a heading on the page use `<h1>`."
+      - type: fill
+        prompt: Give the page the language English.
+        code: |
+          <html ___="en">
+        blanks:
+          - [lang]
+        why: "`lang` is the attribute that sets the page's language."
+      - type: mcq
+        prompt: Which of these is a void element (it has no closing tag)?
+        options:
+          - "`<p>`"
+          - "`<h1>`"
+          - "`<br>`"
+          - "`<title>`"
+        answer: 2
+        why: "`<br>` (line break) has no content, so it has no closing tag."
+      - type: spot
+        prompt: Which line is in the wrong place?
+        code: |
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <title>Pets</title>
+              <h1>My pets</h1>
+            </head>
+            <body>
+              <p>I have two cats.</p>
+            </body>
+          </html>
+        answer: 5
+        why: "The `<h1>` is visible content, so it belongs in the `<body>`, not the `<head>`."
+
+  - type: lesson
+    id: html1-whitespace
+    title: Whitespace, line breaks and headings
+    minutes: 15
+    objectives:
+      - Predict how the browser treats spaces and new lines
+      - Use `<br>` and `<hr>` correctly
+      - Build a sensible heading outline
+    body: |
+      Here's a surprise for every beginner. Look at the HTML, then at the
+      result:
+
+      ```html
+      <p>Roses    are    red,
+      violets are blue,
+         HTML ignores
+      the spaces
+      I give you.</p>
+      ```
+
+      The browser **collapses whitespace**: any run of spaces, tabs and new
+      lines becomes a single space. That's why you can indent your code freely
+      — and why pressing Enter in your HTML doesn't start a new line on the
+      page.
+
+      ## When you do want a new line
+
+      - A new **paragraph** → a new `<p>` element (the usual choice).
+      - A line break **inside** a paragraph, like in a poem or an address → `<br>`.
+      - A thematic break between sections → `<hr>` (drawn as a horizontal line).
+
+      ```html
+      <p>
+        Roses are red,<br>
+        violets are blue,<br>
+        HTML listens<br>
+        when I tell it to.
+      </p>
+      <hr>
+      <p>Poem by a web developer.</p>
+      ```
+
+      > [!mistake]
+      > Using lots of `<br>` tags to add space between paragraphs. Spacing is
+      > the job of CSS. Use `<br>` only where a line break is part of the
+      > content.
+
+      ## Headings are an outline, not font sizes
+
+      Headings describe the **structure** of your page, like the chapters and
+      sections of a book:
+
+      ```html
+      <h1>Travel guide to Portugal</h1>
+        <h2>Lisbon</h2>
+          <h3>Where to eat</h3>
+          <h3>Where to stay</h3>
+        <h2>Porto</h2>
+          <h3>Where to eat</h3>
+      ```
+
+      The rules:
+
+      1. **One `<h1>`** per page — the main topic.
+      2. **Don't skip levels** going down: after an `<h2>` comes an `<h3>`, not an `<h4>`.
+      3. **Never pick a heading for its size.** If you want smaller text, use CSS. Screen-reader users navigate pages by jumping between headings, and search engines use them to understand your page.
+
+      {{check collapse}}
+
+      {{check outline}}
+
+      {{task address}}
+    checks:
+      - id: collapse
+        type: mcq
+        prompt: "`<p>Hello          world</p>` — how does it appear?"
+        options:
+          - "Hello          world (all the spaces)"
+          - "Hello world (one space)"
+          - "Helloworld"
+          - Hello and world on two lines
+        answer: 1
+        why: "Runs of whitespace collapse into a single space."
+      - id: outline
+        type: spot
+        prompt: Which heading breaks the outline rules?
+        code: |
+          <h1>Learning to draw</h1>
+          <h2>Materials</h2>
+          <h3>Pencils</h3>
+          <h3>Paper</h3>
+          <h2>First exercises</h2>
+          <h4>Drawing circles</h4>
+        answer: 6
+        why: "After an `<h2>` the next level down is `<h3>`. Jumping to `<h4>` skips a level."
+    tasks:
+      - id: address
+        title: An address with line breaks
+        prompt: |
+          Show this address as **one paragraph** with line breaks, so it
+          appears on four lines:
+
+          ```text
+          Ada Lovelace
+          12 Analytical Street
+          London
+          United Kingdom
+          ```
+        files:
+          index.html: |
+            <p>
+              Ada Lovelace
+              12 Analytical Street
+              London
+              United Kingdom
+            </p>
+        solution:
+          index.html: |
+            <p>
+              Ada Lovelace<br>
+              12 Analytical Street<br>
+              London<br>
+              United Kingdom
+            </p>
+        harness: |
+          check(count('p'), 1);
+          check(count('p br'), 3);
+          check($('p').innerText.split('\n').map((l) => l.trim()).filter(Boolean), ['Ada Lovelace', '12 Analytical Street', 'London', 'United Kingdom']);
+        hints:
+          - "Pressing Enter in the code doesn't break the line on the page. Add `<br>` at the end of each line except the last."
+    cards:
+      - front: How does the browser treat spaces and new lines in HTML?
+        back: It collapses any run of whitespace into a single space.
+      - front: When should you use `<br>`?
+        back: Only for line breaks that are part of the content, like in a poem or an address — not for spacing.
+      - front: What are the heading rules?
+        back: One `<h1>` per page, don't skip levels going down, and never choose a heading for its size.
+
+  - type: lesson
+    id: html1-mistakes
+    title: Reading and fixing HTML
+    minutes: 15
+    objectives:
+      - Recognise the most common HTML mistakes
+      - Understand why a page can look fine and still be broken
+      - Use the browser's developer tools to inspect a page
+    body: |
+      HTML is **forgiving**. When a browser meets a mistake it doesn't show
+      an error — it guesses what you meant and carries on. That sounds kind,
+      but it means a mistake can hide until it causes something strange much
+      later on the page.
+
+      Watch what one missing slash does:
+
+      ```html
+      <h2>Opening hours<h2>
+      <p>Monday to Friday, 9 to 5.</p>
+      <p>Closed at weekends.</p>
+      ```
+
+      `<h2>Opening hours<h2>` never closes the heading, and the second `<h2>`
+      *opens another one* — so the browser guesses where the headings end.
+      Here it happens to look almost right, but the page's structure is now
+      wrong, and with other elements the damage spreads.
+
+      ## The usual suspects
+
+      | Mistake | Example | Fix |
+      |---|---|---|
+      | Missing `/` in a closing tag | `<p>Hi<p>` | `<p>Hi</p>` |
+      | Closing tags in the wrong order | `<p><em>Hi</p></em>` | `<p><em>Hi</em></p>` |
+      | Typo in a tag name | `<pp>Hi</pp>`, `<h7>` | `<p>`, a real heading `<h1>`–`<h6>` |
+      | Missing quote in an attribute | `<html lang="en>` | `<html lang="en">` |
+      | Content in the head | `<head><p>Hi</p></head>` | move it into `<body>` |
+
+      ## Developer tools
+
+      Every desktop browser has **developer tools** built in. Right-click any
+      part of a page and choose **Inspect**: you see the HTML as the browser
+      understood it — with its guesses applied. When a page looks wrong,
+      compare what you wrote with what the browser built. They're also the
+      best way to learn: inspect sites you like and see how they're made.
+
+      > [!tip]
+      > The W3C's free **Markup Validation Service** (validator.w3.org) reads
+      > your HTML and lists every mistake. Professionals use it; so should you.
+
+      {{check forgiving}}
+
+      {{task fix}}
+    checks:
+      - id: forgiving
+        type: tf
+        prompt: When a browser finds a mistake in HTML, it stops and shows an error message.
+        answer: false
+        why: "Browsers guess and carry on — which is why mistakes can hide. Check your HTML carefully (or with a validator)."
+    tasks:
+      - id: fix
+        title: Fix the broken page
+        prompt: |
+          This page has **three** mistakes. Fix them so that there is one
+          `<h1>` saying `Weekend plans`, one `<h2>` saying `Saturday`, and two
+          complete paragraphs.
+        files:
+          index.html: |
+            <h1>Weekend plans</h1>
+            <h2>Saturday<h2>
+            <p>Go to the <strong>market</p></strong>
+            <pp>Cook dinner for friends.</pp>
+        solution:
+          index.html: |
+            <h1>Weekend plans</h1>
+            <h2>Saturday</h2>
+            <p>Go to the <strong>market</strong></p>
+            <p>Cook dinner for friends.</p>
+        harness: |
+          check(count('h1'), 1);
+          check(count('h2'), 1);
+          check(text('h2'), 'Saturday');
+          check(count('p'), 2);
+          check(text('p strong'), 'market');
+          check(count('pp'), 0);
+          check(text('p:last-of-type'), 'Cook dinner for friends.');
+        hints:
+          - "Look at every closing tag: does it have its `/`? Is it closed in the right order?"
+          - "There is no `<pp>` element in HTML."
+    cards:
+      - front: What does a browser do when it finds a mistake in HTML?
+        back: It guesses what you meant and carries on — so mistakes can hide and cause problems elsewhere.
+      - front: How do you see the HTML as the browser understood it?
+        back: Right-click the page → Inspect (the developer tools).
+      - front: What is the W3C Markup Validation Service?
+        back: A free tool (validator.w3.org) that lists every mistake in your HTML.
+
+  - type: quiz
+    id: html1-quiz2
+    title: "Quiz: whitespace, headings and mistakes"
+    questions:
+      - type: mcq
+        prompt: You want the next sentence in a **new paragraph**. What do you do?
+        options:
+          - Press Enter twice in the code
+          - Add `<br><br>`
+          - Start a new `<p>` element
+          - Add lots of spaces
+        answer: 2
+        why: "A new paragraph is a new `<p>`. Enter and spaces collapse, and `<br>` is for line breaks within content."
+      - type: tf
+        prompt: It's fine to use `<h4>` for a small title just because you like its size.
+        answer: false
+        why: "Headings describe structure. Choose the level that fits the outline, and change the size with CSS."
+      - type: spot
+        prompt: Which line has the mistake?
+        code: |
+          <h1>Shopping list</h1>
+          <p>Bread</p>
+          <p>Milk<p>
+          <p>Eggs</p>
+        answer: 3
+        why: "`<p>Milk<p>` is missing the `/` of its closing tag."
+      - type: mcq
+        prompt: How many `<h1>` elements should a page have?
+        options:
+          - None
+          - One
+          - One per section
+          - As many as you like
+        answer: 1
+        why: "One `<h1>` for the main topic; sections use `<h2>` and below."
+
+  - type: challenge
+    id: html1-ch-recipe
+    title: A recipe page
+    difficulty: 1
+    tags: [headings, paragraphs, document]
+    prompt: |
+      Write a **complete document** (doctype, `lang="en"`, head with a
+      charset and the title `Pancakes`) for a pancake recipe. In the body:
+
+      - an `<h1>` saying `Pancakes`
+      - a short introduction paragraph
+      - an `<h2>` saying `Ingredients` followed by a paragraph that lists them, one per line with `<br>`: `2 eggs`, `1 cup flour`, `1 cup milk`
+      - an `<h2>` saying `Method` followed by two paragraphs
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>Pancakes</title>
+          </head>
+          <body>
+            <h1>Pancakes</h1>
+            <p>The easiest breakfast there is.</p>
+            <h2>Ingredients</h2>
+            <p>2 eggs<br>1 cup flour<br>1 cup milk</p>
+            <h2>Method</h2>
+            <p>Whisk everything together until smooth.</p>
+            <p>Cook spoonfuls in a hot pan, one minute per side.</p>
+          </body>
+        </html>
+    harness: |
+      check(document.title, 'Pancakes');
+      check(attr('html', 'lang'), 'en');
+      check(text('h1'), 'Pancakes');
+      check($$('h2').map((h) => h.textContent.trim()), ['Ingredients', 'Method']);
+      check(count('p br'), 2);
+      check($$('p').find((p) => p.querySelector('br')).innerText.split('\n').map((l) => l.trim()), ['2 eggs', '1 cup flour', '1 cup milk']);
+      check(count('p') >= 4, true);
+    hints:
+      - "Start from the skeleton of lesson 1.3, then fill the body."
+      - "The ingredients paragraph is `<p>2 eggs<br>1 cup flour<br>1 cup milk</p>`."
+
+  - type: challenge
+    id: html1-ch-outline
+    title: Headings for a travel blog
+    difficulty: 2
+    tags: [headings, outline]
+    prompt: |
+      Build the heading outline for this travel blog. Use the right heading
+      level for each line, following the rules (one `<h1>`, no skipped
+      levels). Add one paragraph under **each** of the three `Day` headings.
+
+      ```text
+      Two weeks in Japan            ← the page's topic
+        Tokyo                       ← a city
+          Day 1: Arrival
+          Day 2: Old Tokyo
+        Kyoto                       ← a city
+          Day 3: Temples
+      ```
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <h1>Two weeks in Japan</h1>
+        <h2>Tokyo</h2>
+        <h3>Day 1: Arrival</h3>
+        <p>We landed in the evening and found a tiny noodle bar.</p>
+        <h3>Day 2: Old Tokyo</h3>
+        <p>We walked around Asakusa and its temple.</p>
+        <h2>Kyoto</h2>
+        <h3>Day 3: Temples</h3>
+        <p>So many temples, and even more steps.</p>
+    harness: |
+      check(text('h1'), 'Two weeks in Japan');
+      check($$('h2').map((h) => h.textContent.trim()), ['Tokyo', 'Kyoto']);
+      check($$('h3').map((h) => h.textContent.trim()), ['Day 1: Arrival', 'Day 2: Old Tokyo', 'Day 3: Temples']);
+      check($$('h3').every((h) => h.nextElementSibling && h.nextElementSibling.tagName === 'P'), true);
+      check(count('h4, h5, h6'), 0);
+      check($$('h1, h2, h3').map((h) => h.tagName.toLowerCase()), ['h1', 'h2', 'h3', 'h3', 'h2', 'h3']);
+    hints:
+      - "The topic is the `<h1>`, cities are `<h2>`, days are `<h3>`."
+      - "Each `<h3>` must be directly followed by a `<p>`."
+
+  - type: challenge
+    id: html1-ch-poem
+    title: Format a poem
+    difficulty: 1
+    tags: [line breaks, hr, comments]
+    prompt: |
+      Put this short poem on the page: an `<h2>` with its title, then **one
+      paragraph per verse** (two verses), each line ending in `<br>` except
+      the last line of the verse. Between the two verses put an `<hr>`. Add
+      a comment saying who wrote it.
+
+      ```text
+      The Wind
+        The wind went by,
+        it did not stay.
+        ~
+        It took my hat
+        and flew away.
+      ```
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <!-- Poem by an anonymous writer -->
+        <h2>The Wind</h2>
+        <p>The wind went by,<br>it did not stay.</p>
+        <hr>
+        <p>It took my hat<br>and flew away.</p>
+    harness: |
+      check(text('h2'), 'The Wind');
+      check(count('p'), 2);
+      check(count('hr'), 1);
+      check($('hr').previousElementSibling.tagName, 'P');
+      check($$('p').map((p) => p.innerText.split('\n').map((l) => l.trim())), [['The wind went by,', 'it did not stay.'], ['It took my hat', 'and flew away.']]);
+      check(html().includes('<!--'), true);
+    hints:
+      - "Two `<p>` elements, each with one `<br>` inside, and an `<hr>` between them."
+
+  - type: review
+    id: html1-review
+    title: "Chapter 1 review"
+    body: |
+      ## Cheat sheet
+
+      ```html static
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Shown in the browser tab</title>
+        </head>
+        <body>
+          <h1>Main topic (one per page)</h1>
+          <h2>A section</h2>
+          <p>A paragraph with <strong>important</strong> words.<br>A line break.</p>
+          <hr>
+          <!-- a comment nobody sees -->
+        </body>
+      </html>
+      ```
+
+      ## Key ideas
+
+      - HTML is content and structure; CSS is the look; JavaScript is behaviour.
+      - An element = opening tag + content + closing tag. Void elements (`<br>`, `<hr>`, `<meta>`, `<img>`) have no closing tag.
+      - Attributes add information: `name="value"` in the opening tag.
+      - Nest properly: close in reverse order.
+      - Whitespace collapses. New paragraph → new `<p>`; line break in content → `<br>`.
+      - Headings are an outline: one `<h1>`, no skipped levels.
+      - Browsers forgive mistakes silently — inspect and validate.
+    questions:
+      - type: order
+        prompt: Put this page in order.
+        lines:
+          - "<!DOCTYPE html>"
+          - "<html lang=\"en\">"
+          - "<head>"
+          - "<meta charset=\"utf-8\">"
+          - "<title>Notes</title>"
+          - "</head>"
+          - "<body>"
+          - "<h1>Notes</h1>"
+          - "<p>Remember to water the plants.</p>"
+          - "</body>"
+          - "</html>"
+        why: "Doctype, then html → head (charset, title) → body (content)."
+      - type: mcq
+        prompt: Which is written correctly?
+        options:
+          - "`<p>I <em>really</p> mean it</em>`"
+          - "`<p>I <em>really</em> mean it</p>`"
+          - "`<p>I <em>really mean it</p>`"
+          - "`<em><p>I really mean it</em></p>`"
+        answer: 1
+        why: "Tags close in reverse order: `<em>` closes before `</p>`."
+      - type: fill
+        prompt: Add a line break and a dividing line.
+        code: |
+          <p>Line one___Line two</p>
+          ___
+          <p>Next part</p>
+        blanks:
+          - ["<br>", "<br/>", "<br />"]
+          - ["<hr>", "<hr/>", "<hr />"]
+        why: "`<br>` breaks a line inside content; `<hr>` separates sections."
+
+  - type: exam
+    id: html1-exam
+    title: "Chapter 1 exam"
+    minutes: 20
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: What is HTML responsible for in a web page?
+        options:
+          - The colours and fonts
+          - The content and its structure
+          - Reacting to clicks
+          - Storing passwords
+        answer: 1
+        why: "HTML marks up content — headings, paragraphs, links, images."
+      - type: tf
+        prompt: "`<meta charset=\"utf-8\">` belongs in the `<body>`."
+        answer: false
+        why: "It describes the page, so it belongs in the `<head>`."
+      - type: mcq
+        prompt: What appears in the browser's tab?
+        options:
+          - The first `<h1>`
+          - The `<title>`
+          - The file name, always
+          - The first paragraph
+        answer: 1
+        why: "The `<title>` in the head."
+      - type: spot
+        prompt: Which line has a mistake?
+        code: |
+          <h1>Contact</h1>
+          <p>Email me at <strong>hello@example.com</strong></p>
+          <p>Or call <em>0123 456 789</p></em>
+          <p>Thanks!</p>
+        answer: 3
+        why: "`</em>` must come before `</p>`."
+      - type: fill
+        prompt: Complete the comment.
+        code: |
+          ___ This part is under construction ___
+        blanks:
+          - ["<!--"]
+          - ["-->"]
+        why: "Comments start with `<!--` and end with `-->`."
+      - type: mcq
+        prompt: "A paragraph's code has the word `one`, then three empty lines, then the word `two`. How is it shown?"
+        options:
+          - On three lines
+          - "\"one two\" on one line"
+          - "\"onetwo\""
+          - With blank lines between
+        answer: 1
+        why: "New lines and spaces collapse into one space."
+      - type: tf
+        prompt: Headings should be chosen by how big you want the text to be.
+        answer: false
+        why: "Headings describe the outline; size is CSS's job."
+      - type: mcq
+        prompt: What is `lang="en"` in `<html lang="en">`?
+        options:
+          - An element
+          - An attribute
+          - A comment
+          - A void tag
+        answer: 1
+        why: "An attribute: `name=\"value\"` inside an opening tag."
+      - type: order
+        prompt: Nest these correctly.
+        lines:
+          - "<body>"
+          - "<p>"
+          - "Hello <strong>there</strong>"
+          - "</p>"
+          - "</body>"
+        why: "The paragraph is inside the body; strong is inside the paragraph."
+      - type: mcq
+        prompt: What does a browser do with `<h2>Title<h2>` (missing slash)?
+        options:
+          - Shows an error message
+          - Refuses to show the page
+          - Guesses where the heading ends and carries on — the structure may be wrong
+          - Fixes your file on disk
+        answer: 2
+        why: "Browsers are forgiving; the mistake hides but can break the structure."
+      - type: code
+        prompt: |
+          Write a fragment with an `<h1>` saying `Library`, an `<h2>`
+          saying `Opening times`, and a paragraph with the two lines
+          `Mon–Fri: 9–18` and `Sat: 10–14` separated by a `<br>`.
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <h1>Library</h1>
+            <h2>Opening times</h2>
+            <p>Mon–Fri: 9–18<br>Sat: 10–14</p>
+        harness: |
+          check(text('h1'), 'Library');
+          check(text('h2'), 'Opening times');
+          check(count('p br'), 1);
+          check($('p').innerText.split('\n').map((l) => l.trim()), ['Mon–Fri: 9–18', 'Sat: 10–14']);
+      - type: mcq
+        prompt: Which elements are void (no closing tag)?
+        options:
+          - "`<p>` and `<h1>`"
+          - "`<br>`, `<hr>` and `<meta>`"
+          - "`<body>` and `<head>`"
+          - "`<strong>` and `<em>`"
+        answer: 1
+        why: "They can't contain anything, so they have no closing tag."

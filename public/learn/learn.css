@@ -999,3 +999,113 @@ body.learn {
 .learn a.btn { text-decoration: none; display: inline-block; }
 .order-list pre { min-width: 0; }
 .order-list li { min-width: 0; }
+
+/* ---------- Several courses ---------- */
+.lt-course-picker {
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 7px 9px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+}
+.hero-kicker { margin: 0 0 6px; font-size: 13px; }
+.hero-kicker a { color: var(--text-dim); text-decoration: none; }
+.hero-kicker a:hover { color: var(--accent); }
+.course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.course-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 18px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color .12s, transform .12s;
+}
+.course-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.course-card h2 { margin: 10px 0 4px; font-size: 18px; }
+.course-card p { margin: 0 0 10px; color: var(--text-dim); font-size: 13.5px; line-height: 1.5; flex: 1 1 auto; }
+.cc-top { display: flex; align-items: center; justify-content: space-between; }
+.cc-icon { font-size: 30px; line-height: 1; }
+.cc-meta { color: var(--text-dim); font-size: 12.5px; }
+.cc-next { font-size: 13px; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.course-mastery { margin: 0 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raised); }
+.course-mastery > summary { cursor: pointer; padding: 12px 14px; font-weight: 600; display: flex; gap: 10px; align-items: center; }
+.course-mastery > summary .cm-sub { margin-left: auto; color: var(--text-dim); font-weight: 400; font-size: 13px; }
+.course-mastery .table-wrap { margin: 0 12px 12px; }
+
+/* ---------- Web: files, results and the console ---------- */
+.file-set { min-width: 0; }
+.file-tabs { display: flex; gap: 2px; padding: 6px 8px 0; background: var(--bg-raised); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.file-tab {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  color: var(--text-dim);
+  font: 12.5px var(--font-mono);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.file-tab:hover { color: var(--text); }
+.file-tab.is-active { color: var(--text); background: var(--bg); border-color: var(--line); margin-bottom: -1px; }
+.file-tab.is-locked { font-style: italic; }
+.file-body { min-width: 0; }
+.web-result { border-top: 1px solid var(--line); background: #0b0e13; }
+.web-result-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.web-frame {
+  display: block;
+  width: 100%;
+  height: 160px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  color-scheme: light;
+}
+.web-console { padding: 6px 0; font: 12.5px/1.55 var(--font-mono); }
+.web-console.is-quiet { display: none; }
+.wc-line { padding: 1px 14px; white-space: pre-wrap; word-break: break-word; color: #d6dde8; }
+.wc-line.is-warn { color: #fcd34d; background: var(--warn-bg); }
+.wc-line.is-error { color: #fca5a5; background: var(--err-bg); }
+.web-result .diag, .out .web-console + div .diag { margin: 8px 12px; }
+.pg-new { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 4px 10px; color: var(--text-dim); font-size: 12.5px; }
+.pg-new button {
+  width: auto;
+  padding: 3px 8px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+.pg-new button:hover { border-color: var(--accent); }
+.pg-lang {
+  display: inline-block;
+  min-width: 30px;
+  margin-right: 6px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--bg-inset);
+  color: var(--text-dim);
+  font-size: 10.5px;
+  text-align: center;
+}

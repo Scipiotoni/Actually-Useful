@@ -113,7 +113,7 @@
         if (at < indent) break;
         if (at > indent) fail('unexpected indentation');
         if (isItem(line)) fail('a "- item" here needs a key above it');
-        var m = /^ *([A-Za-z_][\w-]*):(?: (.*))?$/.exec(line);
+        var m = /^ *([A-Za-z_][\w.-]*):(?: (.*))?$/.exec(line);
         if (!m) fail('expected "key: value", got: ' + line.trim());
         var key = m[1];
         var rest = (m[2] || '').trim();
@@ -158,7 +158,7 @@
         if (content === '|' || content === '|-' || content === '|+') {
           pos += 1;
           out.push(block(at));
-        } else if (/^[A-Za-z_][\w-]*:(?: |$)/.test(content)) {
+        } else if (/^[A-Za-z_][\w.-]*:(?: |$)/.test(content)) {
           lines[pos] = new Array(column + 1).join(' ') + content;
           out.push(mapping(column));
         } else if (/^-(?:\s|$)/.test(content)) {
@@ -213,9 +213,61 @@
     });
   }
 
+  // The course being built: its language decides how exercises run.
+  //   lang      'cpp' (compiled on the server) or 'web' (runs in the browser)
+  //   codeLang  how code in questions is highlighted: cpp, html, css or js
+  var CTX = { lang: 'cpp', codeLang: 'cpp' };
+
+  function isMap(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  /** {"index.html": "...", "style.css": "..."} → [{name, content}] */
+  function fileList(map) {
+    if (!isMap(map)) return [];
+    return Object.keys(map).map(function (name) { return { name: name, content: text(map[name]) }; });
+  }
+
+  /**
+   * How an exercise runs:
+   *   cpp   a C++ program or functions, compiled on the server
+   *   js    JavaScript on its own, in a worker (console + checks)
+   *   page  HTML/CSS/JS files shown as a page, checked in a hidden frame
+   */
+  function taskKind(raw) {
+    if (CTX.lang !== 'web') return 'cpp';
+    return isMap(raw.files) || isMap(raw.given) || isMap(raw.solution) ? 'page' : 'js';
+  }
+
   /** A coding exercise: a lesson task, a challenge, a milestone or an exam question. */
   function normalizeTask(raw, id) {
+    var kind = taskKind(raw);
+    if (kind === 'page') {
+      return {
+        id: id,
+        kind: 'page',
+        title: text(raw.title),
+        prompt: text(raw.prompt),
+        starter: '',
+        files: fileList(raw.files),
+        given: fileList(raw.given),
+        solutionFiles: fileList(raw.solution),
+        tests: [],
+        harness: raw.harness === undefined ? '' : text(raw.harness),
+        harnessPre: '',
+        solution: '',
+        hints: list(raw.hints).map(text),
+        explain: text(raw.explain),
+        difficulty: Number(raw.difficulty) || 0,
+        tags: list(raw.tags).map(text),
+        std: '',
+        width: Number(raw.width) || 0,
+        mode: 'functions',
+        _raw: raw
+      };
+    }
     return {
+      kind: kind,
       id: id,
       title: text(raw.title),
       prompt: text(raw.prompt),
@@ -234,6 +286,12 @@
     };
   }
 
+  /** A task's editable files, starting code or solution, whatever its kind. */
+  function taskFiles(task, which) {
+    if (task.kind !== 'page') return [];
+    return which === 'solution' ? task.solutionFiles : task.files;
+  }
+
   function normalizeQuestion(raw, id) {
     raw = raw || {};
     var q = {
@@ -244,6 +302,7 @@
       stdin: raw.stdin === undefined ? '' : text(raw.stdin),
       why: text(raw.why),
       std: text(raw.std),
+      lang: text(raw.lang) || CTX.codeLang,
       _raw: raw
     };
     switch (q.type) {
@@ -331,7 +390,26 @@
    */
   function buildCourse(index, docs, extra) {
     extra = extra || {};
+    CTX = {
+      lang: text(index.lang) || 'cpp',
+      codeLang: text(index.code_lang) || (text(index.lang) === 'web' ? 'html' : 'cpp')
+    };
+    try {
+      return build(index, docs, extra);
+    } finally {
+      CTX = { lang: 'cpp', codeLang: 'cpp' };
+    }
+  }
+
+  function build(index, docs, extra) {
     var course = {
+      id: text(index.id) || 'cpp',
+      lang: CTX.lang,
+      codeLang: CTX.codeLang,
+      short: text(index.short) || text(index.title),
+      icon: text(index.icon),
+      final: text(index.final),
+      graduate: text(index.graduate),
       title: text(index.title),
       subtitle: text(index.subtitle),
       intro: text(index.intro),
@@ -355,7 +433,11 @@
     });
 
     docs.forEach(function (doc) {
+      // A chapter may highlight its code differently (a CSS chapter in a web course).
+      var courseCodeLang = CTX.codeLang;
+      if (doc.code_lang) CTX.codeLang = text(doc.code_lang);
       var chapter = {
+        course: course,
         id: text(doc.id),
         number: doc.number,
         title: text(doc.title),
@@ -378,6 +460,7 @@
       });
       course.chapters.push(chapter);
       if (partsById[chapter.part]) partsById[chapter.part].chapters.push(chapter);
+      CTX.codeLang = courseCodeLang;
     });
 
     return course;
@@ -393,6 +476,14 @@
 
     var checkTask = function (task, where) {
       if (!task.prompt) report(where, 'a coding task needs a prompt');
+      if (task.kind === 'page') {
+        if (!task.solutionFiles.length) report(where, 'a page task needs its solution as files (index.html: |, style.css: |, …)');
+        if (!task.harness) report(where, 'a page task needs a harness of checks');
+        task.solutionFiles.concat(task.files, task.given).forEach(function (f) {
+          if (!/^[\w-]+\.(html|css|js)$/.test(f.name)) report(where, 'file name "' + f.name + '" should look like index.html, style.css or script.js');
+        });
+        return;
+      }
       if (!task.solution) report(where, 'a coding task needs a solution');
       if (!task.tests.length && !task.harness) report(where, 'a coding task needs tests or a harness');
       task.tests.forEach(function (t, i) {
@@ -508,18 +599,39 @@
     return blocks;
   }
 
-  /** Every piece of C++ in lesson text, for the test that compiles them all. */
+  /**
+   * Every runnable piece of code in the lesson text, for the tests that run
+   * them all: C++ (with its input and output), JavaScript (with its console
+   * output) and pages (HTML followed by its CSS and JS).
+   */
   function codeSamples(course) {
     var out = [];
     var fromBody = function (body, where) {
       var blocks = fences(body);
       blocks.forEach(function (b, i) {
-        if (b.lang !== 'cpp') return;
+        if (b.lang !== 'cpp' && b.lang !== 'js' && b.lang !== 'html') return;
         if (b.flags.indexOf('static') !== -1) return;
-        var sample = { where: where + ' block ' + (i + 1), code: b.code, error: b.flags.indexOf('error') !== -1, stdin: '' };
-        for (var j = i + 1; j < blocks.length && (blocks[j].lang === 'output' || blocks[j].lang === 'stdin'); j += 1) {
-          if (blocks[j].lang === 'output') sample.output = blocks[j].code;
-          if (blocks[j].lang === 'stdin') sample.stdin = blocks[j].code;
+        // A block right after an html example belongs to it, not on its own.
+        if (b.lang === 'js' && i > 0 && blocks[i - 1].lang === 'html' && blocks[i - 1].flags.indexOf('static') === -1) return;
+        if (b.lang === 'js' && i > 1 && blocks[i - 1].lang === 'css' && blocks[i - 2].lang === 'html' && blocks[i - 2].flags.indexOf('static') === -1) return;
+        var sample = {
+          where: where + ' block ' + (i + 1),
+          lang: b.lang,
+          code: b.code,
+          error: b.flags.indexOf('error') !== -1,
+          stdin: ''
+        };
+        for (var j = i + 1; j < blocks.length; j += 1) {
+          var next = blocks[j].lang;
+          if (next === 'output') sample.output = blocks[j].code;
+          else if (next === 'stdin' && b.lang === 'cpp') sample.stdin = blocks[j].code;
+          else if ((next === 'css' || next === 'js') && b.lang === 'html' && sample[next] === undefined) sample[next] = blocks[j].code;
+          else break;
+        }
+        if (b.lang === 'html') {
+          sample.files = [{ name: 'index.html', content: b.code }];
+          if (sample.css !== undefined) sample.files.push({ name: 'style.css', content: sample.css });
+          if (sample.js !== undefined) sample.files.push({ name: 'script.js', content: sample.js });
         }
         sample.std = b.flags.indexOf('cpp20') !== -1 ? 'c++20' : '';
         sample.ub = b.flags.indexOf('ub') !== -1;
@@ -543,6 +655,7 @@
     buildCourse: buildCourse,
     validate: validate,
     codeSamples: codeSamples,
+    taskFiles: taskFiles,
     fences: fences,
     ITEM_TYPES: ITEM_TYPES,
     QUESTION_TYPES: QUESTION_TYPES

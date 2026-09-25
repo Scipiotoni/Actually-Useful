@@ -1,0 +1,8 @@
+# The courses Learn mode offers, in the order they are shown. Each folder has
+# a course.yml listing its chapters. Item and chapter ids must be unique across
+# all courses, because progress is kept in one record.
+courses:
+  - dir: course
+  - dir: courses/html
+  - dir: courses/css
+  - dir: courses/js

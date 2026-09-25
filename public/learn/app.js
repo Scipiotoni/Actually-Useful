@@ -1,7 +1,8 @@
 /*
- * Learn mode: a C++ course inside Actually Useful.
+ * Learn mode: courses in C++, HTML, CSS and JavaScript inside Actually Useful.
  *
- * The course text lives in course/*.yml; this file turns it into pages —
+ * courses.yml lists the courses; each has its own folder of chapter files
+ * (the C++ course lives in course/). This file turns them into pages —
  * lessons with runnable examples, quick checks, coding tasks, quizzes, exams,
  * challenges, projects, spaced-repetition review, a playground — and keeps
  * your progress (on this device at once, and on the server so it follows you).
@@ -13,6 +14,7 @@
   const Course = window.LearnCourse;
   const MD = window.LearnMarkdown;
   const Explain = window.LearnExplain;
+  const Web = window.LearnWeb;
   const MiniEditor = window.MiniEditor;
 
   const STORE_KEY = 'au-learn-progress-v1';
@@ -24,7 +26,11 @@
   const syncState = document.getElementById('sync-state');
   syncState.addEventListener('click', () => { if (sync.storage === 'local') location.hash = '#/progress'; });
 
+  // Every course, and the one being looked at. Ids are unique across courses,
+  // so one progress record and one index (ALL) serve them all.
+  let courses = [];
   let course = null;
+  const ALL = { byId: {}, questions: {}, cards: [], items: [], chapters: [] };
   let P = Engine.emptyProgress();
   let compiler = { available: true, pending: true };
   let view = { cleanup: [], guard: null };
@@ -72,12 +78,16 @@
     return h('span', { html: MD.inline(text) });
   }
 
-  function highlight(code) {
-    return MiniEditor.highlight('cpp', code);
+  const EDITOR_MODES = { cpp: 'cpp', 'c++': 'cpp', html: 'html', css: 'css', js: 'js', javascript: 'js' };
+
+  /** Syntax colouring; the language defaults to the current course's. */
+  function highlight(code, lang) {
+    const mode = EDITOR_MODES[lang || (course && course.codeLang) || 'cpp'] || 'text';
+    return MiniEditor.highlight(mode, String(code));
   }
 
   function staticCode(lang, flags, code) {
-    if (lang === 'cpp' || lang === 'c++') return '<pre class="q-code">' + highlight(code) + '</pre>';
+    if (EDITOR_MODES[lang]) return '<pre class="q-code">' + highlight(code, lang) + '</pre>';
     return '<pre class="plain">' + esc(code) + '</pre>';
   }
 
@@ -272,13 +282,13 @@
   // ================================================================ course logic
 
   function examOf(ch) { return ch.items.find((i) => i.type === 'exam'); }
-  function chapterAt(i) { return course.chapters[i]; }
-  function indexOfChapter(ch) { return course.chapters.indexOf(ch); }
+  // Chapter order, and so what unlocks what, is per course.
+  function chapterAfter(ch, delta) { return ch.course.chapters[ch.course.chapters.indexOf(ch) + delta] || null; }
 
   function isUnlocked(ch) {
-    const i = indexOfChapter(ch);
+    const i = ch.course.chapters.indexOf(ch);
     if (i <= 0 || P.unlocked[ch.id]) return true;
-    const prev = chapterAt(i - 1);
+    const prev = chapterAfter(ch, -1);
     const gate = examOf(prev);
     if (gate) return isDone(gate.id);
     return prev.items.every((it) => it.type === 'challenge' || isDone(it.id));
@@ -310,9 +320,9 @@
     };
   }
 
-  /** The next thing to do on the main path (challenges are extra practice). */
-  function nextUp() {
-    for (const ch of course.chapters) {
+  /** The next thing to do on a course's main path (challenges are extra practice). */
+  function nextUp(c) {
+    for (const ch of (c || course).chapters) {
       if (!isUnlocked(ch)) return null;
       for (const item of ch.items) {
         if (item.type === 'challenge') continue;
@@ -323,7 +333,7 @@
   }
 
   function neighbours(item) {
-    const all = course.items;
+    const all = item.chapter.course.items;
     const i = all.indexOf(item);
     return { prev: all[i - 1] || null, next: all[i + 1] || null };
   }
@@ -346,7 +356,7 @@
   function cardById(id) {
     if (!cardIndex) {
       cardIndex = {};
-      course.cards.forEach((c) => { cardIndex[c.id] = c; });
+      ALL.cards.forEach((c) => { cardIndex[c.id] = c; });
     }
     return cardIndex[id] || null;
   }
@@ -354,15 +364,15 @@
   function openMistakes() {
     return Object.keys(P.mistakes).filter((id) => {
       const m = P.mistakes[id];
-      return m && !m.cleared && course.questions[id];
+      return m && !m.cleared && ALL.questions[id];
     });
   }
 
   // ================================================================ badges
 
   function counts() {
-    const done = (type) => course.items.filter((i) => i.type === type && isDone(i.id));
-    const exams = course.items.filter((i) => i.type === 'exam');
+    const done = (type) => ALL.items.filter((i) => i.type === type && isDone(i.id));
+    const exams = ALL.items.filter((i) => i.type === 'exam');
     return {
       lessons: done('lesson').length,
       challenges: done('challenge'),
@@ -381,6 +391,7 @@
   function badgeList() {
     const list = [
       { id: 'hello', icon: '👋', name: 'Hello, World', desc: 'Ran your first program', test: (c) => c.runs >= 1 },
+      { id: 'polyglot', icon: '🌍', name: 'Polyglot', desc: 'Completed lessons in three different courses', test: () => courses.filter((cr) => cr.items.some((i) => i.type === 'lesson' && isDone(i.id))).length >= 3 },
       { id: 'first-error', icon: '🧯', name: 'Met the Compiler', desc: 'Got your first compile error — every programmer does, daily', test: (c) => c.compileErrors >= 1 },
       { id: 'lesson-1', icon: '📘', name: 'First Lesson', desc: 'Completed a lesson', test: (c) => c.lessons >= 1 },
       { id: 'lesson-10', icon: '📚', name: 'Bookworm', desc: 'Completed 10 lessons', test: (c) => c.lessons >= 10 },
@@ -402,16 +413,27 @@
       { id: 'notes-5', icon: '✍️', name: 'Note Taker', desc: 'Wrote notes on 5 lessons', test: (c) => c.notes >= 5 },
       { id: 'night-owl', icon: '🦉', name: 'Night Owl', desc: 'Finished something after midnight', test: () => (Number(P.stats.nightOwl) || 0) >= 1 }
     ];
-    course.parts.forEach((part) => {
-      list.push({
-        id: 'part-' + part.id,
-        icon: '🏆',
-        name: part.title,
-        desc: 'Mastered every chapter in ' + part.title,
-        test: () => part.chapters.length > 0 && part.chapters.every((ch) => chapterStats(ch).mastered)
+    courses.forEach((c) => {
+      c.parts.forEach((part) => {
+        list.push({
+          id: 'part-' + part.id,
+          icon: '🏆',
+          name: part.title,
+          desc: 'Mastered every chapter in ' + part.title + (courses.length > 1 ? ' (' + c.short + ')' : ''),
+          test: () => part.chapters.length > 0 && part.chapters.every((ch) => chapterStats(ch).mastered)
+        });
       });
+      if (c.final) {
+        // The C++ badge keeps its original id so earned badges stay earned.
+        list.push({
+          id: c.id === 'cpp' ? 'graduate' : 'graduate-' + c.id,
+          icon: '👑',
+          name: c.graduate || c.short + ' Graduate',
+          desc: 'Passed the ' + c.short + ' final exam',
+          test: () => isDone(c.final)
+        });
+      }
     });
-    list.push({ id: 'graduate', icon: '👑', name: 'C++ Graduate', desc: 'Passed the final exam', test: () => isDone('final-exam') });
     return list;
   }
 
@@ -580,15 +602,106 @@
     box.append(h('div', { class: 'out-note' }, err.message || String(err)));
   }
 
-  function compilerBanner() {
+  function compilerBanner(forCourse) {
+    // Web courses run in the browser; only C++ needs the server's compiler.
+    if ((forCourse || course) && (forCourse || course).lang !== 'cpp') return null;
     if (compiler.available || compiler.pending) return null;
     return h('div', { class: 'banner', html: MD.inline('**C++ can\'t run on this server right now.** ' + esc(compiler.reason || '') +
       ' You can still read, answer quizzes and review. To run code, the server needs `g++` or internet access to godbolt.org — see the README.') });
   }
 
+  // ================================================================ running web code
+
+  /** JavaScript in a worker. Counts as a run, like compiling C++ does. */
+  async function runJs(code, harness) {
+    bump('runs');
+    save({ quiet: true });
+    return Web.runJs({ code, harness, timeoutMs: harness ? 8000 : 5000 });
+  }
+
+  /** A page, with its checks, in a hidden frame. */
+  async function runPage(files, harness, width) {
+    bump('runs');
+    save({ quiet: true });
+    return Web.runPage({ files, harness, width: width || 800, timeoutMs: 10000 });
+  }
+
+  /** The given files with the learner's on top (same name → the learner's wins). */
+  function mergeFiles(given, mine) {
+    const out = (given || []).map((f) => ({ name: f.name, content: f.content }));
+    (mine || []).forEach((f) => {
+      const at = out.findIndex((g) => g.name === f.name);
+      if (at === -1) out.push({ name: f.name, content: f.content }); else out[at] = { name: f.name, content: f.content };
+    });
+    return out;
+  }
+
+  /** Console lines, as a browser would show them. */
+  function consoleLines(output) {
+    const box = h('div', { class: 'web-console' });
+    output.forEach((o) => box.append(h('div', { class: 'wc-line is-' + o.level }, o.text === '' ? ' ' : o.text)));
+    return box;
+  }
+
+  /** JavaScript errors, explained; the line jumps into the editor. */
+  function webErrorsView(errors, jump) {
+    const wrap = h('div');
+    errors.slice(0, 4).forEach((err) => {
+      const box = h('div', { class: 'diag' });
+      const head = h('div', { class: 'diag-head' });
+      if (err.line) {
+        head.append(h('button', {
+          class: 'diag-line',
+          title: jump ? 'Jump to this line' : '',
+          onclick: () => { if (jump) jump(err.file, err.line); }
+        }, (err.file && err.file !== 'script.js' ? err.file + ' ' : '') + 'line ' + err.line));
+      } else if (err.where === 'checks') {
+        head.append(h('span', { class: 'diag-line' }, 'checker'));
+      }
+      head.append(h('span', null, err.message));
+      box.append(head);
+      if (err.hint) box.append(h('div', { class: 'diag-hint', html: MD.inline(err.hint) }));
+      wrap.append(box);
+    });
+    if (errors.length > 4) wrap.append(h('p', { class: 'out-mismatch' }, '…and ' + plural(errors.length - 4, 'more error') + '. Fix the first one first.'));
+    return wrap;
+  }
+
+  /**
+   * Shows how some JavaScript went: what it printed, what went wrong.
+   * @param {{expected?: string, jump?: Function, edited?: boolean, pageNote?: boolean}} opts
+   */
+  function showWebRun(box, result, opts) {
+    opts = opts || {};
+    box.innerHTML = '';
+    const syntax = result.errors.find((e) => e.where === 'syntax');
+    if (syntax) {
+      box.append(h('div', { class: 'out-head' }, h('b', { style: { color: 'var(--err)' } }, 'Didn\'t run'),
+        h('span', { class: 'out-time' }, 'A syntax error stops the whole script before it starts')));
+      box.append(webErrorsView([syntax], opts.jump));
+      return;
+    }
+    box.append(h('div', { class: 'out-head' }, h('b', null, 'Console'),
+      h('span', { class: 'out-time' }, 'ran in ' + (result.ms || 0) + ' ms')));
+    if (result.output.length) box.append(consoleLines(result.output));
+    else box.append(h('pre', { class: 'out-text is-empty' }, '(nothing was printed)'));
+    if (result.errors.length) box.append(webErrorsView(result.errors, opts.jump));
+    if (result.timedOut) {
+      box.append(h('div', { class: 'out-note', html: MD.inline('The code was still running after a few seconds, so it was stopped. The usual cause is a loop whose condition never becomes false — or a `setInterval` that is never cleared.') }));
+    }
+    if (typeof opts.expected === 'string') {
+      const cmp = Engine.compareOutput(Web.outputText(result), opts.expected);
+      if (cmp.ok) box.append(h('div', { class: 'out-match' }, '✓ Matches the expected output'));
+      else {
+        box.append(h('div', { class: 'out-mismatch' }, 'Differs from the original output at line ' + cmp.line +
+          (opts.edited ? ' — fine if you changed the code on purpose.' : '.')));
+      }
+    }
+  }
+
   // ================================================================ editors
 
-  /** A C++ editor that grows with its content. */
+  /** A code editor (C++ unless told otherwise) that grows with its content. */
   function codeEditor(value, opts) {
     opts = opts || {};
     const host = h('div', { class: 'ed-host' });
@@ -600,9 +713,9 @@
       ed.refresh();
     };
     ed = new MiniEditor(host, {
-      mode: 'cpp',
+      mode: EDITOR_MODES[opts.mode] || 'cpp',
       value: value || '',
-      ariaLabel: opts.label || 'C++ code',
+      ariaLabel: opts.label || ({ html: 'HTML', css: 'CSS', js: 'JavaScript' }[opts.mode] || 'C++') + ' code',
       onChange: () => { fit(); if (opts.onChange) opts.onChange(ed.getValue()); }
     });
     host.addEventListener('keydown', (e) => {
@@ -639,7 +752,7 @@
       bar.append(h('button', {
         class: 'mini-btn',
         title: 'Open a copy in the Playground',
-        onclick: () => openInPlayground(editor ? editor.ed.getValue() : code, stdinBox ? stdinBox.value : (extras.stdin || ''))
+        onclick: () => openInPlayground({ lang: 'cpp', src: editor ? editor.ed.getValue() : code, stdin: stdinBox ? stdinBox.value : (extras.stdin || '') })
       }, 'Playground'));
     }
     fig.append(bar, codeSlot);
@@ -704,6 +817,227 @@
       }
     });
     return fig;
+  }
+
+  /** A JavaScript example: runs in a worker and shows the console. */
+  function jsExampleWidget(code, flags, extras) {
+    const isError = flags.indexOf('error') !== -1;
+    const fig = h('figure', { class: 'ex' });
+    const out = h('div', { class: 'out' });
+    let editor = null;
+    const codeSlot = h('div', null, h('pre', { class: 'ex-code', html: highlight(code, 'js') }));
+    const runBtn = h('button', { class: 'mini-btn is-run', title: 'Run (Ctrl+Enter while editing)' }, '▶ Run');
+    const editBtn = h('button', { class: 'mini-btn' }, 'Edit');
+    const current = () => (editor ? editor.ed.getValue() : code);
+    fig.append(h('div', { class: 'ex-bar' },
+      h('span', { class: 'ex-label' + (isError ? ' is-error' : '') }, isError ? 'Has an error on purpose — run it and read the message' : 'JavaScript example'),
+      runBtn, editBtn,
+      h('button', { class: 'mini-btn', title: 'Copy the code', onclick: () => copyText(current()) }, 'Copy'),
+      h('button', { class: 'mini-btn', title: 'Open a copy in the Playground', onclick: () => openInPlayground({ lang: 'js', src: current() }) }, 'Playground')),
+    codeSlot);
+    if (extras.output !== undefined) {
+      fig.append(h('div', { class: 'ex-io' }, h('div', { class: 'ex-io-label' }, 'Console'), h('pre', null, extras.output)));
+    }
+    fig.append(out);
+    const run = async () => {
+      runBtn.disabled = true;
+      out.replaceChildren(spinner('Running…'));
+      const src = current();
+      try {
+        showWebRun(out, await runJs(src), {
+          expected: extras.output,
+          edited: src !== code,
+          jump: (file, line) => { if (editor) { editor.ed.gotoLine(line); editor.ed.focus(); } }
+        });
+      } catch (err) {
+        showRunError(out, err);
+      } finally {
+        runBtn.disabled = false;
+      }
+    };
+    runBtn.addEventListener('click', run);
+    editBtn.addEventListener('click', () => {
+      if (!editor) {
+        editor = codeEditor(code, { mode: 'js', onRun: run, minLines: 4 });
+        codeSlot.replaceChildren(editor.host);
+        editor.fit();
+        editor.ed.focus();
+        editBtn.textContent = 'Reset';
+        editBtn.title = 'Put the original code back';
+      } else {
+        editor.set(code);
+        out.innerHTML = '';
+      }
+    });
+    return fig;
+  }
+
+  const FILE_LABEL = { 'index.html': 'HTML', 'style.css': 'CSS', 'script.js': 'JS' };
+  const fileLabel = (name) => FILE_LABEL[name] || name;
+  const modeOf = (name) => (/\.css$/.test(name) ? 'css' : /\.js$/.test(name) ? 'js' : 'html');
+
+  /**
+   * A live page: the result in a sandboxed frame, with its console below.
+   * @returns {{el, update(files), clear()}}
+   */
+  function livePreview(files, opts) {
+    opts = opts || {};
+    const frame = h('iframe', { class: 'web-frame', title: 'Result', loading: 'lazy' });
+    const consoleBox = h('div', { class: 'web-console is-quiet' });
+    const errorsBox = h('div');
+    const status = h('div');
+    const el = h('div', { class: 'web-result' },
+      h('div', { class: 'web-result-head' }, h('span', null, '▶ Result'), opts.actions || null),
+      frame, consoleBox, errorsBox, status);
+    let lines = [];
+    let errors = [];
+    const redraw = () => {
+      consoleBox.replaceChildren();
+      lines.forEach((o) => consoleBox.append(h('div', { class: 'wc-line is-' + o.level }, o.text === '' ? ' ' : o.text)));
+      consoleBox.classList.toggle('is-quiet', !lines.length);
+      errorsBox.replaceChildren(errors.length ? webErrorsView(errors, opts.jump) : '');
+    };
+    const live = Web.livePage(frame, files, (m) => {
+      if (m.kind === 'log') lines.push({ level: m.level, text: m.text });
+      else if (m.kind === 'clear') lines = [];
+      else if (m.kind === 'error') errors.push(m.error);
+      else if (m.kind === 'done' && opts.onDone) opts.onDone(lines);
+      redraw();
+    }, { autoHeight: true, minHeight: opts.minHeight || 70, maxHeight: opts.maxHeight || 420 });
+    view.cleanup.push(() => live.destroy());
+    return {
+      el,
+      clear: () => { lines = []; errors = []; status.replaceChildren(); redraw(); },
+      status,
+      update: (next) => { lines = []; errors = []; status.replaceChildren(); redraw(); live.update(next); }
+    };
+  }
+
+  /**
+   * Files shown as tabs — highlighted code, or editors once editing starts.
+   * @returns {{el, files(), edit(), reset(list), jump(file, line), editing()}}
+   */
+  function fileTabs(files, opts) {
+    opts = opts || {};
+    let list = files.map((f) => ({ name: f.name, content: f.content, locked: Boolean(f.locked) }));
+    let active = list.length ? list[0].name : '';
+    const editors = {};
+    let editing = Boolean(opts.editing);
+    const tabs = h('div', { class: 'file-tabs', role: 'tablist' });
+    const body = h('div', { class: 'file-body' });
+    const el = h('div', { class: 'file-set' }, list.length > 1 || opts.alwaysTabs ? tabs : null, body);
+
+    const draw = () => {
+      tabs.replaceChildren();
+      list.forEach((f) => tabs.append(h('button', {
+        class: 'file-tab' + (f.name === active ? ' is-active' : '') + (f.locked ? ' is-locked' : ''),
+        type: 'button',
+        role: 'tab',
+        title: f.locked ? f.name + ' — given, read only' : f.name,
+        onclick: () => { active = f.name; draw(); }
+      }, (f.locked ? '🔒 ' : '') + (opts.fullNames ? f.name : fileLabel(f.name)))));
+      body.replaceChildren();
+      const f = list.find((x) => x.name === active);
+      if (!f) return;
+      if (editing && !f.locked) {
+        if (!editors[f.name]) {
+          editors[f.name] = codeEditor(f.content, {
+            mode: modeOf(f.name),
+            minLines: opts.minLines || 6,
+            maxLines: opts.maxLines || 26,
+            onRun: opts.onRun,
+            onChange: (value) => { f.content = value; if (opts.onChange) opts.onChange(); }
+          });
+        }
+        body.append(editors[f.name].host);
+        editors[f.name].fit();
+      } else {
+        body.append(h('pre', { class: 'ex-code', html: highlight(f.content, modeOf(f.name)) || ' ' }));
+      }
+    };
+    draw();
+    return {
+      el,
+      files: () => list.map((f) => ({ name: f.name, content: f.content })),
+      editable: () => list.filter((f) => !f.locked).map((f) => ({ name: f.name, content: f.content })),
+      edit: () => { editing = true; draw(); const e = editors[active]; if (e) e.ed.focus(); },
+      editing: () => editing,
+      reset: (next) => {
+        next.forEach((n) => {
+          const f = list.find((x) => x.name === n.name);
+          if (f) f.content = n.content;
+          if (editors[n.name]) editors[n.name].set(n.content);
+        });
+        draw();
+      },
+      jump: (file, line) => {
+        const target = list.find((x) => x.name === file) || list.find((x) => /\.js$/.test(x.name));
+        if (!target) return;
+        active = target.name;
+        if (!editing && !target.locked) editing = true;
+        draw();
+        const e = editors[target.name];
+        if (e) { e.ed.gotoLine(line); e.ed.focus(); }
+      },
+      lock: () => { Object.keys(editors).forEach((k) => { editors[k].ed.input.readOnly = true; }); }
+    };
+  }
+
+  /** An HTML example (with its CSS and JS): code and its live result. */
+  function pageExampleWidget(html, flags, extras) {
+    const files = [{ name: 'index.html', content: html }];
+    if (extras.css !== undefined) files.push({ name: 'style.css', content: extras.css });
+    if (extras.js !== undefined) files.push({ name: 'script.js', content: extras.js });
+    const fig = h('figure', { class: 'ex web-ex' });
+    const editBtn = h('button', { class: 'mini-btn' }, 'Edit');
+    let timer = null;
+    const tabs = fileTabs(files, {
+      minLines: 3,
+      onChange: () => { clearTimeout(timer); timer = setTimeout(() => result.update(tabs.files()), 350); },
+      onRun: () => result.update(tabs.files())
+    });
+    const compare = (lines) => {
+      if (extras.output === undefined) return;
+      const text = lines.filter((o) => o.level !== 'error' && o.level !== 'warn').map((o) => o.text).join('\n');
+      const cmp = Engine.compareOutput(text, extras.output);
+      result.status.replaceChildren(cmp.ok ? h('div', { class: 'out-match' }, '✓ The console shows the expected output') : '');
+    };
+    const result = livePreview(files, { jump: tabs.jump, onDone: compare });
+    fig.append(h('div', { class: 'ex-bar' },
+      h('span', { class: 'ex-label' }, 'Example — edit it and watch the result change'),
+      editBtn,
+      h('button', { class: 'mini-btn', title: 'Open a copy in the Playground', onclick: () => openInPlayground({ lang: 'web', files: tabs.files() }) }, 'Playground')),
+    tabs.el, result.el);
+    editBtn.addEventListener('click', () => {
+      if (!tabs.editing()) {
+        tabs.edit();
+        editBtn.textContent = 'Reset';
+        editBtn.title = 'Put the original code back';
+      } else {
+        tabs.reset(files);
+        result.update(files);
+      }
+    });
+    return fig;
+  }
+
+  /** Lesson and review text: runnable code where the course has it. */
+  function codeHook(slots) {
+    return (lang, flags, code, extras) => {
+      const isStatic = flags.indexOf('static') !== -1;
+      let widget = null;
+      if ((lang === 'cpp' || lang === 'c++') && !isStatic) widget = () => exampleWidget(code, flags, extras);
+      else if ((lang === 'js' || lang === 'javascript') && !isStatic) widget = () => jsExampleWidget(code, flags, extras);
+      else if (lang === 'html' && !isStatic) widget = () => pageExampleWidget(code, flags, extras);
+      if (widget) {
+        slots.push(widget);
+        return '<div data-slot="' + (slots.length - 1) + '"></div>';
+      }
+      if (EDITOR_MODES[lang]) return '<pre class="q-code">' + highlight(code, lang) + '</pre>';
+      const label = lang === 'output' ? 'Output' : lang === 'stdin' ? 'Input' : '';
+      return (label ? '<div class="ex-io-label" style="padding:0 0 4px">' + label + '</div>' : '') +
+        '<pre class="plain">' + esc(code) + '</pre>';
+    };
   }
 
   // ================================================================ questions
@@ -818,7 +1152,7 @@
   }
 
   function buildChoice(q, box, changed, options, multi, tf) {
-    if (q.code) box.append(h('pre', { class: 'q-code', html: highlight(q.code) }));
+    if (q.code) box.append(h('pre', { class: 'q-code', html: highlight(q.code, q.lang) }));
     const chosen = new Set();
     const wrap = h('div', { class: tf ? 'tf-row' : 'q-options' });
     const buttons = options.map((text, i) => {
@@ -861,7 +1195,7 @@
   }
 
   function buildOutput(q, box, changed) {
-    box.append(h('pre', { class: 'q-code', html: highlight(q.code) }));
+    box.append(h('pre', { class: 'q-code', html: highlight(q.code, q.lang) }));
     if (q.stdin) box.append(h('div', { class: 'ex-io-label', style: { padding: '0 0 4px' } }, 'Input typed by the user'), h('pre', { class: 'q-expected' }, q.stdin));
     const area = h('textarea', {
       class: 'q-answer-box',
@@ -882,8 +1216,11 @@
         const btn = h('button', { class: 'mini-btn is-run' }, '▶ Run it and see');
         btn.addEventListener('click', async () => {
           btn.disabled = true;
-          out.replaceChildren(spinner());
-          try { showRun(out, await runCpp({ source: q.code, stdin: q.stdin }), { expected: q.answer }); } catch (err) { showRunError(out, err); }
+          out.replaceChildren(spinner(q.lang === 'js' ? 'Running…' : undefined));
+          try {
+            if (q.lang === 'js') showWebRun(out, await runJs(q.code), { expected: q.answer });
+            else showRun(out, await runCpp({ source: q.code, stdin: q.stdin }), { expected: q.answer });
+          } catch (err) { showRunError(out, err); }
           btn.disabled = false;
         });
         return h('div', { style: { marginTop: '10px' } }, btn, out);
@@ -898,7 +1235,7 @@
       marked += part;
       if (i < parts.length - 1) marked += '__AUBLANK' + i + '__';
     });
-    let html = highlight(marked);
+    let html = highlight(marked, q.lang);
     const inputs = [];
     html = html.replace(/__AUBLANK(\d+)__/g, (_, i) => '<input class="blank" data-i="' + i + '" spellcheck="false" autocomplete="off" autocapitalize="off">');
     const pre = h('pre', { class: 'q-code fill-code', html });
@@ -924,7 +1261,7 @@
         });
       },
       expected: () => h('div', null, h('div', { style: { fontSize: '13px', color: 'var(--text-dim)' } }, 'One right answer:'),
-        h('pre', { class: 'q-expected', html: highlight(fillIn(q.code, q.blanks.map((b) => b[0]))) }))
+        h('pre', { class: 'q-expected', html: highlight(fillIn(q.code, q.blanks.map((b) => b[0])), q.lang) }))
     };
   }
 
@@ -947,7 +1284,7 @@
       list.replaceChildren();
       order.forEach((lineIndex, pos) => {
         const li = h('li', { draggable: 'true', 'data-pos': pos },
-          h('pre', { html: highlight(q.lines[lineIndex]) || '&nbsp;' }),
+          h('pre', { html: highlight(q.lines[lineIndex], q.lang) || '&nbsp;' }),
           h('button', { class: 'ord-btn', type: 'button', title: 'Move up', 'aria-label': 'Move up', onclick: () => move(pos, -1) }, '↑'),
           h('button', { class: 'ord-btn', type: 'button', title: 'Move down', 'aria-label': 'Move down', onclick: () => move(pos, 1) }, '↓'));
         li.addEventListener('dragstart', () => { dragging = pos; li.classList.add('is-dragging'); });
@@ -989,7 +1326,7 @@
         list.querySelectorAll('li').forEach((li) => li.setAttribute('draggable', 'false'));
       },
       expected: () => h('div', null, h('div', { style: { fontSize: '13px', color: 'var(--text-dim)' } }, 'The right order:'),
-        h('pre', { class: 'q-expected', html: highlight(q.lines.join('\n')) }))
+        h('pre', { class: 'q-expected', html: highlight(q.lines.join('\n'), q.lang) }))
     };
   }
 
@@ -999,7 +1336,7 @@
     const wrap = h('div', { class: 'spot-code' });
     const buttons = lines.map((line, i) => {
       const btn = h('button', { class: 'spot-line', type: 'button' },
-        h('span', { class: 'ln' }, String(i + 1)), h('span', { html: highlight(line) || ' ' }));
+        h('span', { class: 'ln' }, String(i + 1)), h('span', { html: highlight(line, q.lang) || ' ' }));
       btn.addEventListener('click', () => {
         chosen = i + 1;
         buttons.forEach((b, j) => b.classList.toggle('is-picked', j === i));
@@ -1039,7 +1376,7 @@
     });
     box.append(widget.el);
     return {
-      answered: () => widget.code().trim() !== '' && widget.code() !== q.task.starter,
+      answered: () => widget.changed(),
       response: () => widget.code(),
       grade: () => widget.check(),
       lock: () => { if (deferred) widget.lock(); }
@@ -1048,11 +1385,37 @@
 
   // ================================================================ coding tasks
 
+  /** A task's starting code (page tasks: its editable files as JSON). */
+  function starterOf(task) {
+    return task.kind === 'page' ? JSON.stringify(task.files) : task.starter;
+  }
+
+  function parseFiles(serialized, fallback) {
+    try {
+      const list = JSON.parse(serialized);
+      if (Array.isArray(list) && list.every((f) => f && typeof f.name === 'string')) return list;
+    } catch (e) { /* not files */ }
+    return fallback;
+  }
+
+  /** What a web run means for an exercise. */
+  function webGrade(r) {
+    const syntax = r.errors.find((e) => e.where === 'syntax') || null;
+    const ok = !syntax && r.done && r.checks.length > 0 && r.checks.every((c) => c.ok) &&
+      !r.errors.some((e) => e.where === 'checks');
+    return { ok, web: r, checks: r.checks, crashed: !r.done, output: Web.allOutputText(r), syntax };
+  }
+
   /**
    * Runs a task's tests against some code.
-   * @returns {Promise<{ok, data, tests?, checks?, crashed?, output?}>}
+   * @returns {Promise<{ok, data?, web?, tests?, checks?, crashed?, output?}>}
    */
   async function gradeTask(task, code) {
+    if (task.kind === 'js') return webGrade(await runJs(code, task.harness));
+    if (task.kind === 'page') {
+      const mine = parseFiles(code, task.files);
+      return webGrade(await runPage(mergeFiles(task.given, mine), task.harness, task.width));
+    }
     if (task.harness) {
       const source = Engine.buildChecked(code, task.harness, task.harnessPre);
       const data = await runCpp({ source });
@@ -1076,7 +1439,7 @@
     return h('div', { class: 'io-box' + (bad ? ' is-bad' : '') }, h('b', null, label), h('pre', null, text === '' ? ' ' : text));
   }
 
-  function resultsView(result, editor) {
+  function resultsView(result, editor, jump) {
     const wrap = h('div');
     if (result.compileFailed) {
       const out = h('div', { class: 'out' });
@@ -1084,11 +1447,17 @@
       wrap.append(out);
       return wrap;
     }
+    if (result.syntax) {
+      const out = h('div', { class: 'out' });
+      showWebRun(out, result.web, { jump });
+      wrap.append(out);
+      return wrap;
+    }
     const list = result.checks || result.tests || [];
     const passed = list.filter((x) => x.ok).length;
     wrap.append(h('div', { class: 'summary-bar ' + (result.ok ? 'is-ok' : 'is-bad') },
       result.ok ? '✓ All ' + list.length + ' tests pass'
-        : result.crashed ? '✗ The program stopped before finishing — ' + passed + ' of the ' + plural(list.length, 'check') + ' that ran passed'
+        : result.crashed ? '✗ The ' + (result.web ? 'code' : 'program') + ' stopped before finishing — ' + passed + ' of the ' + plural(list.length, 'check') + ' that ran passed'
           : '✗ ' + passed + ' of ' + list.length + ' tests pass'));
     const ul = h('ul', { class: 'results' });
     let openedOne = false;
@@ -1102,13 +1471,20 @@
         }
         ul.append(li);
       });
-      if (result.crashed) {
+      if (result.web) {
+        if (result.web.errors.length) ul.append(h('li', null, h('div', { style: { margin: '10px 14px' } }, webErrorsView(result.web.errors, jump))));
+        if (result.web.timedOut) {
+          ul.append(h('li', null, h('div', { class: 'out-note', style: { margin: '10px 14px' }, html: MD.inline('The code was still running after several seconds, so it was stopped — look for a loop that never ends, or code that is very slow.') })));
+        } else if (result.crashed && !result.web.errors.length) {
+          ul.append(h('li', null, h('div', { class: 'out-note', style: { margin: '10px 14px' } }, 'The code stopped before all the tests ran.')));
+        }
+      } else if (result.crashed) {
         const why = Explain.runtime(result.run) || 'The program stopped before all the tests ran.';
         ul.append(h('li', null, h('div', { class: 'out-note', style: { margin: '10px 14px' }, html: MD.inline(why) })));
       }
       if (result.output) {
         ul.append(h('li', null, h('details', { class: 'raw-toggle', style: { marginTop: '10px' } },
-          h('summary', null, 'Your code also printed something'), h('pre', null, result.output))));
+          h('summary', null, result.web ? 'What your code printed to the console' : 'Your code also printed something'), h('pre', null, result.output))));
       }
     } else {
       list.forEach((t, i) => {
@@ -1145,6 +1521,61 @@
   }
 
   /**
+   * The editing surface of a task: one editor for C++ or JavaScript, file
+   * tabs (with the given files read-only) for a page.
+   */
+  function taskEditor(task, initial, opts) {
+    if (task.kind === 'page') {
+      const mine = parseFiles(initial, task.files);
+      const shown = mine.map((f) => ({ name: f.name, content: f.content }))
+        .concat(task.given.filter((g) => !mine.some((f) => f.name === g.name)).map((g) => ({ name: g.name, content: g.content, locked: true })));
+      const tabs = fileTabs(shown, { editing: true, alwaysTabs: true, fullNames: true, minLines: 8, maxLines: 30, onChange: opts.onChange, onRun: opts.onRun });
+      return {
+        host: tabs.el,
+        value: () => JSON.stringify(tabs.editable()),
+        set: (serialized) => tabs.reset(parseFiles(serialized, task.files)),
+        jump: tabs.jump,
+        editor: null,
+        lock: tabs.lock
+      };
+    }
+    const ed = codeEditor(initial, {
+      mode: task.kind === 'js' ? 'js' : 'cpp',
+      minLines: 8,
+      maxLines: 30,
+      onRun: opts.onRun,
+      onChange: opts.onChange
+    });
+    return {
+      host: ed.host,
+      value: () => ed.ed.getValue(),
+      set: (text) => ed.set(text),
+      jump: (file, line) => { ed.ed.gotoLine(line); ed.ed.focus(); },
+      editor: ed.ed,
+      lock: () => { ed.ed.input.readOnly = true; }
+    };
+  }
+
+  /** The solution, readable: one block, or one per file. */
+  function solutionView(task) {
+    if (task.kind === 'page') {
+      return h('div', null, task.solutionFiles.map((f) => h('div', null,
+        h('div', { class: 'ex-io-label', style: { padding: '8px 14px 0' } }, f.name),
+        h('pre', { class: 'code-view', html: highlight(f.content, modeOf(f.name)) }))));
+    }
+    return h('pre', { class: 'code-view', html: highlight(task.solution, task.kind === 'js' ? 'js' : 'cpp') });
+  }
+
+  function solutionForEditor(task) {
+    if (task.kind !== 'page') return task.solution;
+    const mine = task.files.map((f) => {
+      const s = task.solutionFiles.find((x) => x.name === f.name);
+      return { name: f.name, content: s ? s.content : f.content };
+    });
+    return JSON.stringify(mine);
+  }
+
+  /**
    * A coding exercise: editor, input, run, check, hints and solution.
    * @param {object} task
    * @param {{kind, codeKey, onSolved, showPrompt, title, noHelp, noCheck, onChange}} opts
@@ -1152,6 +1583,7 @@
   function taskWidget(task, opts) {
     opts = opts || {};
     const key = opts.codeKey === undefined ? task.id : opts.codeKey;
+    const starter = starterOf(task);
     const saved = key && P.code[key] ? P.code[key].src : null;
     const solvedBefore = isDone(task.id);
     const el = h('section', { class: 'task' + (solvedBefore ? ' is-solved' : '') });
@@ -1179,22 +1611,25 @@
       el.append(h('div', { class: 'task-body' }, md(task.prompt)));
     }
 
-    const ed = codeEditor(saved !== null ? saved : task.starter, {
-      minLines: 8,
-      maxLines: 30,
-      onRun: () => (task.harness ? check() : run()),
-      onChange: (value) => {
+    const isPage = task.kind === 'page';
+    const isCpp = task.kind === 'cpp' || !task.kind;
+    let preview = null;
+    let previewTimer = null;
+    const ed = taskEditor(task, saved !== null ? saved : starter, {
+      onRun: () => (task.harness && !isPage ? check() : run()),
+      onChange: () => {
         if (key) {
           clearTimeout(saveTimer);
-          saveTimer = setTimeout(() => { P.code[key] = { src: value, at: iso() }; save({ quiet: true }); }, 700);
+          saveTimer = setTimeout(() => { P.code[key] = { src: ed.value(), at: iso() }; save({ quiet: true }); }, 700);
         }
+        if (isPage && preview) { clearTimeout(previewTimer); previewTimer = setTimeout(() => preview.update(currentFiles()), 400); }
         if (opts.onChange) opts.onChange();
       }
     });
     el.append(h('div', { class: 'task-editor' }, ed.host));
 
     let stdin = null;
-    if (!task.harness) {
+    if (isCpp && !task.harness) {
       stdin = h('textarea', { class: 'io-input', spellcheck: 'false', placeholder: 'Input for ▶ Run — type what a user would type' });
       const first = task.tests.find((t) => !t.hidden && t.input);
       if (first) stdin.value = first.input;
@@ -1202,18 +1637,20 @@
         h('summary', null, 'Input for ▶ Run'), stdin));
     }
 
-    const runBtn = h('button', { class: 'mini-btn is-run', title: 'Compile and run with the input above (Ctrl+Enter)' }, '▶ Run');
+    const runLabel = isPage ? '▶ Preview' : '▶ Run';
+    const runTitle = isPage ? 'Show the page (updates as you type)' : isCpp ? 'Compile and run with the input above (Ctrl+Enter)' : 'Run and see the console (Ctrl+Enter)';
+    const runBtn = h('button', { class: 'mini-btn is-run', title: runTitle }, runLabel);
     const checkBtn = h('button', { class: 'mini-btn is-primary', title: 'Run all the tests' }, task.harness ? '✓ Run the tests' : '✓ Check');
     const hintBtn = h('button', { class: 'mini-btn' });
     const solutionBtn = h('button', { class: 'mini-btn' }, 'Solution');
     const resetBtn = h('button', { class: 'mini-btn', title: 'Start again from the starter code' }, 'Reset');
     const bar = h('div', { class: 'task-bar' });
-    if (!task.harness) bar.append(runBtn);
+    if (!(isCpp && task.harness)) bar.append(runBtn);
     if (!opts.noCheck) bar.append(checkBtn);
     bar.append(h('span', { class: 'spacer' }));
     if (!opts.noHelp) {
       if (task.hints.length) bar.append(hintBtn);
-      if (task.solution) bar.append(solutionBtn);
+      if (task.solution || (task.solutionFiles && task.solutionFiles.length)) bar.append(solutionBtn);
     }
     bar.append(resetBtn);
     el.append(bar);
@@ -1223,6 +1660,8 @@
     const hints = h('ul', { class: 'hint-list' });
     const solution = h('div');
     el.append(out, results, h('div', { class: 'task-foot' }, hints, solution));
+
+    const currentFiles = () => mergeFiles(task.given, parseFiles(ed.value(), task.files));
 
     const updateHint = () => {
       hintBtn.textContent = hintsShown < task.hints.length ? 'Hint ' + (hintsShown + 1) + '/' + task.hints.length : 'No more hints';
@@ -1250,31 +1689,43 @@
       save({ quiet: true });
       solution.append(h('div', { class: 'solution-box' },
         h('b', null, 'One possible solution'),
-        h('pre', { class: 'code-view', html: highlight(task.solution) }),
+        solutionView(task),
         task.explain ? md(task.explain) : null,
         h('div', { style: { padding: '10px 14px' } },
           h('button', {
             class: 'mini-btn',
             onclick: () => {
-              if (confirm('Replace your code with this solution? (Typing it yourself teaches more.)')) ed.set(task.solution);
+              if (confirm('Replace your code with this solution? (Typing it yourself teaches more.)')) ed.set(solutionForEditor(task));
             }
           }, 'Put it in the editor'))));
     });
 
     resetBtn.addEventListener('click', () => {
       if (!confirm('Throw away your code and start again from the starter code?')) return;
-      ed.set(task.starter);
+      ed.set(starter);
       out.replaceChildren();
       results.replaceChildren();
-      if (key) { P.code[key] = { src: task.starter, at: iso() }; save({ quiet: true }); }
+      preview = null;
+      if (key) { P.code[key] = { src: starter, at: iso() }; save({ quiet: true }); }
     });
 
     async function run() {
+      if (isPage) {
+        if (!preview) {
+          preview = livePreview(currentFiles(), { jump: ed.jump });
+          out.replaceChildren(preview.el);
+        } else {
+          preview.update(currentFiles());
+        }
+        bump('runs');
+        save({ quiet: true });
+        return;
+      }
       runBtn.disabled = true;
-      out.replaceChildren(spinner());
+      out.replaceChildren(spinner(isCpp ? undefined : 'Running…'));
       try {
-        const data = await runCpp({ source: ed.ed.getValue(), stdin: stdin ? stdin.value : '' });
-        showRun(out, data, { editor: ed.ed });
+        if (isCpp) showRun(out, await runCpp({ source: ed.value(), stdin: stdin ? stdin.value : '' }), { editor: ed.editor });
+        else showWebRun(out, await runJs(ed.value()), { jump: ed.jump });
       } catch (err) {
         showRunError(out, err);
       } finally {
@@ -1285,18 +1736,18 @@
     async function check() {
       if (locked && opts.kind !== 'exam') return { ok: false };
       checkBtn.disabled = true;
-      out.replaceChildren();
+      if (!isPage) out.replaceChildren();
       results.replaceChildren(spinner('Running the tests…'));
       let result;
       try {
-        result = await gradeTask(task, ed.ed.getValue());
+        result = await gradeTask(task, ed.value());
       } catch (err) {
         results.replaceChildren();
         showRunError(out, err);
         checkBtn.disabled = false;
         return { ok: false, error: err };
       }
-      results.replaceChildren(resultsView(result, ed.ed));
+      results.replaceChildren(resultsView(result, ed.editor, ed.jump));
       checkBtn.disabled = false;
       if (opts.onChecked) opts.onChecked(result);
       if (opts.kind !== 'exam') {
@@ -1315,15 +1766,18 @@
 
     runBtn.addEventListener('click', run);
     checkBtn.addEventListener('click', check);
+    // A page shows its result straight away; it is half the point.
+    if (isPage && !opts.noCheck) requestAnimationFrame(run);
 
     return {
       el,
-      code: () => ed.ed.getValue(),
+      code: () => ed.value(),
+      changed: () => ed.value().trim() !== '' && ed.value() !== starter,
       check,
       editor: ed,
       lock: () => {
         locked = true;
-        ed.ed.input.readOnly = true;
+        ed.lock();
         runBtn.disabled = true;
         checkBtn.disabled = true;
       }
@@ -1341,11 +1795,13 @@
     return nav;
   }
 
+  function courseHome(c) { return courses.length > 1 ? '#/course/' + (c || course).id : '#/'; }
+
   function itemCrumbs(item) {
     const ch = item.chapter;
-    const part = course.parts.find((p) => p.id === ch.part);
+    const part = ch.course.parts.find((p) => p.id === ch.part);
     return crumbs([
-      { label: 'Home', href: '#/' },
+      { label: courses.length > 1 ? ch.course.short : 'Home', href: courseHome(ch.course) },
       part ? { label: part.title } : null,
       { label: 'Chapter ' + ch.number + ': ' + ch.title, href: '#/c/' + ch.id }
     ].filter(Boolean));
@@ -1364,11 +1820,10 @@
   }
 
   function lockedView(item, ch) {
-    const i = indexOfChapter(ch);
-    const prev = chapterAt(i - 1);
+    const prev = chapterAfter(ch, -1);
     const gate = prev ? examOf(prev) : null;
     const p = page();
-    p.append(crumbs([{ label: 'Home', href: '#/' }, { label: 'Chapter ' + ch.number + ': ' + ch.title }]));
+    p.append(crumbs([{ label: courses.length > 1 ? ch.course.short : 'Home', href: courseHome(ch.course) }, { label: 'Chapter ' + ch.number + ': ' + ch.title }]));
     p.append(h('div', { class: 'lock-box' },
       h('h2', null, '🔒 Chapter ' + ch.number + ' is locked'),
       h('p', { html: MD.inline('This course uses **mastery learning**: each chapter builds on the one before, so a chapter opens when you pass the previous chapter\'s exam (80% or more). It is the single most reliable way to avoid the "I followed everything but can\'t write anything" trap.') }),
@@ -1392,7 +1847,7 @@
   function homeView() {
     const p = page('page-wide');
     const level = Engine.levelFor(totalXp());
-    const up = nextUp();
+    const up = nextUp(course);
     const started = Object.keys(P.items).length > 0;
     const hour = new Date().getHours();
     const greet = hour < 5 ? 'Up late' : hour < 12 ? 'Good morning' : hour < 19 ? 'Good afternoon' : 'Good evening';
@@ -1400,16 +1855,18 @@
     const banner = compilerBanner();
     if (banner) p.append(banner);
 
-    const heroText = started
+    const startedHere = course.items.some((i) => P.items[i.id]);
+    const heroText = startedHere
       ? 'Pick up where you left off. A little every day beats a lot once a week — your brain consolidates between sessions.'
-      : 'This course takes you from knowing nothing about programming to writing real C++ programs fluently. Every lesson has runnable code, checks and exercises; every chapter ends with an exam.';
+      : (course.intro || '');
     const hero = h('section', { class: 'hero' },
       h('div', null,
-        h('h1', null, started ? greet + '!' : 'Learn C++ from zero'),
+        courses.length > 1 ? h('div', { class: 'hero-kicker' }, h('a', { href: '#/' }, '← All courses')) : null,
+        h('h1', null, startedHere ? greet + '! ' + course.short + ' it is.' : course.title),
         h('p', null, heroText),
         up ? h('div', { class: 'up-next' }, 'Up next: ', h('b', null, itemLabel(up) + ' — ' + up.title)) : null,
         h('div', { class: 'row-actions' },
-          up ? h('a', { class: 'btn btn-primary btn-big', href: '#/i/' + up.id }, started ? 'Continue →' : 'Start the course →')
+          up ? h('a', { class: 'btn btn-primary btn-big', href: '#/i/' + up.id }, startedHere ? 'Continue →' : 'Start the course →')
             : h('a', { class: 'btn btn-primary btn-big', href: '#/progress' }, 'See your progress'),
           h('a', { class: 'btn btn-big', href: '#/method' }, 'How this course works'))),
       h('div', { class: 'level-card' },
@@ -1447,7 +1904,7 @@
       practice ? h('div', { class: 'stat-card' },
         h('h3', null, 'Practice problem'),
         h('div', { style: { fontWeight: 650, margin: '4px 0' } }, practice.title, ' ', stars(practice.difficulty)),
-        h('p', null, 'From Chapter ' + practice.chapter.number + '. Deliberate practice is what turns knowing into doing.'),
+        h('p', null, 'From ' + practice.chapter.course.short + ' chapter ' + practice.chapter.number + '. Deliberate practice is what turns knowing into doing.'),
         h('a', { class: 'btn', href: '#/i/' + practice.id }, 'Solve it')) : null));
 
     p.append(h('div', { class: 'section-title' }, 'Your roadmap'));
@@ -1487,8 +1944,8 @@
   function chapterView(ch) {
     const p = page();
     const st = chapterStats(ch);
-    const part = course.parts.find((x) => x.id === ch.part);
-    p.append(crumbs([{ label: 'Home', href: '#/' }, part ? { label: part.title } : null, { label: 'Chapter ' + ch.number }].filter(Boolean)));
+    const part = ch.course.parts.find((x) => x.id === ch.part);
+    p.append(crumbs([{ label: courses.length > 1 ? ch.course.short : 'Home', href: courseHome(ch.course) }, part ? { label: part.title } : null, { label: 'Chapter ' + ch.number }].filter(Boolean)));
     p.append(h('div', { style: { display: 'flex', gap: '18px', alignItems: 'center', margin: '0 0 8px' } },
       h('div', { class: 'ring', style: { '--p': Math.round(st.mastery * 100), '--c': st.mastered ? 'var(--ok)' : 'var(--accent)' } },
         h('span', null, Math.round(st.mastery * 100) + '%')),
@@ -1514,7 +1971,7 @@
       let sub = '';
       if (item.type === 'lesson') sub = itemLabel(item) + (item.minutes ? ' · ' + item.minutes + ' min' : '');
       if (item.type === 'quiz' || item.type === 'review') sub = typeName(item.type) + ' · ' + plural(item.questions.length, 'question');
-      if (item.type === 'exam') sub = (item.id === 'final-exam' ? 'Final exam · ' : 'Chapter exam · ') + (item.pick || item.questions.length) + ' questions · pass with ' + pct(item.pass);
+      if (item.type === 'exam') sub = (isFinal(item) ? 'Final exam · ' : 'Chapter exam · ') + (item.pick || item.questions.length) + ' questions · pass with ' + pct(item.pass);
       if (item.type === 'challenge') sub = 'Challenge · ' + ['', 'warm-up', 'solid', 'hard'][item.difficulty];
       if (item.type === 'project') sub = 'Project · ' + plural(item.milestones.length, 'milestone');
       let side = done ? '✓ Done' : r ? 'In progress' : '';
@@ -1540,7 +1997,7 @@
       h('span', { class: 'tag tag-accent' }, itemLabel(item)),
       item.minutes ? h('span', { class: 'tag' }, '⏱ ' + item.minutes + ' min') : null,
       isDone(item.id) ? h('span', { class: 'tag tag-ok' }, '✓ Completed') : null));
-    const banner = compilerBanner();
+    const banner = compilerBanner(item.chapter.course);
     if (banner) p.append(banner);
 
     if (item.objectives.length) {
@@ -1552,15 +2009,7 @@
     const placed = new Set();
     const slots = [];
     const html = MD.render(item.body, {
-      code: (lang, flags, code, extras) => {
-        if (lang === 'cpp' || lang === 'c++') {
-          slots.push(() => exampleWidget(code, flags, extras));
-          return '<div data-slot="' + (slots.length - 1) + '"></div>';
-        }
-        const label = lang === 'output' ? 'Output' : lang === 'stdin' ? 'Input' : '';
-        return (label ? '<div class="ex-io-label" style="padding:0 0 4px">' + label + '</div>' : '') +
-          '<pre class="plain">' + esc(code) + '</pre>';
-      },
+      code: codeHook(slots),
       slot: (kind, id) => {
         const full = item.id + '/' + id;
         placed.add(full);
@@ -1778,7 +2227,7 @@
     const count = item.pick || item.questions.length;
     const hasCode = item.questions.some((q) => q.type === 'code');
     p.append(h('div', { class: 'meta-row' },
-      h('span', { class: 'tag tag-gold' }, item.id === 'final-exam' ? 'Final exam' : 'Exam'),
+      h('span', { class: 'tag tag-gold' }, isFinal(item) ? 'Final exam' : 'Exam'),
       h('span', { class: 'tag' }, count + ' questions'),
       item.minutes ? h('span', { class: 'tag' }, '⏱ ' + item.minutes + ' min') : null,
       passedBefore ? h('span', { class: 'tag tag-ok' }, '✓ Passed') : null));
@@ -1790,8 +2239,8 @@
       const card = h('div', { class: 'exam-intro' });
       if (item.body) card.append(md(item.body));
       card.append(h('ul', null,
-        h('li', null, count + ' questions drawn from everything in ' + (item.id === 'final-exam' ? 'the course' : 'this chapter') + (item.pick && item.pick < item.questions.length ? ' (a different mix each attempt)' : '') + '.'),
-        h('li', null, 'Pass mark: ', h('b', null, pct(item.pass)), item.id === 'final-exam' ? '. Passing earns the C++ Graduate badge.' : '. Passing unlocks the next chapter.'),
+        h('li', null, count + ' questions drawn from everything in ' + (isFinal(item) ? 'the course' : 'this chapter') + (item.pick && item.pick < item.questions.length ? ' (a different mix each attempt)' : '') + '.'),
+        h('li', null, 'Pass mark: ', h('b', null, pct(item.pass)), isFinal(item) ? '. Passing earns the ' + (item.chapter.course.graduate || item.chapter.course.short + ' Graduate') + ' badge.' : '. Passing unlocks the next chapter.'),
         item.minutes ? h('li', null, 'Time limit: ' + item.minutes + ' minutes. It submits itself when time is up.') : h('li', null, 'No time limit — but try to answer from memory.'),
         h('li', null, 'No feedback until you submit. Then every answer is explained.'),
         hasCode ? h('li', null, 'Coding questions are marked by running your code against tests — use ▶ Run to try things before submitting.') : null,
@@ -1905,7 +2354,7 @@
           n ? h('a', { class: 'btn btn-primary', href: '#/i/' + n.id }, 'Continue: ' + n.title + ' →') : null));
         main.scrollTop = 0;
         if (passed && !wasUnlocked) {
-          const nextCh = chapterAt(indexOfChapter(item.chapter) + 1);
+          const nextCh = chapterAfter(item.chapter, 1);
           if (nextCh) {
             celebrate('🔓', 'Chapter ' + nextCh.number + ' unlocked', '**' + nextCh.title + '** is open. ' + (ratio >= 1 ? 'And a perfect score!' : ''),
               { label: 'Go there', run: () => { location.hash = '#/c/' + nextCh.id; } });
@@ -1920,8 +2369,12 @@
     return p;
   }
 
+  function isFinal(item) {
+    return item.type === 'exam' && item.id === item.chapter.course.final;
+  }
+
   function nextChapterUnlocked(item) {
-    const nextCh = chapterAt(indexOfChapter(item.chapter) + 1);
+    const nextCh = chapterAfter(item.chapter, 1);
     return !nextCh || isUnlocked(nextCh) || examOf(item.chapter) !== item;
   }
 
@@ -1936,12 +2389,7 @@
     const slots = [];
     const body = h('article', {
       class: 'prose',
-      html: MD.render(item.body, {
-        code: (lang, flags, code, extras) => {
-          if (lang === 'cpp') { slots.push(() => exampleWidget(code, flags, extras)); return '<div data-slot="' + (slots.length - 1) + '"></div>'; }
-          return '<pre class="plain">' + esc(code) + '</pre>';
-        }
-      })
+      html: MD.render(item.body, { code: codeHook(slots) })
     });
     body.querySelectorAll('[data-slot]').forEach((el) => el.replaceWith(slots[Number(el.dataset.slot)]()));
     p.append(body);
@@ -1980,7 +2428,7 @@
       h('span', { class: 'tag' }, '+' + Engine.XP.challenge[item.difficulty] + ' XP'),
       task.tags.map((t) => h('span', { class: 'tag' }, t)),
       isDone(item.id) ? h('span', { class: 'tag tag-ok' }, '✓ Solved') : null));
-    const banner = compilerBanner();
+    const banner = compilerBanner(item.chapter.course);
     if (banner) left.append(banner);
     left.append(md(task.prompt));
     const visible = task.tests.filter((t) => !t.hidden);
@@ -1993,7 +2441,9 @@
       const hidden = task.tests.length - visible.length;
       if (hidden) left.append(h('p', { style: { color: 'var(--text-dim)', fontSize: '13px' } }, '+ ' + plural(hidden, 'hidden test') + ' with other inputs.'));
     } else if (task.harness) {
-      left.append(h('p', { style: { color: 'var(--text-dim)', fontSize: '13px' } }, 'Your functions are tested directly — you don\'t need to write main().'));
+      left.append(h('p', { style: { color: 'var(--text-dim)', fontSize: '13px' } }, task.kind === 'page'
+        ? 'Your page is checked by looking at what it shows — the elements, their text and their styles.'
+        : task.kind === 'js' ? 'Your functions are called and their results checked.' : 'Your functions are tested directly — you don\'t need to write main().'));
     }
     const widget = taskWidget(task, {
       kind: 'challenge',
@@ -2028,7 +2478,7 @@
     drawCount();
     p.append(h('div', { class: 'meta-row' },
       h('span', { class: 'tag', style: { color: 'var(--violet)' } }, '🏗️ Project'), countTag, completeTag));
-    const banner = compilerBanner();
+    const banner = compilerBanner(item.chapter.course);
     if (banner) p.append(banner);
     if (item.body) p.append(md(item.body));
 
@@ -2063,9 +2513,15 @@
       stage.replaceChildren(
         h('h2', null, 'Milestone ' + (current + 1) + ': ' + (m.title || '')),
         md(m.prompt));
-      const firstStarter = item.milestones[0].starter;
-      if (!P.code[item.id]) P.code[item.id] = { src: m.starter || firstStarter, at: iso() };
-      const w = taskWidget(Object.assign({}, m, { starter: m.starter || firstStarter }), {
+      // Every milestone continues the same code, which starts from the first one's.
+      const first = item.milestones[0];
+      const task = Object.assign({}, m, {
+        starter: m.starter || first.starter,
+        files: m.files && m.files.length ? m.files : first.files,
+        given: m.given && m.given.length ? m.given : first.given
+      });
+      if (!P.code[item.id]) P.code[item.id] = { src: starterOf(task), at: iso() };
+      const w = taskWidget(task, {
         kind: 'milestone',
         codeKey: item.id,
         showPrompt: false,
@@ -2165,9 +2621,9 @@
       const id = queue[0];
       const card = cardById(id);
       const state = P.cards[id];
-      const lesson = course.byId[card.lesson];
+      const lesson = ALL.byId[card.lesson];
       const fc = h('div', { class: 'flashcard' },
-        h('div', { class: 'fc-side' }, 'Question' + (lesson ? ' · ' + itemLabel(lesson) + ' ' + lesson.title : '')),
+        h('div', { class: 'fc-side' }, 'Question' + (lesson ? ' · ' + (courses.length > 1 ? lesson.chapter.course.short + ' · ' : '') + itemLabel(lesson) + ' ' + lesson.title : '')),
         md(card.front));
       const showBtn = h('button', { class: 'btn btn-primary btn-big', style: { width: '100%' } }, 'Show answer');
       const actions = h('div', null, showBtn);
@@ -2209,11 +2665,11 @@
     }
     wrap.append(h('p', { class: 'page-sub' }, 'Get a question right twice (on different visits) to clear it.'));
     ids.slice(0, 12).forEach((id) => {
-      const q = course.questions[id].question;
-      const owner = course.questions[id].item;
+      const q = ALL.questions[id].question;
+      const owner = ALL.questions[id].item;
       const w = questionWidget(q, {
         mode: 'instant',
-        kicker: 'From ' + itemLabel(owner) + ': ' + owner.title,
+        kicker: 'From ' + (courses.length > 1 ? owner.chapter.course.short + ' ' : '') + itemLabel(owner) + ': ' + owner.title,
         onAnswered: (result) => {
           const m = Object.assign({}, P.mistakes[id]);
           if (result.ok) {
@@ -2266,16 +2722,44 @@
 
   // ================================================================ views: playground
 
-  const TEMPLATES = [
-    { name: 'Hello, World', src: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!\\n";\n    return 0;\n}\n' },
-    { name: 'Read two numbers', src: '#include <iostream>\n\nint main() {\n    int a{};\n    int b{};\n    std::cin >> a >> b;\n    std::cout << a << " + " << b << " = " << a + b << \'\\n\';\n    return 0;\n}\n', stdin: '3 4' },
-    { name: 'Vector and loop', src: '#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> numbers{4, 8, 15, 16, 23, 42};\n    int sum{0};\n    for (int n : numbers) {\n        sum += n;\n    }\n    std::cout << "Sum: " << sum << \'\\n\';\n    return 0;\n}\n' },
-    { name: 'A class', src: '#include <iostream>\n#include <string>\n\nclass Counter {\npublic:\n    void increment() { ++count_; }\n    int value() const { return count_; }\nprivate:\n    int count_{0};\n};\n\nint main() {\n    Counter c;\n    c.increment();\n    c.increment();\n    std::cout << c.value() << \'\\n\';\n    return 0;\n}\n' }
-  ];
+  const TEMPLATES = {
+    cpp: [
+      { name: 'Hello, World', src: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!\\n";\n    return 0;\n}\n' },
+      { name: 'Read two numbers', src: '#include <iostream>\n\nint main() {\n    int a{};\n    int b{};\n    std::cin >> a >> b;\n    std::cout << a << " + " << b << " = " << a + b << \'\\n\';\n    return 0;\n}\n', stdin: '3 4' },
+      { name: 'Vector and loop', src: '#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> numbers{4, 8, 15, 16, 23, 42};\n    int sum{0};\n    for (int n : numbers) {\n        sum += n;\n    }\n    std::cout << "Sum: " << sum << \'\\n\';\n    return 0;\n}\n' },
+      { name: 'A class', src: '#include <iostream>\n#include <string>\n\nclass Counter {\npublic:\n    void increment() { ++count_; }\n    int value() const { return count_; }\nprivate:\n    int count_{0};\n};\n\nint main() {\n    Counter c;\n    c.increment();\n    c.increment();\n    std::cout << c.value() << \'\\n\';\n    return 0;\n}\n' }
+    ],
+    js: [
+      { name: 'Hello, console', src: 'console.log("Hello, World!");\n\nconst name = "Ada";\nconsole.log(`Hello, ${name}!`);\n' },
+      { name: 'Loop and array', src: 'const numbers = [4, 8, 15, 16, 23, 42];\nlet sum = 0;\nfor (const n of numbers) {\n  sum += n;\n}\nconsole.log("Sum:", sum);\nconsole.log(numbers.map((n) => n * 2));\n' },
+      { name: 'Functions and objects', src: 'function greet(person) {\n  return `Hi ${person.name}, you are ${person.age}`;\n}\n\nconst ada = { name: "Ada", age: 36 };\nconsole.log(greet(ada));\n' },
+      { name: 'A class', src: 'class Counter {\n  #count = 0;\n  increment() { this.#count += 1; }\n  get value() { return this.#count; }\n}\n\nconst c = new Counter();\nc.increment();\nc.increment();\nconsole.log(c.value);\n' }
+    ],
+    web: [
+      { name: 'Blank page', files: [
+        { name: 'index.html', content: '<h1>Hello!</h1>\n<p>Edit the HTML, CSS and JS — the result updates as you type.</p>\n' },
+        { name: 'style.css', content: 'body {\n  font-family: system-ui, sans-serif;\n  margin: 2rem;\n}\n\nh1 {\n  color: rebeccapurple;\n}\n' },
+        { name: 'script.js', content: 'console.log("The page is ready");\n' }] },
+      { name: 'Button and counter', files: [
+        { name: 'index.html', content: '<button id="add">Add one</button>\n<p>Count: <span id="count">0</span></p>\n' },
+        { name: 'style.css', content: 'body { font-family: system-ui, sans-serif; margin: 2rem; }\nbutton { font-size: 1.1rem; padding: .5rem 1rem; }\n' },
+        { name: 'script.js', content: 'let count = 0;\nconst label = document.querySelector("#count");\n\ndocument.querySelector("#add").addEventListener("click", () => {\n  count += 1;\n  label.textContent = count;\n});\n' }] },
+      { name: 'Card layout', files: [
+        { name: 'index.html', content: '<div class="cards">\n  <article class="card"><h2>One</h2><p>First card</p></article>\n  <article class="card"><h2>Two</h2><p>Second card</p></article>\n  <article class="card"><h2>Three</h2><p>Third card</p></article>\n</div>\n' },
+        { name: 'style.css', content: 'body { font-family: system-ui, sans-serif; margin: 2rem; background: #f4f4f8; }\n.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }\n.card { background: white; border-radius: 12px; padding: 1rem; box-shadow: 0 2px 8px rgb(0 0 0 / .1); }\n' },
+        { name: 'script.js', content: '' }] }
+    ]
+  };
+  const LANG_NAMES = { cpp: 'C++', js: 'JavaScript', web: 'Web page' };
 
-  function openInPlayground(src, stdin) {
+  function newSnippet(lang, template) {
+    const t = template || TEMPLATES[lang][0];
+    return { name: 'Untitled', lang, src: t.src || '', stdin: t.stdin || '', files: t.files ? t.files.map((f) => ({ name: f.name, content: f.content })) : null, at: iso() };
+  }
+
+  function openInPlayground(snippet) {
     const id = 's' + Date.now().toString(36);
-    P.snippets[id] = { name: 'From a lesson', src, stdin: stdin || '', at: iso() };
+    P.snippets[id] = Object.assign({ name: 'From a lesson', lang: 'cpp', src: '', stdin: '', files: null }, snippet, { at: iso() });
     save({ quiet: true });
     location.hash = '#/playground/' + id;
   }
@@ -2283,74 +2767,111 @@
   function playgroundView(id) {
     const p = page('page-wide');
     p.append(h('h1', null, 'Playground'));
-    p.append(h('p', { class: 'page-sub' }, 'Your own space to try anything. Experimenting — "what happens if I change this?" — is how programmers really learn. Snippets are saved with your progress.'));
-    const banner = compilerBanner();
-    if (banner) p.append(banner);
+    p.append(h('p', { class: 'page-sub' }, 'Your own space to try anything — C++ programs, JavaScript, or whole web pages. Experimenting ("what happens if I change this?") is how programmers really learn. Snippets are saved with your progress.'));
 
     const ids = Object.keys(P.snippets).filter((k) => P.snippets[k] && !P.snippets[k].deleted)
       .sort((a, b) => String(P.snippets[b].at).localeCompare(String(P.snippets[a].at)));
     if (!ids.length) {
       const first = 's' + Date.now().toString(36);
-      P.snippets[first] = { name: 'My first program', src: TEMPLATES[0].src, stdin: '', at: iso() };
+      const lang = course && course.lang === 'web' ? (course.codeLang === 'js' ? 'js' : 'web') : 'cpp';
+      P.snippets[first] = Object.assign(newSnippet(lang), { name: 'My first ' + (lang === 'cpp' ? 'program' : lang === 'js' ? 'script' : 'page') });
       save({ quiet: true });
       ids.push(first);
     }
     const currentId = id && P.snippets[id] && !P.snippets[id].deleted ? id : ids[0];
     const snip = P.snippets[currentId];
+    const lang = snip.lang || 'cpp';
 
+    const create = (l) => {
+      const nid = 's' + Date.now().toString(36);
+      P.snippets[nid] = Object.assign(newSnippet(l), { name: 'Untitled ' + (ids.length + 1) });
+      save({ quiet: true });
+      location.hash = '#/playground/' + nid;
+    };
     const list = h('ul', { class: 'pg-list' });
-    list.append(h('li', null, h('button', {
-      class: '',
-      style: { color: 'var(--accent)' },
-      onclick: () => {
-        const nid = 's' + Date.now().toString(36);
-        P.snippets[nid] = { name: 'Untitled ' + (ids.length + 1), src: TEMPLATES[0].src, stdin: '', at: iso() };
-        save({ quiet: true });
-        location.hash = '#/playground/' + nid;
-      }
-    }, '＋ New snippet')));
+    list.append(h('li', { class: 'pg-new' },
+      h('span', null, '＋ New'),
+      ['cpp', 'js', 'web'].map((l) => h('button', { type: 'button', onclick: () => create(l) }, LANG_NAMES[l]))));
     ids.forEach((k) => list.append(h('li', null, h('button', {
       class: k === currentId ? 'is-active' : '',
       onclick: () => { location.hash = '#/playground/' + k; }
-    }, P.snippets[k].name || 'Untitled'))));
+    }, h('span', { class: 'pg-lang' }, { cpp: 'C++', js: 'JS', web: 'Web' }[P.snippets[k].lang || 'cpp']), P.snippets[k].name || 'Untitled'))));
+
+    let editor = null;
+    let tabs = null;
+    let preview = null;
+    let previewTimer = null;
+    const stdin = h('textarea', { class: 'io-input', placeholder: 'Input for the program (what a user would type)', spellcheck: 'false' });
+    stdin.value = snip.stdin || '';
 
     const persist = () => {
-      P.snippets[currentId] = Object.assign({}, P.snippets[currentId], { src: editor.ed.getValue(), stdin: stdin.value, name: name.value, at: iso() });
+      const patch = { name: name.value, at: iso() };
+      if (lang === 'web') patch.files = tabs.files();
+      else patch.src = editor.ed.getValue();
+      if (lang === 'cpp') patch.stdin = stdin.value;
+      P.snippets[currentId] = Object.assign({}, P.snippets[currentId], patch);
       save({ quiet: true });
     };
     let timer = null;
-    const later = () => { clearTimeout(timer); timer = setTimeout(persist, 600); };
+    const later = () => {
+      clearTimeout(timer);
+      timer = setTimeout(persist, 600);
+      if (lang === 'web' && preview) { clearTimeout(previewTimer); previewTimer = setTimeout(() => preview.update(tabs.files()), 400); }
+    };
 
     const name = h('input', { class: 'pg-name', value: snip.name || '', 'aria-label': 'Snippet name' });
     name.addEventListener('change', () => { persist(); route(); });
-    const editor = codeEditor(snip.src, { minLines: 16, maxLines: 40, onChange: later, onRun: () => run() });
-    const stdin = h('textarea', { class: 'io-input', placeholder: 'Input for the program (what a user would type)', spellcheck: 'false' });
-    stdin.value = snip.stdin || '';
-    stdin.addEventListener('input', later);
     const out = h('div', { class: 'out' });
-    const runBtn = h('button', { class: 'mini-btn is-run' }, '▶ Run');
+    const runBtn = h('button', { class: 'mini-btn is-run' }, lang === 'web' ? '▶ Refresh' : '▶ Run');
     const templateSel = h('select', { class: 'pg-name', style: { flex: '0 0 auto', minWidth: 0 }, 'aria-label': 'Start from a template' },
-      h('option', { value: '' }, 'Template…'), TEMPLATES.map((t, i) => h('option', { value: String(i) }, t.name)));
+      h('option', { value: '' }, 'Template…'), TEMPLATES[lang].map((t, i) => h('option', { value: String(i) }, t.name)));
+
+    let workArea;
+    if (lang === 'web') {
+      const files = snip.files && snip.files.length ? snip.files : TEMPLATES.web[0].files;
+      tabs = fileTabs(files, { editing: true, alwaysTabs: true, fullNames: true, minLines: 14, maxLines: 34, onChange: later, onRun: () => run() });
+      preview = livePreview(files, { jump: tabs.jump, maxHeight: 520, minHeight: 160 });
+      workArea = h('div', null, h('div', { class: 'task-editor' }, tabs.el), preview.el);
+    } else {
+      editor = codeEditor(lang === 'js' ? snip.src : snip.src, { mode: lang, minLines: 16, maxLines: 40, onChange: later, onRun: () => run() });
+      stdin.addEventListener('input', later);
+      workArea = h('div', null,
+        h('div', { class: 'task-editor' }, editor.host),
+        lang === 'cpp' ? h('details', { class: 'task-io', open: true }, h('summary', null, 'Input (stdin)'), stdin) : null,
+        out);
+    }
+
     templateSel.addEventListener('change', () => {
-      const t = TEMPLATES[Number(templateSel.value)];
+      const t = TEMPLATES[lang][Number(templateSel.value)];
       templateSel.value = '';
       if (!t || !confirm('Replace this snippet\'s code with "' + t.name + '"?')) return;
+      if (lang === 'web') {
+        P.snippets[currentId] = Object.assign({}, P.snippets[currentId], { files: t.files.map((f) => ({ name: f.name, content: f.content })), at: iso() });
+        save({ quiet: true });
+        route();
+        return;
+      }
       editor.set(t.src);
       stdin.value = t.stdin || '';
       persist();
     });
 
     async function run() {
+      if (lang === 'web') { preview.update(tabs.files()); bump('runs'); save({ quiet: true }); return; }
       runBtn.disabled = true;
-      out.replaceChildren(spinner());
-      try { showRun(out, await runCpp({ source: editor.ed.getValue(), stdin: stdin.value }), { editor: editor.ed }); } catch (e) { showRunError(out, e); }
+      out.replaceChildren(spinner(lang === 'js' ? 'Running…' : undefined));
+      try {
+        if (lang === 'js') showWebRun(out, await runJs(editor.ed.getValue()), { jump: (f, l) => { editor.ed.gotoLine(l); editor.ed.focus(); } });
+        else showRun(out, await runCpp({ source: editor.ed.getValue(), stdin: stdin.value }), { editor: editor.ed });
+      } catch (e) { showRunError(out, e); }
       runBtn.disabled = false;
     }
     runBtn.addEventListener('click', run);
 
+    const banner = lang === 'cpp' ? compilerBanner(courses.find((c) => c.lang === 'cpp') || course) : null;
     const panel = h('div', { class: 'task', style: { margin: 0 } },
-      h('div', { class: 'task-bar' }, name, runBtn, templateSel,
-        h('button', { class: 'mini-btn', onclick: () => copyText(editor.ed.getValue()) }, 'Copy'),
+      h('div', { class: 'task-bar' }, h('span', { class: 'tag' }, LANG_NAMES[lang]), name, runBtn, templateSel,
+        h('button', { class: 'mini-btn', onclick: () => copyText(lang === 'web' ? tabs.files().map((f) => '/* ' + f.name + ' */\n' + f.content).join('\n\n') : editor.ed.getValue()) }, 'Copy'),
         h('button', {
           class: 'mini-btn',
           onclick: () => {
@@ -2361,9 +2882,8 @@
             route();
           }
         }, 'Delete')),
-      h('div', { class: 'task-editor' }, editor.host),
-      h('details', { class: 'task-io', open: true }, h('summary', null, 'Input (stdin)'), stdin),
-      out);
+      banner,
+      workArea);
     p.append(h('div', { class: 'pg' }, list, panel));
     view.cleanup.push(() => { clearTimeout(timer); persist(); });
     return p;
@@ -2371,16 +2891,24 @@
 
   // ================================================================ views: glossary
 
-  function glossaryView() {
+  function glossaryView(courseId) {
     const p = page();
+    const withTerms = courses.filter((c) => c.glossary.length);
+    const gc = withTerms.find((c) => c.id === courseId) || (course && course.glossary.length ? course : withTerms[0]) || course;
     p.append(h('h1', null, 'Glossary'));
     p.append(h('p', { class: 'page-sub' }, 'Every term the course uses, in plain words.'));
-    const input = h('input', { class: 'gloss-search', type: 'search', placeholder: 'Search ' + course.glossary.length + ' terms…', 'aria-label': 'Search the glossary' });
+    if (withTerms.length > 1) {
+      p.append(h('div', { class: 'tabs-row' }, withTerms.map((c) => h('button', {
+        class: c === gc ? 'is-active' : '',
+        onclick: () => { location.hash = '#/glossary/' + c.id; }
+      }, c.short))));
+    }
+    const input = h('input', { class: 'gloss-search', type: 'search', placeholder: 'Search ' + gc.glossary.length + ' ' + gc.short + ' terms…', 'aria-label': 'Search the glossary' });
     const list = h('div');
     const draw = () => {
       const q = input.value.trim().toLowerCase();
       list.replaceChildren();
-      const terms = course.glossary
+      const terms = gc.glossary
         .filter((t) => !q || t.term.toLowerCase().indexOf(q) !== -1 || t.def.toLowerCase().indexOf(q) !== -1)
         .sort((a, b) => a.term.toLowerCase().localeCompare(b.term.toLowerCase()));
       let letter = '';
@@ -2393,7 +2921,7 @@
           dl = h('dl', { class: 'gloss' });
           list.append(dl);
         }
-        const ch = course.chapters.find((c) => c.id === t.chapter);
+        const ch = gc.chapters.find((c) => c.id === t.chapter);
         dl.append(h('dt', null, t.term), h('dd', null, mdInline(t.def), ch ? h('span', null, ' ', h('a', { href: '#/c/' + ch.id }, '(Chapter ' + ch.number + ')')) : null));
       });
       if (!terms.length) list.append(h('p', { class: 'page-sub' }, 'No term matches “' + input.value + '”.'));
@@ -2412,9 +2940,9 @@
     p.append(h('h1', null, 'Your progress'));
     const level = Engine.levelFor(totalXp());
     const c = counts();
-    const allLessons = course.items.filter((i) => i.type === 'lesson').length;
-    const allChallenges = course.items.filter((i) => i.type === 'challenge').length;
-    const allExams = course.items.filter((i) => i.type === 'exam').length;
+    const allLessons = ALL.items.filter((i) => i.type === 'lesson').length;
+    const allChallenges = ALL.items.filter((i) => i.type === 'challenge').length;
+    const allExams = ALL.items.filter((i) => i.type === 'exam').length;
     const cards = Object.keys(P.cards).filter((id) => cardById(id)).length;
 
     p.append(h('div', { class: 'cards-row' },
@@ -2445,11 +2973,11 @@
     }
     p.append(heat);
 
-    p.append(h('div', { class: 'section-title' }, 'Chapter mastery'));
-    const table = h('table', { class: 'mastery-table' },
-      h('thead', null, h('tr', null, ['Chapter', 'Lessons', 'Challenges', 'Best exam', 'Mastery'].map((t) => h('th', null, t)))));
-    const tbody = h('tbody');
-    course.chapters.forEach((ch) => {
+    const masteryTable = (c) => {
+      const table = h('table', { class: 'mastery-table' },
+        h('thead', null, h('tr', null, ['Chapter', 'Lessons', 'Challenges', 'Best exam', 'Mastery'].map((t) => h('th', null, t)))));
+      const tbody = h('tbody');
+      c.chapters.forEach((ch) => {
       const st = chapterStats(ch);
       const best = st.exam ? (rec(st.exam.id) || {}).best : null;
       tbody.append(h('tr', null,
@@ -2458,9 +2986,23 @@
         h('td', { class: 'num' }, st.challenges[0] + '/' + st.challenges[1]),
         h('td', { class: 'num' }, best ? pct(best) + (st.examPassed ? ' ✓' : '') : '—'),
         h('td', { class: 'num', style: { color: st.mastered ? 'var(--ok)' : null } }, pct(st.mastery) + (st.mastered ? ' ★' : ''))));
-    });
-    table.append(tbody);
-    p.append(h('div', { class: 'table-wrap' }, table));
+      });
+      table.append(tbody);
+      return h('div', { class: 'table-wrap' }, table);
+    };
+    if (courses.length > 1) {
+      p.append(h('div', { class: 'section-title' }, 'Chapter mastery by course'));
+      courses.forEach((c) => {
+        const done = c.items.filter((i) => i.type === 'lesson' && isDone(i.id)).length;
+        const total = c.items.filter((i) => i.type === 'lesson').length;
+        p.append(h('details', { class: 'course-mastery', open: c === course ? true : null },
+          h('summary', null, (c.icon ? c.icon + ' ' : '') + c.title, h('span', { class: 'cm-sub' }, done + '/' + total + ' lessons')),
+          masteryTable(c)));
+      });
+    } else {
+      p.append(h('div', { class: 'section-title' }, 'Chapter mastery'));
+      p.append(masteryTable(course));
+    }
 
     p.append(h('div', { class: 'section-title' }, 'Badges'));
     const badges = h('div', { class: 'badges' });
@@ -2527,18 +3069,63 @@
       }, 'Reset progress…'),
       fileInput));
     p.append(h('p', { style: { color: 'var(--text-dim)', fontSize: '12.5px', marginTop: '14px' } },
-      compiler.available ? 'C++ runs on: ' + (compiler.compiler || compiler.backend) + (compiler.std ? ' (' + compiler.std + ')' : '')
-        : 'C++ is not available on this server: ' + (compiler.reason || '')));
+      (compiler.available ? 'C++ runs on: ' + (compiler.compiler || compiler.backend) + (compiler.std ? ' (' + compiler.std + ')' : '')
+        : 'C++ is not available on this server: ' + (compiler.reason || '')) + ' · HTML, CSS and JavaScript run in your browser.'));
     return p;
   }
 
   function methodView() {
     const p = page();
-    p.append(crumbs([{ label: 'Home', href: '#/' }, { label: 'How this course works' }]));
+    p.append(crumbs([{ label: courses.length > 1 ? course.short : 'Home', href: courseHome() }, { label: 'How this course works' }]));
     p.append(h('h1', null, 'How this course works'));
-    p.append(md(course.method || ''));
-    const up = nextUp();
+    // The method is the same for every course; the C++ course holds the text.
+    const withMethod = course.method ? course : courses.find((c) => c.method);
+    p.append(md((withMethod && withMethod.method) || ''));
+    const up = nextUp(course);
     if (up) p.append(h('div', { class: 'lesson-foot' }, h('a', { class: 'btn btn-primary btn-big', href: '#/i/' + up.id }, 'Start: ' + up.title + ' →')));
+    return p;
+  }
+
+  // ================================================================ views: catalog
+
+  /** Every course, to pick from — the home page when there is more than one. */
+  function catalogView() {
+    const p = page('page-wide');
+    const level = Engine.levelFor(totalXp());
+    const started = Object.keys(P.items).length > 0;
+    p.append(h('section', { class: 'hero' },
+      h('div', null,
+        h('h1', null, started ? 'Welcome back!' : 'What do you want to learn?'),
+        h('p', null, 'Each course starts from zero and ends with you building real things on your own: lessons you can run and change, quick checks, exercises checked automatically, challenges, projects and an exam per chapter. Progress, flashcards and badges are shared across all of them.'),
+        h('div', { class: 'row-actions' },
+          h('a', { class: 'btn btn-big', href: '#/method' }, 'How the courses work'),
+          dueCards().length ? h('a', { class: 'btn btn-primary btn-big', href: '#/review' }, 'Review ' + plural(dueCards().length, 'card')) : null)),
+      h('div', { class: 'level-card' },
+        h('div', { class: 'lv' }, 'Level ' + level.level),
+        h('div', { class: 'lv-title' }, level.title),
+        h('div', { class: 'bar' }, h('i', { style: { width: pct(level.progress) } })),
+        h('div', { class: 'bar-label' }, h('span', null, level.xp + ' XP'), h('span', null, level.next ? level.next + ' XP' : 'max')))));
+
+    const grid = h('div', { class: 'course-grid' });
+    courses.forEach((c) => {
+      const lessons = c.items.filter((i) => i.type === 'lesson');
+      const done = lessons.filter((i) => isDone(i.id)).length;
+      const up = nextUp(c);
+      const mastery = c.chapters.length ? c.chapters.reduce((sum, ch) => sum + chapterStats(ch).mastery, 0) / c.chapters.length : 0;
+      grid.append(h('a', { class: 'course-card', href: '#/course/' + c.id },
+        h('div', { class: 'cc-top' },
+          h('span', { class: 'cc-icon' }, c.icon || '📘'),
+          h('div', { class: 'ring small', style: { '--p': Math.round(mastery * 100), '--c': 'var(--accent)' } }, h('span', null, Math.round(mastery * 100) + '%'))),
+        h('h2', null, c.title),
+        h('p', null, c.subtitle),
+        h('div', { class: 'cc-meta' }, plural(c.chapters.length, 'chapter') + ' · ' + plural(lessons.length, 'lesson') + ' · ' + plural(c.items.filter((i) => i.type === 'challenge').length, 'challenge')),
+        h('div', { class: 'bar ok', style: { margin: '10px 0 6px' } }, h('i', { style: { width: pct(lessons.length ? done / lessons.length : 0) } })),
+        h('div', { class: 'cc-next' }, done ? (up ? 'Next: ' + up.title : 'Course complete!') : 'Start from zero →')));
+    });
+    p.append(h('div', { class: 'section-title' }, 'Courses'));
+    p.append(grid);
+    p.append(h('p', { class: 'page-sub', style: { marginTop: '18px' } },
+      'New to programming? A good path for the web is HTML → CSS → JavaScript: each builds on the one before. C++ stands on its own and starts from zero too.'));
     return p;
   }
 
@@ -2548,12 +3135,17 @@
     if (!course) return;
     const q = document.getElementById('outline-search').value.trim().toLowerCase();
     const active = currentItemId();
-    const activeChapter = active && course.byId[active] ? course.byId[active].chapter.id : currentChapterId();
+    const activeChapter = active && ALL.byId[active] ? ALL.byId[active].chapter.id : currentChapterId();
+    const picker = document.getElementById('course-picker');
+    if (picker) {
+      picker.hidden = courses.length < 2;
+      picker.replaceChildren(...courses.map((c) => h('option', { value: c.id, selected: c === course ? true : null }, (c.icon ? c.icon + ' ' : '') + c.title)));
+    }
     const openBefore = new Set(Array.from(outline.querySelectorAll('details[open]')).map((d) => d.dataset.ch));
     const scroll = outline.scrollTop;
     outline.replaceChildren();
     outline.append(h('div', { class: 'lt-side-mobile-nav' },
-      h('a', { href: '#/' }, '🏠 Home'), h('a', { href: '#/review' }, '🔁 Review'), h('a', { href: '#/playground' }, '🧪 Playground'),
+      h('a', { href: '#/' }, courses.length > 1 ? '🏠 All courses' : '🏠 Home'), h('a', { href: '#/review' }, '🔁 Review'), h('a', { href: '#/playground' }, '🧪 Playground'),
       h('a', { href: '#/glossary' }, '📖 Glossary'), h('a', { href: '#/progress' }, '📈 Progress'), h('a', { href: '../' }, '← Editor')));
     let any = false;
     course.parts.forEach((part) => {
@@ -2619,8 +3211,9 @@
     const parts = hash.replace(/^#\/?/, '').split('/');
     let node;
     try {
-      if (parts[0] === 'i' && course.byId[parts[1]]) {
-        const item = course.byId[parts[1]];
+      if (parts[0] === 'i' && ALL.byId[parts[1]]) {
+        const item = ALL.byId[parts[1]];
+        setCourse(item.chapter.course);
         if (!isUnlocked(item.chapter)) node = lockedView(item, item.chapter);
         else {
           node = {
@@ -2629,14 +3222,19 @@
           }[item.type](item);
           touchVisit(item);
         }
-      } else if (parts[0] === 'c' && course.chapters.find((c) => c.id === parts[1])) {
-        node = chapterView(course.chapters.find((c) => c.id === parts[1]));
+      } else if (parts[0] === 'c' && ALL.chapters.find((c) => c.id === parts[1])) {
+        const ch = ALL.chapters.find((c) => c.id === parts[1]);
+        setCourse(ch.course);
+        node = chapterView(ch);
+      } else if (parts[0] === 'course' && courses.find((c) => c.id === parts[1])) {
+        setCourse(courses.find((c) => c.id === parts[1]));
+        node = homeView();
       } else if (parts[0] === 'review') node = reviewView(parts[1] || 'cards');
       else if (parts[0] === 'playground') node = playgroundView(parts[1]);
-      else if (parts[0] === 'glossary') node = glossaryView();
+      else if (parts[0] === 'glossary') node = glossaryView(parts[1]);
       else if (parts[0] === 'progress') node = progressView();
       else if (parts[0] === 'method') node = methodView();
-      else node = homeView();
+      else node = courses.length > 1 ? catalogView() : homeView();
     } catch (err) {
       console.error(err);
       node = h('div', { class: 'page' }, h('h1', null, 'Something went wrong'), h('pre', { class: 'plain' }, String(err && err.stack || err)));
@@ -2645,12 +3243,12 @@
     main.scrollTop = 0;
     document.querySelectorAll('.lt-nav a').forEach((a) => {
       const nav = a.dataset.nav;
-      a.classList.toggle('is-active', (nav === 'home' && (parts[0] === '' || parts[0] === undefined)) || nav === parts[0]);
+      a.classList.toggle('is-active', (nav === 'home' && (parts[0] === '' || parts[0] === undefined || parts[0] === 'course')) || nav === parts[0]);
     });
     document.body.classList.remove('side-open');
     document.getElementById('btn-menu').setAttribute('aria-expanded', 'false');
     const title = node.querySelector('h1');
-    document.title = (title ? title.textContent + ' · ' : '') + 'Learn C++';
+    document.title = (title ? title.textContent + ' · ' : '') + 'Learn ' + (course ? course.short : '');
     renderOutline();
     const active = outline.querySelector('a.is-active');
     if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
@@ -2705,19 +3303,58 @@
     return res.text();
   }
 
-  async function loadCourse() {
-    const index = Course.parseYaml(await fetchText('course/course.yml'), 'course.yml');
+  async function loadCourse(dir) {
+    const index = Course.parseYaml(await fetchText(dir + '/course.yml'), dir + '/course.yml');
     const files = index.chapters || [];
     // A chapter that fails to load is left out rather than taking the course down.
-    const settled = await Promise.allSettled(files.map((f) => fetchText('course/' + f + '.yml')));
+    const settled = await Promise.allSettled(files.map((f) => fetchText(dir + '/' + f + '.yml')));
     const docs = [];
     settled.forEach((r, i) => {
       if (r.status !== 'fulfilled') { console.warn('Skipping chapter', files[i], r.reason); return; }
       try { docs.push(Course.parseYaml(r.value, files[i] + '.yml')); } catch (e) { console.error(e); }
     });
     let glossary = null;
-    try { glossary = Course.parseYaml(await fetchText('course/glossary.yml'), 'glossary.yml'); } catch (e) { glossary = null; }
+    try { glossary = Course.parseYaml(await fetchText(dir + '/glossary.yml'), 'glossary.yml'); } catch (e) { glossary = null; }
     return Course.buildCourse(index, docs, { glossary });
+  }
+
+  /** Every course in courses.yml (or just the C++ one, if there is no list). */
+  async function loadCourses() {
+    let dirs = ['course'];
+    try {
+      const list = Course.parseYaml(await fetchText('courses.yml'), 'courses.yml');
+      if (list && Array.isArray(list.courses) && list.courses.length) dirs = list.courses.map((c) => String(c.dir));
+    } catch (e) { /* the C++ course alone */ }
+    const settled = await Promise.allSettled(dirs.map(loadCourse));
+    const loaded = [];
+    settled.forEach((r, i) => {
+      if (r.status === 'fulfilled') loaded.push(r.value);
+      else console.warn('Skipping course', dirs[i], r.reason);
+    });
+    if (!loaded.length) throw (settled[0] && settled[0].reason) || new Error('No course could be loaded');
+    return loaded;
+  }
+
+  /** Builds the shared index; ids are unique across courses. */
+  function indexCourses() {
+    courses.forEach((c) => {
+      c.items.forEach((item) => { ALL.byId[item.id] = item; ALL.items.push(item); });
+      Object.keys(c.questions).forEach((id) => { ALL.questions[id] = c.questions[id]; });
+      c.cards.forEach((card) => ALL.cards.push(card));
+      c.chapters.forEach((ch) => ALL.chapters.push(ch));
+    });
+  }
+
+  /** Switches the course being looked at (and remembers it). */
+  function setCourse(c) {
+    if (!c || c === course) return;
+    course = c;
+    const brand = document.getElementById('brand-course');
+    if (brand) brand.textContent = c.short;
+    if ((P.settings || {}).course !== c.id) {
+      P.settings = Object.assign({}, P.settings, { course: c.id, at: iso() });
+      persistLocal();
+    }
   }
 
   async function boot() {
@@ -2726,7 +3363,10 @@
     setSync('busy', 'Connecting…');
     const statusDone = loadCompilerStatus().then(() => { compiler.pending = false; });
     try {
-      course = await loadCourse();
+      courses = await loadCourses();
+      indexCourses();
+      course = null;
+      setCourse(courses.find((c) => c.id === (P.settings || {}).course) || courses[0]);
     } catch (err) {
       main.replaceChildren(h('div', { class: 'page' }, h('h1', null, 'The course could not be loaded'),
         h('pre', { class: 'plain' }, String(err && err.message || err))));
@@ -2747,6 +3387,10 @@
     setInterval(() => { if (sync.dirty) push(); }, 60000);
   }
 
-  window.LearnApp = { route, get progress() { return P; }, get course() { return course; } };
+  document.getElementById('course-picker').addEventListener('change', (e) => {
+    location.hash = '#/course/' + e.target.value;
+  });
+
+  window.LearnApp = { route, get progress() { return P; }, get course() { return course; }, get courses() { return courses; } };
   boot();
 })();

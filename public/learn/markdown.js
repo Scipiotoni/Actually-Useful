@@ -157,11 +157,15 @@
         var code = body.join('\n');
         // An example can be followed by the input it reads and what it prints.
         var extras = {};
-        if (lang === 'cpp') {
+        // C++ takes input and output; JavaScript output; an HTML example its
+        // CSS, JS and console output.
+        var follows = { cpp: /^\s*```(output|stdin)\s*$/, js: /^\s*```(output)\s*$/, html: /^\s*```(css|js|output)\s*$/ }[lang];
+        if (follows && flags.indexOf('static') === -1) {
           var k = i;
           while (k < lines.length) {
             while (k < lines.length && /^\s*$/.test(lines[k])) k += 1;
-            var next = /^\s*```(output|stdin)\s*$/.exec(lines[k] || '');
+            var next = follows.exec(lines[k] || '');
+            if (next && extras[next[1]] !== undefined) break;
             if (!next) break;
             var inner = [];
             k += 1;

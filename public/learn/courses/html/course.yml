@@ -1,0 +1,33 @@
+id: html
+lang: web
+code_lang: html
+short: HTML
+icon: 🧱
+final: html-final
+graduate: HTML Graduate
+title: HTML Basics
+subtitle: Build web pages from scratch — the structure and meaning behind every site on the internet.
+
+intro: |
+  HTML is the language every web page is written in. This course starts from
+  nothing — no coding experience needed — and ends with you building a
+  complete, accessible personal website by hand. Every example shows its
+  result live as you edit it, and your pages are checked automatically.
+
+parts:
+  - id: html-p1
+    title: Part I — The Structure of a Page
+    blurb: What a web page is made of — elements, text, links and images — and how to give content meaning.
+  - id: html-p2
+    title: Part II — Building Real Pages
+    blurb: Page layout with meaningful elements, tables, forms, media and good practice — ending with your own site.
+
+chapters:
+  - html01
+  - html02
+  - html03
+  - html04
+  - html05
+  - html06
+  - html07
+  - html08
