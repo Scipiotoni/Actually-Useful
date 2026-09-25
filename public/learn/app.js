@@ -392,7 +392,7 @@
     const list = [
       { id: 'hello', icon: '👋', name: 'Hello, World', desc: 'Ran your first program', test: (c) => c.runs >= 1 },
       { id: 'polyglot', icon: '🌍', name: 'Polyglot', desc: 'Completed lessons in three different courses', test: () => courses.filter((cr) => cr.items.some((i) => i.type === 'lesson' && isDone(i.id))).length >= 3 },
-      { id: 'first-error', icon: '🧯', name: 'Met the Compiler', desc: 'Got your first compile error — every programmer does, daily', test: (c) => c.compileErrors >= 1 },
+      { id: 'first-error', icon: '🧯', name: 'Met an Error', desc: 'Got your first error message — every programmer does, daily', test: (c) => c.compileErrors >= 1 },
       { id: 'lesson-1', icon: '📘', name: 'First Lesson', desc: 'Completed a lesson', test: (c) => c.lessons >= 1 },
       { id: 'lesson-10', icon: '📚', name: 'Bookworm', desc: 'Completed 10 lessons', test: (c) => c.lessons >= 10 },
       { id: 'lesson-50', icon: '🏛️', name: 'Scholar', desc: 'Completed 50 lessons', test: (c) => c.lessons >= 50 },
@@ -612,18 +612,22 @@
 
   // ================================================================ running web code
 
-  /** JavaScript in a worker. Counts as a run, like compiling C++ does. */
+  /** JavaScript in a worker. Counts as a run (and any error as one met), like compiling C++ does. */
   async function runJs(code, harness) {
     bump('runs');
+    const result = await Web.runJs({ code, harness, timeoutMs: harness ? 8000 : 5000 });
+    if (result.errors.length) bump('compileErrors');
     save({ quiet: true });
-    return Web.runJs({ code, harness, timeoutMs: harness ? 8000 : 5000 });
+    return result;
   }
 
   /** A page, with its checks, in a hidden frame. */
   async function runPage(files, harness, width) {
     bump('runs');
+    const result = await Web.runPage({ files, harness, width: width || 800, timeoutMs: 10000 });
+    if (result.errors.length) bump('compileErrors');
     save({ quiet: true });
-    return Web.runPage({ files, harness, width: width || 800, timeoutMs: 10000 });
+    return result;
   }
 
   /** The given files with the learner's on top (same name → the learner's wins). */
@@ -2966,7 +2970,7 @@
       h('div', { class: 'stat-card' }, h('h3', null, 'Memory'), h('div', { class: 'big' }, String(cards)),
         h('p', null, plural(c.reviews, 'review') + ' done · ' + dueCards().length + ' due')),
       h('div', { class: 'stat-card' }, h('h3', null, 'Programs run'), h('div', { class: 'big' }, String(c.runs)),
-        h('p', null, plural(c.compileErrors, 'compile error') + ' met and fixed along the way'))));
+        h('p', null, plural(c.compileErrors, 'error') + ' met and fixed along the way'))));
 
     p.append(h('div', { class: 'section-title' }, 'Activity — last 20 weeks'));
     const heat = h('div', { class: 'heatmap', 'aria-label': 'Daily activity' });
