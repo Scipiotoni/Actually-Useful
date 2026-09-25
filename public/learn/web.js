@@ -651,9 +651,26 @@
     return out;
   }
 
+  /** Positions of the semicolons between start and end that aren't nested or in strings. */
+  function topLevelSemicolons(src, start, end) {
+    var found = [];
+    var depth = 0;
+    var p = start;
+    while (p < end) {
+      var skipped = skipNonCode(src, p);
+      if (skipped !== p) { p = skipped; continue; }
+      var ch = src.charAt(p);
+      if (ch === '(' || ch === '[' || ch === '{') depth += 1;
+      else if (ch === ')' || ch === ']' || ch === '}') depth -= 1;
+      else if (ch === ';' && depth === 0) found.push(p);
+      p += 1;
+    }
+    return found;
+  }
+
   /**
-   * Adds a guard to every braced loop, so an endless loop in a page stops
-   * with a message instead of freezing the browser tab.
+   * Adds a guard to every loop, so an endless loop in a page stops with a
+   * message instead of freezing the browser tab.
    */
   function protectLoops(src) {
     src = String(src || '');
@@ -678,6 +695,20 @@
             if (src.charAt(k) === '{') {
               out += src.slice(i, k + 1) + guard;
               i = k + 1;
+              continue;
+            }
+            // Without braces there's no body to put the guard in, so it goes
+            // in the condition: while (__au.loop(), (cond)).
+            if (kw[1] === 'while') {
+              out += src.slice(i, j + 1) + '__au.loop(), (' + src.slice(j + 1, close) + '))';
+              i = close + 1;
+              continue;
+            }
+            var semis = topLevelSemicolons(src, j + 1, close);
+            if (kw[1] === 'for' && semis.length === 2) {
+              var cond = src.slice(semis[0] + 1, semis[1]).trim() || 'true';
+              out += src.slice(i, semis[0] + 1) + ' __au.loop(), (' + cond + ')' + src.slice(semis[1], close + 1);
+              i = close + 1;
               continue;
             }
           }

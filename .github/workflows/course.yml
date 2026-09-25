@@ -1,33 +1,42 @@
 name: Course
 
-# Compiles and runs every example, question and exercise in Learn C++.
-# It takes a few minutes, so it only runs when the course or the runner changes.
+# Runs every example, question and exercise in Learn mode: the C++ course is
+# compiled with g++, and the HTML, CSS and JavaScript courses run in Chromium.
+# It takes a few minutes, so it only runs when the courses or their runners change.
 on:
   push:
     branches-ignore: [au-learn]
     paths:
       - 'public/learn/**'
+      - 'public/compose.js'
       - 'server/cpp.js'
       - 'test/course-lib.js'
+      - 'test/web-course-lib.js'
       - 'test/course.test.js'
       - '.github/workflows/course.yml'
   pull_request:
     paths:
       - 'public/learn/**'
+      - 'public/compose.js'
       - 'server/cpp.js'
       - 'test/course-lib.js'
+      - 'test/web-course-lib.js'
       - 'test/course.test.js'
       - '.github/workflows/course.yml'
 
 jobs:
   course:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'
       - run: g++ --version
+      - name: Install Chromium for the web courses
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
       - name: Check every lesson, exercise and exam
         run: AU_COURSE_CHECK=1 node --test test/course.test.js

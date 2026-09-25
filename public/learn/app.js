@@ -1738,6 +1738,12 @@
     async function check() {
       if (locked && opts.kind !== 'exam') return { ok: false };
       checkBtn.disabled = true;
+      // Keep the code being checked right away, not after the typing pause:
+      // passing a milestone opens the next one, which starts from it.
+      if (key) {
+        clearTimeout(saveTimer);
+        P.code[key] = { src: ed.value(), at: iso() };
+      }
       if (!isPage) out.replaceChildren();
       results.replaceChildren(spinner('Running the tests…'));
       let result;

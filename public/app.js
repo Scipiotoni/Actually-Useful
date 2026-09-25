@@ -1615,7 +1615,7 @@
   }
 
   // ----------------------------------------------------------------- backup
-  // One file with this project and the Learn C++ progress kept in this
+  // One file with this project and the Learn progress kept in this
   // browser. In the open version it is the only way work leaves the browser.
   var backupModal = $('backup-modal');
   var backupFile = $('backup-file');
@@ -1641,7 +1641,7 @@
     if (parsed.editor && !window.confirm(
       'Restore ' + Backup.describe(parsed) + '?\n\n' +
       'The project in the editor is replaced by the one in the backup. ' +
-      'Learn C++ progress is merged, so nothing you have done there is lost.')) return;
+      'Learning progress is merged, so nothing you have done there is lost.')) return;
 
     if (parsed.learn && window.LearnEngine) {
       var current = null;
@@ -1650,7 +1650,7 @@
       try {
         localStorage.setItem(Backup.KEYS.learn, JSON.stringify(merged));
       } catch (err) {
-        return toast('This browser has no room to store the Learn C++ progress.', 'err', 7000);
+        return toast('This browser has no room to store the learning progress.', 'err', 7000);
       }
     }
     if (parsed.editor) {
@@ -1743,7 +1743,7 @@
     document.body.classList.add('is-open-version');
     [els.deploy, els.sites, $('btn-images')].forEach(function (button) { if (button) button.hidden = true; });
     $('backup-note').textContent = 'This is the open version: nothing is published or kept on the server. ' +
-      'Your project and Learn C++ progress live in this browser — download a backup now and then ' +
+      'Your project and learning progress live in this browser — download a backup now and then ' +
       'so clearing the browser can never cost you your work.';
     els.previewUrl.textContent = 'preview — open version, publishing is off';
   }

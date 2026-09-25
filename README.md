@@ -218,7 +218,7 @@ A project holds up to 40 files, each up to 2 MB. Names must end in `.html`,
 ## C and C++
 
 C++ sources are edited and highlighted like any other file, and published as
-readable text. To *run* C++ while learning, use [Learn C++](#learn-c) — its
+readable text. To *run* C++ while learning, use [Learn](#learn) — its C++
 lessons and Playground compile on the server.
 
 A published page can't run C++ by itself — no browser executes C++. The way C++ reaches a web
@@ -242,35 +242,42 @@ WebAssembly.instantiateStreaming(fetch('add.wasm'))
 any of the project's own files from the copy it carries, so a module runs while
 you are still drafting, not only once deployed.
 
-## Learn C++
+## Learn
 
-The **Learn C++** button (or `/learn/`) opens a complete course that starts
-from knowing nothing about programming and ends with writing real C++
-fluently:
+The **Learn** button (or `/learn/`) opens four complete courses, each
+starting from zero:
 
-- **20 chapters in 5 parts** — first steps, working with data, object-oriented
-  C++, the standard library and modern C++, and becoming fluent (multi-file
-  programs, debugging, testing, algorithms) — ending with a capstone project
-  and a final exam.
-- **118 lessons**, each with stated objectives, examples you can edit and run,
-  and quick checks as you read.
-- **Practice at every level**: 91 exercises inside lessons, 98 challenges
-  (★ to ★★★), 5 projects built in 19 milestones, 36 quizzes, a review page and
-  an exam per chapter (760 questions in all: multiple choice, predict the
-  output, fill in the blank, order the lines, spot the bug, and code).
+| Course | Chapters | Lessons | Exercises and challenges | Ends with |
+|---|---|---|---|---|
+| **C++** | 20 | 118 | 91 + 98, 5 projects | a capstone project and a final exam |
+| **HTML Basics** | 8 | 26 | 20 + 18 | a hand-written personal website and a final exam |
+| **CSS Styling** | 12 | 39 | 35 + 22 | styling that website, responsive and accessible, and a final exam |
+| **JavaScript** | 14 | 46 | 42 + 26 | a to-do app built in five milestones, and a final exam |
+
+Every course works the same way:
+
+- **Lessons** with stated objectives, examples you can edit and run (HTML and
+  CSS examples show their result live as you type), and quick checks as you
+  read.
+- **Practice at every level**: exercises inside lessons, challenges
+  (★ to ★★★), projects built in milestones, quizzes, a review page and an exam
+  per chapter — multiple choice, predict the output, fill in the blank, order
+  the lines, spot the bug, and code (1,623 questions across the courses).
 - **Mastery learning**: a chapter's exam (80% to pass) unlocks the next one —
   or unlock it anyway if you already know the material.
-- **Remembering it**: 396 spaced-repetition flashcards, a mistake bank that
-  brings back what you got wrong, and mixed practice across chapters.
-- **Help when stuck**: progressive hints, compiler errors and crashes
-  explained in plain words, and solutions after a real attempt.
-- XP, levels, streaks, badges, notes per lesson, a searchable 198-term
-  glossary and a Playground with templates.
+- **Remembering it**: spaced-repetition flashcards (755 in all), a mistake bank
+  that brings back what you got wrong, and mixed practice across chapters.
+- **Help when stuck**: progressive hints, errors explained in plain words
+  (compiler messages, crashes, JavaScript errors, endless loops), and
+  solutions after a real attempt.
+- XP, levels, streaks, badges (including a Graduate badge per course), notes
+  per lesson, a searchable glossary per course (485 terms) and a Playground.
 
-Progress is kept in the browser and synced to the server, merged so two
-devices never overwrite each other. With GitHub storage on, it is committed to
-its own branch (`au-learn`), so saving progress never triggers a Pages build or
-a redeploy. **Progress → Export** downloads a copy at any time.
+Progress for all courses is one record, kept in the browser and synced to the
+server, merged so two devices never overwrite each other. With GitHub storage
+on, it is committed to its own branch (`au-learn`), so saving progress never
+triggers a Pages build or a redeploy. **Progress → Export** downloads a copy at
+any time.
 
 ### How the C++ runs
 
@@ -290,19 +297,51 @@ Code is compiled and run on the server, in this order of preference:
 stop honest mistakes — an endless loop, a runaway print — not to contain
 hostile code: with `AU_PASSWORD` set, only signed-in users can run anything.
 
+### How HTML, CSS and JavaScript run
+
+Entirely in the learner's browser — nothing is sent to the server:
+
+- **JavaScript on its own** runs in a Web Worker. It can't touch the page, and
+  one that never finishes is simply stopped.
+- **Pages** (HTML with its CSS and JavaScript) run in a sandboxed frame with no
+  access to the site, composed the same way the editor's preview does it.
+  Loops in page scripts get a guard, so an endless one stops after 1.5 seconds
+  with a message instead of freezing the tab.
+- A small **bridge** in both captures `console` output (formatted like a
+  browser console) and errors (with line numbers, and a plain-words hint), and
+  runs the exercise's checks. Links and forms in a preview say where they would
+  have gone instead of leaving the page.
+
 ### Writing course content
 
-Chapters are YAML files in `public/learn/course/` (`course.yml` lists them).
-Lessons are Markdown with callouts (`> [!tip]`, `> [!mistake]`, …), runnable
-` ```cpp ` blocks followed by optional ` ```stdin ` and ` ```output ` blocks,
-and `{{check id}}` / `{{task id}}` placeholders for questions and exercises.
-Exercises are either whole programs checked against input/output tests, or
-functions checked by a `harness` of `CHECK(expression, expected);` lines.
+`public/learn/courses.yml` lists the courses; each has a folder with a
+`course.yml` (its id, language, parts and chapters), one YAML file per chapter
+and a `glossary.yml`. Chapter, item and question ids must be unique across all
+courses. Lessons are Markdown with callouts (`> [!tip]`, `> [!warning]`, …),
+runnable code blocks, and `{{check id}}` / `{{task id}}` placeholders for
+questions and exercises.
 
-`node test/course-lib.js [ch05 ...]` compiles and runs everything in the
-chosen chapters (all of them by default): examples must print what they
-claim, solutions must pass without warnings, and starters must not already
-pass.
+- **C++**: ` ```cpp ` blocks, followed by optional ` ```stdin ` and ` ```output `
+  blocks. Exercises are whole programs checked against input/output tests, or
+  functions checked by a `harness` of `CHECK(expression, expected);` lines.
+- **JavaScript**: ` ```js ` blocks with an optional ` ```output `. Exercises have a
+  `starter`, a `solution` and a `harness` of `check(expression, expected);`
+  lines (`checkThrows(expression)` for errors); `printed()` and `capture(fn)`
+  read what the code logged.
+- **Pages**: an ` ```html ` block, optionally followed by ` ```css ` and ` ```js `,
+  runs as a live preview. Page exercises list their `files` (what the learner
+  edits), `given` files (shown read-only) and `solution` files, and check the
+  result with helpers such as `text('h1')`, `count('li')`, `style('p',
+  'color')`, `color('navy')`, `box('.card')`, `hover('a', 'color')`,
+  `rule('@keyframes spin')`, `click('#add')`, `typeInto('#name', 'Ana')`,
+  `submit('form')`, `press('#new', 'Enter')` and `await viewport(400)` (to try
+  another screen width).
+
+`node test/course-lib.js [ch05 ...]` compiles and runs everything in the C++
+course, and `node test/web-course-lib.js [html css03 ...]` does the same for
+the web courses in Chromium (with Playwright installed): examples must run
+cleanly and print what they claim, solutions must pass, and starters — and each
+milestone's previous solution — must not already pass.
 
 ## Progressive web apps
 
@@ -374,7 +413,7 @@ without a password:
 
 - **Nothing can be published.** Deploy, Pages and Images disappear, and the
   server refuses to publish, delete or upload.
-- **Nothing is kept on the server.** Each visitor's project and Learn C++
+- **Nothing is kept on the server.** Each visitor's project and learning
   progress live in their own browser.
 - **Backup** (in the editor, and on Learn's Progress page) downloads one file
   with both the project and the learning progress; **Restore** brings it back
@@ -402,7 +441,7 @@ button is there too, as an extra safety net.
 | `AU_GITHUB_BRANCH` | *(repo default)* | Branch to commit pages to |
 | `AU_ALLOW_PUBLIC_WRITES` | *(unset)* | Permit a public bind with no password |
 | `AU_OPEN` | *(unset)* | `1` runs [the open version](#the-open-version): no password, no publishing |
-| `AU_CPP_BACKEND` | `auto` (`godbolt` in the open version) | How Learn C++ runs code: `auto`, `local`, `godbolt`, `wandbox` or `off` |
+| `AU_CPP_BACKEND` | `auto` (`godbolt` in the open version) | How the C++ course runs code: `auto`, `local`, `godbolt`, `wandbox` or `off` |
 | `AU_CXX` | `g++` | The local C++ compiler to use |
 | `AU_LEARN_BRANCH` | `au-learn` | Branch that stores learning progress when GitHub storage is on |
 
@@ -499,16 +538,22 @@ delete and find — as pure functions over text and a selection, so their edge
 cases (blank lines, the last line, no trailing newline) are pinned down without
 needing a browser.
 
-Learn C++ has its own suites: the learning engine (answer marking, spaced
+Learn mode has its own suites: the learning engine (answer marking, spaced
 repetition, merging progress from two devices), the course format and
-Markdown renderer (including link and HTML escaping), the error explainer, the
-C++ and progress APIs, and the compiler runner itself (skipped when no `g++` is
-installed). The whole course — over a thousand examples, questions and
-exercises — is compiled and checked with:
+Markdown renderer (including link and HTML escaping), every course's
+structure (ids unique across courses), the error explainers, the C++ and
+progress APIs, the compiler runner itself (skipped when no `g++` is
+installed), and the browser runner's pure parts (console formatting, check
+translation, loop guards). Every course — over a thousand C++ checks and
+almost 800 browser runs for HTML, CSS and JavaScript — is checked with:
 
 ```bash
 AU_COURSE_CHECK=1 npm test
 ```
+
+The web courses need Playwright with Chromium (`npm install --no-save
+playwright && npx playwright install chromium`); without it that part is
+skipped.
 
 ## Security notes
 
@@ -544,8 +589,11 @@ test/github-store.test.js  GitHub storage, against a stand-in GitHub API
 server/cpp.js      Compiles and runs C++ for Learn mode (local g++ or a remote service)
 server/learn-store.js  Learning progress on disk or on its own GitHub branch
 public/backup.js   Backup files: the editor project and Learn progress in one JSON file
-public/learn/      Learn C++: the app, its engine, and the course in course/*.yml
+public/learn/      Learn: the app, its engine, the C++ course in course/ and the
+                   HTML, CSS and JavaScript courses in courses/
+public/learn/web.js  Runs HTML, CSS and JavaScript for Learn, in a worker or a sandboxed frame
 test/learn-*.test.js, test/cpp-runner.test.js, test/course.test.js  Learn mode tests
+test/course-lib.js, test/web-course-lib.js  Check every example and exercise (C++ / web)
 ```
 
 ## License

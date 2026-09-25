@@ -1,5 +1,5 @@
 /*
- * Backup files: the editor's project and Learn C++ progress in one JSON file,
+ * Backup files: the editor's project and learning progress in one JSON file,
  * so work can be kept (and moved to another browser) without any server.
  * Shared by the editor, Learn mode and the tests.
  */
@@ -105,7 +105,7 @@
     }
     if (parsed.learn) {
       var items = isObject(parsed.learn.items) ? Object.keys(parsed.learn.items).length : 0;
-      parts.push('Learn C++ progress (' + items + (items === 1 ? ' item' : ' items') + ')');
+      parts.push('learning progress (' + items + (items === 1 ? ' item' : ' items') + ')');
     }
     return parts.join(' and ');
   }

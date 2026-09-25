@@ -136,7 +136,7 @@ test('a backup holds the project and the learning progress, and reads back', () 
   assert.deepStrictEqual(back.editor, editor);
   assert.deepStrictEqual(back.learn, learn);
   assert.strictEqual(Backup.fileName(new Date(2026, 8, 5)), 'actually-useful-backup-2026-09-05.json');
-  assert.strictEqual(Backup.describe(back), 'the project "My page" (1 file) and Learn C++ progress (1 item)');
+  assert.strictEqual(Backup.describe(back), 'the project "My page" (1 file) and learning progress (1 item)');
 });
 
 test('collect reads both parts from browser storage', () => {

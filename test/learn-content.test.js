@@ -152,6 +152,35 @@ test('the real course is complete and consistent', () => {
   });
 });
 
+test('every course in courses.yml is complete, and ids are unique across courses', () => {
+  // Progress is one record for all courses, so no two may share an id.
+  const { loadCourseAt, courseDirs } = require('./web-course-lib.js');
+  const loaded = courseDirs().map((dir) => loadCourseAt(dir));
+  assert.deepStrictEqual(loaded.map(({ course }) => course.id), ['cpp', 'html', 'css', 'js']);
+  const owner = {};
+  const claim = (id, courseId) => {
+    assert.ok(!owner[id] || owner[id] === courseId, `${id} is used by both ${owner[id]} and ${courseId}`);
+    owner[id] = courseId;
+  };
+  loaded.forEach(({ course, missing }) => {
+    assert.deepStrictEqual(missing, [], `${course.id} lists chapters that have no file`);
+    assert.deepStrictEqual(Course.validate(course), [], `${course.id} is valid`);
+    assert.ok(course.final && course.byId[course.final], `${course.id}'s final exam exists`);
+    assert.ok(course.glossary.length >= 50, `${course.id} has a glossary`);
+    course.glossary.forEach((term) => {
+      if (term.chapter) assert.ok(course.chapters.some((c) => c.id === term.chapter), `${course.id}: ${term.term} links to a real chapter`);
+    });
+    course.chapters.forEach((chapter) => {
+      claim(chapter.id, course.id);
+      assert.ok(chapter.items.some((i) => i.type === 'exam'), `${chapter.id} has an exam`);
+    });
+    course.items.forEach((item) => claim(item.id, course.id));
+    Object.keys(course.questions).forEach((id) => claim(id, course.id));
+  });
+  const web = loaded.filter(({ course }) => course.lang === 'web').map(({ course }) => course);
+  assert.deepStrictEqual(web.map((c) => [c.id, c.chapters.length]), [['html', 8], ['css', 12], ['js', 14]]);
+});
+
 // ------------------------------------------------------------------ markdown
 
 test('markdown escapes HTML and only allows safe links', () => {
