@@ -1,0 +1,658 @@
+id: html07
+number: 7
+part: html-p2
+title: Media, the Head and Good Practice
+blurb: Video, audio and embeds; everything that goes in the head; connecting CSS and JavaScript files; and the habits of a professional.
+hours: 2.5
+goals:
+  - Add video and audio with controls, several formats and captions
+  - Embed other pages with `<iframe>`
+  - Fill the head with a description, a favicon and sharing information
+  - Connect a stylesheet and a script to a page
+  - Use handy elements like `<details>`, `<time>` and `<address>`, and check pages for quality
+
+items:
+  - type: lesson
+    id: html7-media
+    title: Video, audio and embeds
+    minutes: 20
+    objectives:
+      - Add `<video>` and `<audio>` with controls and fallbacks
+      - Provide captions with `<track>`
+      - Embed a page, a map or a video with `<iframe>`
+    body: |
+      ## Video and audio
+
+      ```html static
+      <video controls width="640" height="360" poster="images/cover.jpg">
+        <source src="media/trailer.webm" type="video/webm">
+        <source src="media/trailer.mp4" type="video/mp4">
+        <track kind="captions" src="media/trailer.en.vtt" srclang="en" label="English">
+        <p>Your browser can't play this video. <a href="media/trailer.mp4">Download it</a>.</p>
+      </video>
+
+      <audio controls>
+        <source src="media/podcast.mp3" type="audio/mpeg">
+        <p><a href="media/podcast.mp3">Download the episode</a></p>
+      </audio>
+      ```
+
+      - `controls` shows play, pause and volume buttons. **Always** include it (unless you build your own controls).
+      - Several `<source>`s: the browser plays the **first format it supports**.
+      - `poster` is the image shown before the video plays.
+      - `<track kind="captions">` adds captions (a `.vtt` text file). Captions are essential for deaf viewers — and used by everyone watching with the sound off.
+      - Content inside the element is a **fallback** for browsers that can't play it.
+
+      Here is what the controls look like (the files don't exist here, so it
+      won't play):
+
+      ```html
+      <audio controls></audio>
+      ```
+
+      > [!warning]
+      > Avoid `autoplay` — sound that starts by itself is jarring, and
+      > browsers block it anyway unless the media is also `muted`.
+
+      ## Embedding with iframe
+
+      An `<iframe>` shows **another web page inside yours** — how you embed a
+      YouTube video, a map or a form from another service. The service gives
+      you the code; you paste it:
+
+      ```html static
+      <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
+              title="How to fold a paper crane"
+              width="560" height="315"
+              loading="lazy" allowfullscreen></iframe>
+      ```
+
+      Always give an iframe a `title` — it's what screen readers announce.
+      `loading="lazy"` waits to load it until the visitor scrolls near it.
+
+      {{check sources}}
+
+      {{check title}}
+    checks:
+      - id: sources
+        type: mcq
+        prompt: A `<video>` has two `<source>` elements. Which one plays?
+        options:
+          - Both, one after the other
+          - The last one
+          - The first one whose format the browser supports
+          - The smaller file
+        answer: 2
+        why: "The browser picks the first source it can play."
+      - id: title
+        type: tf
+        prompt: An `<iframe>` should have a `title` attribute describing what it contains.
+        answer: true
+        why: "Screen readers announce it so users know what the embedded content is."
+    cards:
+      - front: Which attribute adds play/pause buttons to video and audio?
+        back: "`controls`."
+      - front: Why put several `<source>` elements in a `<video>`?
+        back: The browser plays the first format it supports.
+      - front: How do you add captions to a video?
+        back: "`<track kind=\"captions\" src=\"file.vtt\" srclang=\"en\" label=\"English\">` inside the video."
+      - front: What is an `<iframe>`?
+        back: A window showing another web page inside yours (embedded videos, maps…). Give it a `title`.
+
+  - type: lesson
+    id: html7-head
+    title: The head, and connecting CSS and JavaScript
+    minutes: 25
+    objectives:
+      - Write a description, a favicon link and social sharing tags
+      - Link a stylesheet with `<link rel="stylesheet">`
+      - Load a script with `<script src defer>`
+    body: |
+      The `<head>` is where you tell browsers, search engines and social
+      networks about your page — and where you connect your CSS and
+      JavaScript files.
+
+      ```html static
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Handmade Soap — Lavender Bar</title>
+        <meta name="description" content="A gentle lavender soap, handmade in small batches in Porto.">
+        <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+        <meta property="og:title" content="Lavender Bar">
+        <meta property="og:description" content="A gentle lavender soap, handmade in Porto.">
+        <meta property="og:image" content="https://example.com/images/lavender.jpg">
+
+        <link rel="stylesheet" href="style.css">
+        <script src="script.js" defer></script>
+      </head>
+      ```
+
+      - `description` is the text search engines often show under your title in results. One or two sentences, unique per page.
+      - `<link rel="icon">` is the **favicon**, the little picture in the browser tab.
+      - The `og:` ("Open Graph") tags control the preview card when someone shares your link on social media or in a chat.
+      - `<link rel="stylesheet" href="style.css">` connects a **CSS file** — that's how every page of a site shares one look.
+      - `<script src="script.js" defer></script>` loads a **JavaScript file**. `defer` means "run it after the page has been read", so the script can find every element. Without `defer`, a script in the head runs *before* the body exists.
+
+      ## Try it
+
+      In this example the HTML links two files. Look at the tabs — the page
+      picks up the colour from `style.css` and the text from `script.js`:
+
+      ```html
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <title>Linked files</title>
+          <link rel="stylesheet" href="style.css">
+          <script src="script.js" defer></script>
+        </head>
+        <body>
+          <h1>Hello from HTML</h1>
+          <p id="message">This text will be replaced by the script.</p>
+        </body>
+      </html>
+      ```
+
+      ```css
+      h1 { color: rebeccapurple; }
+      ```
+
+      ```js
+      document.querySelector('#message').textContent = 'And hello from JavaScript!';
+      ```
+
+      Press **Edit**, delete the `<link>` line, and watch the colour go.
+
+      {{check defer}}
+
+      {{task link-files}}
+    checks:
+      - id: defer
+        type: mcq
+        prompt: Why use `defer` on a script in the head?
+        options:
+          - It makes the script download later
+          - It runs the script after the page has been read, so all elements exist
+          - It stops the script from running
+          - It's required for the script to load
+        answer: 1
+        why: "A deferred script runs once the HTML has been parsed."
+      - id: description
+        type: tf
+        prompt: The meta description appears on the page, under the `<h1>`.
+        answer: false
+        why: "It's for search results and link previews; nothing in the head is shown on the page."
+    tasks:
+      - id: link-files
+        title: Connect the stylesheet and the script
+        prompt: |
+          The files `style.css` and `script.js` already exist (see their
+          tabs — they're read-only). Connect them to the page in its head:
+          the stylesheet with `<link>`, the script with `<script … defer>`.
+          Add a meta description too: `My linked page`.
+        files:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <title>Linked</title>
+              </head>
+              <body>
+                <h1>It works</h1>
+                <p id="status">Waiting for the script…</p>
+              </body>
+            </html>
+        given:
+          style.css: |
+            h1 { color: rgb(0, 128, 0); }
+          script.js: |
+            document.querySelector('#status').textContent = 'The script ran!';
+        solution:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <title>Linked</title>
+                <meta name="description" content="My linked page">
+                <link rel="stylesheet" href="style.css">
+                <script src="script.js" defer></script>
+              </head>
+              <body>
+                <h1>It works</h1>
+                <p id="status">Waiting for the script…</p>
+              </body>
+            </html>
+        harness: |
+          check(style('h1', 'color'), 'rgb(0, 128, 0)');
+          check(text('#status'), 'The script ran!');
+          check(attr('meta[name=description]', 'content'), 'My linked page');
+        hints:
+          - "`<link rel=\"stylesheet\" href=\"style.css\">` in the head."
+          - "`<script src=\"script.js\" defer></script>` — scripts need their closing tag."
+    cards:
+      - front: How do you link a CSS file?
+        back: "`<link rel=\"stylesheet\" href=\"style.css\">` in the head."
+      - front: How do you load a JavaScript file so it can find every element?
+        back: "`<script src=\"script.js\" defer></script>` in the head (`defer` runs it after the page is read)."
+      - front: What is the meta description for?
+        back: The summary search engines show under your title; one or two sentences, unique per page.
+      - front: What are Open Graph (`og:`) tags?
+        back: Meta tags that control the preview card when your link is shared on social media or in chats.
+
+  - type: quiz
+    id: html7-quiz1
+    title: "Quiz: media and the head"
+    questions:
+      - type: fill
+        prompt: Link a stylesheet.
+        code: |
+          <link ___="stylesheet" ___="style.css">
+        blanks:
+          - [rel]
+          - [href]
+        why: "`rel` says what the link is; `href` where the file is."
+      - type: mcq
+        prompt: Which is the favicon link?
+        options:
+          - "`<link rel=\"icon\" href=\"favicon.svg\">`"
+          - "`<img src=\"favicon.svg\" class=\"icon\">`"
+          - "`<meta name=\"icon\" content=\"favicon.svg\">`"
+          - "`<favicon src=\"favicon.svg\">`"
+        answer: 0
+        why: "A `<link rel=\"icon\">` in the head."
+      - type: tf
+        prompt: Captions help deaf viewers and people watching without sound.
+        answer: true
+        why: "Always caption videos with speech."
+      - type: spot
+        prompt: This script can't find the paragraph. Which line is the problem?
+        code: |
+          <head>
+            <title>Demo</title>
+            <script src="app.js"></script>
+          </head>
+          <body>
+            <p id="out"></p>
+          </body>
+        answer: 3
+        why: "Without `defer`, the script runs before the body exists. Add `defer`."
+
+  - type: lesson
+    id: html7-extras
+    title: Handy elements and professional habits
+    minutes: 22
+    objectives:
+      - Use `<details>`/`<summary>`, `<time>`, `<address>` and `<meter>`/`<progress>`
+      - Make pages faster with lazy-loaded images
+      - Check a page for quality before publishing
+    body: |
+      ## A few useful elements
+
+      ```html
+      <details>
+        <summary>What is your refund policy?</summary>
+        <p>Full refund within 30 days, no questions asked.</p>
+      </details>
+      <p>Posted on <time datetime="2026-05-03">3 May 2026</time>.</p>
+      <address>
+        Contact: <a href="mailto:hi@example.com">hi@example.com</a><br>
+        12 Rua das Flores, Porto
+      </address>
+      <p>Battery: <meter value="0.7">70%</meter></p>
+      <p>Upload: <progress value="45" max="100">45%</progress></p>
+      ```
+
+      - `<details>` + `<summary>` — a section that opens and closes on click, with no JavaScript. Great for FAQs.
+      - `<time datetime="…">` — a date or time in a form computers can read (`2026-05-03`, `18:30`), while people see whatever text you like.
+      - `<address>` — contact information for the page's author or company.
+      - `<meter>` shows a measurement in a range; `<progress>` how far a task has got.
+
+      ## Faster pages
+
+      - Add `loading="lazy"` to images further down the page: the browser only downloads them when the visitor scrolls near.
+      - Don't use a 4000-pixel photo where 800 pixels are shown: resize images before uploading.
+      - Keep `width` and `height` on images, so nothing jumps while loading.
+
+      ## Before you publish: a checklist
+
+      1. **Validate** your HTML at validator.w3.org.
+      2. **Check the outline**: one `<h1>`, headings in order.
+      3. **Check every image** has a suitable `alt`.
+      4. **Tab through the page** with the keyboard.
+      5. **Read the link texts** on their own.
+      6. **Check every form field** has a label.
+      7. **Try it on a phone**, or with a narrow window.
+      8. **Title and description** on every page.
+
+      {{check details}}
+
+      {{task faq}}
+    checks:
+      - id: details
+        type: mcq
+        prompt: Which elements make an open/close section with no JavaScript?
+        options:
+          - "`<section>` and `<h2>`"
+          - "`<details>` and `<summary>`"
+          - "`<dialog>` and `<button>`"
+          - "`<aside>` and `<p>`"
+        answer: 1
+        why: "`<details>` holds the content; `<summary>` is the always-visible label."
+    tasks:
+      - id: faq
+        title: A collapsible FAQ
+        prompt: |
+          Build a FAQ with two `<details>` sections:
+
+          - summary `When are you open?` — content: a paragraph `Every day from 9am.`, where `9am` is a `<time>` element with `datetime="09:00"`
+          - summary `Where are you?` — content: an `<address>` with the text `5 Market Square`.
+
+          The **first** one should start **open** (use the `open` attribute).
+        files:
+          index.html: |
+            <h2>FAQ</h2>
+        solution:
+          index.html: |
+            <h2>FAQ</h2>
+            <details open>
+              <summary>When are you open?</summary>
+              <p>Every day from <time datetime="09:00">9am</time>.</p>
+            </details>
+            <details>
+              <summary>Where are you?</summary>
+              <address>5 Market Square</address>
+            </details>
+        harness: |
+          check(count('details'), 2);
+          check($$('details > summary').map((s) => s.textContent.trim()), ['When are you open?', 'Where are you?']);
+          check($$('details').map((d) => d.open), [true, false]);
+          check(text('details:first-of-type p'), 'Every day from 9am.');
+          check(attr('details time', 'datetime'), '09:00');
+          check(text('details time'), '9am');
+          check(text('details:last-of-type address'), '5 Market Square');
+        hints:
+          - "`<details open><summary>…</summary>…</details>` — `open` has no value."
+    cards:
+      - front: How do you make a section that opens and closes without JavaScript?
+        back: "`<details><summary>Label</summary>…content…</details>`"
+      - front: What is `<time datetime>` for?
+        back: A date/time that computers can read (`datetime=\"2026-05-03\"`), shown to people in any wording.
+      - front: What does `loading="lazy"` do on an image?
+        back: Delays downloading it until the visitor scrolls near it.
+      - front: Name five checks before publishing a page.
+        back: Validate; one h1 and headings in order; alt on every image; tab through with the keyboard; labels on every field (also: link texts, phone check, title and description).
+
+  - type: quiz
+    id: html7-quiz2
+    title: "Quiz: extras and quality"
+    questions:
+      - type: mcq
+        prompt: Which element shows how far an upload has got?
+        options:
+          - "`<meter>`"
+          - "`<progress>`"
+          - "`<range>`"
+          - "`<bar>`"
+        answer: 1
+        why: "`<progress>` for task progress; `<meter>` for a measurement in a known range."
+      - type: tf
+        prompt: "`<details open>` starts expanded."
+        answer: true
+        why: "The `open` attribute."
+      - type: mcq
+        prompt: A page has a 5 MB photo shown 600 pixels wide. What's the best fix?
+        options:
+          - Add `loading="lazy"` only
+          - Resize the image to about the size it's shown at (and compress it)
+          - Use a `<video>` instead
+          - Nothing — browsers shrink it
+        answer: 1
+        why: "Downloading 5 MB to show a small picture wastes time and data."
+
+  - type: challenge
+    id: html7-ch-video
+    title: A video section done right
+    difficulty: 2
+    tags: [media, accessibility]
+    prompt: |
+      Mark up a video section:
+
+      - an `<h2>` `Watch the tour`
+      - a `<video>` with `controls`, width `640`, height `360` and a `poster` of `tour.jpg`
+      - two sources: `tour.webm` (type `video/webm`) then `tour.mp4` (type `video/mp4`)
+      - an English captions track: `kind="captions"`, `src="tour.en.vtt"`, `srclang="en"`, `label="English"`
+      - a fallback paragraph with a download link to `tour.mp4`
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <h2>Watch the tour</h2>
+        <video controls width="640" height="360" poster="tour.jpg">
+          <source src="tour.webm" type="video/webm">
+          <source src="tour.mp4" type="video/mp4">
+          <track kind="captions" src="tour.en.vtt" srclang="en" label="English">
+          <p>Your browser can't play this video. <a href="tour.mp4">Download the tour</a>.</p>
+        </video>
+    harness: |
+      check(text('h2'), 'Watch the tour');
+      const v = $('video');
+      check(Boolean(v) && v.controls, true);
+      check([attr('video', 'width'), attr('video', 'height'), attr('video', 'poster')], ['640', '360', 'tour.jpg']);
+      check($$('video > source').map((s) => s.getAttribute('src') + ' ' + s.getAttribute('type')), ['tour.webm video/webm', 'tour.mp4 video/mp4']);
+      check(['kind', 'src', 'srclang', 'label'].map((a) => attr('video > track', a)), ['captions', 'tour.en.vtt', 'en', 'English']);
+      check(attr('video a', 'href'), 'tour.mp4');
+    hints:
+      - "Inside `<video>`: the sources, then the track, then the fallback paragraph."
+
+  - type: challenge
+    id: html7-ch-head
+    title: A complete head
+    difficulty: 2
+    tags: [head, meta]
+    prompt: |
+      Write a complete document for a page about a bakery, whose head has:
+
+      - charset `utf-8` and the viewport meta
+      - the title `Crumb & Co — Bakery`
+      - the description `Fresh bread every morning in the old town.`
+      - a favicon link to `favicon.png`
+      - Open Graph tags `og:title` = `Crumb & Co` and `og:image` = `https://example.com/bread.jpg`
+
+      The body just needs an `<h1>` `Crumb & Co`.
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Crumb &amp; Co — Bakery</title>
+            <meta name="description" content="Fresh bread every morning in the old town.">
+            <link rel="icon" href="favicon.png">
+            <meta property="og:title" content="Crumb &amp; Co">
+            <meta property="og:image" content="https://example.com/bread.jpg">
+          </head>
+          <body>
+            <h1>Crumb &amp; Co</h1>
+          </body>
+        </html>
+    harness: |
+      check(document.title, 'Crumb & Co — Bakery');
+      check(exists('meta[charset]'), true);
+      check(attr('meta[name=viewport]', 'content') !== null, true);
+      check(attr('meta[name=description]', 'content'), 'Fresh bread every morning in the old town.');
+      check(attr('link[rel~=icon]', 'href'), 'favicon.png');
+      check(attr('meta[property="og:title"]', 'content'), 'Crumb & Co');
+      check(attr('meta[property="og:image"]', 'content'), 'https://example.com/bread.jpg');
+      check(text('h1'), 'Crumb & Co');
+    hints:
+      - "Open Graph tags use `property`, not `name`: `<meta property=\"og:title\" content=\"…\">`."
+      - "Write `&` as `&amp;` (inside attributes too)."
+
+  - type: review
+    id: html7-review
+    title: "Chapter 7 review"
+    body: |
+      ## Cheat sheet
+
+      ```html static
+      <video controls width="640" height="360" poster="cover.jpg">
+        <source src="clip.webm" type="video/webm">
+        <source src="clip.mp4" type="video/mp4">
+        <track kind="captions" src="clip.vtt" srclang="en" label="English">
+      </video>
+      <iframe src="…" title="What it shows" loading="lazy"></iframe>
+
+      <meta name="description" content="…">
+      <link rel="icon" href="favicon.svg">
+      <meta property="og:title" content="…">
+      <link rel="stylesheet" href="style.css">
+      <script src="script.js" defer></script>
+
+      <details><summary>Question</summary>Answer</details>
+      <time datetime="2026-05-03">3 May</time>   <address>…</address>
+      <img src="…" alt="…" loading="lazy" width="800" height="600">
+      ```
+
+      ## Key ideas
+
+      - Media: `controls`, several sources, captions, a fallback; no autoplay.
+      - iframes embed other pages — always with a `title`.
+      - The head: title, description, favicon, sharing tags, stylesheet and deferred script.
+      - Check before publishing: validator, outline, alt, keyboard, labels, phone.
+    questions:
+      - type: order
+        prompt: Put the head together.
+        lines:
+          - "<head>"
+          - "<meta charset=\"utf-8\">"
+          - "<title>Shop</title>"
+          - "<link rel=\"stylesheet\" href=\"style.css\">"
+          - "<script src=\"app.js\" defer></script>"
+          - "</head>"
+        alternatives:
+          - [0, 1, 2, 4, 3, 5]
+          - [0, 1, 3, 2, 4, 5]
+        why: "Charset first; the rest can be in several orders."
+      - type: tf
+        prompt: Without `controls`, a `<video>` has no buttons to play it.
+        answer: true
+        why: "Always include `controls` (or build your own with JavaScript)."
+
+  - type: exam
+    id: html7-exam
+    title: "Chapter 7 exam"
+    minutes: 20
+    pick: 9
+    questions:
+      - type: mcq
+        prompt: What does `defer` do on `<script src="app.js" defer>`?
+        options:
+          - Runs the script after the HTML has been read
+          - Stops the script
+          - Runs the script twice
+          - Loads it from a cache only
+        answer: 0
+        why: "Deferred scripts run once the page is parsed."
+      - type: mcq
+        prompt: Where does a video's caption file go?
+        options:
+          - In a `<caption>` element
+          - In a `<track kind="captions">`
+          - In the `poster` attribute
+          - In a `<figcaption>`
+        answer: 1
+        why: "`<track>` inside the video."
+      - type: tf
+        prompt: The meta description is shown at the top of your page.
+        answer: false
+        why: "It's used by search engines and link previews."
+      - type: fill
+        prompt: Load a script file after the page is read.
+        code: |
+          <script ___="script.js" ___></script>
+        blanks:
+          - [src]
+          - [defer]
+        why: "`src` points to the file; `defer` delays it."
+      - type: mcq
+        prompt: Which should every `<iframe>` have for accessibility?
+        options:
+          - "`alt`"
+          - "`title`"
+          - "`name`"
+          - "`caption`"
+        answer: 1
+        why: "The title names the embedded content."
+      - type: mcq
+        prompt: Which element makes a FAQ answer open and close?
+        options:
+          - "`<details>`"
+          - "`<dialog>`"
+          - "`<dl>`"
+          - "`<toggle>`"
+        answer: 0
+        why: "`<details>` with a `<summary>`."
+      - type: spot
+        prompt: Which line has a mistake?
+        code: |
+          <head>
+            <meta charset="utf-8">
+            <link rel="stylesheet" src="style.css">
+            <title>Menu</title>
+          </head>
+        answer: 3
+        why: "`<link>` uses `href`, not `src`."
+      - type: mcq
+        prompt: What does `<time datetime="2026-12-24">Christmas Eve</time>` show on the page?
+        options:
+          - "2026-12-24"
+          - "Christmas Eve"
+          - Both
+          - A calendar
+        answer: 1
+        why: "The content is shown; `datetime` is for computers."
+      - type: code
+        prompt: |
+          Write a full document whose head links `style.css` (given — it
+          colours the `<h1>` blue) and whose body has an `<h1>` `Styled`.
+          Include the doctype, `lang="en"`, charset and title `Styled page`.
+        files:
+          index.html: |
+        given:
+          style.css: |
+            h1 { color: rgb(0, 0, 255); }
+        solution:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <title>Styled page</title>
+                <link rel="stylesheet" href="style.css">
+              </head>
+              <body>
+                <h1>Styled</h1>
+              </body>
+            </html>
+        harness: |
+          check(document.title, 'Styled page');
+          check(attr('html', 'lang'), 'en');
+          check(text('h1'), 'Styled');
+          check(style('h1', 'color'), 'rgb(0, 0, 255)');
+      - type: mcq
+        prompt: What should you do with a 4000-pixel-wide photo shown at 800 pixels?
+        options:
+          - Keep it for quality
+          - Resize it before uploading
+          - Convert it to GIF
+          - Put it in an iframe
+        answer: 1
+        why: "Smaller files, faster pages."

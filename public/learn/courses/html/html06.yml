@@ -1,0 +1,753 @@
+id: html06
+number: 6
+part: html-p2
+title: Forms
+blurb: Let visitors type, choose and send — text fields, checkboxes, radio buttons, menus and buttons, labelled properly and checked by the browser.
+hours: 3
+goals:
+  - Build forms with `<form>`, `<input>`, `<label>` and `<button>`
+  - Choose the right input type — email, number, password, date, checkbox, radio, range…
+  - Use `<textarea>`, `<select>`, `<fieldset>` and `<legend>`
+  - Let the browser validate input with `required`, `min`, `max`, `pattern` and more
+  - Label every field so forms are accessible
+
+items:
+  - type: lesson
+    id: html6-basics
+    title: Your first form
+    minutes: 22
+    objectives:
+      - Build a form with a text field, a label and a submit button
+      - Connect a label to its field with `for` and `id`
+      - Explain what `name`, `action` and `method` do when a form is sent
+    body: |
+      Forms are how visitors talk back: search boxes, sign-ups, orders,
+      comments. Here's the smallest useful form:
+
+      ```html
+      <form action="/subscribe" method="post">
+        <label for="email">Your email</label>
+        <input type="email" id="email" name="email">
+        <button type="submit">Subscribe</button>
+      </form>
+      ```
+
+      Type an address and press **Subscribe**. In this course's preview
+      nothing is really sent — the console shows what *would* be sent.
+
+      ## The pieces
+
+      - `<form>` wraps the fields. `action` is where the data goes (a server address); `method` is how: `get` puts the data in the URL (fine for searches), `post` sends it separately (for anything that changes something, or is private).
+      - `<input>` is a field — a void element. Its `type` decides what kind.
+      - `name` is the key the data is sent under: `email=ada@example.com`. **A field without a name isn't sent at all.**
+      - `<button type="submit">` sends the form. (Pressing Enter in a text field does too.)
+
+      ## Labels
+
+      Every field needs a **label** saying what to type. Connect them: the
+      label's `for` matches the field's `id`.
+
+      ```html
+      <p>
+        <label for="city">City</label>
+        <input type="text" id="city" name="city">
+      </p>
+      <p>
+        <label>Country <input type="text" name="country"></label>
+      </p>
+      ```
+
+      The second way — the field inside the label — works too. Either way,
+      clicking the label now focuses the field (try it!), and screen readers
+      announce "City, edit text" when the field is focused.
+
+      > [!mistake]
+      > Using `placeholder` (grey hint text inside the field) *instead of* a
+      > label. The placeholder vanishes as soon as you type, it's often too
+      > faint to read, and many screen readers skip it. Placeholders can add
+      > an example — `placeholder="e.g. Lisbon"` — but never replace a label.
+
+      {{check name}}
+
+      {{check label}}
+
+      {{task search}}
+    checks:
+      - id: name
+        type: tf
+        prompt: A field without a `name` attribute is still sent with the form.
+        answer: false
+        why: "Only named fields are sent; `name` is the key of each value."
+      - id: label
+        type: fill
+        prompt: Connect the label to the field.
+        code: |
+          <label ___="phone">Phone number</label>
+          <input type="tel" ___="phone" name="phone">
+        blanks:
+          - [for]
+          - [id]
+        why: "The label's `for` matches the field's `id`."
+    tasks:
+      - id: search
+        title: A search form
+        prompt: |
+          Build a search form that sends to `/search` with `method="get"`:
+
+          - a label `Search for` connected to a field
+          - an input of type `search` with the id `q` and the name `q`
+          - a submit button with the text `Go`
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <form action="/search" method="get">
+              <label for="q">Search for</label>
+              <input type="search" id="q" name="q">
+              <button type="submit">Go</button>
+            </form>
+        harness: |
+          check(attr('form', 'action'), '/search');
+          check(attr('form', 'method'), 'get');
+          check(attr('form input', 'type'), 'search');
+          check(attr('form input', 'name'), 'q');
+          check(attr('form input', 'id'), 'q');
+          check(text('label[for="q"]'), 'Search for');
+          check(text('form button'), 'Go');
+          check($('form button').type, 'submit');
+        hints:
+          - "`<label for=\"q\">Search for</label>` then `<input type=\"search\" id=\"q\" name=\"q\">`."
+    cards:
+      - front: What do a form's `action` and `method` say?
+        back: "Where the data is sent (`action`), and how (`method`: `get` puts it in the URL, `post` sends it separately)."
+      - front: What is a field's `name` for?
+        back: It's the key its value is sent under. Fields without a name aren't sent.
+      - front: How do you connect a label to its field?
+        back: "`<label for=\"x\">` matching `<input id=\"x\">` — or put the input inside the label."
+      - front: Why isn't a placeholder a replacement for a label?
+        back: It disappears when you type, is often faint, and many screen readers ignore it.
+
+  - type: lesson
+    id: html6-inputs
+    title: Kinds of input
+    minutes: 28
+    objectives:
+      - Pick the input type that fits the data
+      - Build checkboxes and radio button groups
+      - Use `<textarea>`, `<select>`, `<fieldset>` and `<legend>`
+    body: |
+      The `type` attribute changes what a field accepts and how it looks —
+      and on phones, which keyboard appears.
+
+      ```html
+      <p><label for="n">Name</label> <input type="text" id="n" name="name"></p>
+      <p><label for="e">Email</label> <input type="email" id="e" name="email"></p>
+      <p><label for="p">Password</label> <input type="password" id="p" name="password"></p>
+      <p><label for="a">Age</label> <input type="number" id="a" name="age" min="0" max="120"></p>
+      <p><label for="d">Birthday</label> <input type="date" id="d" name="birthday"></p>
+      <p><label for="c">Favourite colour</label> <input type="color" id="c" name="colour" value="#6ea8fe"></p>
+      <p><label for="v">Volume</label> <input type="range" id="v" name="volume" min="0" max="10"></p>
+      ```
+
+      Other useful types: `tel`, `url`, `search`, `time`, `file`. An unknown
+      type falls back to `text`.
+
+      ## Checkboxes and radio buttons
+
+      - **Checkboxes** — choose **any number** of options. Each is its own yes/no.
+      - **Radio buttons** — choose **exactly one** from a group. Buttons in a group share the same `name`; each has its own `value`.
+
+      ```html
+      <fieldset>
+        <legend>Toppings</legend>
+        <label><input type="checkbox" name="topping" value="cheese" checked> Cheese</label>
+        <label><input type="checkbox" name="topping" value="olives"> Olives</label>
+      </fieldset>
+      <fieldset>
+        <legend>Size</legend>
+        <label><input type="radio" name="size" value="small"> Small</label>
+        <label><input type="radio" name="size" value="large" checked> Large</label>
+      </fieldset>
+      ```
+
+      `checked` ticks one by default. `<fieldset>` groups related fields, and
+      its `<legend>` is the group's label — screen readers read "Size, radio
+      button, Small".
+
+      ## Longer text and menus
+
+      ```html
+      <p>
+        <label for="msg">Message</label><br>
+        <textarea id="msg" name="message" rows="4" cols="40"></textarea>
+      </p>
+      <p>
+        <label for="country">Country</label>
+        <select id="country" name="country">
+          <option value="">Choose…</option>
+          <option value="pt">Portugal</option>
+          <option value="es" selected>Spain</option>
+          <option value="fr">France</option>
+        </select>
+      </p>
+      ```
+
+      - `<textarea>` is a multi-line text box (it has a closing tag; any text inside is its starting value).
+      - `<select>` is a drop-down menu of `<option>`s. The `value` is what's sent; the text is what's shown. `selected` picks the default.
+
+      ## Buttons
+
+      A `<button>` inside a form **submits it by default**. For a button that
+      does something else (with JavaScript), write `type="button"`. A
+      `type="reset"` button clears the form — rarely a good idea.
+
+      {{check radio}}
+
+      {{check type}}
+
+      {{task survey}}
+    checks:
+      - id: radio
+        type: mcq
+        prompt: What makes three radio buttons one group, so only one can be chosen?
+        options:
+          - They are next to each other
+          - They share the same `name`
+          - They share the same `value`
+          - They are inside a `<select>`
+        answer: 1
+        why: "Radio buttons with the same `name` form a group."
+      - id: type
+        type: mcq
+        prompt: Which input type shows a numeric keypad on phones and rejects letters?
+        options:
+          - "`text`"
+          - "`number`"
+          - "`range`"
+          - "`digits`"
+        answer: 1
+        why: "`type=\"number\"`."
+    tasks:
+      - id: survey
+        title: A short survey
+        prompt: |
+          Build a form with:
+
+          1. a `<fieldset>` with the legend `How did you hear about us?` and three **radio buttons** named `source` with the values `friend`, `search` and `ad`, each inside its label (`A friend`, `A search engine`, `An advert`)
+          2. a **checkbox** named `newsletter` with the label `Send me the newsletter`
+          3. a `<textarea>` named `comments` with the label `Comments` (use `for`/`id`: `comments`)
+          4. a submit button `Send`
+        files:
+          index.html: |
+            <form>
+            </form>
+        solution:
+          index.html: |
+            <form>
+              <fieldset>
+                <legend>How did you hear about us?</legend>
+                <label><input type="radio" name="source" value="friend"> A friend</label>
+                <label><input type="radio" name="source" value="search"> A search engine</label>
+                <label><input type="radio" name="source" value="ad"> An advert</label>
+              </fieldset>
+              <p><label><input type="checkbox" name="newsletter"> Send me the newsletter</label></p>
+              <p>
+                <label for="comments">Comments</label>
+                <textarea id="comments" name="comments"></textarea>
+              </p>
+              <button type="submit">Send</button>
+            </form>
+        harness: |
+          check(text('fieldset legend'), 'How did you hear about us?');
+          check($$('input[type=radio]').map((r) => r.name + '=' + r.value), ['source=friend', 'source=search', 'source=ad']);
+          check($$('input[type=radio]').map((r) => r.closest('label') ? r.closest('label').textContent.trim() : null), ['A friend', 'A search engine', 'An advert']);
+          check(attr('input[type=checkbox]', 'name'), 'newsletter');
+          check($('input[type=checkbox]').labels.length > 0 && $('input[type=checkbox]').labels[0].textContent.trim(), 'Send me the newsletter');
+          check(attr('textarea', 'name'), 'comments');
+          check($('textarea').labels.length > 0 && $('textarea').labels[0].textContent.trim(), 'Comments');
+          check(text('form button'), 'Send');
+        hints:
+          - "A radio button inside its label: `<label><input type=\"radio\" name=\"source\" value=\"friend\"> A friend</label>`."
+          - "`<label for=\"comments\">Comments</label><textarea id=\"comments\" name=\"comments\"></textarea>`."
+    cards:
+      - front: Checkboxes vs radio buttons?
+        back: Checkboxes allow any number of choices; radio buttons in a group (same `name`) allow exactly one.
+      - front: What are `<fieldset>` and `<legend>`?
+        back: A group of related fields and the group's label.
+      - front: "`<select>` — what is sent, the option's text or its value?"
+        back: Its `value`. The text is only what's shown.
+      - front: What does a `<button>` inside a form do by default?
+        back: "Submits the form. Use `type=\"button\"` for buttons that do something else."
+
+  - type: quiz
+    id: html6-quiz1
+    title: "Quiz: forms and inputs"
+    questions:
+      - type: mcq
+        prompt: Which type fits a field for someone's email address?
+        options:
+          - "`text`"
+          - "`email`"
+          - "`mail`"
+          - "`address`"
+        answer: 1
+        why: "`type=\"email\"` checks the format and shows an email keyboard."
+      - type: spot
+        prompt: Why can the visitor choose **both** sizes? Find the line.
+        code: |
+          <fieldset>
+            <legend>Size</legend>
+            <label><input type="radio" name="size" value="s"> Small</label>
+            <label><input type="radio" name="sise" value="l"> Large</label>
+          </fieldset>
+        answer: 4
+        why: "`name=\"sise\"` is a typo, so it's a separate group."
+      - type: tf
+        prompt: "`<textarea>` is a void element."
+        answer: false
+        why: "It has a closing tag; text inside is its starting value."
+      - type: order
+        prompt: Build a menu for choosing a colour.
+        lines:
+          - "<label for=\"col\">Colour</label>"
+          - "<select id=\"col\" name=\"colour\">"
+          - "<option value=\"red\">Red</option>"
+          - "<option value=\"blue\">Blue</option>"
+          - "</select>"
+        alternatives:
+          - [0, 1, 3, 2, 4]
+        why: "Label, then the select containing its options."
+      - type: mcq
+        prompt: Which method should a login form use?
+        options:
+          - "`get` — so the password is in the URL"
+          - "`post` — so the data isn't in the URL"
+          - It doesn't matter
+          - "`put`"
+        answer: 1
+        why: "Never put passwords in URLs: they're saved in history and server logs."
+
+  - type: lesson
+    id: html6-validation
+    title: Letting the browser check the input
+    minutes: 20
+    objectives:
+      - Require fields and limit values with validation attributes
+      - Match formats with `pattern`
+      - Help people fill in forms with `autocomplete` and good defaults
+    body: |
+      Browsers can check a form **before** it's sent, and show a message next
+      to the problem field — no programming needed. Try submitting this form
+      empty, then with a two-letter username:
+
+      ```html
+      <form>
+        <p>
+          <label for="user">Username (3–12 letters)</label>
+          <input id="user" name="user" required minlength="3" maxlength="12" pattern="[A-Za-z]+">
+        </p>
+        <p>
+          <label for="age">Age</label>
+          <input type="number" id="age" name="age" min="13" max="120" required>
+        </p>
+        <p>
+          <label for="site">Website</label>
+          <input type="url" id="site" name="site" placeholder="https://…">
+        </p>
+        <button>Sign up</button>
+      </form>
+      ```
+
+      | Attribute | Means |
+      |---|---|
+      | `required` | Can't be left empty |
+      | `minlength`, `maxlength` | Shortest and longest text allowed |
+      | `min`, `max`, `step` | Range of a number or date (`step="0.01"` allows cents) |
+      | `pattern` | The text must match this pattern (a *regular expression*): `[0-9]{5}` = five digits |
+      | `type="email"`, `"url"` | Must look like an email address / web address |
+
+      ## Helping people
+
+      - `autocomplete` tells the browser what the field is, so it can fill it in: `autocomplete="email"`, `"name"`, `"street-address"`, `"current-password"`, `"new-password"`.
+      - Mark required fields in the **label text** too — "Email (required)" — not only with colour or an asterisk.
+      - Ask only for what you need. Every field is a reason to give up.
+
+      > [!warning]
+      > Browser validation is for **convenience**, not security. Anyone can
+      > send anything to a server, skipping your form entirely. The server
+      > must always check the data again.
+
+      {{check required}}
+
+      {{task signup}}
+    checks:
+      - id: required
+        type: mcq
+        prompt: Which attribute stops a field being left empty?
+        options:
+          - "`needed`"
+          - "`required`"
+          - "`minlength=\"0\"`"
+          - "`validate`"
+        answer: 1
+        why: "`required`."
+      - id: security
+        type: tf
+        prompt: With `required` and `pattern` in place, the server no longer needs to check the data.
+        answer: false
+        why: "Browser checks are easy to bypass; servers must always validate."
+    tasks:
+      - id: signup
+        title: A sign-up form that checks itself
+        prompt: |
+          Build a sign-up form with three labelled fields and a submit button:
+
+          - `Email` — type `email`, name `email`, **required**, `autocomplete="email"`
+          - `Password` — type `password`, name `password`, required, at least **8** characters, `autocomplete="new-password"`
+          - `Postcode` — name `postcode`, required, exactly **5 digits** (use `pattern="[0-9]{5}"`)
+
+          Use `for`/`id` pairs `email`, `password`, `postcode`.
+        files:
+          index.html: |
+            <form>
+            </form>
+        solution:
+          index.html: |
+            <form>
+              <p>
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required autocomplete="email">
+              </p>
+              <p>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+              </p>
+              <p>
+                <label for="postcode">Postcode</label>
+                <input id="postcode" name="postcode" required pattern="[0-9]{5}">
+              </p>
+              <button type="submit">Sign up</button>
+            </form>
+        harness: |
+          const email = $('#email');
+          const pass = $('#password');
+          const code = $('#postcode');
+          check([email, pass, code].every(Boolean), true);
+          check([email, pass, code].map((f) => f.labels.length ? f.labels[0].textContent.trim() : null), ['Email', 'Password', 'Postcode']);
+          check([email.type, pass.type], ['email', 'password']);
+          check([email.required, pass.required, code.required], [true, true, true]);
+          check(email.getAttribute('autocomplete'), 'email');
+          check(pass.getAttribute('autocomplete'), 'new-password');
+          email.value = 'ada@example.com';
+          check(pass.minLength, 8);
+          code.value = '1234';
+          check(code.checkValidity(), false);
+          code.value = '12345';
+          check(code.checkValidity(), true);
+          code.value = 'abcde';
+          check(code.checkValidity(), false);
+          check(exists('form button, form input[type=submit]'), true);
+        hints:
+          - "`minlength=\"8\"` for the password; `pattern=\"[0-9]{5}\"` for the postcode."
+          - "Remember `required` on all three, and the `autocomplete` values."
+    cards:
+      - front: Name five validation attributes.
+        back: "`required`, `minlength`/`maxlength`, `min`/`max`, `pattern`, and types like `email` and `url`."
+      - front: What does `pattern="[0-9]{5}"` accept?
+        back: Exactly five digits.
+      - front: Why must servers still validate form data?
+        back: Browser validation can be bypassed — anyone can send anything to a server.
+      - front: What does `autocomplete="email"` do?
+        back: Tells the browser what the field is, so it can offer to fill it in.
+
+  - type: quiz
+    id: html6-quiz2
+    title: "Quiz: validation"
+    questions:
+      - type: fill
+        prompt: A number between 1 and 10.
+        code: |
+          <input type="number" name="rating" ___="1" ___="10">
+        blanks:
+          - [min]
+          - [max]
+        why: "`min` and `max`."
+      - type: mcq
+        prompt: How should a required field be marked for everyone?
+        options:
+          - Only with a red border
+          - With text in the label, like "(required)"
+          - With a tooltip
+          - It doesn't need marking
+        answer: 1
+        why: "Never rely on colour alone."
+      - type: tf
+        prompt: "`pattern` works on `type=\"text\"` inputs."
+        answer: true
+        why: "It checks the text against a regular expression."
+
+  - type: challenge
+    id: html6-ch-pizza
+    title: A pizza order form
+    difficulty: 2
+    tags: [forms, radio, checkbox, select]
+    prompt: |
+      Build a pizza order form (sent with `method="post"` to `/order`):
+
+      - `Name` — text, name `name`, required (label `for`/`id` `name`)
+      - a fieldset `Size` with radio buttons named `size`: `small`, `medium` (checked by default), `large` — each inside its label (`Small`, `Medium`, `Large`)
+      - a fieldset `Extras` with checkboxes named `extra`: `cheese`, `mushrooms` (labels `Extra cheese`, `Mushrooms`)
+      - `Delivery time` — a `<select>` named `time` (label `for`/`id` `time`) with options `asap` (`As soon as possible`), `18` (`18:00`), `19` (`19:00`)
+      - a submit button `Order`
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <form action="/order" method="post">
+          <p>
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required>
+          </p>
+          <fieldset>
+            <legend>Size</legend>
+            <label><input type="radio" name="size" value="small"> Small</label>
+            <label><input type="radio" name="size" value="medium" checked> Medium</label>
+            <label><input type="radio" name="size" value="large"> Large</label>
+          </fieldset>
+          <fieldset>
+            <legend>Extras</legend>
+            <label><input type="checkbox" name="extra" value="cheese"> Extra cheese</label>
+            <label><input type="checkbox" name="extra" value="mushrooms"> Mushrooms</label>
+          </fieldset>
+          <p>
+            <label for="time">Delivery time</label>
+            <select id="time" name="time">
+              <option value="asap">As soon as possible</option>
+              <option value="18">18:00</option>
+              <option value="19">19:00</option>
+            </select>
+          </p>
+          <button type="submit">Order</button>
+        </form>
+    harness: |
+      check([attr('form', 'action'), attr('form', 'method')], ['/order', 'post']);
+      check($('#name') && $('#name').required && $('#name').labels[0].textContent.trim(), 'Name');
+      check($$('fieldset legend').map((l) => l.textContent.trim()), ['Size', 'Extras']);
+      check($$('input[type=radio]').map((r) => r.name + ':' + r.value + ':' + r.checked), ['size:small:false', 'size:medium:true', 'size:large:false']);
+      check($$('input[type=radio]').map((r) => r.labels[0].textContent.trim()), ['Small', 'Medium', 'Large']);
+      check($$('input[type=checkbox]').map((c) => c.name + ':' + c.value + ':' + c.labels[0].textContent.trim()), ['extra:cheese:Extra cheese', 'extra:mushrooms:Mushrooms']);
+      check($('#time') && $('#time').tagName, 'SELECT');
+      check($$('#time option').map((o) => o.value + '=' + o.textContent.trim()), ['asap=As soon as possible', '18=18:00', '19=19:00']);
+      check($('#time').labels[0].textContent.trim(), 'Delivery time');
+      check(text('form button'), 'Order');
+    hints:
+      - "Build it one part at a time, checking the preview."
+      - "The default size: `<input type=\"radio\" name=\"size\" value=\"medium\" checked>`."
+
+  - type: challenge
+    id: html6-ch-labels
+    title: Fix the inaccessible form
+    difficulty: 2
+    tags: [forms, accessibility]
+    prompt: |
+      Every field in this form lacks a proper label — it uses placeholders
+      or loose text instead. Give each field a connected `<label>`
+      (keep the placeholders if you like):
+
+      - `First name` (id `first`)
+      - `Last name` (id `last`)
+      - `Phone` (id `phone`)
+
+      and make the two checkboxes' texts clickable labels too.
+    files:
+      index.html: |
+        <form>
+          <input id="first" name="first" placeholder="First name">
+          <input id="last" name="last" placeholder="Last name">
+          Phone <input id="phone" name="phone" type="tel">
+          <p><input type="checkbox" name="sms"> Text me updates</p>
+          <p><input type="checkbox" name="email"> Email me updates</p>
+          <button>Save</button>
+        </form>
+    solution:
+      index.html: |
+        <form>
+          <p><label for="first">First name</label> <input id="first" name="first" placeholder="First name"></p>
+          <p><label for="last">Last name</label> <input id="last" name="last" placeholder="Last name"></p>
+          <p><label for="phone">Phone</label> <input id="phone" name="phone" type="tel"></p>
+          <p><label><input type="checkbox" name="sms"> Text me updates</label></p>
+          <p><label><input type="checkbox" name="email"> Email me updates</label></p>
+          <button>Save</button>
+        </form>
+    harness: |
+      check(['first', 'last', 'phone'].map((id) => { const f = $('#' + id); return f && f.labels.length ? f.labels[0].textContent.trim() : null; }), ['First name', 'Last name', 'Phone']);
+      check($$('input[type=checkbox]').map((c) => c.labels.length ? c.labels[0].textContent.trim() : null), ['Text me updates', 'Email me updates']);
+    hints:
+      - "Text fields: `<label for=\"first\">First name</label>` next to the input."
+      - "Checkboxes: wrap the input and its text in a `<label>`."
+
+  - type: review
+    id: html6-review
+    title: "Chapter 6 review"
+    body: |
+      ## Cheat sheet
+
+      ```html static
+      <form action="/send" method="post">
+        <label for="e">Email (required)</label>
+        <input type="email" id="e" name="email" required autocomplete="email">
+
+        <fieldset>
+          <legend>Plan</legend>
+          <label><input type="radio" name="plan" value="free" checked> Free</label>
+          <label><input type="radio" name="plan" value="pro"> Pro</label>
+        </fieldset>
+        <label><input type="checkbox" name="terms" required> I accept the terms</label>
+
+        <label for="msg">Message</label>
+        <textarea id="msg" name="message" maxlength="500"></textarea>
+
+        <label for="c">Country</label>
+        <select id="c" name="country"><option value="pt">Portugal</option></select>
+
+        <button type="submit">Send</button>
+      </form>
+      ```
+
+      ## Key ideas
+
+      - Only fields with a `name` are sent. `get` for searches, `post` for everything else.
+      - Every field has a connected label; placeholders are only examples.
+      - Input `type`s give the right keyboard and validation.
+      - Radio buttons share a `name`; checkboxes are independent.
+      - Browser validation helps people; servers must still check everything.
+    questions:
+      - type: mcq
+        prompt: What is sent for `<option value="pt">Portugal</option>` when it's chosen?
+        options:
+          - "`Portugal`"
+          - "`pt`"
+          - "`option`"
+          - Nothing
+        answer: 1
+        why: "The value is sent; the text is what the visitor sees."
+      - type: spot
+        prompt: Which field won't be sent?
+        code: |
+          <form>
+            <input name="city">
+            <input id="zip">
+            <select name="country"></select>
+          </form>
+        answer: 3
+        why: "The zip field has no `name`."
+
+  - type: exam
+    id: html6-exam
+    title: "Chapter 6 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: What connects `<label for="x">` to a field?
+        options:
+          - The field's `name="x"`
+          - The field's `id="x"`
+          - The field's `value="x"`
+          - Being next to it
+        answer: 1
+        why: "`for` matches the field's `id`."
+      - type: mcq
+        prompt: Which element makes a drop-down menu?
+        options:
+          - "`<menu>`"
+          - "`<select>`"
+          - "`<dropdown>`"
+          - "`<list>`"
+        answer: 1
+        why: "`<select>` with `<option>`s."
+      - type: tf
+        prompt: Radio buttons that share a `name` allow only one choice among them.
+        answer: true
+        why: "That's how a radio group works."
+      - type: fill
+        prompt: A button that doesn't submit the form.
+        code: |
+          <button type="___">Show password</button>
+        blanks:
+          - [button]
+        why: "`type=\"button\"`; the default inside a form is `submit`."
+      - type: mcq
+        prompt: What's wrong with a form that only uses placeholders as labels?
+        options:
+          - Nothing
+          - The hint disappears when you type and many screen readers skip it
+          - Placeholders aren't allowed in HTML
+          - The form can't be submitted
+        answer: 1
+        why: "Labels must be real `<label>`s."
+      - type: mcq
+        prompt: Which input shows a slider?
+        options:
+          - "`type=\"slider\"`"
+          - "`type=\"range\"`"
+          - "`type=\"number\"`"
+          - "`type=\"scroll\"`"
+        answer: 1
+        why: "`range`."
+      - type: tf
+        prompt: The server doesn't need to check data that the browser has validated.
+        answer: false
+        why: "Always validate on the server."
+      - type: spot
+        prompt: Which line groups the options wrongly?
+        code: |
+          <fieldset>
+            <legend>Payment</legend>
+            <label><input type="radio" name="pay" value="card"> Card</label>
+            <label><input type="checkbox" name="pay" value="cash"> Cash</label>
+          </fieldset>
+        answer: 4
+        why: "One of a group of exclusive choices must be a radio button too."
+      - type: mcq
+        prompt: What is `<legend>` for?
+        options:
+          - A caption for a table
+          - The label of a `<fieldset>` group
+          - A footnote
+          - The title of the page
+        answer: 1
+        why: "It labels the group."
+      - type: code
+        prompt: |
+          Build a newsletter form with a labelled, **required** email field
+          (`for`/`id` `mail`, name `mail`, type `email`) and a checkbox named
+          `weekly` inside a label `Weekly digest`, plus a submit button
+          `Join`.
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <form>
+              <label for="mail">Email</label>
+              <input type="email" id="mail" name="mail" required>
+              <label><input type="checkbox" name="weekly"> Weekly digest</label>
+              <button type="submit">Join</button>
+            </form>
+        harness: |
+          const m = $('#mail');
+          check(Boolean(m) && m.type + ' ' + m.name + ' ' + m.required, 'email mail true');
+          check(m && m.labels.length > 0, true);
+          const w = $('input[type=checkbox]');
+          check(w && w.name, 'weekly');
+          check(w && w.labels.length ? w.labels[0].textContent.trim() : null, 'Weekly digest');
+          check(text('form button'), 'Join');
+      - type: mcq
+        prompt: Which `autocomplete` value suits a field for choosing a new password?
+        options:
+          - "`password`"
+          - "`current-password`"
+          - "`new-password`"
+          - "`off`"
+        answer: 2
+        why: "`new-password` lets password managers suggest a strong one."

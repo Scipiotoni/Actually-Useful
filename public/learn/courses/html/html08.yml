@@ -1,0 +1,905 @@
+id: html08
+number: 8
+part: html-p2
+title: "Project: Your Personal Website"
+blurb: Plan and build a complete personal website by hand — then prove what you know in the final exam.
+hours: 4
+goals:
+  - Plan a page before writing it — content, structure, then code
+  - Build a complete, valid, accessible page using everything in the course
+  - Pass the HTML final exam
+  - Know what to learn next
+
+items:
+  - type: lesson
+    id: html8-plan
+    title: Planning a page
+    minutes: 15
+    objectives:
+      - Work out content and structure before writing code
+      - Sketch a page as landmarks and headings
+      - Build a page in small, tested steps
+    body: |
+      Professionals rarely start by typing tags. They start with **content**
+      and **structure**, and only then write HTML.
+
+      ## 1. Content first
+
+      Write down what the page must say: who you are, what you do, how to
+      reach you. Real words, not "lorem ipsum" — the words decide the
+      structure.
+
+      ## 2. Sketch the structure
+
+      Turn the content into landmarks and an outline of headings. For a
+      personal site:
+
+      ```text
+      header
+        h1  Your name
+        nav → About · Projects · Contact
+      main
+        section#about     h2 About me       (paragraph, photo, list of interests)
+        section#projects  h2 Projects       (table of projects)
+        section#contact   h2 Contact        (form)
+      footer
+        © year, address with email
+      ```
+
+      Notice this already *is* almost HTML. If the sketch is right, the code
+      is easy.
+
+      ## 3. Build in small steps
+
+      Write the skeleton, check it in the preview, then add one section at a
+      time — checking after each. Small steps mean every mistake is in the
+      few lines you just wrote. That's exactly how the project below is
+      organised: five milestones, each one building on the last.
+
+      ## 4. Review
+
+      When it's done, run through the checklist from Chapter 7: validate,
+      outline, alt texts, keyboard, labels, phone.
+
+      {{check first}}
+    checks:
+      - id: first
+        type: order
+        prompt: Put the steps of building a page in order.
+        lines:
+          - "Write the content"
+          - "Sketch the landmarks and headings"
+          - "Write the skeleton and check it"
+          - "Add one section at a time, checking each"
+          - "Review with the quality checklist"
+        why: "Content → structure → skeleton → sections → review."
+    cards:
+      - front: What comes before writing HTML?
+        back: The content, then a sketch of the structure (landmarks and headings).
+      - front: Why build a page in small steps?
+        back: Every mistake is then in the few lines you just wrote, so it's quick to find.
+
+  - type: project
+    id: html8-project
+    title: "Project: a personal website"
+    body: |
+      Build a one-page personal website — about you, or about a made-up
+      person if you prefer. It uses everything in this course: a complete
+      document, semantic layout, text, lists, images, links, a table and a
+      form, all accessible.
+
+      The checks look at **structure**, not your exact words, so write your
+      own content. Each milestone continues the same file.
+
+      > [!tip]
+      > Keep the preview open while you work (**▶ Preview**). It updates as
+      > you type.
+    milestones:
+      - title: The skeleton
+        prompt: |
+          Write the complete page skeleton:
+
+          - the doctype, `<html>` with a `lang`, a head with the charset, the viewport meta, a **title** and a **meta description**
+          - in the body: a `<header>` with an `<h1>` (your name) and a `<nav>` with three links: `#about`, `#projects`, `#contact`
+          - an empty `<main>` for now
+          - a `<footer>` with a paragraph containing `©` and the year
+        files:
+          index.html: |
+            <!-- Your personal website -->
+        solution:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Ada Lovelace — personal site</title>
+                <meta name="description" content="Mathematician, writer and the first programmer.">
+              </head>
+              <body>
+                <header>
+                  <h1>Ada Lovelace</h1>
+                  <nav>
+                    <ul>
+                      <li><a href="#about">About</a></li>
+                      <li><a href="#projects">Projects</a></li>
+                      <li><a href="#contact">Contact</a></li>
+                    </ul>
+                  </nav>
+                </header>
+                <main>
+                </main>
+                <footer>
+                  <p>&copy; 2026 Ada Lovelace</p>
+                </footer>
+              </body>
+            </html>
+        harness: |
+          check(document.doctype !== null, true);
+          check((attr('html', 'lang') || '').length > 0, true);
+          check(exists('meta[charset]'), true);
+          check(exists('meta[name=viewport]'), true);
+          check(document.title.trim().length > 0, true);
+          check((attr('meta[name=description]', 'content') || '').trim().length > 0, true);
+          check(exists('body > header > h1'), true);
+          check(text('header h1').length > 0, true);
+          check($$('header nav a').map((a) => a.getAttribute('href')), ['#about', '#projects', '#contact']);
+          check(exists('body > main'), true);
+          check(exists('body > footer'), true);
+          check(text('footer').includes('©'), true);
+        hints:
+          - "Start from the skeleton in lesson 1.3, then add the head's description and the body's header, main and footer."
+          - "The nav can be a list: `<nav><ul><li><a href=\"#about\">About</a></li>…</ul></nav>`."
+      - title: About me
+        prompt: |
+          Inside `<main>`, add a `<section id="about">` with:
+
+          - an `<h2>` `About me`
+          - at least one paragraph, with at least one word in `<strong>` or `<em>`
+          - an image with a **meaningful alt**, and `width` and `height`
+          - an `<h3>` `Interests` followed by a `<ul>` with at least three items
+        solution:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Ada Lovelace — personal site</title>
+                <meta name="description" content="Mathematician, writer and the first programmer.">
+              </head>
+              <body>
+                <header>
+                  <h1>Ada Lovelace</h1>
+                  <nav>
+                    <ul>
+                      <li><a href="#about">About</a></li>
+                      <li><a href="#projects">Projects</a></li>
+                      <li><a href="#contact">Contact</a></li>
+                    </ul>
+                  </nav>
+                </header>
+                <main>
+                  <section id="about">
+                    <h2>About me</h2>
+                    <p>I write about machines that can <em>compute</em> — and one day, maybe, compose music.</p>
+                    <img src="ada.jpg" alt="Portrait of Ada Lovelace in a blue dress" width="240" height="300">
+                    <h3>Interests</h3>
+                    <ul>
+                      <li>Mathematics</li>
+                      <li>Poetry</li>
+                      <li>Engines of all kinds</li>
+                    </ul>
+                  </section>
+                </main>
+                <footer>
+                  <p>&copy; 2026 Ada Lovelace</p>
+                </footer>
+              </body>
+            </html>
+        harness: |
+          check(exists('main > section#about'), true);
+          check(text('#about > h2'), 'About me');
+          check(count('#about p') >= 1, true);
+          check(count('#about p strong, #about p em') >= 1, true);
+          const img = $('#about img');
+          check(Boolean(img), true);
+          check((img && img.getAttribute('alt') || '').trim().length >= 5, true);
+          check(Boolean(img && img.getAttribute('width') && img.getAttribute('height')), true);
+          check(text('#about h3'), 'Interests');
+          check(count('#about h3 + ul > li') >= 3, true);
+        hints:
+          - "The section goes inside `<main>`: `<section id=\"about\"><h2>About me</h2>…</section>`."
+          - "The list must come right after the `<h3>` (the check looks for `h3 + ul`)."
+      - title: Projects
+        prompt: |
+          After the about section, add a `<section id="projects">` with an
+          `<h2>` `Projects` and a **table** of your projects:
+
+          - a `<caption>`
+          - a `<thead>` with at least two `<th scope="col">` (for example `Project` and `Year`)
+          - a `<tbody>` with at least two rows
+        solution:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Ada Lovelace — personal site</title>
+                <meta name="description" content="Mathematician, writer and the first programmer.">
+              </head>
+              <body>
+                <header>
+                  <h1>Ada Lovelace</h1>
+                  <nav>
+                    <ul>
+                      <li><a href="#about">About</a></li>
+                      <li><a href="#projects">Projects</a></li>
+                      <li><a href="#contact">Contact</a></li>
+                    </ul>
+                  </nav>
+                </header>
+                <main>
+                  <section id="about">
+                    <h2>About me</h2>
+                    <p>I write about machines that can <em>compute</em> — and one day, maybe, compose music.</p>
+                    <img src="ada.jpg" alt="Portrait of Ada Lovelace in a blue dress" width="240" height="300">
+                    <h3>Interests</h3>
+                    <ul>
+                      <li>Mathematics</li>
+                      <li>Poetry</li>
+                      <li>Engines of all kinds</li>
+                    </ul>
+                  </section>
+                  <section id="projects">
+                    <h2>Projects</h2>
+                    <table>
+                      <caption>Things I have worked on</caption>
+                      <thead>
+                        <tr><th scope="col">Project</th><th scope="col">Year</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr><td>Notes on the Analytical Engine</td><td>1843</td></tr>
+                        <tr><td>Flyology (a book about flying)</td><td>1828</td></tr>
+                      </tbody>
+                    </table>
+                  </section>
+                </main>
+                <footer>
+                  <p>&copy; 2026 Ada Lovelace</p>
+                </footer>
+              </body>
+            </html>
+        harness: |
+          check(exists('main > section#projects'), true);
+          check(text('#projects > h2'), 'Projects');
+          check(text('#projects table > caption').length > 0, true);
+          check(count('#projects thead th[scope=col]') >= 2, true);
+          check(count('#projects tbody tr') >= 2, true);
+          const cols = count('#projects thead th');
+          check($$('#projects tbody tr').every((r) => r.cells.length === cols), true);
+          check($('#about').compareDocumentPosition($('#projects')) & Node.DOCUMENT_POSITION_FOLLOWING, Node.DOCUMENT_POSITION_FOLLOWING);
+        hints:
+          - "`<table><caption>…</caption><thead><tr><th scope=\"col\">Project</th>…</tr></thead><tbody>…</tbody></table>`"
+          - "Every body row needs as many cells as there are column headers."
+      - title: Contact form
+        prompt: |
+          Add a `<section id="contact">` with an `<h2>` `Contact` and a form
+          (`method="post"`) with:
+
+          - a **required** name field (`type="text"`)
+          - a **required** email field (`type="email"`)
+          - a message `<textarea>`
+          - a submit button
+
+          Every field needs a `name` and a connected `<label>`.
+        solution:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Ada Lovelace — personal site</title>
+                <meta name="description" content="Mathematician, writer and the first programmer.">
+              </head>
+              <body>
+                <header>
+                  <h1>Ada Lovelace</h1>
+                  <nav>
+                    <ul>
+                      <li><a href="#about">About</a></li>
+                      <li><a href="#projects">Projects</a></li>
+                      <li><a href="#contact">Contact</a></li>
+                    </ul>
+                  </nav>
+                </header>
+                <main>
+                  <section id="about">
+                    <h2>About me</h2>
+                    <p>I write about machines that can <em>compute</em> — and one day, maybe, compose music.</p>
+                    <img src="ada.jpg" alt="Portrait of Ada Lovelace in a blue dress" width="240" height="300">
+                    <h3>Interests</h3>
+                    <ul>
+                      <li>Mathematics</li>
+                      <li>Poetry</li>
+                      <li>Engines of all kinds</li>
+                    </ul>
+                  </section>
+                  <section id="projects">
+                    <h2>Projects</h2>
+                    <table>
+                      <caption>Things I have worked on</caption>
+                      <thead>
+                        <tr><th scope="col">Project</th><th scope="col">Year</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr><td>Notes on the Analytical Engine</td><td>1843</td></tr>
+                        <tr><td>Flyology (a book about flying)</td><td>1828</td></tr>
+                      </tbody>
+                    </table>
+                  </section>
+                  <section id="contact">
+                    <h2>Contact</h2>
+                    <form method="post">
+                      <p>
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name" required autocomplete="name">
+                      </p>
+                      <p>
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required autocomplete="email">
+                      </p>
+                      <p>
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5"></textarea>
+                      </p>
+                      <button type="submit">Send</button>
+                    </form>
+                  </section>
+                </main>
+                <footer>
+                  <p>&copy; 2026 Ada Lovelace</p>
+                </footer>
+              </body>
+            </html>
+        harness: |
+          check(exists('main > section#contact'), true);
+          check(text('#contact > h2'), 'Contact');
+          check(attr('#contact form', 'method'), 'post');
+          const textField = $('#contact input[type=text]');
+          const mail = $('#contact input[type=email]');
+          const area = $('#contact textarea');
+          check([textField, mail, area].every(Boolean), true);
+          check([textField, mail].every((f) => f && f.required), true);
+          check([textField, mail, area].every((f) => f && f.name && f.labels.length > 0), true);
+          check(exists('#contact form button, #contact form input[type=submit]'), true);
+        hints:
+          - "Each field: `<label for=\"x\">…</label><input … id=\"x\" name=\"x\" required>`."
+      - title: Final polish
+        prompt: |
+          Finish the site:
+
+          - add a `<details>` inside the about section with a `<summary>` `A fun fact` and a paragraph
+          - in the footer, add an `<address>` containing a `mailto:` link
+          - make sure the whole page passes the quality checklist: exactly one `<h1>`, headings never skip a level, every image has an alt, every link has text, every field is labelled
+        solution:
+          index.html: |
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Ada Lovelace — personal site</title>
+                <meta name="description" content="Mathematician, writer and the first programmer.">
+              </head>
+              <body>
+                <header>
+                  <h1>Ada Lovelace</h1>
+                  <nav>
+                    <ul>
+                      <li><a href="#about">About</a></li>
+                      <li><a href="#projects">Projects</a></li>
+                      <li><a href="#contact">Contact</a></li>
+                    </ul>
+                  </nav>
+                </header>
+                <main>
+                  <section id="about">
+                    <h2>About me</h2>
+                    <p>I write about machines that can <em>compute</em> — and one day, maybe, compose music.</p>
+                    <img src="ada.jpg" alt="Portrait of Ada Lovelace in a blue dress" width="240" height="300">
+                    <h3>Interests</h3>
+                    <ul>
+                      <li>Mathematics</li>
+                      <li>Poetry</li>
+                      <li>Engines of all kinds</li>
+                    </ul>
+                    <details>
+                      <summary>A fun fact</summary>
+                      <p>My father was the poet Lord Byron.</p>
+                    </details>
+                  </section>
+                  <section id="projects">
+                    <h2>Projects</h2>
+                    <table>
+                      <caption>Things I have worked on</caption>
+                      <thead>
+                        <tr><th scope="col">Project</th><th scope="col">Year</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr><td>Notes on the Analytical Engine</td><td>1843</td></tr>
+                        <tr><td>Flyology (a book about flying)</td><td>1828</td></tr>
+                      </tbody>
+                    </table>
+                  </section>
+                  <section id="contact">
+                    <h2>Contact</h2>
+                    <form method="post">
+                      <p>
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name" required autocomplete="name">
+                      </p>
+                      <p>
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required autocomplete="email">
+                      </p>
+                      <p>
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5"></textarea>
+                      </p>
+                      <button type="submit">Send</button>
+                    </form>
+                  </section>
+                </main>
+                <footer>
+                  <p>&copy; 2026 Ada Lovelace</p>
+                  <address><a href="mailto:ada@example.com">ada@example.com</a></address>
+                </footer>
+              </body>
+            </html>
+        harness: |
+          check(text('#about details > summary'), 'A fun fact');
+          check(exists('#about details p'), true);
+          check(exists('footer address a[href^="mailto:"]'), true);
+          check(count('h1'), 1);
+          const levels = $$('h1, h2, h3, h4, h5, h6').map((h) => Number(h.tagName[1]));
+          check(levels.every((l, i) => i === 0 || l <= levels[i - 1] + 1), true);
+          check($$('img').every((i) => i.hasAttribute('alt')), true);
+          check($$('a').every((a) => a.textContent.trim().length > 0 || (a.querySelector('img') && a.querySelector('img').alt)), true);
+          check($$('input, textarea, select').filter((f) => f.type !== 'submit' && f.type !== 'hidden').every((f) => f.labels.length > 0), true);
+        hints:
+          - "`<details><summary>A fun fact</summary><p>…</p></details>` inside `#about`."
+          - "`<address><a href=\"mailto:you@example.com\">you@example.com</a></address>` inside the footer."
+        explain: |
+          That's a complete, hand-written, accessible web page — the same
+          HTML that professional sites are built on. It looks plain, because
+          looks are CSS's job. Take this page with you into the CSS course and
+          make it beautiful.
+
+  - type: challenge
+    id: html8-ch-event
+    title: An event page from a brief
+    difficulty: 3
+    tags: [everything]
+    prompt: |
+      A client sends you this brief. Build the page (a fragment is fine):
+
+      > We're running **Code Club Night** on **14 June 2026 at 18:00**.
+      > People should see what happens (a numbered list: `Welcome`,
+      > `Lightning talks`, `Pizza & chat`), who's speaking (a table of
+      > speaker and topic, at least two speakers, with column headers), and
+      > sign up with their name and email (both required). Put a link to the
+      > venue's map at `https://maps.example.com/venue` in the header.
+
+      Requirements the checks look for:
+
+      - `<header>` with an `<h1>` `Code Club Night` and the map link
+      - the date in a `<time datetime="2026-06-14T18:00">`
+      - an `<ol>` with the three agenda items, in order
+      - a table with `<th scope="col">` headers `Speaker` and `Topic`
+      - a form with labelled, required name and email fields and a button
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <header>
+          <h1>Code Club Night</h1>
+          <p><a href="https://maps.example.com/venue">Map to the venue</a></p>
+        </header>
+        <main>
+          <p>Join us on <time datetime="2026-06-14T18:00">14 June 2026 at 18:00</time>.</p>
+          <section>
+            <h2>Agenda</h2>
+            <ol>
+              <li>Welcome</li>
+              <li>Lightning talks</li>
+              <li>Pizza &amp; chat</li>
+            </ol>
+          </section>
+          <section>
+            <h2>Speakers</h2>
+            <table>
+              <caption>Tonight's talks</caption>
+              <thead><tr><th scope="col">Speaker</th><th scope="col">Topic</th></tr></thead>
+              <tbody>
+                <tr><td>Grace</td><td>Debugging</td></tr>
+                <tr><td>Linus</td><td>Version control</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <section>
+            <h2>Sign up</h2>
+            <form method="post">
+              <label for="n">Name</label> <input id="n" name="name" required>
+              <label for="e">Email</label> <input type="email" id="e" name="email" required>
+              <button type="submit">Sign up</button>
+            </form>
+          </section>
+        </main>
+    harness: |
+      check(text('header h1'), 'Code Club Night');
+      check(exists('header a[href="https://maps.example.com/venue"]'), true);
+      check(attr('time', 'datetime'), '2026-06-14T18:00');
+      check($$('ol > li').map((li) => li.textContent.trim()), ['Welcome', 'Lightning talks', 'Pizza & chat']);
+      check($$('table thead th').map((t) => t.textContent.trim() + '/' + t.getAttribute('scope')), ['Speaker/col', 'Topic/col']);
+      check(count('table tbody tr') >= 2, true);
+      const name = $('form input:not([type=email])');
+      const mail = $('form input[type=email]');
+      check(Boolean(name && mail && name.required && mail.required), true);
+      check(name.labels.length > 0 && mail.labels.length > 0, true);
+      check(exists('form button, form input[type=submit]'), true);
+    hints:
+      - "Tackle it in the order of the requirements list, checking the preview after each."
+      - "`&` in `Pizza & chat` is written `&amp;`."
+
+  - type: review
+    id: html8-review
+    title: "The whole HTML course on one page"
+    body: |
+      ## A complete page
+
+      ```html static
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Page title</title>
+          <meta name="description" content="One or two sentences.">
+          <link rel="stylesheet" href="style.css">
+          <script src="script.js" defer></script>
+        </head>
+        <body>
+          <header><h1>…</h1><nav>…</nav></header>
+          <main>
+            <article>
+              <h2>…</h2>
+              <p><strong>important</strong>, <em>stressed</em>, <a href="…">a link</a>.</p>
+              <ul><li>…</li></ul>   <ol><li>…</li></ol>
+              <figure><img src="…" alt="…" width="…" height="…"><figcaption>…</figcaption></figure>
+              <table><caption>…</caption><thead>…</thead><tbody>…</tbody></table>
+              <form>… <label for="x">…</label><input id="x" name="x" required> …</form>
+            </article>
+          </main>
+          <footer><address>…</address></footer>
+        </body>
+      </html>
+      ```
+
+      ## The big ideas
+
+      1. HTML describes **meaning and structure**; CSS does looks; JavaScript behaviour.
+      2. Elements nest properly; void elements have no closing tag; attributes add information.
+      3. Whitespace collapses; entities write `<`, `>` and `&`.
+      4. Headings form an outline; landmarks organise the page.
+      5. Links use `href`, images `src` and `alt`; paths are relative to the current page.
+      6. Tables are for data; forms need names and labels; browsers validate but servers must too.
+      7. Accessibility comes mostly from using the right elements.
+    questions:
+      - type: mcq
+        prompt: Which is the most accessible way to make something clickable that performs an action?
+        options:
+          - "`<div onclick>`"
+          - "`<span onclick>`"
+          - "`<button>`"
+          - "`<a>` with no href"
+        answer: 2
+        why: "Buttons are keyboard-accessible and announced correctly."
+      - type: spot
+        prompt: Which line has a problem?
+        code: |
+          <img src="team.jpg" alt="Our team of five at the summer picnic" width="800" height="500">
+          <p>Read <a href="history.html">our story</a>.</p>
+          <label>Email</label> <input type="email" name="email">
+          <button>Subscribe</button>
+        answer: 3
+        why: "The label isn't connected to the field — use `for`/`id` or put the input inside the label."
+
+  - type: exam
+    id: html-final
+    title: "HTML final exam"
+    minutes: 45
+    pick: 20
+    body: |
+      One exam covering the **whole HTML course**, from the first tag to
+      forms and good practice. Take your time.
+    questions:
+      - type: mcq
+        prompt: What is HTML's job in a web page?
+        options:
+          - Its colours and layout
+          - Its content and structure
+          - Its animations
+          - Its server
+        answer: 1
+        why: "Structure and meaning; CSS looks; JavaScript behaviour."
+      - type: order
+        prompt: Put the skeleton in order.
+        lines:
+          - "<!DOCTYPE html>"
+          - "<html lang=\"en\">"
+          - "<head><title>Hi</title></head>"
+          - "<body><p>Hi</p></body>"
+          - "</html>"
+        why: "Doctype, html, head, body."
+      - type: spot
+        prompt: Which line nests wrongly?
+        code: |
+          <p>One <strong>two</strong> three.</p>
+          <p>Four <em>five <strong>six</em></strong>.</p>
+          <p>Seven.</p>
+        answer: 2
+        why: "Close `<strong>` before `</em>`."
+      - type: mcq
+        prompt: How do you show a line break inside an address?
+        options:
+          - Press Enter in the code
+          - "`<br>`"
+          - "`<hr>`"
+          - "`&nbsp;`"
+        answer: 1
+        why: "`<br>` for line breaks that belong to the content."
+      - type: tf
+        prompt: It's fine to skip from `<h2>` straight to `<h4>` to get smaller text.
+        answer: false
+        why: "Headings are an outline; size is CSS."
+      - type: fill
+        prompt: Show `if (a < b)` as text.
+        code: |
+          <code>if (a ___ b)</code>
+        blanks:
+          - ["&lt;"]
+        why: "`<` is written `&lt;`."
+      - type: mcq
+        prompt: Which list for the steps of a recipe?
+        options:
+          - "`<ul>`"
+          - "`<ol>`"
+          - "`<dl>`"
+          - "`<menu>`"
+        answer: 1
+        why: "Order matters."
+      - type: mcq
+        prompt: "From `docs/guide.html`, link to `index.html` in the folder above."
+        options:
+          - "`index.html`"
+          - "`../index.html`"
+          - "`/docs/index.html`"
+          - "`#index`"
+        answer: 1
+        why: "`../` goes up one folder."
+      - type: mcq
+        prompt: A decorative swirl image should have…
+        options:
+          - No alt attribute
+          - "`alt=\"swirl\"`"
+          - "`alt=\"\"`"
+          - "`alt=\"image\"`"
+        answer: 2
+        why: "Empty alt: screen readers skip it."
+      - type: fill
+        prompt: Jump to the section `<h2 id="menu">`.
+        code: |
+          <a href="___">See the menu</a>
+        blanks:
+          - ["#menu"]
+        why: "`#` + id."
+      - type: mcq
+        prompt: Which element is the page's main content — one per page?
+        options:
+          - "`<section>`"
+          - "`<main>`"
+          - "`<article>`"
+          - "`<body>`"
+        answer: 1
+        why: "`<main>`."
+      - type: mcq
+        prompt: A blog post that makes sense on its own is…
+        options:
+          - "`<article>`"
+          - "`<aside>`"
+          - "`<div>`"
+          - "`<nav>`"
+        answer: 0
+        why: "Self-contained content."
+      - type: tf
+        prompt: "`class` values must be unique on the page, like `id`s."
+        answer: false
+        why: "Classes are shared labels; only ids are unique."
+      - type: mcq
+        prompt: Which makes a table cell span two columns?
+        options:
+          - "`rowspan=\"2\"`"
+          - "`colspan=\"2\"`"
+          - "`span=\"2\"`"
+          - "`cols=\"2\"`"
+        answer: 1
+        why: "Column span."
+      - type: mcq
+        prompt: What does `<th scope="row">` tell screen readers?
+        options:
+          - That the row is hidden
+          - That this cell is the header for its row
+          - That the row is sortable
+          - Nothing
+        answer: 1
+        why: "Cells are then read with their row heading."
+      - type: tf
+        prompt: Tables are a good tool for page layout.
+        answer: false
+        why: "Data only; layout is CSS."
+      - type: mcq
+        prompt: Which field is **not** sent when the form is submitted?
+        options:
+          - "`<input name=\"a\">`"
+          - "`<input id=\"b\">`"
+          - "`<select name=\"c\">`"
+          - "`<textarea name=\"d\">`"
+        answer: 1
+        why: "No name, no data."
+      - type: mcq
+        prompt: How do radio buttons become one group?
+        options:
+          - Same `id`
+          - Same `name`
+          - Same `value`
+          - Inside a `<ul>`
+        answer: 1
+        why: "Shared name."
+      - type: fill
+        prompt: Make the field required and connect its label.
+        code: |
+          <label ___="age">Age</label>
+          <input type="number" id="age" name="age" ___>
+        blanks:
+          - [for]
+          - [required]
+        why: "`for` matches the id; `required` forbids empty."
+      - type: mcq
+        prompt: Why must servers validate form data even with `required` and `pattern`?
+        options:
+          - Browsers don't support them
+          - Anyone can send data without using your form
+          - They're only suggestions shown in grey
+          - They slow the page down
+        answer: 1
+        why: "Browser checks are convenience, not security."
+      - type: fill
+        prompt: Link a stylesheet.
+        code: |
+          <link rel="___" href="style.css">
+        blanks:
+          - [stylesheet]
+        why: "`rel=\"stylesheet\"`."
+      - type: mcq
+        prompt: What should every `<iframe>` have?
+        options:
+          - "`alt`"
+          - "`title`"
+          - "`caption`"
+          - "`controls`"
+        answer: 1
+        why: "A title for screen readers."
+      - type: mcq
+        prompt: Which video attribute shows play and pause buttons?
+        options:
+          - "`buttons`"
+          - "`controls`"
+          - "`player`"
+          - "`autoplay`"
+        answer: 1
+        why: "`controls`."
+      - type: mcq
+        prompt: "What's the first rule of ARIA?"
+        options:
+          - Put `role` on every element
+          - Prefer native HTML elements when they exist
+          - Never use `aria-label`
+          - Use ARIA instead of headings
+        answer: 1
+        why: "Native elements come with meaning and keyboard support."
+      - type: code
+        prompt: |
+          Write a page fragment with a `<nav>` holding an unordered list of
+          two links (`Home` → `index.html`, `Shop` → `shop.html`), then a
+          `<main>` containing an `<h1>` `Welcome` and an image `hero.jpg`
+          with the alt `Our shop window at night`.
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <nav>
+              <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="shop.html">Shop</a></li>
+              </ul>
+            </nav>
+            <main>
+              <h1>Welcome</h1>
+              <img src="hero.jpg" alt="Our shop window at night">
+            </main>
+        harness: |
+          check($$('nav ul > li > a').map((a) => a.textContent.trim() + '>' + a.getAttribute('href')), ['Home>index.html', 'Shop>shop.html']);
+          check(text('main h1'), 'Welcome');
+          check(attr('main img', 'src'), 'hero.jpg');
+          check(attr('main img', 'alt'), 'Our shop window at night');
+      - type: code
+        prompt: |
+          Build a table with the caption `Scores`, a `<thead>` with the
+          column headers `Name` and `Points` (`scope="col"`), and a
+          `<tbody>` with the rows `Ana 12` and `Ben 9`.
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <table>
+              <caption>Scores</caption>
+              <thead><tr><th scope="col">Name</th><th scope="col">Points</th></tr></thead>
+              <tbody>
+                <tr><td>Ana</td><td>12</td></tr>
+                <tr><td>Ben</td><td>9</td></tr>
+              </tbody>
+            </table>
+        harness: |
+          check(text('caption'), 'Scores');
+          check($$('thead th').map((t) => t.textContent.trim() + '/' + t.getAttribute('scope')), ['Name/col', 'Points/col']);
+          check($$('tbody tr').map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' ')), ['Ana 12', 'Ben 9']);
+
+  - type: lesson
+    id: html8-next
+    title: What next?
+    minutes: 8
+    objectives:
+      - Know where to go after this course
+    body: |
+      You can now write the HTML of any web page by hand — correctly,
+      accessibly, and with meaning. That's the foundation everything else on
+      the web stands on.
+
+      ## Next: CSS
+
+      Your pages look plain because HTML isn't meant to decorate. The
+      **CSS course** turns the same HTML into beautiful, responsive designs:
+      colours, fonts, spacing, Flexbox and Grid layouts, and pages that work
+      on every screen. Start it from the course list — your personal site is
+      the perfect thing to style.
+
+      ## Then: JavaScript
+
+      After CSS, the **JavaScript course** makes pages interactive: react to
+      clicks, validate forms, build games and apps.
+
+      ## Keep practising
+
+      - **Rebuild pages you like**: pick a simple site, and write its HTML from scratch without looking at theirs. Then inspect it and compare.
+      - **MDN Web Docs** (developer.mozilla.org) is the best reference for every element and attribute.
+      - **Publish**: the main editor of this site can deploy your pages with one click. Put your personal site online and share it.
+
+      > [!tip]
+      > Keep reviewing your flashcards — a few minutes a day keeps every
+      > element you've learned at your fingertips.
+    cards:
+      - front: What is the best reference for HTML elements and attributes?
+        back: MDN Web Docs — developer.mozilla.org.

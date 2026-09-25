@@ -1,0 +1,790 @@
+id: html03
+number: 3
+part: html-p1
+title: Links and Images
+blurb: The "hyper" in hypertext — linking pages together, finding files with paths, and adding images that everyone can understand.
+hours: 3
+goals:
+  - Create links to other sites, other pages, parts of a page, email addresses and phone numbers
+  - Write absolute and relative paths, and understand folders
+  - Add images with good alternative text and the right size attributes
+  - Group an image with its caption using `<figure>`
+
+items:
+  - type: lesson
+    id: html3-links
+    title: Links
+    minutes: 22
+    objectives:
+      - Write links with `<a href>`
+      - Tell absolute URLs from relative ones
+      - Write link text that makes sense out of context
+      - Open links in a new tab, and link to email and phone numbers
+    body: |
+      Links are what make the web a *web*. A link is an `<a>` (**anchor**)
+      element; its `href` (**h**ypertext **ref**erence) attribute says where
+      it goes, and its content is what people click:
+
+      ```html
+      <p>Search the web with <a href="https://duckduckgo.com">DuckDuckGo</a>.</p>
+      <p>Read our <a href="about.html">about page</a>.</p>
+      ```
+
+      > [!note]
+      > In this course's previews only one page exists, so a click on a link
+      > to another page is reported in the console instead. Links to other
+      > websites open in a new tab.
+
+      ## Absolute and relative URLs
+
+      - An **absolute** URL is the full address, starting with `https://`: `https://example.com/shop/shoes.html`. Use it for other websites.
+      - A **relative** URL is a path *from the current page*: `about.html`, `blog/first-post.html`. Use it for pages on your own site — it keeps working if the whole site moves to another address.
+
+      ## Good link text
+
+      Screen-reader users often jump from link to link, hearing only the link
+      text. "Click here" tells them nothing:
+
+      ```html static
+      <!-- Bad -->
+      <p>To see our prices, <a href="prices.html">click here</a>.</p>
+      <!-- Good -->
+      <p>See <a href="prices.html">our prices</a>.</p>
+      ```
+
+      Link text should say **where the link goes**, even when read alone.
+
+      ## New tabs, email and phone
+
+      ```html
+      <p><a href="https://developer.mozilla.org" target="_blank" rel="noopener">MDN (opens in a new tab)</a></p>
+      <p><a href="mailto:hello@example.com">Email us</a></p>
+      <p><a href="tel:+441234567890">Call +44 1234 567890</a></p>
+      ```
+
+      - `target="_blank"` opens a new tab. Use it sparingly — people can choose that themselves — and add `rel="noopener"` for safety.
+      - `mailto:` opens the visitor's email program; `tel:` dials on a phone.
+
+      {{check absolute}}
+
+      {{check text}}
+
+      {{task nav}}
+    checks:
+      - id: absolute
+        type: mcq
+        prompt: Which is a **relative** URL?
+        options:
+          - "`https://example.com/about.html`"
+          - "`blog/news.html`"
+          - "`http://localhost:3000`"
+          - "`https://blog.example.com`"
+        answer: 1
+        why: "A relative URL has no scheme (`https://`) or domain; it's a path from the current page."
+      - id: text
+        type: mcq
+        prompt: Which link text is best?
+        options:
+          - "`<a href=\"menu.pdf\">Click here</a> for the menu`"
+          - "`<a href=\"menu.pdf\">here</a>`"
+          - "`<a href=\"menu.pdf\">Download our menu (PDF)</a>`"
+          - "`<a href=\"menu.pdf\">menu.pdf</a>`"
+        answer: 2
+        why: "It says where the link goes and what you'll get, even read on its own."
+    tasks:
+      - id: nav
+        title: A navigation list
+        prompt: |
+          Build a navigation menu as an unordered list of three links:
+
+          - `Home` → `index.html`
+          - `Blog` → `blog.html`
+          - `Contact` → `mailto:me@example.com`
+        files:
+          index.html: |
+            <ul>
+            </ul>
+        solution:
+          index.html: |
+            <ul>
+              <li><a href="index.html">Home</a></li>
+              <li><a href="blog.html">Blog</a></li>
+              <li><a href="mailto:me@example.com">Contact</a></li>
+            </ul>
+        harness: |
+          check(count('ul > li > a'), 3);
+          check($$('li a').map((a) => a.textContent.trim()), ['Home', 'Blog', 'Contact']);
+          check($$('li a').map((a) => a.getAttribute('href')), ['index.html', 'blog.html', 'mailto:me@example.com']);
+        hints:
+          - "Each item is `<li><a href=\"…\">Text</a></li>`."
+    cards:
+      - front: How do you write a link?
+        back: "`<a href=\"address\">text people click</a>`"
+      - front: Absolute vs relative URL?
+        back: "Absolute: the full address with `https://` (for other sites). Relative: a path from the current page, like `about.html` (for your own pages)."
+      - front: What makes good link text?
+        back: It says where the link goes even when read on its own — never "click here".
+      - front: How do you link to an email address or phone number?
+        back: "`href=\"mailto:name@example.com\"` and `href=\"tel:+441234567890\"`."
+
+  - type: lesson
+    id: html3-paths
+    title: Paths, folders and jumping within a page
+    minutes: 20
+    objectives:
+      - Write relative paths to files in other folders, including `../`
+      - Give elements an `id` and link to them with `#`
+      - Build a table of contents for a long page
+    body: |
+      A website is a folder of files. Imagine this one:
+
+      ```text
+      my-site/
+      ├── index.html
+      ├── about.html
+      ├── blog/
+      │   ├── index.html
+      │   └── first-post.html
+      └── images/
+          └── logo.png
+      ```
+
+      A relative path starts from **the folder of the current page**:
+
+      | From | To | Path |
+      |---|---|---|
+      | `index.html` | `about.html` | `about.html` |
+      | `index.html` | `first-post.html` | `blog/first-post.html` |
+      | `index.html` | `logo.png` | `images/logo.png` |
+      | `blog/first-post.html` | `about.html` | `../about.html` |
+      | `blog/first-post.html` | `logo.png` | `../images/logo.png` |
+
+      `../` means "go up one folder". A path starting with `/` starts at the
+      **top of the site**: `/about.html` works from any page (once the site
+      is on a server).
+
+      ## Jumping to part of a page
+
+      Any element can have an `id` — a name that is **unique** on the page.
+      A link to `#` + that name jumps there:
+
+      ```html
+      <nav>
+        <a href="#rules">Rules</a> · <a href="#prizes">Prizes</a>
+      </nav>
+      <h2 id="rules">Rules</h2>
+      <p>Be kind. Have fun.</p>
+      <p>(Lots of text…)</p>
+      <p>(More text…)</p>
+      <h2 id="prizes">Prizes</h2>
+      <p>A golden trophy!</p>
+      <p><a href="#top">Back to the top</a></p>
+      ```
+
+      `#top` is special: it always means the top of the page. You can also
+      combine a page and an id: `about.html#team` opens the about page at its
+      team section.
+
+      > [!remember]
+      > An `id` must be **unique** on its page and can't contain spaces. Use
+      > lowercase words joined by hyphens: `id="opening-hours"`.
+
+      {{check up}}
+
+      {{check anchor}}
+
+      {{task toc}}
+    checks:
+      - id: up
+        type: mcq
+        prompt: "From `blog/first-post.html`, which path reaches `images/logo.png`?"
+        options:
+          - "`images/logo.png`"
+          - "`../images/logo.png`"
+          - "`blog/images/logo.png`"
+          - "`/blog/../logo.png`"
+        answer: 1
+        why: "`../` goes up from `blog/` to the site folder; then down into `images/`."
+      - id: anchor
+        type: fill
+        prompt: Link to the section with `id="faq"` on the same page.
+        code: |
+          <a href="___">Questions</a>
+        blanks:
+          - ["#faq"]
+        why: "`#` followed by the id."
+    tasks:
+      - id: toc
+        title: A table of contents
+        prompt: |
+          This page has three sections but no way to jump between them. Give
+          the three `<h2>` headings the ids `history`, `food` and `music`, and
+          add, above them, a `<nav>` containing a list of three links to them.
+          The link texts are the headings' texts.
+        files:
+          index.html: |
+            <h1>About Portugal</h1>
+
+            <h2>History</h2>
+            <p>An old country with a long seafaring past.</p>
+            <h2>Food</h2>
+            <p>Custard tarts. Enough said.</p>
+            <h2>Music</h2>
+            <p>Fado: sad songs, beautifully sung.</p>
+        solution:
+          index.html: |
+            <h1>About Portugal</h1>
+            <nav>
+              <ul>
+                <li><a href="#history">History</a></li>
+                <li><a href="#food">Food</a></li>
+                <li><a href="#music">Music</a></li>
+              </ul>
+            </nav>
+            <h2 id="history">History</h2>
+            <p>An old country with a long seafaring past.</p>
+            <h2 id="food">Food</h2>
+            <p>Custard tarts. Enough said.</p>
+            <h2 id="music">Music</h2>
+            <p>Fado: sad songs, beautifully sung.</p>
+        harness: |
+          check($$('h2').map((h) => h.id), ['history', 'food', 'music']);
+          check($$('nav a').map((a) => a.getAttribute('href')), ['#history', '#food', '#music']);
+          check($$('nav a').map((a) => a.textContent.trim()), ['History', 'Food', 'Music']);
+          check(count('nav li'), 3);
+          check($('nav').compareDocumentPosition($('h2')) & Node.DOCUMENT_POSITION_FOLLOWING, Node.DOCUMENT_POSITION_FOLLOWING);
+        hints:
+          - "`<h2 id=\"history\">History</h2>` — and the link `<a href=\"#history\">History</a>`."
+          - "The nav: `<nav><ul><li>…</li>…</ul></nav>`, placed after the `<h1>`."
+    cards:
+      - front: What does `../` mean in a path?
+        back: Go up one folder.
+      - front: How do you link to a part of a page?
+        back: "Give the target an `id` (`<h2 id=\"faq\">`) and link to `#faq`."
+      - front: What are the rules for an `id`?
+        back: Unique on the page, no spaces. By convention lowercase-with-hyphens.
+      - front: What does a path starting with `/` mean?
+        back: It starts at the top (root) of the website, whatever page you're on.
+
+  - type: quiz
+    id: html3-quiz1
+    title: "Quiz: links and paths"
+    questions:
+      - type: mcq
+        prompt: "You're on `index.html`. Which link opens `contact.html` from the same folder?"
+        options:
+          - "`<a href=\"../contact.html\">`"
+          - "`<a href=\"contact.html\">`"
+          - "`<a href=\"#contact.html\">`"
+          - "`<a src=\"contact.html\">`"
+        answer: 1
+        why: "Same folder: just the file name. (`src` is for images, not links.)"
+      - type: tf
+        prompt: Two elements on the same page may share an `id`.
+        answer: false
+        why: "An `id` must be unique on its page — otherwise `#name` links can't know where to go."
+      - type: spot
+        prompt: Which line has a broken link?
+        code: |
+          <nav>
+            <a href="index.html">Home</a>
+            <a href="gallery.html>Gallery</a>
+            <a href="#contact">Contact</a>
+          </nav>
+        answer: 3
+        why: "The `href` value is missing its closing quote."
+      - type: mcq
+        prompt: What should you add together with `target="_blank"`?
+        options:
+          - "`rel=\"noopener\"`"
+          - "`id=\"blank\"`"
+          - "`href=\"#\"`"
+          - Nothing
+        answer: 0
+        why: "`rel=\"noopener\"` stops the new tab from reaching back into your page."
+
+  - type: lesson
+    id: html3-images
+    title: Images
+    minutes: 24
+    objectives:
+      - Add images with `<img>`, `src` and `alt`
+      - Write alternative text that helps, and know when it should be empty
+      - Set `width` and `height`, and choose an image format
+    body: |
+      Images use the void element `<img>`. Two attributes are essential:
+
+      - `src` — where the image file is (a path or URL, like links)
+      - `alt` — **alternative text**: what the image shows, for people who can't see it
+
+      ```html
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='140'%3E%3Crect width='240' height='140' fill='%2393c5fd'/%3E%3Ccircle cx='60' cy='45' r='24' fill='%23fcd34d'/%3E%3Cpath d='M0 140l80-70 50 45 40-30 70 55z' fill='%2334d399'/%3E%3C/svg%3E"
+           alt="Green hills under a yellow sun" width="240" height="140">
+      <p>Here the image file is missing, so the browser shows the alt text instead:</p>
+      <img src="holiday-photo.jpg" alt="Our tent on a beach at sunset" width="240" height="140">
+      ```
+
+      (The first image's `src` is a tiny drawing written right into the
+      address — a *data URL*. Normally you'd write `src="images/hills.png"`.)
+
+      ## Writing good alt text
+
+      Alt text is read by screen readers, shown when an image fails to load,
+      and used by search engines. Describe what the image **tells the reader
+      in this context**:
+
+      | Image | Good alt |
+      |---|---|
+      | A photo in a news story | What happens in it: `"Firefighters carry a child out of the flooded house"` |
+      | A logo that is a link to your home page | Where it goes: `"Acme — home"` |
+      | A chart | Its point: `"Sales doubled between 2023 and 2025"` |
+      | Pure decoration (a swirl, a divider) | **Empty**: `alt=""`, so screen readers skip it |
+
+      Don't start with "Image of…" — screen readers already say it's an
+      image. **Never leave `alt` out entirely**: without it, a screen reader
+      may read out the file name, like "DSC underscore 4 0 7 1 dot jpg".
+
+      ## Size and format
+
+      `width` and `height` (in pixels) let the browser **reserve the space**
+      before the image arrives, so the page doesn't jump as it loads. They
+      should match the image's real proportions.
+
+      | Format | Best for |
+      |---|---|
+      | **JPEG** (`.jpg`) | Photographs |
+      | **PNG** (`.png`) | Graphics with sharp edges or transparency |
+      | **SVG** (`.svg`) | Logos, icons, drawings — scales to any size |
+      | **WebP / AVIF** | Modern formats: smaller files for both photos and graphics |
+      | **GIF** (`.gif`) | Simple animations |
+
+      ## Images that are links
+
+      Put the `<img>` inside an `<a>`:
+
+      ```html static
+      <a href="index.html"><img src="images/logo.svg" alt="Acme — home" width="120" height="40"></a>
+      ```
+
+      {{check alt}}
+
+      {{check decorative}}
+
+      {{task gallery}}
+    checks:
+      - id: alt
+        type: mcq
+        prompt: A shop's product photo shows a red wool scarf. Best alt text?
+        options:
+          - "`alt=\"image\"`"
+          - "`alt=\"scarf.jpg\"`"
+          - "`alt=\"Red wool scarf, folded\"`"
+          - No alt attribute
+        answer: 2
+        why: "It describes what matters about the image in context."
+      - id: decorative
+        type: tf
+        prompt: A purely decorative image should have `alt=""` (empty), not no `alt` at all.
+        answer: true
+        why: "An empty alt tells screen readers to skip it; a missing alt makes them guess (often reading the file name)."
+    tasks:
+      - id: gallery
+        title: Three pictures
+        prompt: |
+          Add three images for a pet page:
+
+          1. `dog.jpg`, alt `A golden retriever catching a ball`, 300 × 200
+          2. `cat.jpg`, alt `A black cat asleep on a sofa`, 300 × 200
+          3. `paw-divider.png` — a decorative line, 300 × 20, with an **empty** alt
+        files:
+          index.html: |
+            <h1>Our pets</h1>
+        solution:
+          index.html: |
+            <h1>Our pets</h1>
+            <img src="dog.jpg" alt="A golden retriever catching a ball" width="300" height="200">
+            <img src="cat.jpg" alt="A black cat asleep on a sofa" width="300" height="200">
+            <img src="paw-divider.png" alt="" width="300" height="20">
+        harness: |
+          check(count('img'), 3);
+          check($$('img').map((i) => i.getAttribute('src')), ['dog.jpg', 'cat.jpg', 'paw-divider.png']);
+          check($$('img').map((i) => i.getAttribute('alt')), ['A golden retriever catching a ball', 'A black cat asleep on a sofa', '']);
+          check($$('img').map((i) => i.getAttribute('width') + 'x' + i.getAttribute('height')), ['300x200', '300x200', '300x20']);
+        hints:
+          - "`<img src=\"dog.jpg\" alt=\"…\" width=\"300\" height=\"200\">` — no closing tag."
+          - "The decorative one needs `alt=\"\"` written out, with nothing between the quotes."
+    cards:
+      - front: What are the two essential attributes of `<img>`?
+        back: "`src` (where the file is) and `alt` (what it shows, for people who can't see it)."
+      - front: What alt should a purely decorative image have?
+        back: "An empty one: `alt=\"\"` — screen readers skip it. Never leave alt out."
+      - front: Why set `width` and `height` on images?
+        back: So the browser reserves space before the image loads and the page doesn't jump.
+      - front: Which image format for a photo, a logo, a screenshot with sharp text?
+        back: JPEG (or WebP/AVIF) for photos, SVG for logos, PNG for sharp-edged graphics.
+
+  - type: lesson
+    id: html3-figures
+    title: Figures and captions
+    minutes: 12
+    objectives:
+      - Group an image with its caption using `<figure>` and `<figcaption>`
+      - Tell captions from alt text
+    body: |
+      When an image comes with a caption — like in a book or a news story —
+      wrap both in `<figure>` and put the caption in `<figcaption>`:
+
+      ```html
+      <figure>
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect width='200' height='120' fill='%23fde68a'/%3E%3Crect x='30' y='40' width='40' height='60' fill='%23f97316'/%3E%3Crect x='80' y='20' width='40' height='80' fill='%23ef4444'/%3E%3Crect x='130' y='60' width='40' height='40' fill='%23a855f7'/%3E%3C/svg%3E"
+             alt="Bar chart: March had the most visitors" width="200" height="120">
+        <figcaption>Figure 1: Visitors per month, January to March.</figcaption>
+      </figure>
+      ```
+
+      The **caption** is visible to everyone and adds context ("Figure 1",
+      who took the photo, what the chart covers). The **alt** replaces the
+      image for those who can't see it. They do different jobs, so don't
+      simply repeat one in the other.
+
+      A `<figure>` isn't only for images: a code listing, a quotation or a
+      table with a caption can be a figure too.
+
+      {{check caption}}
+    checks:
+      - id: caption
+        type: order
+        prompt: Put the figure together.
+        lines:
+          - "<figure>"
+          - "<img src=\"bridge.jpg\" alt=\"The Golden Gate Bridge in fog\">"
+          - "<figcaption>Photo: Ana Lima, 2024</figcaption>"
+          - "</figure>"
+        alternatives:
+          - [0, 2, 1, 3]
+        why: "The image and its caption both sit inside `<figure>`; the caption may come first or last."
+    cards:
+      - front: How do you give an image a visible caption?
+        back: "Wrap it in `<figure>` with a `<figcaption>`."
+      - front: Caption vs alt text?
+        back: The caption is visible context for everyone; alt text replaces the image for people who can't see it.
+
+  - type: quiz
+    id: html3-quiz2
+    title: "Quiz: images and figures"
+    questions:
+      - type: mcq
+        prompt: What does a browser show if an image file is missing?
+        options:
+          - An error page
+          - Nothing at all, ever
+          - A broken-image icon and/or the alt text
+          - The file name in red
+        answer: 2
+        why: "That's one of the jobs of alt text."
+      - type: spot
+        prompt: Which line is missing something important?
+        code: |
+          <h2>Our team</h2>
+          <img src="ana.jpg" alt="Ana, head chef, smiling in the kitchen" width="200" height="200">
+          <img src="ben.jpg" width="200" height="200">
+          <p>Come and meet us!</p>
+        answer: 3
+        why: "Ben's photo has no `alt` at all."
+      - type: mcq
+        prompt: Which format suits a company logo that must look sharp at any size?
+        options:
+          - JPEG
+          - SVG
+          - GIF
+          - BMP
+        answer: 1
+        why: "SVG is a vector format: it scales perfectly."
+      - type: tf
+        prompt: "`<img>` needs a closing tag `</img>`."
+        answer: false
+        why: "It's a void element."
+
+  - type: challenge
+    id: html3-ch-article
+    title: A long article with a contents list
+    difficulty: 2
+    tags: [links, ids, lists]
+    prompt: |
+      Build a mini article:
+
+      - an `<h1>` `Learning to swim`
+      - a `<nav>` with an ordered list of links to three sections
+      - three sections, each an `<h2>` with an id (`breathing`, `floating`, `kicking`) and one paragraph
+      - after the last section, a `Back to top` link pointing to `#top`
+
+      Section headings: `Breathing`, `Floating`, `Kicking`.
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <h1>Learning to swim</h1>
+        <nav>
+          <ol>
+            <li><a href="#breathing">Breathing</a></li>
+            <li><a href="#floating">Floating</a></li>
+            <li><a href="#kicking">Kicking</a></li>
+          </ol>
+        </nav>
+        <h2 id="breathing">Breathing</h2>
+        <p>Blow bubbles out through your nose.</p>
+        <h2 id="floating">Floating</h2>
+        <p>Relax and let the water hold you up.</p>
+        <h2 id="kicking">Kicking</h2>
+        <p>Kick from the hips, not the knees.</p>
+        <p><a href="#top">Back to top</a></p>
+    harness: |
+      check(text('h1'), 'Learning to swim');
+      check($$('nav ol > li > a').map((a) => a.getAttribute('href')), ['#breathing', '#floating', '#kicking']);
+      check($$('h2').map((h) => h.id + ':' + h.textContent.trim()), ['breathing:Breathing', 'floating:Floating', 'kicking:Kicking']);
+      check($$('h2').every((h) => h.nextElementSibling && h.nextElementSibling.tagName === 'P'), true);
+      check($$('a').some((a) => a.getAttribute('href') === '#top' && a.textContent.trim() === 'Back to top'), true);
+    hints:
+      - "Each link's `href` is `#` plus the id of its heading."
+
+  - type: challenge
+    id: html3-ch-paths
+    title: Fix the paths
+    difficulty: 2
+    tags: [paths]
+    prompt: |
+      This menu lives in `blog/post.html` of the site below. Four of its links
+      and images use the wrong path. Fix every `href` and `src`.
+
+      ```text
+      site/
+      ├── index.html
+      ├── about.html
+      ├── images/
+      │   └── logo.svg
+      └── blog/
+          ├── post.html      ← this page
+          └── older.html
+      ```
+    files:
+      index.html: |
+        <nav>
+          <a href="index.html"><img src="images/logo.svg" alt="Site home" width="80" height="30"></a>
+          <a href="blog/older.html">Older post</a>
+          <a href="/about">About</a>
+        </nav>
+    solution:
+      index.html: |
+        <nav>
+          <a href="../index.html"><img src="../images/logo.svg" alt="Site home" width="80" height="30"></a>
+          <a href="older.html">Older post</a>
+          <a href="../about.html">About</a>
+        </nav>
+    harness: |
+      check($$('nav a').map((a) => a.getAttribute('href')), ['../index.html', 'older.html', '../about.html']);
+      check(attr('nav img', 'src'), '../images/logo.svg');
+      check(attr('nav img', 'alt'), 'Site home');
+    hints:
+      - "From `blog/`, the home page and the images folder are one level up: `../`."
+      - "`older.html` is in the same folder as the current page. And the about page is a file: `about.html`."
+
+  - type: challenge
+    id: html3-ch-card
+    title: A profile card
+    difficulty: 1
+    tags: [images, figure, links]
+    prompt: |
+      Make a profile card as a `<figure>`:
+
+      - an image `ada.jpg`, alt `Portrait of Ada Lovelace`, 160 × 160
+      - a `<figcaption>` containing the text `Ada Lovelace — first programmer` and, after it, a link `Read more` to `https://en.wikipedia.org/wiki/Ada_Lovelace` that opens in a new tab (with `rel="noopener"`)
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <figure>
+          <img src="ada.jpg" alt="Portrait of Ada Lovelace" width="160" height="160">
+          <figcaption>
+            Ada Lovelace — first programmer
+            <a href="https://en.wikipedia.org/wiki/Ada_Lovelace" target="_blank" rel="noopener">Read more</a>
+          </figcaption>
+        </figure>
+    harness: |
+      check(count('figure > img'), 1);
+      check(attr('figure img', 'alt'), 'Portrait of Ada Lovelace');
+      check(attr('figure img', 'width') + 'x' + attr('figure img', 'height'), '160x160');
+      check(text('figcaption').startsWith('Ada Lovelace — first programmer'), true);
+      check(attr('figcaption a', 'href'), 'https://en.wikipedia.org/wiki/Ada_Lovelace');
+      check(attr('figcaption a', 'target'), '_blank');
+      check(attr('figcaption a', 'rel'), 'noopener');
+      check(text('figcaption a'), 'Read more');
+    hints:
+      - "The link goes inside `<figcaption>`, after the caption text."
+
+  - type: review
+    id: html3-review
+    title: "Chapter 3 review"
+    body: |
+      ## Cheat sheet
+
+      ```html static
+      <a href="https://example.com">Another site</a>
+      <a href="about.html">A page in this folder</a>
+      <a href="../index.html">One folder up</a>
+      <a href="#faq">A part of this page</a>   <h2 id="faq">FAQ</h2>
+      <a href="mailto:me@example.com">Email</a>  <a href="tel:+441234">Call</a>
+      <a href="https://example.com" target="_blank" rel="noopener">New tab</a>
+
+      <img src="images/photo.jpg" alt="What it shows, in context" width="400" height="300">
+      <img src="swirl.png" alt="">   <!-- decorative -->
+      <figure>
+        <img src="chart.svg" alt="Sales doubled in 2025">
+        <figcaption>Figure 2: Sales, 2020–2025</figcaption>
+      </figure>
+      ```
+
+      ## Key ideas
+
+      - `href` for links, `src` for images.
+      - Relative paths start from the current page's folder; `../` goes up.
+      - Link text says where it goes. Alt text says what the image means here; `alt=""` for decoration, never missing.
+      - `id`s are unique; `#id` links jump to them.
+    questions:
+      - type: mcq
+        prompt: Which attribute points an **image** to its file?
+        options:
+          - "`href`"
+          - "`src`"
+          - "`link`"
+          - "`alt`"
+        answer: 1
+        why: "Images use `src`; links use `href`."
+      - type: fill
+        prompt: Make the logo a link to the home page.
+        code: |
+          <___ href="index.html"><img src="logo.svg" alt="Home"></___>
+        blanks:
+          - [a]
+          - [/a]
+        why: "Wrap the image in `<a href=\"…\">…</a>`."
+      - type: mcq
+        prompt: "`<h2 id=\"prices\">Prices</h2>` — which link jumps to it from another page, `index.html`, to `shop.html`?"
+        options:
+          - "`<a href=\"#prices\">`"
+          - "`<a href=\"shop.html#prices\">`"
+          - "`<a href=\"prices.shop.html\">`"
+          - "`<a href=\"shop.html/prices\">`"
+        answer: 1
+        why: "Page, then `#` and the id."
+
+  - type: exam
+    id: html3-exam
+    title: "Chapter 3 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: What does `href` stand for?
+        options:
+          - Hyper reference (hypertext reference)
+          - Home referral
+          - HTML frame
+          - Header reference
+        answer: 0
+        why: "Hypertext reference — where the link points."
+      - type: mcq
+        prompt: "From `index.html`, link to `photos/2024/summer.html`."
+        options:
+          - "`../photos/2024/summer.html`"
+          - "`photos/2024/summer.html`"
+          - "`#photos/2024/summer`"
+          - "`summer.html`"
+        answer: 1
+        why: "Go down into the folders from the current one."
+      - type: tf
+        prompt: Link text like "click here" is fine as long as the sentence around it explains the link.
+        answer: false
+        why: "Screen-reader users often hear link texts alone; the text should make sense out of context."
+      - type: mcq
+        prompt: Which image needs `alt=""`?
+        options:
+          - A photo in a news article
+          - A decorative background flourish
+          - A logo that links home
+          - A chart of results
+        answer: 1
+        why: "Purely decorative images get an empty alt."
+      - type: spot
+        prompt: Which line mixes up link and image attributes?
+        code: |
+          <a href="index.html">Home</a>
+          <img href="logo.png" alt="Acme logo">
+          <a href="#team">Team</a>
+        answer: 2
+        why: "Images use `src`, not `href`."
+      - type: fill
+        prompt: Open a link in a new tab, safely.
+        code: |
+          <a href="https://example.com" target="___" rel="___">Example</a>
+        blanks:
+          - [_blank]
+          - [noopener]
+        why: "`target=\"_blank\"` with `rel=\"noopener\"`."
+      - type: mcq
+        prompt: Why give images a `width` and `height`?
+        options:
+          - To make them load faster
+          - So the page reserves space and doesn't jump when they load
+          - It's required or they won't show
+          - To make them sharper
+        answer: 1
+        why: "Layout stability."
+      - type: tf
+        prompt: A `<figcaption>` should just repeat the image's alt text.
+        answer: false
+        why: "They do different jobs: the caption adds visible context; alt replaces the image."
+      - type: mcq
+        prompt: "`mailto:` in an `href`…"
+        options:
+          - Downloads a file
+          - Opens the visitor's email program with that address
+          - Sends an email automatically
+          - Checks that an address exists
+        answer: 1
+        why: "It opens a new message in the email app."
+      - type: order
+        prompt: Put the linked, captioned image together.
+        lines:
+          - "<figure>"
+          - "<a href=\"big.jpg\">"
+          - "<img src=\"small.jpg\" alt=\"Sunset over the harbour\">"
+          - "</a>"
+          - "<figcaption>Click to enlarge</figcaption>"
+          - "</figure>"
+        why: "The image is inside the link; both, with the caption, inside the figure."
+      - type: code
+        prompt: |
+          Write a paragraph `Visit the Louvre website or email us.` where
+          `the Louvre website` links to `https://www.louvre.fr` and `email us`
+          links to `mailto:info@example.com`. Then add an image `louvre.jpg`
+          with the alt `The glass pyramid of the Louvre at night`.
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <p>Visit <a href="https://www.louvre.fr">the Louvre website</a> or <a href="mailto:info@example.com">email us</a>.</p>
+            <img src="louvre.jpg" alt="The glass pyramid of the Louvre at night">
+        harness: |
+          check(text('p'), 'Visit the Louvre website or email us.');
+          check($$('p a').map((a) => a.textContent.trim() + ' -> ' + a.getAttribute('href')), ['the Louvre website -> https://www.louvre.fr', 'email us -> mailto:info@example.com']);
+          check(attr('img', 'src'), 'louvre.jpg');
+          check(attr('img', 'alt'), 'The glass pyramid of the Louvre at night');
+      - type: mcq
+        prompt: Which is a valid id?
+        options:
+          - "`id=\"opening hours\"`"
+          - "`id=\"opening-hours\"`"
+          - "`id=\"#opening\"`"
+          - Any text, as long as it's unique
+        answer: 1
+        why: "No spaces; the `#` belongs in the link, not the id."

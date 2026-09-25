@@ -1,0 +1,564 @@
+id: html05
+number: 5
+part: html-p2
+title: Tables
+blurb: Show data in rows and columns — with headers, captions and cells that span several rows or columns — and know when not to use a table.
+hours: 2
+goals:
+  - Build tables with `<table>`, `<tr>`, `<th>` and `<td>`
+  - Structure a table with `<caption>`, `<thead>`, `<tbody>` and `<tfoot>`
+  - Merge cells with `colspan` and `rowspan`
+  - Make tables accessible with header cells and `scope`, and use them only for data
+
+items:
+  - type: lesson
+    id: html5-basics
+    title: Rows, columns and cells
+    minutes: 20
+    objectives:
+      - Build a table row by row
+      - Use header cells for column and row headings
+      - Add a caption that says what the table shows
+    body: |
+      Tables show **data** that has rows and columns — timetables, prices,
+      results. A table is built **one row at a time**:
+
+      ```html
+      <table>
+        <caption>Opening hours</caption>
+        <tr>
+          <th>Day</th>
+          <th>Open</th>
+          <th>Close</th>
+        </tr>
+        <tr>
+          <td>Monday</td>
+          <td>9:00</td>
+          <td>17:00</td>
+        </tr>
+        <tr>
+          <td>Saturday</td>
+          <td>10:00</td>
+          <td>14:00</td>
+        </tr>
+      </table>
+      ```
+
+      - `<table>` wraps everything.
+      - `<tr>` is a **t**able **r**ow.
+      - `<td>` is a **t**able **d**ata cell.
+      - `<th>` is a **t**able **h**eader cell — shown bold and centred, and, more importantly, read by screen readers as the heading of its column or row.
+      - `<caption>` is the table's title. It must be the **first** thing inside `<table>`.
+
+      Every row should have the same number of cells (counting merged cells,
+      which you'll see soon).
+
+      ## Row headers
+
+      Headers can label rows too. Put a `<th>` at the start of each row:
+
+      ```html
+      <table>
+        <caption>Weekly steps</caption>
+        <tr><th></th><th>Ana</th><th>Ben</th></tr>
+        <tr><th>Monday</th><td>8,200</td><td>5,100</td></tr>
+        <tr><th>Tuesday</th><td>9,750</td><td>6,300</td></tr>
+      </table>
+      ```
+
+      > [!tip]
+      > The default table looks plain, with no borders. That's on purpose —
+      > the look is CSS's job. Here, a table is about **structure**.
+
+      {{check cell}}
+
+      {{task hours}}
+    checks:
+      - id: cell
+        type: mcq
+        prompt: Which element holds a single ordinary data cell?
+        options:
+          - "`<tr>`"
+          - "`<th>`"
+          - "`<td>`"
+          - "`<tc>`"
+        answer: 2
+        why: "`<td>` = table data. `<tr>` is a row, `<th>` a header cell."
+      - id: caption-first
+        type: tf
+        prompt: "`<caption>` may go anywhere inside the table."
+        answer: false
+        why: "It must be the first child of `<table>`."
+    tasks:
+      - id: hours
+        title: A price list
+        prompt: |
+          Build a table with the caption `Coffee prices`, a header row with
+          `Drink` and `Price`, and three rows:
+
+          - `Espresso` — `€1.50`
+          - `Latte` — `€2.80`
+          - `Tea` — `€1.90`
+        files:
+          index.html: |
+            <table>
+            </table>
+        solution:
+          index.html: |
+            <table>
+              <caption>Coffee prices</caption>
+              <tr><th>Drink</th><th>Price</th></tr>
+              <tr><td>Espresso</td><td>€1.50</td></tr>
+              <tr><td>Latte</td><td>€2.80</td></tr>
+              <tr><td>Tea</td><td>€1.90</td></tr>
+            </table>
+        harness: |
+          check(text('table > caption'), 'Coffee prices');
+          check($$('th').map((t) => t.textContent.trim()), ['Drink', 'Price']);
+          check(count('tr'), 4);
+          check($$('tr').slice(1).map((r) => [...r.children].map((c) => c.textContent.trim())), [['Espresso', '€1.50'], ['Latte', '€2.80'], ['Tea', '€1.90']]);
+          check(count('td'), 6);
+        hints:
+          - "One `<tr>` per row. The first row uses `<th>` cells, the others `<td>`."
+    cards:
+      - front: What are `<tr>`, `<td>` and `<th>`?
+        back: A table row, a data cell and a header cell.
+      - front: Where does `<caption>` go?
+        back: As the first child of `<table>` — it's the table's title.
+      - front: Why use `<th>` rather than a bold `<td>`?
+        back: Screen readers announce header cells as the headings of their column or row.
+
+  - type: lesson
+    id: html5-structure
+    title: Head, body, foot and merged cells
+    minutes: 22
+    objectives:
+      - Group rows with `<thead>`, `<tbody>` and `<tfoot>`
+      - Merge cells with `colspan` and `rowspan`
+      - Use `scope` to link header cells to their cells
+    body: |
+      Bigger tables group their rows into three parts:
+
+      ```html
+      <table>
+        <caption>Quarterly sales (€)</caption>
+        <thead>
+          <tr><th scope="col">Product</th><th scope="col">Q1</th><th scope="col">Q2</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Books</th><td>1,200</td><td>1,450</td></tr>
+          <tr><th scope="row">Games</th><td>800</td><td>1,100</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><th scope="row">Total</th><td>2,000</td><td>2,550</td></tr>
+        </tfoot>
+      </table>
+      ```
+
+      - `<thead>` holds the header row(s), `<tbody>` the data, `<tfoot>` totals or notes.
+      - `scope="col"` says "I'm the header of this **column**"; `scope="row"` says "…of this **row**". Screen readers then read each cell with its headers: "Games, Q2: 1,100".
+      - A long table printed over several pages repeats its `<thead>` on each page.
+
+      ## Merging cells
+
+      A cell can stretch across columns with `colspan`, or down rows with
+      `rowspan`:
+
+      ```html
+      <table>
+        <caption>School timetable</caption>
+        <tr><th>Time</th><th>Monday</th><th>Tuesday</th></tr>
+        <tr><td>9:00</td><td rowspan="2">Science (double)</td><td>Maths</td></tr>
+        <tr><td>10:00</td><td>History</td></tr>
+        <tr><td>11:00</td><td colspan="2">Sports day — no lessons</td></tr>
+      </table>
+      ```
+
+      When a cell spans, the cells it covers are **left out** of the other
+      rows: the 10:00 row has only two cells, because Monday is already taken
+      by the Science cell from above.
+
+      > [!mistake]
+      > Forgetting to remove the covered cells. The table then has rows of
+      > different lengths and cells pop out to the side. Count: every row
+      > should add up to the same number of columns.
+
+      {{check span}}
+
+      {{check count}}
+
+      {{task results}}
+    checks:
+      - id: span
+        type: fill
+        prompt: Make the cell cover three columns.
+        code: |
+          <td ___="3">Closed for renovation</td>
+        blanks:
+          - [colspan]
+        why: "`colspan` spans columns; `rowspan` spans rows."
+      - id: count
+        type: mcq
+        prompt: |
+          A 3-column table has a cell with `rowspan="2"` in the first column of row 2. How many cells should row 3 contain?
+        options:
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+        answer: 1
+        why: "Row 3's first column is covered by the spanning cell, so it needs only 2 cells."
+    tasks:
+      - id: results
+        title: Match results
+        prompt: |
+          Build this table of football results with a `<thead>` (column
+          headers `Home`, `Score`, `Away` with `scope="col"`), a `<tbody>`
+          with two matches, and a `<tfoot>` row with one cell spanning all
+          three columns that says `Played on 12 May`.
+
+          - `Lions` `2–1` `Tigers`
+          - `Bears` `0–0` `Wolves`
+        files:
+          index.html: |
+            <table>
+              <caption>Round 5</caption>
+            </table>
+        solution:
+          index.html: |
+            <table>
+              <caption>Round 5</caption>
+              <thead>
+                <tr><th scope="col">Home</th><th scope="col">Score</th><th scope="col">Away</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Lions</td><td>2–1</td><td>Tigers</td></tr>
+                <tr><td>Bears</td><td>0–0</td><td>Wolves</td></tr>
+              </tbody>
+              <tfoot>
+                <tr><td colspan="3">Played on 12 May</td></tr>
+              </tfoot>
+            </table>
+        harness: |
+          check($$('thead th').map((t) => t.textContent.trim() + '/' + t.getAttribute('scope')), ['Home/col', 'Score/col', 'Away/col']);
+          check($$('tbody tr').map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' ')), ['Lions 2–1 Tigers', 'Bears 0–0 Wolves']);
+          check(count('tfoot td'), 1);
+          check(attr('tfoot td', 'colspan'), '3');
+          check(text('tfoot td'), 'Played on 12 May');
+          check(text('caption'), 'Round 5');
+        hints:
+          - "Three groups inside `<table>`, after the caption: `<thead>`, `<tbody>`, `<tfoot>`."
+          - "The footer cell: `<td colspan=\"3\">Played on 12 May</td>`."
+    cards:
+      - front: What are `<thead>`, `<tbody>` and `<tfoot>`?
+        back: The groups of header rows, data rows and footer rows (totals, notes) in a table.
+      - front: What do `colspan` and `rowspan` do?
+        back: Make a cell stretch across several columns or down several rows.
+      - front: What does `scope="col"` on a `<th>` mean?
+        back: It's the header for its column (`scope="row"` for its row) — screen readers read cells with their headers.
+      - front: What must you do after using rowspan or colspan?
+        back: Leave out the cells that the merged cell covers, so every row adds up to the same number of columns.
+
+  - type: lesson
+    id: html5-when
+    title: When (not) to use tables
+    minutes: 10
+    objectives:
+      - Recognise data that belongs in a table
+      - Explain why tables must not be used for page layout
+    body: |
+      Use a table when your content is **data in two dimensions** — when it
+      would make sense as a spreadsheet: every cell is "the value of *this
+      column's thing* for *this row's thing*".
+
+      | Good as a table | Not a table |
+      |---|---|
+      | Train times per station | A photo gallery |
+      | Product comparison | A page with a sidebar |
+      | Exam results per subject | A form's labels and fields |
+      | Monthly budget | A list of links |
+
+      ## No layout tables
+
+      In the early days of the web, before CSS could lay out pages, people
+      built whole pages with invisible tables. **Don't.** A layout table
+      confuses screen readers — which announce "table with 3 columns, 12
+      rows" and read cell by cell — and it's rigid on phones. Page layout is
+      CSS's job (with Flexbox and Grid, in the CSS course).
+
+      {{check which}}
+    checks:
+      - id: which
+        type: mcq
+        prompt: Which of these belongs in a table?
+        options:
+          - A two-column page layout with a sidebar
+          - A comparison of three phones by price, weight and battery life
+          - A navigation menu
+          - Three photos side by side
+        answer: 1
+        why: "Things (rows) × properties (columns) — real two-dimensional data."
+    cards:
+      - front: When should you use a table?
+        back: For data in two dimensions — if it would make sense as a spreadsheet.
+      - front: Why not use tables for page layout?
+        back: Screen readers announce and read them cell by cell, and they don't adapt to small screens. Layout is CSS's job.
+
+  - type: quiz
+    id: html5-quiz
+    title: "Quiz: tables"
+    questions:
+      - type: order
+        prompt: Build a one-row table.
+        lines:
+          - "<table>"
+          - "<caption>Scores</caption>"
+          - "<tr>"
+          - "<td>Ana</td><td>98</td>"
+          - "</tr>"
+          - "</table>"
+        why: "Caption first, then rows containing cells."
+      - type: spot
+        prompt: Which row has the wrong number of cells?
+        code: |
+          <table>
+            <tr><th>Name</th><th>Age</th><th>City</th></tr>
+            <tr><td>Ana</td><td>31</td><td>Lisbon</td></tr>
+            <tr><td>Ben</td><td>28</td><td>Oslo</td><td>Extra</td></tr>
+            <tr><td colspan="3">Two people</td></tr>
+          </table>
+        answer: 4
+        why: "The table has 3 columns; Ben's row has 4 cells."
+      - type: tf
+        prompt: "`<tfoot>` is a good place for totals."
+        answer: true
+        why: "Totals and summary notes go in the footer group."
+      - type: mcq
+        prompt: What does `rowspan="3"` do?
+        options:
+          - Repeats the row three times
+          - Makes the cell three columns wide
+          - Makes the cell stretch down three rows
+          - Adds three empty rows
+        answer: 2
+        why: "Row span: down several rows."
+
+  - type: challenge
+    id: html5-ch-timetable
+    title: A class timetable
+    difficulty: 3
+    tags: [tables, rowspan, colspan]
+    prompt: |
+      Build this timetable (caption `Week plan`). The header row has `Time`,
+      `Mon`, `Tue`, `Wed` as `<th scope="col">`; each time is a
+      `<th scope="row">`.
+
+      ```text
+      Time  | Mon      | Tue         | Wed
+      ------+----------+-------------+---------
+      9:00  | Art      | Maths       | Music
+      10:00 |  (Art)   | English     | Science
+      11:00 | Reading  | Lunch break (Tue + Wed)
+      ```
+
+      - `Art` is a double lesson: one cell spanning the 9:00 **and** 10:00 rows.
+      - `Lunch break` is one cell spanning the Tue **and** Wed columns.
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <table>
+          <caption>Week plan</caption>
+          <tr><th scope="col">Time</th><th scope="col">Mon</th><th scope="col">Tue</th><th scope="col">Wed</th></tr>
+          <tr><th scope="row">9:00</th><td rowspan="2">Art</td><td>Maths</td><td>Music</td></tr>
+          <tr><th scope="row">10:00</th><td>English</td><td>Science</td></tr>
+          <tr><th scope="row">11:00</th><td>Reading</td><td colspan="2">Lunch break</td></tr>
+        </table>
+    harness: |
+      check(text('caption'), 'Week plan');
+      check($$('tr:first-of-type th').map((t) => t.textContent.trim()), ['Time', 'Mon', 'Tue', 'Wed']);
+      check($$('tr:first-of-type th').every((t) => t.getAttribute('scope') === 'col'), true);
+      check($$('tr').slice(1).map((r) => r.cells[0].tagName + ':' + r.cells[0].textContent.trim() + ':' + r.cells[0].getAttribute('scope')), ['TH:9:00:row', 'TH:10:00:row', 'TH:11:00:row']);
+      const art = $$('td').find((c) => c.textContent.trim() === 'Art');
+      check(art && art.rowSpan, 2);
+      check($$('tr')[2].cells.length, 3);
+      const lunch = $$('td').find((c) => c.textContent.trim() === 'Lunch break');
+      check(lunch && lunch.colSpan, 2);
+      check([...$$('tr')[3].cells].map((c) => c.textContent.trim()), ['11:00', 'Reading', 'Lunch break']);
+    hints:
+      - "Row 10:00 has only three cells (time, Tue, Wed): Mon is covered by Art."
+      - "Row 11:00: `<th scope=\"row\">11:00</th><td>Reading</td><td colspan=\"2\">Lunch break</td>`."
+
+  - type: challenge
+    id: html5-ch-budget
+    title: A monthly budget
+    difficulty: 2
+    tags: [tables, thead, tfoot]
+    prompt: |
+      Build a budget table (caption `March budget`) with:
+
+      - a `<thead>` row: `Item`, `Cost (€)` — both `scope="col"`
+      - a `<tbody>` with `Rent 700`, `Food 250`, `Transport 60` — the item names as `<th scope="row">`
+      - a `<tfoot>` row: `<th scope="row">Total</th>` and `1010`
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <table>
+          <caption>March budget</caption>
+          <thead>
+            <tr><th scope="col">Item</th><th scope="col">Cost (€)</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Rent</th><td>700</td></tr>
+            <tr><th scope="row">Food</th><td>250</td></tr>
+            <tr><th scope="row">Transport</th><td>60</td></tr>
+          </tbody>
+          <tfoot>
+            <tr><th scope="row">Total</th><td>1010</td></tr>
+          </tfoot>
+        </table>
+    harness: |
+      check(text('caption'), 'March budget');
+      check($$('thead th').map((t) => t.textContent.trim() + '|' + t.getAttribute('scope')), ['Item|col', 'Cost (€)|col']);
+      check($$('tbody tr').map((r) => r.cells[0].tagName + ' ' + r.cells[0].textContent.trim() + ' ' + r.cells[1].textContent.trim()), ['TH Rent 700', 'TH Food 250', 'TH Transport 60']);
+      check($$('tbody th').every((t) => t.getAttribute('scope') === 'row'), true);
+      check([...$('tfoot tr').cells].map((c) => c.textContent.trim()), ['Total', '1010']);
+    hints:
+      - "Row headers: `<tr><th scope=\"row\">Rent</th><td>700</td></tr>`."
+
+  - type: review
+    id: html5-review
+    title: "Chapter 5 review"
+    body: |
+      ## Cheat sheet
+
+      ```html static
+      <table>
+        <caption>What the table shows</caption>
+        <thead><tr><th scope="col">A</th><th scope="col">B</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Row 1</th><td>1</td></tr>
+          <tr><td colspan="2">spans two columns</td></tr>
+        </tbody>
+        <tfoot><tr><th scope="row">Total</th><td>1</td></tr></tfoot>
+      </table>
+      ```
+
+      ## Key ideas
+
+      - Tables are built row by row: `<tr>` containing `<td>`/`<th>` cells.
+      - `<caption>` first; `<thead>`, `<tbody>`, `<tfoot>` group rows.
+      - `<th>` with `scope` makes tables understandable to screen readers.
+      - `colspan`/`rowspan` merge cells — leave out the cells they cover.
+      - Tables are for data only, never for page layout.
+    questions:
+      - type: fill
+        prompt: A header cell for a row.
+        code: |
+          <tr><th ___="row">Monday</th><td>8,200</td></tr>
+        blanks:
+          - [scope]
+        why: "`scope=\"row\"`."
+      - type: mcq
+        prompt: A 4-column table's footer has one cell covering all columns. Which attribute?
+        options:
+          - "`rowspan=\"4\"`"
+          - "`colspan=\"4\"`"
+          - "`span=\"4\"`"
+          - "`width=\"4\"`"
+        answer: 1
+        why: "Across columns: `colspan`."
+
+  - type: exam
+    id: html5-exam
+    title: "Chapter 5 exam"
+    minutes: 20
+    pick: 9
+    questions:
+      - type: mcq
+        prompt: What does `<tr>` stand for?
+        options:
+          - Table row
+          - Table reference
+          - Text row
+          - Table right
+        answer: 0
+        why: "A table row."
+      - type: tf
+        prompt: Tables are a good way to put a sidebar next to your content.
+        answer: false
+        why: "Layout is CSS's job; tables are for data."
+      - type: mcq
+        prompt: Which is the right order inside `<table>`?
+        options:
+          - "`<tbody>`, `<thead>`, `<caption>`"
+          - "`<caption>`, `<thead>`, `<tbody>`, `<tfoot>`"
+          - "`<thead>`, `<caption>`, `<tbody>`"
+          - Any order
+        answer: 1
+        why: "Caption first, then head, body, foot."
+      - type: spot
+        prompt: A 3-column table. Which row is wrong?
+        code: |
+          <tr><th>A</th><th>B</th><th>C</th></tr>
+          <tr><td rowspan="2">x</td><td>1</td><td>2</td></tr>
+          <tr><td>y</td><td>3</td><td>4</td></tr>
+        answer: 3
+        why: "Row 3's first column is covered by the rowspan, so it should have only 2 cells."
+      - type: mcq
+        prompt: Why use `<th scope="col">`?
+        options:
+          - It makes the text bold
+          - Screen readers use it to announce each cell's column heading
+          - It sorts the column
+          - It's required for the table to show
+        answer: 1
+        why: "Accessibility: cells are read with their headers."
+      - type: fill
+        prompt: Make the cell stretch down two rows.
+        code: |
+          <td ___="2">Double lesson</td>
+        blanks:
+          - [rowspan]
+        why: "`rowspan` spans rows."
+      - type: mcq
+        prompt: Where do totals belong?
+        options:
+          - "`<caption>`"
+          - "`<thead>`"
+          - "`<tfoot>`"
+          - After `</table>`
+        answer: 2
+        why: "The footer row group."
+      - type: tf
+        prompt: Every row of a table should add up to the same number of columns.
+        answer: true
+        why: "Counting spans, yes — otherwise cells stick out."
+      - type: code
+        prompt: |
+          Build a table with caption `Planets`, header cells `Planet` and
+          `Moons`, and rows `Earth 1` and `Mars 2`.
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <table>
+              <caption>Planets</caption>
+              <tr><th>Planet</th><th>Moons</th></tr>
+              <tr><td>Earth</td><td>1</td></tr>
+              <tr><td>Mars</td><td>2</td></tr>
+            </table>
+        harness: |
+          check(text('caption'), 'Planets');
+          check($$('th').map((t) => t.textContent.trim()), ['Planet', 'Moons']);
+          check($$('tr').filter((r) => r.querySelector('td')).map((r) => [...r.cells].map((c) => c.textContent.trim()).join(' ')), ['Earth 1', 'Mars 2']);
+      - type: mcq
+        prompt: What happens if you forget `<tbody>` in a simple table?
+        options:
+          - The table doesn't show
+          - The browser adds one automatically — it's optional to write
+          - All rows become headers
+          - An error message appears
+        answer: 1
+        why: "Browsers insert an implicit `<tbody>`. Writing it is still clearer in bigger tables."

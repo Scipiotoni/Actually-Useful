@@ -1,0 +1,749 @@
+id: html04
+number: 4
+part: html-p2
+title: Structure and Semantics
+blurb: Organise a whole page — header, navigation, main content, articles, sidebars and footer — so browsers, search engines and assistive technology understand it.
+hours: 3
+goals:
+  - Use `<div>` and `<span>` as generic containers, with classes and ids
+  - Lay out a page with semantic elements like `<header>`, `<nav>`, `<main>`, `<article>` and `<footer>`
+  - Choose between `<section>`, `<article>` and `<div>`
+  - Apply the basics of accessibility — landmarks, headings, labels and language
+
+items:
+  - type: lesson
+    id: html4-containers
+    title: Generic containers, classes and ids
+    minutes: 18
+    objectives:
+      - Group content with `<div>` (blocks) and `<span>` (inline)
+      - Label elements with `class` and `id`, and know the difference
+      - Tell block elements from inline elements
+    body: |
+      Sometimes you need to group things just so you can style them or find
+      them with JavaScript later — with no special meaning. That's what the
+      two **generic** containers are for:
+
+      - `<div>` groups **blocks** (it starts on a new line and takes the full width).
+      - `<span>` wraps a piece of text **inside** a line.
+
+      ```html
+      <div class="card">
+        <h3>Basic plan</h3>
+        <p>Price: <span class="price">€5</span> a month.</p>
+      </div>
+      <div class="card">
+        <h3>Pro plan</h3>
+        <p>Price: <span class="price">€12</span> a month.</p>
+      </div>
+      ```
+
+      Nothing looks different yet — `<div>` and `<span>` don't change the
+      look. They become useful with CSS (next course!).
+
+      ## Block and inline
+
+      Every element is displayed as either **block** or **inline** by default:
+
+      | Block (new line, full width) | Inline (flows inside text) |
+      |---|---|
+      | `<div>`, `<p>`, `<h1>`–`<h6>`, `<ul>`, `<ol>`, `<li>`, `<blockquote>`, `<pre>`, `<figure>`, `<table>`, `<form>` | `<span>`, `<a>`, `<strong>`, `<em>`, `<code>`, `<img>`, `<abbr>`, `<br>` |
+
+      A rule of thumb: don't put a block element inside an inline one (a
+      `<p>` inside a `<span>`, say).
+
+      ## class and id
+
+      Both are **attributes you can put on any element**:
+
+      - `class` — a label for a **kind** of thing. Many elements can share a class, and one element can have several, separated by spaces: `class="card featured"`.
+      - `id` — the **unique** name of one element (you used it for `#links`).
+
+      ```html static
+      <div id="main-menu" class="menu dark">…</div>
+      <p class="note">One note.</p>
+      <p class="note warning">Another, with two classes.</p>
+      ```
+
+      Class names describe *what* something is, not how it looks:
+      `class="error"` rather than `class="red-text"` — because next year the
+      errors might be orange.
+
+      {{check block}}
+
+      {{check class}}
+
+      {{task cards}}
+    checks:
+      - id: block
+        type: mcq
+        prompt: Which of these is an **inline** element?
+        options:
+          - "`<p>`"
+          - "`<div>`"
+          - "`<span>`"
+          - "`<h2>`"
+        answer: 2
+        why: "`<span>` flows inside a line of text; the others are blocks."
+      - id: class
+        type: tf
+        prompt: Several elements on a page may have the same `class`.
+        answer: true
+        why: "Classes are for kinds of things; only `id` must be unique."
+    tasks:
+      - id: cards
+        title: Price cards
+        prompt: |
+          Make two product cards. Each card is a `<div>` with the class `card`
+          containing an `<h3>` (the name) and a `<p>` in which the price is a
+          `<span>` with the class `price`.
+
+          - `Notebook` — `€3`
+          - `Pen` — `€1`
+
+          Give the **second** card the extra class `sale`.
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <div class="card">
+              <h3>Notebook</h3>
+              <p>Only <span class="price">€3</span></p>
+            </div>
+            <div class="card sale">
+              <h3>Pen</h3>
+              <p>Only <span class="price">€1</span></p>
+            </div>
+        harness: |
+          check(count('div.card'), 2);
+          check($$('div.card > h3').map((h) => h.textContent.trim()), ['Notebook', 'Pen']);
+          check($$('div.card span.price').map((s) => s.textContent.trim()), ['€3', '€1']);
+          check($$('div.card')[1].classList.contains('sale'), true);
+          check($$('div.card')[0].classList.contains('sale'), false);
+        hints:
+          - "`<div class=\"card\">` … `</div>`; for two classes write `class=\"card sale\"`."
+    cards:
+      - front: "`<div>` vs `<span>`?"
+        back: "`<div>` is a generic block container; `<span>` is a generic inline container. Neither has meaning or looks on its own."
+      - front: "`class` vs `id`?"
+        back: A class labels a kind of thing and can be shared (and an element can have several); an id names one unique element.
+      - front: What's the difference between block and inline elements?
+        back: Blocks start on a new line and take the full width; inline elements flow inside a line of text.
+
+  - type: lesson
+    id: html4-semantic
+    title: Semantic page layout
+    minutes: 25
+    objectives:
+      - Lay out a page with `<header>`, `<nav>`, `<main>`, `<aside>` and `<footer>`
+      - Use `<article>` and `<section>` correctly
+      - Explain why semantic elements beat a page made only of divs
+    body: |
+      Most web pages share the same parts: a header with a logo, navigation,
+      the main content, maybe a sidebar, and a footer. HTML has an element
+      for each, so their **meaning** is part of the page:
+
+      ```html
+      <header>
+        <p><strong>The Daily Bread</strong> — a baking blog</p>
+        <nav>
+          <a href="#">Home</a> · <a href="#">Recipes</a> · <a href="#">About</a>
+        </nav>
+      </header>
+      <main>
+        <article>
+          <h1>Sourdough for beginners</h1>
+          <p>Posted on 3 May 2026</p>
+          <section>
+            <h2>What you need</h2>
+            <p>Flour, water, salt — and patience.</p>
+          </section>
+          <section>
+            <h2>Method</h2>
+            <p>Mix, wait, fold, wait, bake.</p>
+          </section>
+        </article>
+        <aside>
+          <h2>Popular posts</h2>
+          <p>Focaccia in 30 minutes</p>
+        </aside>
+      </main>
+      <footer>
+        <p>&copy; 2026 The Daily Bread</p>
+      </footer>
+      ```
+
+      | Element | What it is |
+      |---|---|
+      | `<header>` | Introductory content: logo, site name, often the navigation |
+      | `<nav>` | A block of **main** navigation links |
+      | `<main>` | The page's main content — **one per page** |
+      | `<article>` | A **self-contained** piece that would make sense on its own: a blog post, a news story, a product card, a comment |
+      | `<section>` | A thematic part of something, **usually with a heading** |
+      | `<aside>` | Content related to, but separate from, the main content: a sidebar, a pull quote |
+      | `<footer>` | Closing information: copyright, contact, related links |
+
+      ## Why bother?
+
+      A page made only of `<div>`s *looks* the same. But:
+
+      - **Screen readers** list these **landmarks** so users can jump straight to the navigation or the main content — imagine listening to the whole menu on every page otherwise.
+      - **Search engines** understand which part is the real content.
+      - **You and your team** read the code and understand it at a glance.
+
+      ## article, section or div?
+
+      1. Could it be taken out and published **on its own** (in a feed, on another site) and still make sense? → `<article>`
+      2. Is it a **themed part** of the page or of an article, with its own heading? → `<section>`
+      3. Is it only a wrapper for **styling**? → `<div>`
+
+      `<header>` and `<footer>` can also be used *inside* an article, for its
+      title/author and its tags/comments.
+
+      {{check pick}}
+
+      {{check main}}
+
+      {{task layout}}
+    checks:
+      - id: pick
+        type: mcq
+        prompt: A single customer review on a product page — which element fits best?
+        options:
+          - "`<section>`"
+          - "`<article>`"
+          - "`<aside>`"
+          - "`<nav>`"
+        answer: 1
+        why: "A review is self-contained: it would make sense on its own."
+      - id: main
+        type: tf
+        prompt: A page may have several `<main>` elements, one per section.
+        answer: false
+        why: "`<main>` is the page's main content — one per page."
+    tasks:
+      - id: layout
+        title: From div soup to meaning
+        prompt: |
+          This page is built from anonymous `<div>`s. Replace each `div` with
+          the right semantic element — `header`, `nav`, `main`, `article`,
+          `aside` and `footer` — keeping the content. (The comments say what
+          each part is.)
+        files:
+          index.html: |
+            <div> <!-- the site's header -->
+              <h1>Green Thumb</h1>
+              <div> <!-- the site's navigation -->
+                <a href="#">Home</a> <a href="#">Plants</a>
+              </div>
+            </div>
+            <div> <!-- the main content of the page -->
+              <div> <!-- a blog post that makes sense on its own -->
+                <h2>Watering in summer</h2>
+                <p>Water in the evening, never at noon.</p>
+              </div>
+              <div> <!-- a sidebar -->
+                <p>Tip of the day: talk to your plants.</p>
+              </div>
+            </div>
+            <div> <!-- the site's footer -->
+              <p>&copy; Green Thumb</p>
+            </div>
+        solution:
+          index.html: |
+            <header>
+              <h1>Green Thumb</h1>
+              <nav>
+                <a href="#">Home</a> <a href="#">Plants</a>
+              </nav>
+            </header>
+            <main>
+              <article>
+                <h2>Watering in summer</h2>
+                <p>Water in the evening, never at noon.</p>
+              </article>
+              <aside>
+                <p>Tip of the day: talk to your plants.</p>
+              </aside>
+            </main>
+            <footer>
+              <p>&copy; Green Thumb</p>
+            </footer>
+        harness: |
+          check(count('div'), 0);
+          check($$('body > *').filter((e) => e.tagName !== 'SCRIPT').map((e) => e.tagName.toLowerCase()), ['header', 'main', 'footer']);
+          check(exists('header > h1'), true);
+          check(count('header > nav a'), 2);
+          check($$('main > *').map((e) => e.tagName.toLowerCase()), ['article', 'aside']);
+          check(text('article h2'), 'Watering in summer');
+          check(text('footer p'), '© Green Thumb');
+        hints:
+          - "Change both the opening and the closing tag: `<div>` … `</div>` becomes `<header>` … `</header>`."
+          - "Five divs become header, nav, main, article, aside and footer — work from the comments."
+    cards:
+      - front: Which element holds a page's main content?
+        back: "`<main>` — exactly one per page."
+      - front: When is something an `<article>`?
+        back: When it's self-contained and would make sense on its own — a post, a story, a review, a product card.
+      - front: "`<section>` vs `<div>`?"
+        back: A section is a themed part of the page, usually with a heading; a div is a meaningless wrapper for styling.
+      - front: Why use semantic elements instead of divs?
+        back: Screen readers use them as landmarks, search engines understand the page, and the code is easier to read.
+
+  - type: quiz
+    id: html4-quiz1
+    title: "Quiz: containers and layout"
+    questions:
+      - type: mcq
+        prompt: The links to the main parts of a site belong in…
+        options:
+          - "`<aside>`"
+          - "`<nav>`"
+          - "`<footer>` only"
+          - "`<section>`"
+        answer: 1
+        why: "`<nav>` marks main navigation."
+      - type: mcq
+        prompt: "Which element suits a pull quote next to an article, related but separate?"
+        options:
+          - "`<aside>`"
+          - "`<main>`"
+          - "`<header>`"
+          - "`<span>`"
+        answer: 0
+        why: "`<aside>` holds content related to, but separate from, the main content."
+      - type: tf
+        prompt: "`<div class=\"header\">` means the same to a screen reader as `<header>`."
+        answer: false
+        why: "Class names are just labels. Only the semantic element creates a landmark."
+      - type: fill
+        prompt: Give one element two classes.
+        code: |
+          <p class="___">Your changes were saved.</p>
+        blanks:
+          - ["message success"]
+        why: "Several classes go in one `class` attribute, separated by spaces."
+      - type: spot
+        prompt: Which line breaks a rule?
+        code: |
+          <p>Welcome to <span>our <p>new</p> shop</span>!</p>
+          <p>Open every day.</p>
+          <div class="note">Closed on holidays.</div>
+        answer: 1
+        why: "A block (`<p>`) can't go inside an inline element (`<span>`) — nor inside another `<p>`."
+
+  - type: lesson
+    id: html4-accessibility
+    title: Accessibility from the start
+    minutes: 20
+    objectives:
+      - Explain who accessibility helps and why it's a basic requirement
+      - Apply a checklist of accessible HTML habits
+      - Know what ARIA is, and when not to use it
+    body: |
+      **Accessibility** (often written **a11y**) means everyone can use your
+      page — including people who are blind or have low vision, who can't use
+      a mouse, who are deaf, or who have cognitive differences. That's over
+      a billion people. It also helps everybody else: captions help in a
+      noisy café, a good structure helps anyone skimming.
+
+      The good news: **most accessibility comes free with good HTML.** You've
+      already learned most of it.
+
+      ## The checklist
+
+      1. **Set the language**: `<html lang="en">` — so screen readers pronounce the page correctly.
+      2. **Write a real `<title>`** for every page.
+      3. **Use headings as an outline** — one `<h1>`, no skipped levels. Screen-reader users jump by heading.
+      4. **Use landmarks**: `<header>`, `<nav>`, `<main>`, `<footer>`.
+      5. **Give every image an `alt`** — descriptive, or empty for decoration.
+      6. **Write link text that makes sense alone**.
+      7. **Use real buttons and links**: `<button>` for actions, `<a href>` for going somewhere — never a clickable `<div>`, which keyboards can't reach.
+      8. **Label every form field** (next chapters!).
+      9. **Don't rely on colour alone** to say something ("fields in red are required") — add text or an icon too.
+
+      ## Try it: use the keyboard
+
+      Put your mouse away and press **Tab** on any site: focus should move
+      through links, buttons and fields in a sensible order, and you should
+      always see where it is. Pages built with the right elements get this
+      for free.
+
+      ```html
+      <p>Press Tab to move between these:</p>
+      <p><a href="#">A link</a> <button>A button</button> <input placeholder="A text field"></p>
+      <p><span onclick="alert('clicked')">A span pretending to be a button</span> — Tab skips it.</p>
+      ```
+
+      ## ARIA — and the first rule of ARIA
+
+      **ARIA** attributes (`role`, `aria-label`, `aria-expanded`…) add
+      accessibility information that HTML can't express on its own, mostly
+      for complex custom widgets. The first rule of ARIA is: **don't use ARIA
+      if a native HTML element does the job.** A `<button>` is better than
+      `<div role="button">`, every time.
+
+      One ARIA attribute you'll use early is `aria-label`, which names an
+      element that has no visible text:
+
+      ```html static
+      <button aria-label="Close">✕</button>
+      <nav aria-label="Footer links">…</nav>
+      ```
+
+      {{check who}}
+
+      {{check aria}}
+    checks:
+      - id: who
+        type: mcq
+        prompt: Which of these makes a page **less** accessible?
+        options:
+          - "`<html lang=\"en\">`"
+          - "`<div onclick=\"…\">Buy</div>` instead of a button"
+          - "`alt=\"\"` on a decorative image"
+          - Using `<nav>` for the menu
+        answer: 1
+        why: "A clickable div can't be reached or activated with a keyboard, and screen readers don't know it's a button."
+      - id: aria
+        type: tf
+        prompt: The first rule of ARIA is to prefer native HTML elements when they exist.
+        answer: true
+        why: "Native elements come with keyboard support and meaning built in."
+    cards:
+      - front: What is accessibility (a11y)?
+        back: Making pages usable by everyone, including people with visual, motor, hearing or cognitive disabilities.
+      - front: Name five accessible-HTML habits.
+        back: lang attribute, real titles, headings as an outline, landmarks, alt text (also link text, real buttons, labelled fields, not colour alone).
+      - front: What is the first rule of ARIA?
+        back: Don't use ARIA if a native HTML element does the job.
+      - front: How can you quickly test keyboard accessibility?
+        back: Put the mouse away and use Tab — focus should move sensibly through everything interactive, and stay visible.
+
+  - type: quiz
+    id: html4-quiz2
+    title: "Quiz: accessibility"
+    questions:
+      - type: mcq
+        prompt: A form says "Required fields are shown in red". What's the problem?
+        options:
+          - Red is hard to print
+          - It relies on colour alone — some people can't see the difference
+          - Forms can't use colour
+          - Nothing
+        answer: 1
+        why: "Add a text marker too, like \"(required)\" or an asterisk explained in words."
+      - type: mcq
+        prompt: "An icon-only close button: `<button>✕</button>`. How do you give it an accessible name?"
+        options:
+          - "`<button title=\"x\">`"
+          - "`<button aria-label=\"Close\">✕</button>`"
+          - "`<button alt=\"Close\">`"
+          - It doesn't need one
+        answer: 1
+        why: "`aria-label` names an element with no visible text."
+      - type: tf
+        prompt: Good accessibility mostly comes from using the right HTML elements.
+        answer: true
+        why: "Headings, landmarks, alt, labels, buttons and links do most of the work."
+
+  - type: challenge
+    id: html4-ch-blog
+    title: A blog page with two posts
+    difficulty: 2
+    tags: [semantics, article, section]
+    prompt: |
+      Build a blog page:
+
+      - a `<header>` with an `<h1>` `Pixel Diaries` and a `<nav>` with two links
+      - a `<main>` with **two** `<article>`s. Each article has an `<h2>` title, a `<p>` and a `<footer>` containing `Posted by Sam`
+      - the first article also contains a `<section>` with an `<h3>` `Update` and a paragraph
+      - a page `<footer>` (outside `<main>`) with a copyright paragraph
+
+      Article titles: `My first game` and `Drawing sprites`.
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <header>
+          <h1>Pixel Diaries</h1>
+          <nav>
+            <a href="#">Home</a>
+            <a href="#">Archive</a>
+          </nav>
+        </header>
+        <main>
+          <article>
+            <h2>My first game</h2>
+            <p>It is a tiny platformer about a frog.</p>
+            <section>
+              <h3>Update</h3>
+              <p>The frog can jump now!</p>
+            </section>
+            <footer>Posted by Sam</footer>
+          </article>
+          <article>
+            <h2>Drawing sprites</h2>
+            <p>Sixteen by sixteen pixels is enough.</p>
+            <footer>Posted by Sam</footer>
+          </article>
+        </main>
+        <footer>
+          <p>&copy; 2026 Pixel Diaries</p>
+        </footer>
+    harness: |
+      check(text('header h1'), 'Pixel Diaries');
+      check(count('header nav a'), 2);
+      check(count('main > article'), 2);
+      check($$('main > article > h2').map((h) => h.textContent.trim()), ['My first game', 'Drawing sprites']);
+      check($$('article > footer').map((f) => f.textContent.trim()), ['Posted by Sam', 'Posted by Sam']);
+      check(text('main > article:first-of-type > section > h3'), 'Update');
+      check(count('main > article:last-of-type section'), 0);
+      check(exists('body > footer p'), true);
+      check(text('body > footer').includes('©'), true);
+    hints:
+      - "Each article: `<article><h2>…</h2><p>…</p><footer>Posted by Sam</footer></article>`."
+      - "The page footer is a direct child of `<body>`, after `</main>`."
+
+  - type: challenge
+    id: html4-ch-a11y
+    title: Accessibility fixes
+    difficulty: 3
+    tags: [accessibility]
+    prompt: |
+      This page has **six** accessibility problems. Fix them all:
+
+      - the page has no language → English
+      - a heading level is skipped → the `h4` should be an `h2`
+      - an image has no alt → `Map of the park entrances`
+      - a link says "here" → make the link text `the full timetable` (remove the word "here")
+      - a clickable `div` pretends to be a button → use a real `<button>` (keep its text `Book now`)
+      - an icon-only button has no name → give it `aria-label="Close"`
+    files:
+      index.html: |
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>City Park</title>
+          </head>
+          <body>
+            <h1>City Park</h1>
+            <h4>Getting here</h4>
+            <img src="map.png" width="300" height="200">
+            <p>See the full timetable <a href="times.html">here</a>.</p>
+            <div class="button" onclick="book()">Book now</div>
+            <button>✕</button>
+          </body>
+        </html>
+    solution:
+      index.html: |
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>City Park</title>
+          </head>
+          <body>
+            <h1>City Park</h1>
+            <h2>Getting here</h2>
+            <img src="map.png" alt="Map of the park entrances" width="300" height="200">
+            <p>See <a href="times.html">the full timetable</a>.</p>
+            <button class="button" onclick="book()">Book now</button>
+            <button aria-label="Close">✕</button>
+          </body>
+        </html>
+    harness: |
+      check(attr('html', 'lang'), 'en');
+      check(count('h4'), 0);
+      check(text('h2'), 'Getting here');
+      check(attr('img', 'alt'), 'Map of the park entrances');
+      check(text('a'), 'the full timetable');
+      check(text('p').includes('here'), false);
+      check(count('div.button, div[onclick]'), 0);
+      check($$('button').map((b) => b.textContent.trim()), ['Book now', '✕']);
+      check($$('button')[1].getAttribute('aria-label'), 'Close');
+    hints:
+      - "Language: `<html lang=\"en\">`. Heading: change both tags of the `h4`."
+      - "The sentence becomes `See <a href=\"times.html\">the full timetable</a>.`"
+      - "Turn `<div class=\"button\" onclick=\"book()\">Book now</div>` into a `<button>` with the same attributes."
+
+  - type: review
+    id: html4-review
+    title: "Chapter 4 review"
+    body: |
+      ## Cheat sheet
+
+      ```html static
+      <header>  <nav aria-label="Main">…</nav>  </header>
+      <main>
+        <article>
+          <h1>Title</h1>
+          <section><h2>Part</h2>…</section>
+          <footer>Author, tags</footer>
+        </article>
+        <aside>Related</aside>
+      </main>
+      <footer>© …</footer>
+
+      <div class="card featured" id="plan-pro">…</div>   <span class="price">€5</span>
+      <button aria-label="Close">✕</button>
+      ```
+
+      ## Key ideas
+
+      - `<div>` (block) and `<span>` (inline) group things with no meaning.
+      - `class` is a shareable label (several per element); `id` is unique.
+      - Semantic elements are landmarks: one `<main>`; `<article>` = self-contained; `<section>` = themed part with a heading.
+      - Accessibility mostly comes from correct HTML: lang, title, heading outline, landmarks, alt, link text, real buttons, labels, not colour alone.
+      - Native elements before ARIA.
+    questions:
+      - type: order
+        prompt: Put a standard page layout in order.
+        lines:
+          - "<header>"
+          - "<nav>…</nav>"
+          - "</header>"
+          - "<main>…</main>"
+          - "<footer>…</footer>"
+        why: "Header (with nav), then main, then footer."
+      - type: mcq
+        prompt: A "Share" widget next to a news story, not part of the story itself?
+        options:
+          - "`<article>`"
+          - "`<aside>`"
+          - "`<main>`"
+          - "`<section>`"
+        answer: 1
+        why: "Related but separate: `<aside>`."
+      - type: tf
+        prompt: "`<span>` elements start on a new line."
+        answer: false
+        why: "They're inline."
+
+  - type: exam
+    id: html4-exam
+    title: "Chapter 4 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: Which is a block element?
+        options:
+          - "`<em>`"
+          - "`<a>`"
+          - "`<section>`"
+          - "`<code>`"
+        answer: 2
+        why: "Sectioning elements are blocks."
+      - type: mcq
+        prompt: Which should appear only once per page?
+        options:
+          - "`<section>`"
+          - "`<main>`"
+          - "`<article>`"
+          - "`<footer>`"
+        answer: 1
+        why: "One main content area."
+      - type: tf
+        prompt: An element can have several classes.
+        answer: true
+        why: "`class=\"a b c\"`."
+      - type: mcq
+        prompt: A list of blog posts on a home page — each post preview should be…
+        options:
+          - "`<div>`"
+          - "`<article>`"
+          - "`<nav>`"
+          - "`<aside>`"
+        answer: 1
+        why: "Each preview is self-contained."
+      - type: spot
+        prompt: Which line is an accessibility problem?
+        code: |
+          <nav aria-label="Main">
+            <a href="index.html">Home</a>
+            <div onclick="openMenu()">Menu</div>
+            <a href="shop.html">Shop</a>
+          </nav>
+        answer: 3
+        why: "A clickable div isn't keyboard-accessible; use a `<button>`."
+      - type: mcq
+        prompt: Why prefer `class="error"` over `class="red-text"`?
+        options:
+          - It's shorter
+          - It describes what the thing is, so it stays true if the design changes
+          - Browsers colour `.error` red automatically
+          - Red isn't allowed in class names
+        answer: 1
+        why: "Name classes by meaning, not appearance."
+      - type: fill
+        prompt: Mark up a site's main navigation.
+        code: |
+          <___>
+            <a href="/">Home</a>
+            <a href="/blog">Blog</a>
+          </___>
+        blanks:
+          - [nav]
+          - [/nav]
+        why: "`<nav>` for main navigation."
+      - type: tf
+        prompt: Screen-reader users can jump directly to landmarks like `<main>` and `<nav>`.
+        answer: true
+        why: "That's the big benefit of semantic layout."
+      - type: mcq
+        prompt: What does `aria-label` do?
+        options:
+          - Styles an element
+          - Gives an accessible name to an element without visible text
+          - Makes an element clickable
+          - Translates the page
+        answer: 1
+        why: "E.g. `<button aria-label=\"Close\">✕</button>`."
+      - type: mcq
+        prompt: "`<section>` usually has…"
+        options:
+          - An image
+          - A heading
+          - A form
+          - An id
+        answer: 1
+        why: "A section is a themed part with its own heading."
+      - type: code
+        prompt: |
+          Build a page skeleton (a fragment is fine) with a `<header>`
+          containing an `<h1>` `Café Luna`, a `<main>` with one `<article>`
+          that has an `<h2>` `Our menu` and a paragraph, and a `<footer>` with
+          the paragraph `Open daily 8–18`.
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <header>
+              <h1>Café Luna</h1>
+            </header>
+            <main>
+              <article>
+                <h2>Our menu</h2>
+                <p>Coffee, cakes and sandwiches.</p>
+              </article>
+            </main>
+            <footer>
+              <p>Open daily 8–18</p>
+            </footer>
+        harness: |
+          check(text('header h1'), 'Café Luna');
+          check(text('main > article > h2'), 'Our menu');
+          check(exists('main > article p'), true);
+          check(text('footer p'), 'Open daily 8–18');
+          check($$('body > *').filter((e) => e.tagName !== 'SCRIPT').map((e) => e.tagName.toLowerCase()), ['header', 'main', 'footer']);
+      - type: mcq
+        prompt: What should you do before adding a `role` attribute?
+        options:
+          - Check whether a native HTML element already does the job
+          - Add a class too
+          - Nothing, always add roles
+          - Remove all headings
+        answer: 0
+        why: "The first rule of ARIA."

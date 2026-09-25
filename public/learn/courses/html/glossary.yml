@@ -1,0 +1,274 @@
+terms:
+  - term: Absolute URL
+    def: A full address including the scheme and site, like `https://example.com/about.html`. It works from any page.
+    chapter: html03
+  - term: Accessibility
+    def: Making pages usable by everyone, including people using screen readers, keyboards only, or zoom. Mostly achieved by using the right elements.
+    chapter: html07
+  - term: action
+    def: The form attribute giving the URL the data is sent to. Without it, the form sends to the current page.
+    chapter: html06
+  - term: alt
+    def: The image attribute describing the image in words for screen readers, search engines and broken images. Empty (`alt=""`) for decorative images.
+    chapter: html03
+  - term: Anchor
+    def: The `<a>` element — a link. Its `href` says where it goes.
+    chapter: html03
+  - term: ARIA
+    def: Attributes such as `aria-label` and `role` that add accessibility information. First rule — prefer a native HTML element when one exists.
+    chapter: html07
+  - term: article
+    def: "`<article>` — self-contained content that makes sense on its own: a blog post, a news story, a product card."
+    chapter: html04
+  - term: aside
+    def: "`<aside>` — content related to the page but not part of the main flow, like a sidebar or a note."
+    chapter: html04
+  - term: Attribute
+    def: Extra information inside an opening tag, written `name="value"` — for example `href`, `src`, `alt`, `lang`.
+    chapter: html01
+  - term: audio
+    def: "`<audio src=\"…\" controls>` — plays a sound file with the browser's player."
+    chapter: html07
+  - term: Block element
+    def: An element that starts on a new line and takes the full width by default, like `<p>`, `<h1>`, `<ul>`, `<div>`.
+    chapter: html02
+  - term: blockquote
+    def: "`<blockquote>` — a longer quotation from another source, shown as its own block."
+    chapter: html02
+  - term: body
+    def: "`<body>` — contains everything shown on the page."
+    chapter: html01
+  - term: Boolean attribute
+    def: An attribute that is on just by being present, with no value — `required`, `checked`, `disabled`, `controls`.
+    chapter: html06
+  - term: br
+    def: "`<br>` — a line break that belongs to the content, like in a poem or an address. Void element."
+    chapter: html02
+  - term: button
+    def: "`<button>` — a clickable button. Inside a form its default type is `submit`; use `type=\"button\"` for other actions."
+    chapter: html06
+  - term: caption
+    def: "`<caption>` — the title of a table, written right after `<table>`."
+    chapter: html05
+  - term: Character entity
+    def: A code that writes a special character, like `&lt;` for `<`, `&gt;` for `>`, `&amp;` for `&`, `&copy;` for ©.
+    chapter: html02
+  - term: charset
+    def: "`<meta charset=\"utf-8\">` — tells the browser the text encoding so every character displays correctly. First thing in the head."
+    chapter: html01
+  - term: checkbox
+    def: "`<input type=\"checkbox\">` — an on/off choice. Several can be ticked at once."
+    chapter: html06
+  - term: class
+    def: An attribute giving an element one or more reusable labels, used by CSS and JavaScript. Many elements can share a class.
+    chapter: html04
+  - term: code
+    def: "`<code>` — a fragment of computer code within text."
+    chapter: html02
+  - term: colspan
+    def: The table cell attribute that makes a cell span several columns. `rowspan` spans rows.
+    chapter: html05
+  - term: Comment
+    def: "`<!-- … -->` — a note in the code that the browser doesn't show."
+    chapter: html01
+  - term: controls
+    def: The boolean attribute that shows play/pause buttons on `<video>` and `<audio>`.
+    chapter: html07
+  - term: datalist
+    def: "`<datalist>` — a list of suggestions for an `<input>`, connected with the input's `list` attribute."
+    chapter: html06
+  - term: details
+    def: "`<details>` with a `<summary>` — a box that opens and closes without any JavaScript."
+    chapter: html07
+  - term: div
+    def: "`<div>` — a generic block container with no meaning. Use it only when no semantic element fits, usually for styling."
+    chapter: html04
+  - term: DOCTYPE
+    def: "`<!DOCTYPE html>` — the first line of every page, telling the browser to use modern standards mode."
+    chapter: html01
+  - term: DOM
+    def: The Document Object Model — the tree of elements the browser builds from your HTML, which CSS styles and JavaScript changes.
+    chapter: html04
+  - term: Element
+    def: A piece of a page made of an opening tag, content and a closing tag, like `<p>Hello</p>`.
+    chapter: html01
+  - term: em
+    def: "`<em>` — stress emphasis, usually shown in italics. Changes the meaning of a sentence."
+    chapter: html02
+  - term: fieldset
+    def: "`<fieldset>` with a `<legend>` — groups related form fields under a caption, like a set of radio buttons."
+    chapter: html06
+  - term: figure
+    def: "`<figure>` with `<figcaption>` — an image, diagram or code listing with its caption."
+    chapter: html03
+  - term: footer
+    def: "`<footer>` — the closing part of a page or section: copyright, contact, related links."
+    chapter: html04
+  - term: form
+    def: "`<form>` — a group of fields whose data is sent together when submitted."
+    chapter: html06
+  - term: Fragment
+    def: The `#id` part of a link that jumps to the element with that id on a page.
+    chapter: html03
+  - term: head
+    def: "`<head>` — information about the page that isn't shown on it: title, charset, description, stylesheets, scripts."
+    chapter: html01
+  - term: header
+    def: "`<header>` — the introductory part of a page or section, usually with the title and navigation."
+    chapter: html04
+  - term: Heading
+    def: "`<h1>` to `<h6>` — section titles that form the page's outline. One `<h1>` per page; never skip levels."
+    chapter: html02
+  - term: hr
+    def: "`<hr>` — a thematic break between sections of content. Void element."
+    chapter: html02
+  - term: href
+    def: The link attribute that says where an `<a>` goes.
+    chapter: html03
+  - term: HTML
+    def: HyperText Markup Language — describes the content and structure of web pages.
+    chapter: html01
+  - term: id
+    def: A unique name for one element on the page, used for links (`#id`), labels, CSS and JavaScript.
+    chapter: html03
+  - term: iframe
+    def: "`<iframe>` — embeds another web page, like a map or a video. Always give it a `title`."
+    chapter: html07
+  - term: img
+    def: "`<img src=\"…\" alt=\"…\">` — shows an image. Void element; always needs `alt`."
+    chapter: html03
+  - term: Inline element
+    def: An element that flows within a line of text, like `<a>`, `<strong>`, `<em>`, `<span>`.
+    chapter: html02
+  - term: input
+    def: "`<input>` — a form field. Its `type` decides what kind: `text`, `email`, `number`, `date`, `checkbox`, `radio`…"
+    chapter: html06
+  - term: label
+    def: "`<label>` — the visible name of a form field, connected with `for`/`id` or by wrapping the field."
+    chapter: html06
+  - term: lang
+    def: The `<html>` attribute giving the page's language, like `lang="en"`. Helps screen readers and translation.
+    chapter: html01
+  - term: Landmark
+    def: A structural element — `header`, `nav`, `main`, `aside`, `footer` — that screen reader users can jump between.
+    chapter: html04
+  - term: li
+    def: "`<li>` — one item in a `<ul>` or `<ol>` list."
+    chapter: html02
+  - term: link
+    def: "`<link rel=\"stylesheet\" href=\"style.css\">` — connects a stylesheet (or icon) to the page, in the head."
+    chapter: html07
+  - term: main
+    def: "`<main>` — the page's main content. Only one per page."
+    chapter: html04
+  - term: mailto
+    def: "A link scheme that opens an email to an address: `<a href=\"mailto:me@example.com\">`."
+    chapter: html03
+  - term: mark
+    def: "`<mark>` — highlighted text, like a search match."
+    chapter: html02
+  - term: meta description
+    def: "`<meta name=\"description\" content=\"…\">` — a short summary of the page shown in search results."
+    chapter: html07
+  - term: method
+    def: "The form attribute saying how data is sent: `get` (in the URL, for searches) or `post` (in the request body, for changes)."
+    chapter: html06
+  - term: name
+    def: The form field attribute that labels its data when sent. A field with no name isn't sent.
+    chapter: html06
+  - term: nav
+    def: "`<nav>` — a block of major navigation links."
+    chapter: html04
+  - term: Nesting
+    def: Putting elements inside others. Elements must close in the reverse order they opened.
+    chapter: html01
+  - term: ol
+    def: "`<ol>` — an ordered (numbered) list, for when order matters."
+    chapter: html02
+  - term: option
+    def: "`<option>` — one choice in a `<select>` or `<datalist>`."
+    chapter: html06
+  - term: p
+    def: "`<p>` — a paragraph of text."
+    chapter: html01
+  - term: pattern
+    def: The input attribute giving a regular expression the value must match.
+    chapter: html06
+  - term: placeholder
+    def: Grey example text inside an empty field. Not a replacement for a label.
+    chapter: html06
+  - term: pre
+    def: "`<pre>` — preformatted text that keeps its spaces and line breaks, often with `<code>` inside."
+    chapter: html02
+  - term: radio
+    def: "`<input type=\"radio\">` — one choice from a group. Radios with the same `name` form a group."
+    chapter: html06
+  - term: Relative URL
+    def: An address relative to the current page, like `about.html`, `img/cat.jpg` or `../index.html`.
+    chapter: html03
+  - term: required
+    def: The boolean attribute that stops a form being submitted while the field is empty.
+    chapter: html06
+  - term: scope
+    def: "The `<th>` attribute saying whether it heads a column (`col`) or a row (`row`)."
+    chapter: html05
+  - term: script
+    def: "`<script src=\"…\" defer>` — loads JavaScript. `defer` runs it after the page is parsed."
+    chapter: html07
+  - term: section
+    def: "`<section>` — a thematic group of content, usually with its own heading."
+    chapter: html04
+  - term: select
+    def: "`<select>` — a drop-down list of `<option>`s."
+    chapter: html06
+  - term: Semantic HTML
+    def: Choosing elements for their meaning (`<nav>`, `<article>`, `<button>`) rather than their look. Better for accessibility, search engines and maintenance.
+    chapter: html04
+  - term: span
+    def: "`<span>` — a generic inline container with no meaning, usually for styling a piece of text."
+    chapter: html04
+  - term: src
+    def: The attribute giving the file to load for `<img>`, `<script>`, `<video>`, `<audio>`, `<iframe>`.
+    chapter: html03
+  - term: strong
+    def: "`<strong>` — strong importance, usually shown in bold."
+    chapter: html02
+  - term: table
+    def: "`<table>` — tabular data in rows (`<tr>`) of cells (`<td>` data, `<th>` headers). Not for layout."
+    chapter: html05
+  - term: Tag
+    def: The markers around content — `<p>` opens an element and `</p>` closes it.
+    chapter: html01
+  - term: target
+    def: "The link attribute that opens it elsewhere — `target=\"_blank\"` opens a new tab."
+    chapter: html03
+  - term: tbody
+    def: "`<tbody>` — the body rows of a table. `<thead>` holds the header rows and `<tfoot>` the footer rows."
+    chapter: html05
+  - term: textarea
+    def: "`<textarea>` — a multi-line text field."
+    chapter: html06
+  - term: time
+    def: "`<time datetime=\"2026-06-14\">` — a date or time in a machine-readable form."
+    chapter: html07
+  - term: title
+    def: "`<title>` — the page's name, shown in the browser tab and search results. Also an attribute giving extra advisory text."
+    chapter: html01
+  - term: ul
+    def: "`<ul>` — an unordered (bulleted) list, for when order doesn't matter."
+    chapter: html02
+  - term: Validation
+    def: Checking something is correct — the browser validates form fields, and the W3C validator checks your HTML. Servers must always validate data too.
+    chapter: html06
+  - term: video
+    def: "`<video src=\"…\" controls>` — plays a video. Add `<track>` for captions."
+    chapter: html07
+  - term: viewport meta
+    def: "`<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">` — makes the page use the phone's real width."
+    chapter: html07
+  - term: Void element
+    def: An element with no content and no closing tag, like `<img>`, `<br>`, `<hr>`, `<input>`, `<meta>`.
+    chapter: html01
+  - term: Whitespace collapsing
+    def: Browsers turn any run of spaces, tabs and new lines into a single space.
+    chapter: html02

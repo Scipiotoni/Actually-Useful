@@ -390,6 +390,33 @@
         },
         html: function () { return doc.documentElement.outerHTML; }
       };
+      // Links and forms in a preview: only this page exists here, so say
+      // where a link or form would have gone instead of leaving a blank frame.
+      doc.addEventListener('click', function (e) {
+        var link = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!link || e.defaultPrevented) return;
+        var href = link.getAttribute('href') || '';
+        if (href.charAt(0) === '#') return;
+        e.preventDefault();
+        if (/^https?:/i.test(href) && !opts.grading) {
+          try { scope.open(href, '_blank', 'noopener'); } catch (err) { /* popups blocked */ }
+          emit('log', '[link] opened ' + href + ' in a new tab');
+        } else {
+          emit('log', '[link] would go to ' + href + (/^(mailto|tel):/i.test(href) ? '' : ' — in this preview only this page exists'));
+        }
+      });
+      scope.addEventListener('submit', function (e) {
+        if (e.defaultPrevented) return;
+        e.preventDefault();
+        var form = e.target;
+        var pairs = [];
+        try {
+          new scope.FormData(form).forEach(function (value, key) { pairs.push(key + '=' + (typeof value === 'string' ? value : '[file]')); });
+        } catch (err) { /* no FormData */ }
+        emit('log', '[form] would send ' + (pairs.length ? pairs.join('&') : 'nothing (no named fields)') +
+          ' to ' + (form.getAttribute('action') || 'this page') + ' (' + (form.getAttribute('method') || 'get').toUpperCase() + ')');
+      });
+
       // Reports the page's height so a preview can fit its content.
       var reportSize = function () {
         try {
@@ -740,7 +767,7 @@
       loopMs: 1500,
       maxLines: 500
     }) + '<\/script>';
-    var doc = Compose.composeFile(files, entry, { head: '<base target="_blank">', title: 'Preview' });
+    var doc = Compose.composeFile(files, entry, { title: 'Preview' });
 
     // The bridge goes first, so it sees every console.log the page makes.
     if (/<head\b[^>]*>/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, function (m) { return m + '\n' + bridge; });

@@ -1,0 +1,814 @@
+id: html02
+number: 2
+part: html-p1
+title: Text and Meaning
+blurb: Mark up text so it means something — emphasis, lists, quotations, code and special characters.
+hours: 2.5
+goals:
+  - Choose between elements that look alike but mean different things, like `<strong>` and `<b>`
+  - Build bulleted, numbered, nested and description lists
+  - Mark up quotations, code and pre-formatted text
+  - Write characters that HTML treats as special, like `<` and `&`
+
+items:
+  - type: lesson
+    id: html2-emphasis
+    title: Meaning, not looks
+    minutes: 18
+    objectives:
+      - Use `<strong>`, `<em>`, `<mark>` and friends for their meaning
+      - Explain why `<strong>` is better than `<b>` for important text
+      - Mark up abbreviations, small print, and subscripts/superscripts
+    body: |
+      HTML describes what text **means**. How it **looks** comes from the
+      browser's default styles — and later, from your CSS. This matters
+      because not everyone *sees* your page: screen readers read it aloud to
+      blind users, search engines read it to index it, and CSS can restyle
+      anything.
+
+      ```html
+      <p><strong>Warning:</strong> the oven is <em>very</em> hot.</p>
+      <p>Remember: <mark>the exam is on Friday</mark>.</p>
+      <p><small>Prices include tax.</small></p>
+      <p>Water is H<sub>2</sub>O and E = mc<sup>2</sup>.</p>
+      <p>The <abbr title="World Wide Web">WWW</abbr> started in 1991.</p>
+      ```
+
+      | Element | Means | Looks like (by default) |
+      |---|---|---|
+      | `<strong>` | Important, serious, urgent | **bold** |
+      | `<em>` | Stressed — changes how the sentence is said | *italic* |
+      | `<mark>` | Highlighted, relevant right now | yellow background |
+      | `<small>` | Side comments, small print | smaller |
+      | `<sub>`, `<sup>` | Subscript, superscript | lower, higher |
+      | `<abbr title="…">` | An abbreviation; `title` is its full form | dotted underline, tooltip |
+
+      ## Looks the same, means something else
+
+      `<b>` and `<i>` also make text bold and italic — but they carry **no
+      importance**. Use `<b>` for things traditionally bold without being
+      important (a product name in a review), and `<i>` for things
+      traditionally italic (a foreign word, a ship's name, a thought).
+
+      ```html
+      <p>I tried the <b>SuperBlend 3000</b> — it's <em>really</em> loud.</p>
+      <p>The ship was called <i>Endeavour</i>. <i lang="fr">Bon voyage!</i></p>
+      ```
+
+      > [!why]
+      > A screen reader may change its voice for `<em>`, and search engines
+      > give `<strong>` text a little more weight. `<b>` and `<i>` are only
+      > about appearance. When in doubt: `<strong>` and `<em>`.
+
+      {{check strong}}
+
+      {{task science}}
+    checks:
+      - id: strong
+        type: mcq
+        prompt: "The sentence is: \"Do **not** touch the red button.\" Which element should wrap *not*?"
+        options:
+          - "`<b>`"
+          - "`<strong>`"
+          - "`<mark>`"
+          - "`<small>`"
+        answer: 1
+        why: "It is important, not just bold — that's `<strong>`."
+      - id: em
+        type: tf
+        prompt: "`<em>` and `<i>` mean exactly the same thing."
+        answer: false
+        why: "`<em>` is stress emphasis that changes the meaning of a sentence; `<i>` is for text that is traditionally italic, with no extra emphasis."
+    tasks:
+      - id: science
+        title: Science notes
+        prompt: |
+          Mark up these notes (one paragraph each):
+
+          1. `Water` is written `H2O` — the 2 as a **subscript**.
+          2. `Einstein: E = mc2` — the 2 as a **superscript**.
+          3. `NASA was founded in 1958` — `NASA` as an **abbreviation** whose title is `National Aeronautics and Space Administration`.
+          4. `Never look directly at the sun` — `Never` as **important** text.
+        files:
+          index.html: |
+            <p>Water is H2O.</p>
+            <p>Einstein: E = mc2</p>
+            <p>NASA was founded in 1958.</p>
+            <p>Never look directly at the sun.</p>
+        solution:
+          index.html: |
+            <p>Water is H<sub>2</sub>O.</p>
+            <p>Einstein: E = mc<sup>2</sup></p>
+            <p><abbr title="National Aeronautics and Space Administration">NASA</abbr> was founded in 1958.</p>
+            <p><strong>Never</strong> look directly at the sun.</p>
+        harness: |
+          check(text('sub'), '2');
+          check(text('sup'), '2');
+          check(text('abbr'), 'NASA');
+          check(attr('abbr', 'title'), 'National Aeronautics and Space Administration');
+          check(text('strong'), 'Never');
+          check(count('p'), 4);
+        hints:
+          - "`H<sub>2</sub>O`, `mc<sup>2</sup>`."
+          - "`<abbr title=\"National Aeronautics and Space Administration\">NASA</abbr>` and `<strong>Never</strong>`."
+    cards:
+      - front: "`<strong>` vs `<b>`?"
+        back: "`<strong>` means important (shown bold); `<b>` is bold with no extra importance."
+      - front: "`<em>` vs `<i>`?"
+        back: "`<em>` is stressed emphasis that changes the meaning; `<i>` is for text traditionally in italics (foreign words, names of ships…)."
+      - front: How do you write an abbreviation with its full form?
+        back: "`<abbr title=\"World Wide Web\">WWW</abbr>`"
+      - front: Why does meaning matter more than looks in HTML?
+        back: Screen readers and search engines use the meaning, and CSS can change the looks of anything.
+
+  - type: lesson
+    id: html2-lists
+    title: Lists
+    minutes: 22
+    objectives:
+      - Build bulleted lists with `<ul>` and numbered lists with `<ol>`
+      - Nest lists inside list items
+      - Write description lists with `<dl>`, `<dt>` and `<dd>`
+    body: |
+      Lists are everywhere on the web — menus, steps, features, results.
+      HTML has three kinds.
+
+      ## Unordered lists: when order doesn't matter
+
+      ```html
+      <h3>Shopping</h3>
+      <ul>
+        <li>Bread</li>
+        <li>Cheese</li>
+        <li>Apples</li>
+      </ul>
+      ```
+
+      `<ul>` (unordered list) holds `<li>` (list item) elements, shown with
+      bullets. **Only `<li>` elements may be direct children of `<ul>` or
+      `<ol>`.**
+
+      ## Ordered lists: when order matters
+
+      ```html
+      <h3>Making tea</h3>
+      <ol>
+        <li>Boil the water</li>
+        <li>Add the tea bag</li>
+        <li>Wait three minutes</li>
+      </ol>
+      <h3>Top three (counting down)</h3>
+      <ol reversed>
+        <li>Bronze</li>
+        <li>Silver</li>
+        <li>Gold</li>
+      </ol>
+      ```
+
+      The browser numbers the items for you. Attributes change the counting:
+      `start="5"` begins at 5, `reversed` counts down, and `type="a"`, `"A"`,
+      `"i"` or `"I"` uses letters or Roman numerals.
+
+      ## Lists inside lists
+
+      A nested list goes **inside an `<li>`**, not directly inside the outer
+      list:
+
+      ```html
+      <ul>
+        <li>Fruit
+          <ul>
+            <li>Apples</li>
+            <li>Pears</li>
+          </ul>
+        </li>
+        <li>Vegetables</li>
+      </ul>
+      ```
+
+      ## Description lists: terms and their descriptions
+
+      For glossaries, FAQs, or "label: value" pairs:
+
+      ```html
+      <dl>
+        <dt>HTML</dt>
+        <dd>The structure of a web page.</dd>
+        <dt>CSS</dt>
+        <dd>The look of a web page.</dd>
+      </dl>
+      ```
+
+      `<dt>` is the term, `<dd>` its description.
+
+      > [!mistake]
+      > Putting the nested list *after* `</li>`, or text directly inside
+      > `<ul>`. Browsers display it anyway, but the structure is invalid and
+      > screen readers announce the wrong number of items.
+
+      {{check which-list}}
+
+      {{check nested}}
+
+      {{task steps}}
+
+      {{task nested-menu}}
+    checks:
+      - id: which-list
+        type: mcq
+        prompt: Which list fits the steps to assemble a bookshelf?
+        options:
+          - "`<ul>`"
+          - "`<ol>`"
+          - "`<dl>`"
+          - No list — use `<br>`
+        answer: 1
+        why: "The order of the steps matters, so it's an ordered list."
+      - id: nested
+        type: spot
+        prompt: Which line puts the nested list in the wrong place?
+        code: |
+          <ul>
+            <li>Drinks</li>
+            <ul>
+              <li>Tea</li>
+              <li>Coffee</li>
+            </ul>
+            <li>Snacks</li>
+          </ul>
+        answer: 3
+        why: "A nested `<ul>` must go inside an `<li>` — here, inside the Drinks item, before its `</li>`."
+    tasks:
+      - id: steps
+        title: Numbered steps
+        prompt: |
+          Turn these instructions into an **ordered list** under the heading.
+          Then add a second list — an **unordered** one — under a heading
+          `You will need` with the items `A mug` and `A tea bag`.
+        files:
+          index.html: |
+            <h2>Making tea</h2>
+            Boil the water.
+            Put the tea bag in the mug.
+            Pour the water and wait.
+        solution:
+          index.html: |
+            <h2>Making tea</h2>
+            <ol>
+              <li>Boil the water.</li>
+              <li>Put the tea bag in the mug.</li>
+              <li>Pour the water and wait.</li>
+            </ol>
+            <h2>You will need</h2>
+            <ul>
+              <li>A mug</li>
+              <li>A tea bag</li>
+            </ul>
+        harness: |
+          check(count('ol > li'), 3);
+          check($$('ol > li').map((li) => li.textContent.trim()), ['Boil the water.', 'Put the tea bag in the mug.', 'Pour the water and wait.']);
+          check($$('h2').map((h) => h.textContent.trim()), ['Making tea', 'You will need']);
+          check($$('ul > li').map((li) => li.textContent.trim()), ['A mug', 'A tea bag']);
+          check($('h2:nth-of-type(2)').nextElementSibling.tagName, 'UL');
+        hints:
+          - "Wrap the three lines in `<ol>…</ol>` and each line in `<li>…</li>`."
+      - id: nested-menu
+        title: A nested menu
+        prompt: |
+          Build this menu as an unordered list with a nested list inside
+          `Drinks`:
+
+          - Food
+          - Drinks
+            - Tea
+            - Coffee
+            - Juice
+          - Desserts
+        files:
+          index.html: |
+            <ul>
+
+            </ul>
+        solution:
+          index.html: |
+            <ul>
+              <li>Food</li>
+              <li>Drinks
+                <ul>
+                  <li>Tea</li>
+                  <li>Coffee</li>
+                  <li>Juice</li>
+                </ul>
+              </li>
+              <li>Desserts</li>
+            </ul>
+        harness: |
+          check(count('body > ul > li'), 3);
+          check(count('body > ul > li > ul > li'), 3);
+          check($$('body > ul > li > ul > li').map((li) => li.textContent.trim()), ['Tea', 'Coffee', 'Juice']);
+          check($('body > ul > li:nth-child(2)').firstChild.textContent.trim(), 'Drinks');
+          check(text('body > ul > li:last-child'), 'Desserts');
+        hints:
+          - "The inner `<ul>` goes inside `<li>Drinks … </li>`, before its closing tag."
+    cards:
+      - front: "`<ul>` vs `<ol>`?"
+        back: Unordered (bullets — order doesn't matter) vs ordered (numbers — order matters). Both contain `<li>` items.
+      - front: Where does a nested list go?
+        back: Inside an `<li>` of the outer list, before that item's `</li>`.
+      - front: What are `<dl>`, `<dt>` and `<dd>`?
+        back: A description list, its terms, and their descriptions — for glossaries and label/value pairs.
+      - front: How do you make an ordered list start at 5 or count down?
+        back: "`<ol start=\"5\">` and `<ol reversed>`."
+
+  - type: quiz
+    id: html2-quiz1
+    title: "Quiz: meaning and lists"
+    questions:
+      - type: mcq
+        prompt: Which is the best mark-up for a foreign phrase with no special emphasis?
+        options:
+          - "`<strong lang=\"es\">`"
+          - "`<i lang=\"es\">`"
+          - "`<em lang=\"es\">`"
+          - "`<mark lang=\"es\">`"
+        answer: 1
+        why: "Foreign words are traditionally italic, without stress: `<i>`, with `lang` for pronunciation."
+      - type: tf
+        prompt: A `<ul>` may contain text directly, without `<li>`.
+        answer: false
+        why: "Only `<li>` elements may be direct children of `<ul>` and `<ol>`."
+      - type: fill
+        prompt: Make a numbered list that starts at 10.
+        code: |
+          <ol ___="10">
+            <li>Ten</li>
+            <li>Eleven</li>
+          </___>
+        blanks:
+          - [start]
+          - [ol]
+        why: "`start` sets the first number; the list closes with `</ol>`."
+      - type: order
+        prompt: Put the description list in order.
+        lines:
+          - "<dl>"
+          - "<dt>Byte</dt>"
+          - "<dd>Eight bits.</dd>"
+          - "<dt>Bit</dt>"
+          - "<dd>A 0 or a 1.</dd>"
+          - "</dl>"
+        alternatives:
+          - [0, 3, 4, 1, 2, 5]
+        why: "Each `<dt>` term is followed by its `<dd>` description, all inside `<dl>`."
+      - type: mcq
+        prompt: What does `<mark>` mean?
+        options:
+          - Important text
+          - Text highlighted as relevant right now
+          - A mistake
+          - A bookmark
+        answer: 1
+        why: "Like a highlighter pen — relevant in the current context."
+
+  - type: lesson
+    id: html2-quotes-code
+    title: Quotations, code and special characters
+    minutes: 20
+    objectives:
+      - Mark up long and short quotations
+      - Show code with `<code>` and keep formatting with `<pre>`
+      - Write special characters with entities like `&lt;` and `&amp;`
+    body: |
+      ## Quotations
+
+      A long quotation gets its own block with `<blockquote>`; a short one
+      inside a sentence uses `<q>`, which adds the quotation marks for you.
+
+      ```html
+      <blockquote cite="https://en.wikipedia.org/wiki/Grace_Hopper">
+        <p>The most dangerous phrase in the language is "We've always done it this way."</p>
+      </blockquote>
+      <p>— Grace Hopper</p>
+      <p>As Einstein said, <q>imagination is more important than knowledge</q>.</p>
+      ```
+
+      `cite` holds the web address the quote comes from — it isn't shown,
+      but it records the source.
+
+      ## Code
+
+      `<code>` marks a piece of code inside a sentence. `<kbd>` marks keys to
+      press. And `<pre>` (pre-formatted) is the one element where the
+      browser **keeps every space and line break** exactly as written:
+
+      ```html
+      <p>Press <kbd>Ctrl</kbd> + <kbd>C</kbd> to copy. The <code>&lt;p&gt;</code> element makes a paragraph.</p>
+      <pre>
+      Name     Score
+      Ada        98
+      Linus      87
+      </pre>
+      ```
+
+      To show a block of code, put `<code>` inside `<pre>`:
+      `<pre><code>…</code></pre>`.
+
+      ## Special characters: entities
+
+      Notice `&lt;p&gt;` above. Why not just write `<p>`? Because the browser
+      would think it's a real tag! Characters that mean something in HTML
+      must be written as **entities** — `&name;`:
+
+      | You want | Write | Why |
+      |---|---|---|
+      | `<` | `&lt;` | "less than" — otherwise it starts a tag |
+      | `>` | `&gt;` | "greater than" |
+      | `&` | `&amp;` | otherwise it starts an entity |
+      | `"` | `&quot;` | inside attribute values |
+      | a space that never breaks a line | `&nbsp;` | "10&nbsp;km" stays together |
+      | © | `&copy;` | a symbol not on your keyboard |
+
+      ```html
+      <p>In HTML, a paragraph starts with &lt;p&gt; and ends with &lt;/p&gt;.</p>
+      <p>Fish &amp; chips — &copy; 2026 — 10&nbsp;km away.</p>
+      ```
+
+      With `<meta charset="utf-8">`, you can type other symbols (é, €, ✓)
+      directly; entities are only *needed* for `<`, `>` and `&`.
+
+      {{check entity}}
+
+      {{check pre}}
+
+      {{task show-code}}
+    checks:
+      - id: entity
+        type: fill
+        prompt: Show the text `a < b & c` on the page.
+        code: |
+          <p>a ___ b ___ c</p>
+        blanks:
+          - ["&lt;"]
+          - ["&amp;"]
+        why: "`<` and `&` are special in HTML, so they're written `&lt;` and `&amp;`."
+      - id: pre
+        type: mcq
+        prompt: Which element keeps all the spaces and line breaks exactly as written?
+        options:
+          - "`<p>`"
+          - "`<code>`"
+          - "`<pre>`"
+          - "`<blockquote>`"
+        answer: 2
+        why: "`<pre>` is pre-formatted text. `<code>` alone still collapses whitespace."
+    tasks:
+      - id: show-code
+        title: Teach a tag
+        prompt: |
+          Write a paragraph that shows this sentence on the page, exactly:
+
+          `Links are made with the <a> element & an href.`
+
+          Put `<a>` inside a `<code>` element. Then add a `<pre>` block
+          containing these two lines (keep the spaces):
+
+          ```text
+          Name   Age
+          Ada    36
+          ```
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <p>Links are made with the <code>&lt;a&gt;</code> element &amp; an href.</p>
+            <pre>Name   Age
+            Ada    36</pre>
+        harness: |
+          check(text('p'), 'Links are made with the <a> element & an href.');
+          check(text('p code'), '<a>');
+          check(count('p a'), 0);
+          check($('pre').textContent.trim().split('\n').map((l) => l.trimStart()), ['Name   Age', 'Ada    36']);
+        hints:
+          - "`<a>` must be written `&lt;a&gt;` or the browser creates a real link; `&` is `&amp;`."
+          - "Inside `<pre>`, spaces are kept, so type the table exactly."
+    cards:
+      - front: "`<blockquote>` vs `<q>`?"
+        back: "`<blockquote>` for a long quotation on its own; `<q>` for a short one inside a sentence (it adds quotation marks)."
+      - front: What is special about `<pre>`?
+        back: It keeps every space and line break exactly as written.
+      - front: How do you show `<`, `>` and `&` on a page?
+        back: "With entities: `&lt;`, `&gt;`, `&amp;`."
+      - front: What is `&nbsp;`?
+        back: A non-breaking space — the words on either side stay on the same line.
+
+  - type: quiz
+    id: html2-quiz2
+    title: "Quiz: quotes, code and entities"
+    questions:
+      - type: mcq
+        prompt: What does the page show for `<p>5 &lt; 10</p>`?
+        options:
+          - "5 &lt; 10"
+          - "5 < 10"
+          - "5 10"
+          - Nothing — it's an error
+        answer: 1
+        why: "`&lt;` is the entity for `<`."
+      - type: tf
+        prompt: The `cite` attribute of `<blockquote>` is shown on the page below the quote.
+        answer: false
+        why: "`cite` records the source address; it isn't displayed. Credit the author in visible text too."
+      - type: spot
+        prompt: This should show the text `Tom & Jerry` safely. Which line is wrong?
+        code: |
+          <h2>Cartoons</h2>
+          <p>Tom &amp; Jerry</p>
+          <p>Wallace & Gromit &amp; friends</p>
+        answer: 3
+        why: "The first `&` on line 3 should be `&amp;` too. (Browsers often cope, but it's invalid and can go wrong.)"
+      - type: mcq
+        prompt: Which elements show keyboard keys and inline code?
+        options:
+          - "`<key>` and `<script>`"
+          - "`<kbd>` and `<code>`"
+          - "`<pre>` and `<b>`"
+          - "`<button>` and `<code>`"
+        answer: 1
+        why: "`<kbd>` for keys to press, `<code>` for code."
+
+  - type: challenge
+    id: html2-ch-faq
+    title: A FAQ with a description list
+    difficulty: 1
+    tags: [description lists, emphasis]
+    prompt: |
+      Write a FAQ as a description list with three questions (`<dt>`) and
+      their answers (`<dd>`):
+
+      - `Is it free?` → `Yes, completely.`
+      - `Do I need an account?` → `No.`
+      - `Can I use it offline?` → `Only after it has loaded once.` — with **`once`** marked as stressed emphasis.
+
+      Put an `<h2>` with the text `FAQ` above the list.
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <h2>FAQ</h2>
+        <dl>
+          <dt>Is it free?</dt>
+          <dd>Yes, completely.</dd>
+          <dt>Do I need an account?</dt>
+          <dd>No.</dd>
+          <dt>Can I use it offline?</dt>
+          <dd>Only after it has loaded <em>once</em>.</dd>
+        </dl>
+    harness: |
+      check(text('h2'), 'FAQ');
+      check($$('dl > dt').map((d) => d.textContent.trim()), ['Is it free?', 'Do I need an account?', 'Can I use it offline?']);
+      check($$('dl > dd').map((d) => d.textContent.trim()), ['Yes, completely.', 'No.', 'Only after it has loaded once.']);
+      check(text('dd em'), 'once');
+      check($$('dl > *').map((e) => e.tagName), ['DT', 'DD', 'DT', 'DD', 'DT', 'DD']);
+    hints:
+      - "`<dl>` contains pairs: `<dt>question</dt><dd>answer</dd>`."
+
+  - type: challenge
+    id: html2-ch-recipe-steps
+    title: Recipe with nested steps
+    difficulty: 2
+    tags: [lists, nesting]
+    prompt: |
+      Build the method of a recipe as an **ordered list** of three steps.
+      The second step contains a nested **unordered** list of two tips.
+
+      1. `Preheat the oven to 180°C.`
+      2. `Mix the dry ingredients.` with the nested tips `Sift the flour` and `Use a big bowl`
+      3. `Bake for 25 minutes.`
+
+      Also add, before the list, a paragraph `Serves 4 — takes 40 minutes` in
+      which `40 minutes` is marked as **important**.
+    files:
+      index.html: |
+    solution:
+      index.html: |
+        <p>Serves 4 — takes <strong>40 minutes</strong></p>
+        <ol>
+          <li>Preheat the oven to 180°C.</li>
+          <li>Mix the dry ingredients.
+            <ul>
+              <li>Sift the flour</li>
+              <li>Use a big bowl</li>
+            </ul>
+          </li>
+          <li>Bake for 25 minutes.</li>
+        </ol>
+    harness: |
+      check(text('p strong'), '40 minutes');
+      check(count('body > ol > li'), 3);
+      check($('ol > li:nth-child(2)').firstChild.textContent.trim(), 'Mix the dry ingredients.');
+      check($$('ol > li:nth-child(2) > ul > li').map((li) => li.textContent.trim()), ['Sift the flour', 'Use a big bowl']);
+      check(text('ol > li:first-child'), 'Preheat the oven to 180°C.');
+      check(text('ol > li:last-child'), 'Bake for 25 minutes.');
+      check($('p').compareDocumentPosition($('ol')) & Node.DOCUMENT_POSITION_FOLLOWING, Node.DOCUMENT_POSITION_FOLLOWING);
+    hints:
+      - "The nested `<ul>` goes inside the second `<li>`, after its text and before `</li>`."
+
+  - type: challenge
+    id: html2-ch-cheatsheet
+    title: An HTML cheat sheet
+    difficulty: 2
+    tags: [entities, code, lists]
+    prompt: |
+      Make a cheat sheet: an unordered list of three items, each one showing a
+      tag inside `<code>` followed by what it does:
+
+      - `<p>` — a paragraph
+      - `<ul>` — a bulleted list
+      - `<a>` — a link
+
+      The tags must appear as **text** (use entities), and the dash is an em
+      dash `—` (you can type it or use `&mdash;`).
+    files:
+      index.html: |
+        <ul>
+          <li><code><p></code> — a paragraph</li>
+        </ul>
+    solution:
+      index.html: |
+        <ul>
+          <li><code>&lt;p&gt;</code> — a paragraph</li>
+          <li><code>&lt;ul&gt;</code> — a bulleted list</li>
+          <li><code>&lt;a&gt;</code> — a link</li>
+        </ul>
+    harness: |
+      check(count('body > ul > li'), 3);
+      check($$('li > code').map((c) => c.textContent), ['<p>', '<ul>', '<a>']);
+      check($$('body > ul > li').map((li) => li.textContent.trim()), ['<p> — a paragraph', '<ul> — a bulleted list', '<a> — a link']);
+      check(count('li p, li a, li ul'), 0);
+    hints:
+      - "The starter shows the problem: `<code><p></code>` creates a real paragraph. Write `&lt;p&gt;` instead."
+
+  - type: review
+    id: html2-review
+    title: "Chapter 2 review"
+    body: |
+      ## Cheat sheet
+
+      ```html static
+      <strong>important</strong>  <em>stressed</em>  <mark>highlighted</mark>
+      <b>bold, no importance</b>   <i>traditionally italic</i>  <small>small print</small>
+      H<sub>2</sub>O   x<sup>2</sup>   <abbr title="full form">ABBR</abbr>
+
+      <ul><li>bullets</li></ul>     <ol start="3" reversed><li>numbers</li></ol>
+      <ul><li>Outer <ul><li>nested</li></ul></li></ul>
+      <dl><dt>Term</dt><dd>Description</dd></dl>
+
+      <blockquote cite="url"><p>Long quote</p></blockquote>   <q>short quote</q>
+      <code>code</code>  <kbd>Ctrl</kbd>   <pre>keeps   spaces</pre>
+      &lt;  &gt;  &amp;  &quot;  &nbsp;  &copy;
+      ```
+
+      ## Key ideas
+
+      - Choose elements for their **meaning**; CSS decides the looks.
+      - Lists: `<ul>` when order doesn't matter, `<ol>` when it does, `<dl>` for term/description pairs. Only `<li>` directly inside `<ul>`/`<ol>`; nested lists go inside an `<li>`.
+      - `<pre>` keeps whitespace; everything else collapses it.
+      - `<`, `>` and `&` must be written as entities to appear as text.
+    questions:
+      - type: mcq
+        prompt: Which is valid HTML for a nested list?
+        options:
+          - "`<ul><li>A</li><ul><li>B</li></ul></ul>`"
+          - "`<ul><li>A<ul><li>B</li></ul></li></ul>`"
+          - "`<ul>A<ul>B</ul></ul>`"
+          - "`<li><ul>A</ul></li>`"
+        answer: 1
+        why: "The nested `<ul>` sits inside the outer `<li>`."
+      - type: fill
+        prompt: Make "Warning" important and show `<br>` as text.
+        code: |
+          <p><___>Warning</___>: don't overuse ___br&gt;.</p>
+        blanks:
+          - [strong]
+          - [/strong]
+          - ["&lt;"]
+        why: "`<strong>` for importance; `&lt;` for a literal `<`."
+      - type: tf
+        prompt: With `<meta charset="utf-8">`, you can type é and € directly instead of using entities.
+        answer: true
+        why: "Entities are only required for characters with special meaning in HTML: `<`, `>`, `&` (and quotes in attributes)."
+
+  - type: exam
+    id: html2-exam
+    title: "Chapter 2 exam"
+    minutes: 20
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: A review says a phone is *really* fast, with stress on "really". Which element?
+        options:
+          - "`<i>`"
+          - "`<em>`"
+          - "`<b>`"
+          - "`<small>`"
+        answer: 1
+        why: "Stress emphasis that changes how the sentence is read: `<em>`."
+      - type: mcq
+        prompt: Which list type fits a glossary of terms and definitions?
+        options:
+          - "`<ul>`"
+          - "`<ol>`"
+          - "`<dl>`"
+          - "`<table>`"
+        answer: 2
+        why: "A description list pairs `<dt>` terms with `<dd>` descriptions."
+      - type: tf
+        prompt: "`<ol reversed>` counts down."
+        answer: true
+        why: "The `reversed` attribute numbers the items in descending order."
+      - type: spot
+        prompt: Which line is invalid?
+        code: |
+          <ol>
+            <li>First</li>
+            Second
+            <li>Third</li>
+          </ol>
+        answer: 3
+        why: "Text can't sit directly inside `<ol>`; it must be in an `<li>`."
+      - type: fill
+        prompt: Show `Q&A` correctly.
+        code: |
+          <h2>Q___A</h2>
+        blanks:
+          - ["&amp;"]
+        why: "`&` is written `&amp;`."
+      - type: mcq
+        prompt: What does `<pre>` do that `<p>` doesn't?
+        options:
+          - Makes the text bold
+          - Keeps spaces and line breaks
+          - Adds quotation marks
+          - Numbers the lines
+        answer: 1
+        why: "Pre-formatted text keeps whitespace."
+      - type: mcq
+        prompt: How do you write "the square of x" as x²?
+        options:
+          - "`x<sub>2</sub>`"
+          - "`x<sup>2</sup>`"
+          - "`x<small>2</small>`"
+          - "`x^2`"
+        answer: 1
+        why: "Superscript: `<sup>`."
+      - type: tf
+        prompt: "`<q>` adds the quotation marks for you."
+        answer: true
+        why: "The browser draws them."
+      - type: order
+        prompt: Build a list with a nested list inside the first item.
+        lines:
+          - "<ul>"
+          - "<li>Colours"
+          - "<ul><li>Red</li><li>Blue</li></ul>"
+          - "</li>"
+          - "<li>Shapes</li>"
+          - "</ul>"
+        why: "The nested list goes inside the Colours item, before its `</li>`."
+      - type: mcq
+        prompt: What is the `title` of an `<abbr>` for?
+        options:
+          - It's the text shown on the page
+          - The full form, shown as a tooltip and read by assistive tech
+          - A link address
+          - A CSS class
+        answer: 1
+        why: "`<abbr title=\"full form\">ABBR</abbr>`."
+      - type: code
+        prompt: |
+          Write an ordered list of the planets `Mercury`, `Venus`, `Earth`
+          starting at number `1`, and after it a paragraph saying
+          `Earth is home & it's blue.` (with the `&` written correctly).
+        files:
+          index.html: |
+        solution:
+          index.html: |
+            <ol>
+              <li>Mercury</li>
+              <li>Venus</li>
+              <li>Earth</li>
+            </ol>
+            <p>Earth is home &amp; it's blue.</p>
+        harness: |
+          check($$('ol > li').map((li) => li.textContent.trim()), ['Mercury', 'Venus', 'Earth']);
+          check(text('p'), "Earth is home & it's blue.");
+          check(html().includes('&amp;'), true);
+      - type: mcq
+        prompt: Which is the right way to show a block of code?
+        options:
+          - "`<code><pre>…</pre></code>`"
+          - "`<pre><code>…</code></pre>`"
+          - "`<p><code>…</code></p>` with `<br>` on every line"
+          - "`<blockquote>…</blockquote>`"
+        answer: 1
+        why: "`<pre>` keeps the formatting; `<code>` inside says it's code."
