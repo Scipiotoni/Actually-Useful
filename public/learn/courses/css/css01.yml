@@ -1,0 +1,900 @@
+id: css01
+number: 1
+part: css-p1
+title: Your First Styles
+blurb: What CSS is, how a rule is written, where styles go, and your first properties — colour, background, size and alignment.
+hours: 2
+goals:
+  - Explain what CSS does and how it works together with HTML
+  - Write a CSS rule — selector, property and value
+  - Add CSS to a page in the three possible places, and know which is best
+  - Use colour, background colour, font size, font family and alignment
+  - Find and fix the mistakes CSS silently ignores
+
+items:
+  - type: lesson
+    id: css1-what
+    title: What CSS is
+    minutes: 15
+    objectives:
+      - Say what CSS is for and how it relates to HTML
+      - Name the parts of a CSS rule
+      - Edit a stylesheet and see the page change
+    body: |
+      A web page is made of three languages, each with one job:
+
+      | Language | Its job | Example |
+      |---|---|---|
+      | **HTML** | Content and structure | "this is a heading", "this is a list" |
+      | **CSS** | Presentation — how it **looks** | "headings are dark blue and centred" |
+      | **JavaScript** | Behaviour | "when you click here, open the menu" |
+
+      CSS stands for **Cascading Style Sheets**. A stylesheet is a list of
+      **rules**; each rule picks some elements and says how they should
+      look.
+
+      Here is a page with its stylesheet. The **HTML** tab has the content,
+      the **CSS** tab the styles. Change `crimson` to `green` in the CSS tab
+      (press **Edit** first) and watch the heading change:
+
+      ```html
+      <h1>Hello, CSS!</h1>
+      <p>This paragraph is styled by the rules in the CSS tab.</p>
+      <p>So is this one — one rule styles every paragraph.</p>
+      ```
+      ```css
+      h1 {
+        color: crimson;
+        text-align: center;
+      }
+
+      p {
+        color: dimgray;
+        font-size: 20px;
+      }
+      ```
+
+      ## The parts of a rule
+
+      ```css static
+      h1 {                  /* selector: which elements */
+        color: crimson;     /* a declaration: property: value; */
+        text-align: center; /* another declaration */
+      }
+      ```
+
+      - The **selector** (`h1`) chooses which elements the rule applies to — here, every `<h1>`.
+      - Between the braces `{ }` is the **declaration block**.
+      - Each **declaration** is a **property** (`color`), a colon, a **value** (`crimson`) and a semicolon.
+
+      One rule can have as many declarations as you like. Put each on its
+      own line — it's much easier to read.
+
+      Text between `/*` and `*/` is a **comment**: the browser ignores it.
+
+      {{check parts}}
+
+      {{check job}}
+
+      {{task first}}
+    checks:
+      - id: parts
+        type: mcq
+        prompt: "In `p { font-size: 20px; }`, what is `font-size`?"
+        options:
+          - The selector
+          - The property
+          - The value
+          - The declaration block
+        answer: 1
+        why: "`p` is the selector, `font-size` the property, `20px` the value."
+      - id: job
+        type: mcq
+        prompt: Which language decides that a heading is **red**?
+        options:
+          - HTML
+          - CSS
+          - JavaScript
+          - None — browsers choose
+        answer: 1
+        why: "Looks are CSS's job. HTML only says it's a heading."
+    tasks:
+      - id: first
+        title: Your first rules
+        prompt: |
+          The page (in the locked HTML tab) has a heading and a paragraph.
+          In `style.css`, write two rules:
+
+          - the `h1` is `navy` and centred (`text-align: center`)
+          - the `p` has a `font-size` of `18px`
+        given:
+          index.html: |
+            <h1>My first styled page</h1>
+            <p>CSS makes pages look good.</p>
+        files:
+          style.css: |
+            /* Write your rules here */
+        solution:
+          style.css: |
+            h1 {
+              color: navy;
+              text-align: center;
+            }
+
+            p {
+              font-size: 18px;
+            }
+        harness: |
+          check(style('h1', 'color'), color('navy'));
+          check(style('h1', 'text-align'), 'center');
+          check(style('p', 'font-size'), '18px');
+        hints:
+          - "A rule is `selector { property: value; }`."
+          - "`h1 { color: navy; text-align: center; }` — then a second rule for `p`."
+    cards:
+      - front: What is CSS for?
+        back: Presentation — how HTML elements look. HTML is structure, JavaScript behaviour.
+      - front: Name the parts of `h1 { color: red; }`.
+        back: "`h1` is the selector; `{ … }` the declaration block; `color: red;` a declaration made of the property `color` and the value `red`."
+      - front: How do you write a comment in CSS?
+        back: "`/* like this */`"
+
+  - type: lesson
+    id: css1-where
+    title: Where CSS goes
+    minutes: 15
+    objectives:
+      - Add CSS with a `style` attribute, a `<style>` element or a linked stylesheet
+      - Explain why a separate stylesheet is usually best
+    body: |
+      There are three places to put CSS.
+
+      ## 1. A linked stylesheet (best)
+
+      The CSS lives in its own file, like `style.css`, and each page links to
+      it in its `<head>`:
+
+      ```html static
+      <link rel="stylesheet" href="style.css">
+      ```
+
+      One stylesheet can style **every page** of a site. Change a colour
+      once, and the whole site changes.
+
+      ## 2. A `<style>` element
+
+      CSS written inside a `<style>` element in the `<head>` styles only that
+      page.
+
+      ## 3. A `style` attribute
+
+      Declarations (no selector, no braces) written right on one element.
+      They style only that element.
+
+      All three at once:
+
+      ```html
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <title>Three ways</title>
+          <link rel="stylesheet" href="style.css">
+          <style>
+            p { color: teal; }
+          </style>
+        </head>
+        <body>
+          <h1>Three ways to add CSS</h1>
+          <p>This paragraph is teal, from the style element.</p>
+          <p style="color: purple;">This one is purple, from its style attribute.</p>
+        </body>
+      </html>
+      ```
+      ```css
+      h1 {
+        color: darkorange;
+      }
+      ```
+
+      ## Why a separate file wins
+
+      - **One place** to change the look of the whole site.
+      - HTML stays about content; CSS about looks — both easier to read.
+      - The browser downloads the stylesheet once and reuses it on every page.
+
+      `style` attributes are the worst choice: styles scattered through the
+      HTML, repeated on every element, impossible to change in one go.
+
+      > [!note]
+      > In this course the **CSS** tab is `style.css`. When the HTML is only
+      > a fragment (no `<head>`), it's linked for you automatically; in a
+      > full page you write the `<link>` yourself.
+
+      {{check best}}
+
+      {{task move}}
+    checks:
+      - id: best
+        type: mcq
+        prompt: A site has 30 pages that should share the same look. Where should its CSS go?
+        options:
+          - In a `style` attribute on each element
+          - In a `<style>` element on each page
+          - In one stylesheet file linked from every page
+          - In the `<title>`
+        answer: 2
+        why: "One file, linked from every page, styles the whole site."
+    tasks:
+      - id: move
+        title: Out of the HTML
+        prompt: |
+          This page uses `style` attributes. Move the styles into `style.css`
+          so the page **looks exactly the same** but **no element** has a
+          `style` attribute any more. (Both tabs are editable here.)
+        files:
+          index.html: |
+            <h1 style="color: green;">Garden Club</h1>
+            <p style="font-size: 20px;">We meet every Saturday.</p>
+          style.css: |
+            /* Move the styles here */
+        solution:
+          index.html: |
+            <h1>Garden Club</h1>
+            <p>We meet every Saturday.</p>
+          style.css: |
+            h1 {
+              color: green;
+            }
+
+            p {
+              font-size: 20px;
+            }
+        harness: |
+          check(count('[style]'), 0);
+          check(style('h1', 'color'), color('green'));
+          check(style('p', 'font-size'), '20px');
+          check(text('h1'), 'Garden Club');
+        hints:
+          - "Delete the `style=\"…\"` attributes from the HTML tab."
+          - "In the CSS tab: `h1 { color: green; }` and `p { font-size: 20px; }`."
+    cards:
+      - front: How does a page link a stylesheet?
+        back: "`<link rel=\"stylesheet\" href=\"style.css\">` in the `<head>`."
+      - front: Why is a separate stylesheet usually best?
+        back: One file styles every page — change the look of the whole site in one place, and HTML stays about content.
+      - front: What goes in a `style` attribute?
+        back: "Just declarations, no selector or braces: `style=\"color: red;\"`. Avoid it — it styles one element only."
+
+  - type: quiz
+    id: css1-quiz1
+    title: "Quiz: rules and stylesheets"
+    questions:
+      - type: fill
+        prompt: Complete the rule so every paragraph is blue.
+        code: |
+          ___ {
+            color: ___;
+          }
+        blanks:
+          - [p]
+          - [blue]
+        why: "Selector `p`, property `color`, value `blue`."
+      - type: mcq
+        prompt: What does CSS stand for?
+        options:
+          - Computer Style Sheets
+          - Cascading Style Sheets
+          - Creative Styling System
+          - Coloured Style Syntax
+        answer: 1
+        why: "Cascading Style Sheets — the \"cascade\" is how conflicts are resolved (Chapter 3)."
+      - type: tf
+        prompt: "A `<style>` element in one page also styles the other pages of the site."
+        answer: false
+        why: "Only a linked stylesheet can be shared between pages."
+      - type: order
+        prompt: Put the rule in order.
+        lines:
+          - "h2 {"
+          - "  color: teal;"
+          - "  font-size: 28px;"
+          - "}"
+        alternatives:
+          - [0, 2, 1, 3]
+        why: "Selector, opening brace, declarations, closing brace."
+
+  - type: lesson
+    id: css1-properties
+    title: Your first properties
+    minutes: 20
+    objectives:
+      - Set text colour and background colour
+      - Set font size in pixels, the font family and boldness
+      - Align text left, right, centre or justified
+    body: |
+      A handful of properties already make a big difference.
+
+      | Property | What it does | Example values |
+      |---|---|---|
+      | `color` | Text colour | `red`, `navy`, `#1a73e8` |
+      | `background-color` | Colour behind the element | `lightyellow`, `#f5f5f5` |
+      | `font-size` | Size of the text | `16px`, `24px` |
+      | `font-family` | The typeface | `serif`, `sans-serif`, `monospace` |
+      | `font-weight` | How bold | `normal`, `bold` |
+      | `text-align` | Horizontal alignment | `left`, `center`, `right`, `justify` |
+
+      ```html
+      <h1>Lemonade Stand</h1>
+      <p>Fresh lemonade, squeezed this morning.</p>
+      <p>Only 1 euro a cup!</p>
+      ```
+      ```css
+      body {
+        background-color: lightyellow;
+        font-family: sans-serif;
+      }
+
+      h1 {
+        color: darkorange;
+        text-align: center;
+        font-size: 40px;
+      }
+
+      p {
+        color: #444;
+        font-weight: bold;
+      }
+      ```
+
+      Styling `body` affects the **whole page**: its background fills the
+      window, and many properties (like `font-family` and `color`) are
+      **inherited** by everything inside it. That's why every paragraph above
+      is sans-serif, though no `p` rule says so.
+
+      ## Colours
+
+      There are 140 named colours — `tomato`, `teal`, `gold`, `slategray`…
+      Chapter 4 shows how to write *any* colour with codes like `#1a73e8`.
+
+      ## Font families
+
+      Three **generic families** work everywhere:
+
+      - `serif` — letters with little feet, like a newspaper
+      - `sans-serif` — clean letters, without feet
+      - `monospace` — every letter the same width, like code
+
+      Chapter 5 shows how to pick specific fonts.
+
+      {{check body}}
+
+      {{task stand}}
+    checks:
+      - id: body
+        type: mcq
+        prompt: "Why do the paragraphs in the example use a sans-serif font?"
+        options:
+          - Paragraphs are always sans-serif
+          - They inherit `font-family` from `body`
+          - Because of `font-weight: bold`
+          - The `h1` rule applies to them too
+        answer: 1
+        why: "`font-family` is inherited from `body` by everything inside it."
+    tasks:
+      - id: stand
+        title: A market stall sign
+        prompt: |
+          Style the page:
+
+          - the whole page (`body`) has the background colour `honeydew` and the font family `sans-serif`
+          - the `h1` is `darkgreen`, `36px` and centred
+          - paragraphs (`p`) are `bold`
+        given:
+          index.html: |
+            <h1>Fresh Vegetables</h1>
+            <p>Carrots, beans and peas.</p>
+            <p>Open until noon.</p>
+        files:
+          style.css: |
+            /* Style the sign */
+        solution:
+          style.css: |
+            body {
+              background-color: honeydew;
+              font-family: sans-serif;
+            }
+
+            h1 {
+              color: darkgreen;
+              font-size: 36px;
+              text-align: center;
+            }
+
+            p {
+              font-weight: bold;
+            }
+        harness: |
+          check(style('body', 'background-color'), color('honeydew'));
+          check(style('body', 'font-family'), 'sans-serif');
+          check(style('h1', 'color'), color('darkgreen'));
+          check(style('h1', 'font-size'), '36px');
+          check(style('h1', 'text-align'), 'center');
+          check(style('p', 'font-weight'), '700');
+          check(style('p', 'font-family'), 'sans-serif');
+        hints:
+          - "Three rules: `body { … }`, `h1 { … }`, `p { … }`."
+          - "`font-weight: bold;` — the browser reports bold as the number 700."
+    cards:
+      - front: Which property sets the text colour?
+        back: "`color` (and `background-color` for the colour behind)."
+      - front: Name the three generic font families.
+        back: "`serif`, `sans-serif` and `monospace`."
+      - front: Why style `body`?
+        back: Its background fills the page, and inherited properties like `font-family` and `color` pass to everything inside.
+
+  - type: lesson
+    id: css1-mistakes
+    title: When CSS doesn't work
+    minutes: 15
+    objectives:
+      - Explain what the browser does with CSS it doesn't understand
+      - Spot the most common CSS mistakes
+      - Use the browser's developer tools to inspect styles
+    body: |
+      CSS never shows an error message. If the browser doesn't understand a
+      declaration, it **silently ignores it** and carries on. That's
+      forgiving — but it means a typo just… does nothing.
+
+      Only one of these three rules fully works. Can you see why?
+
+      ```html
+      <h1>Silent mistakes</h1>
+      <p>First paragraph.</p>
+      <h2>A smaller heading</h2>
+      ```
+      ```css
+      h1 {
+        colour: red;
+      }
+
+      p {
+        color: blue
+        font-size: 24px;
+      }
+
+      h2 {
+        color: green;
+        font-size: 30;
+      }
+      ```
+
+      - `colour` isn't a property (CSS uses American spelling: `color`) — ignored.
+      - A missing semicolon after `blue` glues the next line on: the browser reads `color: blue font-size: 24px`, which is nonsense, so **both** are ignored.
+      - `30` has no unit. Sizes need one: `30px`. The colour works; the size doesn't.
+
+      ## The usual suspects
+
+      1. A misspelled property or value (`colour`, `centre`, `text-align: middle`).
+      2. A missing `;` between declarations.
+      3. A missing `}` — then the *next* rule is swallowed too.
+      4. A number without a unit (`20` instead of `20px`). Only `0` may go without one.
+      5. A selector that matches nothing (`.titel` instead of `.title`).
+
+      ## Developer tools
+
+      Every desktop browser has **developer tools**: right-click any element
+      and choose **Inspect**. The **Styles** panel lists every rule that
+      applies to it. Declarations the browser rejected are **crossed out**
+      with a warning icon — the fastest way to find a typo.
+
+      {{check semi}}
+
+      {{task fix}}
+    checks:
+      - id: semi
+        type: spot
+        prompt: Which line causes **two** declarations to be ignored?
+        code: |
+          nav {
+            background-color: black;
+            color: white
+            text-align: right;
+          }
+        answer: 3
+        why: "The missing semicolon joins `color` and `text-align` into one invalid declaration."
+    tasks:
+      - id: fix
+        title: Fix the stylesheet
+        prompt: |
+          This stylesheet has **four** mistakes, so none of its intended
+          styles work except the first. Fix them so that:
+
+          - the `h1` is `purple`
+          - the `h1` is `32px`
+          - paragraphs are centred and `gray`
+        given:
+          index.html: |
+            <h1>Book Club</h1>
+            <p>This month: a mystery novel.</p>
+        files:
+          style.css: |
+            body {
+              background-color: lavender;
+            }
+
+            h1 {
+              colour: purple;
+              font-size: 32;
+            }
+
+            p {
+              text-align: centre
+              color: gray;
+            }
+        solution:
+          style.css: |
+            body {
+              background-color: lavender;
+            }
+
+            h1 {
+              color: purple;
+              font-size: 32px;
+            }
+
+            p {
+              text-align: center;
+              color: gray;
+            }
+        harness: |
+          check(style('h1', 'color'), color('purple'));
+          check(style('h1', 'font-size'), '32px');
+          check(style('p', 'text-align'), 'center');
+          check(style('p', 'color'), color('gray'));
+          check(style('body', 'background-color'), color('lavender'));
+        hints:
+          - "Look for a British spelling (two of them), a missing unit and a missing semicolon."
+          - "`colour` → `color`, `32` → `32px`, `centre` → `center`, and add `;` after it."
+    cards:
+      - front: What does the browser do with a CSS declaration it doesn't understand?
+        back: It silently ignores it and carries on — no error message.
+      - front: Which numbers may be written without a unit?
+        back: Only `0`. Sizes like `20` need a unit — `20px`.
+      - front: How do you see which styles apply to an element?
+        back: Right-click it → Inspect. The Styles panel lists the rules, with rejected declarations crossed out.
+
+  - type: quiz
+    id: css1-quiz2
+    title: "Quiz: properties and mistakes"
+    questions:
+      - type: mcq
+        prompt: Which property changes the colour **behind** a paragraph's text?
+        options:
+          - "`color`"
+          - "`background-color`"
+          - "`fill`"
+          - "`text-color`"
+        answer: 1
+        why: "`color` is the text; `background-color` is behind it."
+      - type: spot
+        prompt: Which line is ignored by the browser?
+        code: |
+          h3 {
+            color: teal;
+            text-align: middle;
+            font-weight: bold;
+          }
+        answer: 3
+        why: "`middle` isn't a value of `text-align` — it's `center`."
+      - type: tf
+        prompt: "`font-size: 0;` is valid even without a unit."
+        answer: true
+        why: "Zero is zero in any unit, so it's the one number that needs none."
+      - type: mcq
+        prompt: "Which font family makes every letter the same width?"
+        options:
+          - "`serif`"
+          - "`sans-serif`"
+          - "`monospace`"
+          - "`cursive`"
+        answer: 2
+        why: "Monospace — like code."
+
+  - type: challenge
+    id: css1-ch-poster
+    title: A concert poster
+    difficulty: 1
+    tags: [properties]
+    prompt: |
+      Style this concert poster:
+
+      - the page background is `black`, and all text is `white` and `sans-serif` (set these on `body`)
+      - the `h1` is `gold`, `48px` and centred
+      - the `h2` is `tomato` and centred
+      - paragraphs are centred and `20px`
+    given:
+      index.html: |
+        <h1>Summer Jazz Night</h1>
+        <h2>Friday, 8 pm</h2>
+        <p>Live music in the park.</p>
+        <p>Free entry — bring a blanket!</p>
+    files:
+      style.css: |
+        /* Style the poster */
+    solution:
+      style.css: |
+        body {
+          background-color: black;
+          color: white;
+          font-family: sans-serif;
+        }
+
+        h1 {
+          color: gold;
+          font-size: 48px;
+          text-align: center;
+        }
+
+        h2 {
+          color: tomato;
+          text-align: center;
+        }
+
+        p {
+          text-align: center;
+          font-size: 20px;
+        }
+    harness: |
+      check(style('body', 'background-color'), color('black'));
+      check(style('p', 'color'), color('white'));
+      check(style('p', 'font-family'), 'sans-serif');
+      check(style('h1', 'color'), color('gold'));
+      check(style('h1', 'font-size'), '48px');
+      check(style('h1', 'text-align'), 'center');
+      check(style('h2', 'color'), color('tomato'));
+      check(style('h2', 'text-align'), 'center');
+      check($$('p').every((p) => getComputedStyle(p).textAlign === 'center' && getComputedStyle(p).fontSize === '20px'), true);
+    hints:
+      - "White text on the `body` is inherited by the paragraphs."
+      - "The headings need their own `color`, since their rules override the inherited one."
+
+  - type: challenge
+    id: css1-ch-debug
+    title: Nothing works!
+    difficulty: 2
+    tags: [debugging]
+    prompt: |
+      A classmate wrote this stylesheet, but **none** of it seems to work.
+      There are five mistakes — including a missing brace that swallows a
+      whole rule. Fix them so that:
+
+      - the `body` background is `aliceblue`
+      - the `h1` is `steelblue`, `40px` and `sans-serif`
+      - paragraphs are `18px` and `darkslategray`
+    given:
+      index.html: |
+        <h1>Weather Today</h1>
+        <p>Sunny with a light breeze.</p>
+    files:
+      style.css: |
+        body {
+          background-colour: aliceblue;
+
+        h1 {
+          color: steelblue;
+          font-size: 40 px;
+          font-family: sans serif;
+        }
+
+        p {
+          font-size: 18px
+          color: darkslategray;
+        }
+    solution:
+      style.css: |
+        body {
+          background-color: aliceblue;
+        }
+
+        h1 {
+          color: steelblue;
+          font-size: 40px;
+          font-family: sans-serif;
+        }
+
+        p {
+          font-size: 18px;
+          color: darkslategray;
+        }
+    harness: |
+      check(style('body', 'background-color'), color('aliceblue'));
+      check(style('h1', 'color'), color('steelblue'));
+      check(style('h1', 'font-size'), '40px');
+      check(style('h1', 'font-family'), 'sans-serif');
+      check(style('p', 'font-size'), '18px');
+      check(style('p', 'color'), color('darkslategray'));
+    hints:
+      - "The `body` rule never closes — add its `}`."
+      - "No space between a number and its unit: `40px`. And the generic family is `sans-serif`, with a hyphen."
+      - "One British spelling, and one missing semicolon in the last rule."
+
+  - type: review
+    id: css1-review
+    title: "Chapter 1 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      /* a comment */
+      selector {
+        property: value;
+        another-property: value;
+      }
+
+      body { background-color: lightyellow; font-family: sans-serif; }
+      h1   { color: navy; font-size: 36px; text-align: center; }
+      p    { font-weight: bold; }
+      ```
+
+      ```html static
+      <link rel="stylesheet" href="style.css">   <!-- best: one file for the site -->
+      <style> p { color: teal; } </style>       <!-- one page -->
+      <p style="color: purple;">…</p>            <!-- one element: avoid -->
+      ```
+
+      ## Key ideas
+
+      - HTML is structure; CSS is presentation.
+      - A rule = selector + declarations (`property: value;`).
+      - A linked stylesheet styles a whole site from one place.
+      - Styles on `body` are inherited by the elements inside, for properties like `color` and `font-family`.
+      - CSS silently ignores what it doesn't understand — check spelling, semicolons, braces and units. Use Inspect to find mistakes.
+    questions:
+      - type: mcq
+        prompt: What is the selector in `body { color: white; }`?
+        options:
+          - "`body`"
+          - "`color`"
+          - "`white`"
+          - "`{ }`"
+        answer: 0
+        why: "The selector comes before the braces."
+      - type: fill
+        prompt: Link the stylesheet.
+        code: |
+          <link rel="___" href="___">
+        blanks:
+          - [stylesheet]
+          - [style.css]
+        why: "`rel=\"stylesheet\"` and the file's path."
+      - type: tf
+        prompt: CSS shows an error message in the page when you make a mistake.
+        answer: false
+        why: "It silently ignores the declaration. Use the developer tools."
+
+  - type: exam
+    id: css1-exam
+    title: "Chapter 1 exam"
+    minutes: 20
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: Which is HTML's job, not CSS's?
+        options:
+          - Making headings blue
+          - Saying that some text is a heading
+          - Centring a paragraph
+          - Choosing a font
+        answer: 1
+        why: "HTML gives structure and meaning; CSS the looks."
+      - type: mcq
+        prompt: "In `h2 { color: teal; }`, what is `color: teal;`?"
+        options:
+          - A selector
+          - A declaration
+          - A comment
+          - An element
+        answer: 1
+        why: "A declaration: property, colon, value, semicolon."
+      - type: fill
+        prompt: Make every `h1` centred.
+        code: |
+          h1 {
+            ___: center;
+          }
+        blanks:
+          - [text-align]
+        why: "`text-align` aligns text horizontally."
+      - type: mcq
+        prompt: Where is the best place for the CSS of a 20-page website?
+        options:
+          - Style attributes
+          - A `<style>` element on each page
+          - One linked stylesheet
+          - The `<body>`
+        answer: 2
+        why: "One file for the whole site."
+      - type: spot
+        prompt: Which line has a mistake?
+        code: |
+          footer {
+            background-color: gray;
+            color: white;
+            font-size: 14;
+          }
+        answer: 4
+        why: "`14` needs a unit: `14px`."
+      - type: spot
+        prompt: Which line has a mistake?
+        code: |
+          h1 {
+            colour: red;
+            text-align: center;
+          }
+        answer: 2
+        why: "`color`, American spelling."
+      - type: tf
+        prompt: A missing semicolon can make the browser ignore two declarations.
+        answer: true
+        why: "The two get glued into one invalid declaration."
+      - type: mcq
+        prompt: Which property makes text bold?
+        options:
+          - "`font-style`"
+          - "`font-weight`"
+          - "`text-weight`"
+          - "`bold`"
+        answer: 1
+        why: "`font-weight: bold;`"
+      - type: mcq
+        prompt: How do you write a comment in CSS?
+        options:
+          - "`// comment`"
+          - "`<!-- comment -->`"
+          - "`/* comment */`"
+          - "`# comment`"
+        answer: 2
+        why: "`/* … */` — the other two are JavaScript and HTML."
+      - type: tf
+        prompt: Setting `font-family` on `body` changes the font of the paragraphs inside it.
+        answer: true
+        why: "`font-family` is inherited."
+      - type: mcq
+        prompt: How do you find out why a style isn't applied?
+        options:
+          - Reload the page ten times
+          - Right-click the element → Inspect, and look at the Styles panel
+          - Add `!` at the end of the rule
+          - Rename the file
+        answer: 1
+        why: "Rejected declarations are crossed out there."
+      - type: code
+        prompt: |
+          Write the stylesheet: the `body` background is `mintcream`, the
+          `h1` is `teal` and centred, and paragraphs are `monospace`.
+        given:
+          index.html: |
+            <h1>Code Corner</h1>
+            <p>print("hello")</p>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            body {
+              background-color: mintcream;
+            }
+
+            h1 {
+              color: teal;
+              text-align: center;
+            }
+
+            p {
+              font-family: monospace;
+            }
+        harness: |
+          check(style('body', 'background-color'), color('mintcream'));
+          check(style('h1', 'color'), color('teal'));
+          check(style('h1', 'text-align'), 'center');
+          check(style('p', 'font-family'), 'monospace');

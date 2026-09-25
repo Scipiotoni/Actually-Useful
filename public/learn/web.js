@@ -316,6 +316,37 @@
     if (scope.document) {
       var doc = scope.document;
       var one = function (sel) { return doc.querySelector(sel); };
+      var eachRule = function (fn) {
+        var walk = function (rules) {
+          for (var i = 0; i < rules.length; i += 1) {
+            var r = rules[i];
+            fn(r);
+            // Into @media, @supports and nested rules; not into keyframes.
+            if (r.cssRules && r.type !== 7) walk(r.cssRules);
+          }
+        };
+        Array.prototype.forEach.call(doc.styleSheets, function (sheet) {
+          try { walk(sheet.cssRules); } catch (e) { /* a sheet from elsewhere */ }
+        });
+      };
+      var stateRule = function (sel, states, prop) {
+        var el = one(sel);
+        if (!el) return null;
+        var value = '';
+        eachRule(function (r) {
+          if (r.selectorText === undefined || !r.style) return;
+          var hit = r.selectorText.split(',').some(function (part) {
+            if (!states.some(function (st) { return part.indexOf(st) !== -1; })) return false;
+            var rest = part;
+            states.forEach(function (st) { rest = rest.split(st).join(''); });
+            try { return el.matches(rest.trim() || '*'); } catch (e) { return false; }
+          });
+          if (!hit) return;
+          var v = r.style.getPropertyValue(prop).trim();
+          if (v) value = v;
+        });
+        return value;
+      };
       dom = {
         $: one,
         $$: function (sel) { return Array.prototype.slice.call(doc.querySelectorAll(sel)); },
@@ -333,13 +364,38 @@
           var el = one(sel);
           return el ? el.tagName.toLowerCase() : null;
         },
-        style: function (sel, prop) {
+        style: function (sel, prop, pseudo) {
           var el = one(sel);
           if (!el) return null;
-          return scope.getComputedStyle(el).getPropertyValue(prop).trim();
+          return scope.getComputedStyle(el, pseudo || null).getPropertyValue(prop).trim();
         },
+        // What the stylesheets say for a selector (for :hover, @media and
+        // @keyframes, which computed styles can't show). With a property:
+        // its value in the last matching rule that sets it ('' if none does,
+        // null if no rule matches). Without: whether such a rule exists.
+        rule: function (sel, prop) {
+          var norm = function (x) { return String(x).replace(/\s+/g, ' ').replace(/\s*([,>+~])\s*/g, '$1').replace(/'/g, '"').trim(); };
+          var want = norm(sel);
+          var found = [];
+          eachRule(function (r) {
+            if (r.selectorText !== undefined && norm(r.selectorText) === want) found.push(r);
+            else if (r.type === 7 && want === '@keyframes ' + r.name) found.push(r);
+          });
+          if (prop === undefined) return found.length > 0;
+          if (!found.length) return null;
+          for (var j = found.length - 1; j >= 0; j -= 1) {
+            var v = found[j].style ? found[j].style.getPropertyValue(prop).trim() : '';
+            if (v) return v;
+          }
+          return '';
+        },
+        // What a :hover or :focus rule sets for an element (the last rule
+        // that sets it wins; '' if none does). Media conditions are ignored.
+        hover: function (sel, prop) { return stateRule(sel, [':hover'], prop); },
+        focus: function (sel, prop) { return stateRule(sel, [':focus-visible', ':focus-within', ':focus'], prop); },
         // Any CSS colour written the way computed styles report it.
         color: function (value) {
+          if (value === null || value === undefined || value === '') return '';
           var probe = doc.createElement('span');
           probe.style.color = value;
           doc.body.appendChild(probe);
@@ -739,7 +795,7 @@
     return '<script>' + String(js).replace(/<\/script>/gi, '<\\/script>') + '\n//# sourceURL=' + name + '\n<\/script>';
   }
 
-  var PAGE_HELPERS = ['$', '$$', 'exists', 'count', 'text', 'attr', 'tag', 'style', 'color', 'box', 'click', 'typeInto', 'submit', 'press', 'wait', 'viewport', 'html'];
+  var PAGE_HELPERS = ['$', '$$', 'exists', 'count', 'text', 'attr', 'tag', 'style', 'rule', 'hover', 'focus', 'color', 'box', 'click', 'typeInto', 'submit', 'press', 'wait', 'viewport', 'html'];
 
   /**
    * The document for a page: the learner's files composed like the editor

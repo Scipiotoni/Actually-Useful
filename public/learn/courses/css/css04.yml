@@ -1,0 +1,971 @@
+id: css04
+number: 4
+part: css-p1
+title: Colours, Units and Backgrounds
+blurb: Write any colour, size things with the right unit, reuse values with variables, and paint backgrounds and gradients.
+hours: 3
+goals:
+  - Write colours as names, hex codes, `rgb()` and `hsl()`, with transparency
+  - Choose readable colour combinations with enough contrast
+  - Size things with `px`, `%`, `em`, `rem`, `vw` and `vh`
+  - Store and reuse values with custom properties (CSS variables)
+  - Paint backgrounds with images and gradients
+
+items:
+  - type: lesson
+    id: css4-colors
+    title: Writing colours
+    minutes: 25
+    objectives:
+      - Write a colour as a hex code, `rgb()` or `hsl()`
+      - Add transparency to a colour, or make a whole element see-through
+      - Check that text has enough contrast with its background
+    body: |
+      Named colours are handy, but there are only 140. Screens mix every
+      colour from **red, green and blue** light, and CSS lets you write any
+      of the 16 million mixes.
+
+      ```html
+      <p class="hex">Hex: #1a73e8</p>
+      <p class="short">Short hex: #f60</p>
+      <p class="rgb">rgb(46 139 87)</p>
+      <p class="hsl">hsl(280 60% 45%)</p>
+      <p class="see">Half-transparent black: rgb(0 0 0 / 50%)</p>
+      ```
+      ```css
+      p {
+        color: white;
+        font-family: sans-serif;
+        padding: 8px;
+      }
+
+      .hex   { background-color: #1a73e8; }
+      .short { background-color: #f60; }
+      .rgb   { background-color: rgb(46 139 87); }
+      .hsl   { background-color: hsl(280 60% 45%); }
+      .see   { background-color: rgb(0 0 0 / 50%); }
+      ```
+
+      ## Hex codes
+
+      `#1a73e8` is three pairs of **hexadecimal** digits (0–9 then a–f):
+      red `1a`, green `73`, blue `e8`, each from `00` (none) to `ff` (full).
+      `#000000` is black, `#ffffff` white, `#ff0000` red. A three-digit code
+      doubles each digit: `#f60` = `#ff6600`.
+
+      ## rgb()
+
+      The same three amounts as numbers from 0 to 255: `rgb(255 102 0)`.
+      (You'll also see the older comma style, `rgb(255, 102, 0)`.)
+
+      ## hsl() — the designer's favourite
+
+      **Hue** (an angle on the colour wheel: 0 red, 120 green, 240 blue),
+      **saturation** (0% grey to 100% vivid) and **lightness** (0% black,
+      50% the pure colour, 100% white). It makes palettes easy — keep the
+      hue, change the lightness:
+
+      ```css static
+      --blue-dark:  hsl(215 80% 30%);
+      --blue:       hsl(215 80% 50%);
+      --blue-light: hsl(215 80% 90%);
+      ```
+
+      ## Transparency
+
+      - Add an **alpha** value after a slash: `rgb(0 0 0 / 50%)`, `hsl(215 80% 50% / 0.2)`, or two more hex digits: `#00000080`.
+      - `transparent` is fully see-through.
+      - The `opacity` property (0 to 1) fades a **whole element**, including its text and children.
+
+      ## Contrast
+
+      Text must stand out from its background. The accessibility guidelines
+      ask for a **contrast ratio** of at least **4.5 : 1** for normal text
+      (3 : 1 for large text). Light grey on white usually fails. Browser
+      developer tools show the ratio when you inspect a colour.
+
+      {{check hex}}
+
+      {{check hsl}}
+
+      {{task contrast}}
+    checks:
+      - id: hex
+        type: mcq
+        prompt: What colour is `#00ff00`?
+        options:
+          - Red
+          - Green
+          - Blue
+          - Black
+        answer: 1
+        why: "Red 00, green ff (full), blue 00."
+      - id: hsl
+        type: mcq
+        prompt: "`hsl(0 100% 50%)` is pure red. How do you get a light pink?"
+        options:
+          - "`hsl(0 100% 90%)`"
+          - "`hsl(0 100% 10%)`"
+          - "`hsl(180 100% 50%)`"
+          - "`hsl(0 0% 50%)`"
+        answer: 0
+        why: "Same hue, much higher lightness."
+    tasks:
+      - id: contrast
+        title: Readable colours
+        prompt: |
+          - The `.muted` text is `#bbbbbb` on white: its contrast is only about 1.9 : 1. Change it to a grey with a contrast of **at least 4.5 : 1** (try `#666666`).
+          - Make `.brand` text the colour `hsl(215 80% 40%)`.
+          - Make `.overlay` have the background colour **black at 60% opacity**, written with `rgb()` and a slash.
+        given:
+          index.html: |
+            <h1 class="brand">Northwind</h1>
+            <p class="muted">Posted 3 hours ago</p>
+            <p class="overlay">Caption over a photo</p>
+        files:
+          style.css: |
+            body {
+              background-color: white;
+            }
+
+            .muted {
+              color: #bbbbbb;
+            }
+        solution:
+          style.css: |
+            body {
+              background-color: white;
+            }
+
+            .muted {
+              color: #666666;
+            }
+
+            .brand {
+              color: hsl(215 80% 40%);
+            }
+
+            .overlay {
+              background-color: rgb(0 0 0 / 60%);
+            }
+        harness: |
+          const lum = (c) => {
+            const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => {
+              v /= 255;
+              return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+            });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          };
+          const ratio = (a, b) => {
+            const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+            return (hi + 0.05) / (lo + 0.05);
+          };
+          check(ratio(style('.muted', 'color'), style('body', 'background-color')) >= 4.5, true);
+          check(style('.brand', 'color'), color('hsl(215 80% 40%)'));
+          check(style('.overlay', 'background-color'), color('rgb(0 0 0 / 60%)'));
+          check(rule('.overlay', 'background-color').startsWith('rgb'), true);
+        hints:
+          - "Darker greys have more contrast on white: `#666666` gives about 5.7 : 1."
+          - "`background-color: rgb(0 0 0 / 60%);`"
+    cards:
+      - front: "What does `#ff8800` mean?"
+        back: "Red ff (255), green 88 (136), blue 00 — an orange."
+      - front: "What are the three parts of `hsl()`?"
+        back: Hue (angle on the colour wheel), saturation (grey → vivid), lightness (black → white).
+      - front: "Alpha colour vs `opacity`?"
+        back: "An alpha colour (`rgb(0 0 0 / 50%)`) makes only that colour see-through; `opacity` fades the whole element with its text and children."
+      - front: What contrast ratio does normal text need?
+        back: At least 4.5 : 1 (3 : 1 for large text).
+
+  - type: lesson
+    id: css4-units
+    title: Units
+    minutes: 25
+    objectives:
+      - Tell absolute from relative units
+      - Use `rem` for font sizes and `em` for spacing that grows with the text
+      - Size things relative to the parent (`%`) or the window (`vw`, `vh`)
+    body: |
+      Lengths in CSS always need a **unit** (except `0`). The common ones:
+
+      | Unit | Relative to | Typical use |
+      |---|---|---|
+      | `px` | nothing — a fixed "CSS pixel" | borders, small details |
+      | `rem` | the **root** (`html`) font size — 16px by default | font sizes, spacing |
+      | `em` | the element's **own** font size (for `font-size` itself: the parent's) | padding that grows with the text |
+      | `%` | usually the **parent's** size | widths |
+      | `vw` / `vh` | 1% of the window's **width** / **height** | full-screen sections |
+
+      ```html
+      <div class="box">
+        <h2>Units</h2>
+        <p class="rem">1.25rem = 20px</p>
+        <p class="em">This text is 0.75em of the box's 20px = 15px, and its padding is 1em = 15px.</p>
+        <div class="half">50% of the box's width</div>
+      </div>
+      ```
+      ```css
+      .box {
+        font-size: 20px;
+        background-color: #eef;
+      }
+
+      .box h2 {
+        font-size: 2rem;
+      }
+
+      .rem {
+        font-size: 1.25rem;
+      }
+
+      .em {
+        font-size: 0.75em;
+        padding: 1em;
+        background-color: #ddf;
+      }
+
+      .half {
+        width: 50%;
+        background-color: #ccf;
+      }
+      ```
+
+      ## Why relative units?
+
+      People can set a bigger default text size in their browser. Sizes in
+      `rem` grow with that choice; sizes in `px` ignore it. So:
+
+      - **Font sizes in `rem`**: `1rem` for body text, `2rem` for headings.
+      - **Padding in `em`** when it should grow with the element's text (buttons).
+      - **Widths in `%`** (or the layout tools in Part II) so boxes fit the screen.
+      - **`px`** for things that shouldn't scale, like a 1px border.
+
+      > [!warning]
+      > `em` compounds: a `1.5em` list inside a `1.5em` list is 1.5 × 1.5 =
+      > 2.25 times the size. `rem` always refers to the root, so it never
+      > compounds — that's why it's safer for font sizes.
+
+      {{check rem}}
+
+      {{check em}}
+
+      {{task units}}
+    checks:
+      - id: rem
+        type: mcq
+        prompt: "With the default settings, how big is `1.5rem`?"
+        options:
+          - 15px
+          - 24px
+          - 1.5px
+          - 150%
+        answer: 1
+        why: "1rem = 16px, so 1.5 × 16 = 24px."
+      - id: em
+        type: mcq
+        prompt: "A button has `font-size: 20px; padding: 0.5em;`. How much padding?"
+        options:
+          - 8px
+          - 10px
+          - 20px
+          - 0.5px
+        answer: 1
+        why: "em refers to the element's own font size: 0.5 × 20 = 10px."
+    tasks:
+      - id: units
+        title: Size it right
+        prompt: |
+          Use relative units:
+
+          - `h1`: `2.5rem` (the checks expect 40px)
+          - `p`: `1.125rem` (18px)
+          - `.button`: font size `1.25rem` and padding `0.5em` (so 20px text and 10px padding)
+          - `.panel`: width `50%` of its parent
+        given:
+          index.html: |
+            <h1>Units</h1>
+            <p>Relative units respect people's settings.</p>
+            <div class="panel">
+              <a class="button" href="#">Get started</a>
+            </div>
+        files:
+          style.css: |
+            /* Use rem, em and % */
+        solution:
+          style.css: |
+            h1 {
+              font-size: 2.5rem;
+            }
+
+            p {
+              font-size: 1.125rem;
+            }
+
+            .button {
+              font-size: 1.25rem;
+              padding: 0.5em;
+            }
+
+            .panel {
+              width: 50%;
+            }
+        harness: |
+          check(style('h1', 'font-size'), '40px');
+          check(style('p', 'font-size'), '18px');
+          check(style('.button', 'font-size'), '20px');
+          check(style('.button', 'padding-left'), '10px');
+          check(rule('h1', 'font-size'), '2.5rem');
+          check(rule('.button', 'padding').includes('em'), true);
+          check(Math.round(box('.panel').width), Math.round(box('body').width / 2));
+        hints:
+          - "`h1 { font-size: 2.5rem; }` — 2.5 × 16 = 40px."
+          - "`.button { font-size: 1.25rem; padding: 0.5em; }` and `.panel { width: 50%; }`."
+    cards:
+      - front: "`rem` vs `em`?"
+        back: "`rem` is relative to the root (html) font size; `em` to the element's own font size (the parent's, for font-size)."
+      - front: Why use `rem` for font sizes?
+        back: It grows with the reader's browser setting and, unlike em, never compounds.
+      - front: "What is `1vw`?"
+        back: 1% of the window's width (`vh`: of its height).
+
+  - type: quiz
+    id: css4-quiz1
+    title: "Quiz: colours and units"
+    questions:
+      - type: mcq
+        prompt: Which is **not** a valid way to write white?
+        options:
+          - "`#fff`"
+          - "`rgb(255 255 255)`"
+          - "`hsl(0 0% 100%)`"
+          - "`#1000000`"
+        answer: 3
+        why: "Hex codes have 3, 4, 6 or 8 digits."
+      - type: fill
+        prompt: Make the background black at 25% opacity.
+        code: |
+          .shade { background-color: rgb(0 0 0 / ___); }
+        blanks:
+          - ["25%", "0.25", ".25"]
+        why: "The alpha comes after the slash."
+      - type: mcq
+        prompt: "The root font size is 16px. A paragraph has `font-size: 0.875rem`. How big is it?"
+        options:
+          - 12px
+          - 14px
+          - 16px
+          - 8.75px
+        answer: 1
+        why: "0.875 × 16 = 14."
+      - type: tf
+        prompt: "`opacity: 0.5` on a card also makes the text inside it half-transparent."
+        answer: true
+        why: "opacity fades the whole element and its children."
+
+  - type: lesson
+    id: css4-variables
+    title: Custom properties (variables)
+    minutes: 20
+    objectives:
+      - Define custom properties and use them with `var()`
+      - Give `var()` a fallback
+      - Build a theme by redefining variables
+    body: |
+      A real site uses the same few colours and sizes over and over. Write
+      them **once**, as **custom properties** (also called CSS variables):
+
+      ```html
+      <h1>Brand colours</h1>
+      <p>Links like <a href="#">this one</a> use the brand colour.</p>
+      <button>Sign up</button>
+      ```
+      ```css
+      :root {
+        --brand: hsl(265 70% 50%);
+        --radius: 8px;
+      }
+
+      h1 {
+        color: var(--brand);
+      }
+
+      a {
+        color: var(--brand);
+      }
+
+      button {
+        background-color: var(--brand);
+        color: white;
+        border: none;
+        border-radius: var(--radius);
+        padding: 0.5em 1em;
+      }
+      ```
+
+      - A custom property's name starts with **two dashes**: `--brand`.
+      - `var(--brand)` uses its value.
+      - Defined on `:root` (the `<html>` element), it's available everywhere.
+      - Change `--brand` in one place and the whole design follows. Try it.
+
+      ## Fallbacks
+
+      `var(--accent, orange)` uses `orange` if `--accent` isn't defined.
+
+      ## Themes
+
+      Custom properties are **inherited**, and you can redefine them for
+      part of the page. That makes themes easy:
+
+      ```html
+      <div class="card">Light card</div>
+      <div class="card dark">Dark card</div>
+      ```
+      ```css
+      :root {
+        --bg: white;
+        --text: #222;
+      }
+
+      .dark {
+        --bg: #222;
+        --text: #eee;
+      }
+
+      .card {
+        background-color: var(--bg);
+        color: var(--text);
+        border: 1px solid #999;
+        padding: 1rem;
+        margin: 0.5rem 0;
+      }
+      ```
+
+      The `.card` rule is the same for both; only the variables change.
+
+      {{check syntax}}
+
+      {{task vars}}
+    checks:
+      - id: syntax
+        type: fill
+        prompt: Use the variable.
+        code: |
+          :root { --accent: tomato; }
+          h2 { color: ___(--accent); }
+        blanks:
+          - [var]
+        why: "`var(--name)` reads a custom property."
+    tasks:
+      - id: vars
+        title: One place for the colours
+        prompt: |
+          - On `:root`, define `--primary` as `#0b7285` and `--space` as `16px`
+          - Use `var(--primary)` for the `h1` colour **and** the `.btn` background colour
+          - Use `var(--space)` for the padding of `.btn`
+          - Make `.btn` text `white`
+        given:
+          index.html: |
+            <h1>Ocean Tours</h1>
+            <a class="btn" href="#">Book a trip</a>
+        files:
+          style.css: |
+            /* Define your variables on :root */
+        solution:
+          style.css: |
+            :root {
+              --primary: #0b7285;
+              --space: 16px;
+            }
+
+            h1 {
+              color: var(--primary);
+            }
+
+            .btn {
+              background-color: var(--primary);
+              color: white;
+              padding: var(--space);
+            }
+        harness: |
+          check(style(':root', '--primary'), '#0b7285');
+          check(style(':root', '--space'), '16px');
+          check(style('h1', 'color'), color('#0b7285'));
+          check(style('.btn', 'background-color'), color('#0b7285'));
+          check(style('.btn', 'padding-top'), '16px');
+          check(style('.btn', 'color'), color('white'));
+          check(rule('h1', 'color'), 'var(--primary)');
+          check(rule('.btn', 'background-color'), 'var(--primary)');
+        hints:
+          - "`:root { --primary: #0b7285; --space: 16px; }`"
+          - "`h1 { color: var(--primary); }`"
+    cards:
+      - front: How do you define and use a custom property?
+        back: "Define `--name: value;` (usually on `:root`), use it with `var(--name)`."
+      - front: "What does `var(--x, red)` do?"
+        back: Uses `--x`, or `red` if `--x` isn't defined.
+      - front: How do variables make themes easy?
+        back: Components use variables; a theme class just redefines the variables for its part of the page.
+
+  - type: lesson
+    id: css4-backgrounds
+    title: Backgrounds and gradients
+    minutes: 20
+    objectives:
+      - Put an image behind an element and control its size and position
+      - Paint linear and radial gradients
+      - Layer a gradient over an image
+    body: |
+      Besides a colour, an element's background can hold **images** and
+      **gradients**.
+
+      ## Background images
+
+      ```css static
+      .hero {
+        background-image: url("mountains.jpg");
+        background-size: cover;        /* fill the box, cropping if needed */
+        background-position: center;   /* keep the middle visible */
+        background-repeat: no-repeat;
+      }
+      ```
+
+      | Property | Common values |
+      |---|---|
+      | `background-size` | `cover` (fill, crop), `contain` (fit whole image), `200px auto` |
+      | `background-position` | `center`, `top right`, `50% 20%` |
+      | `background-repeat` | `repeat` (tile, the default), `no-repeat`, `repeat-x` |
+
+      A background image is **decoration**: it has no `alt` text. If an
+      image *means* something, use `<img>` in the HTML.
+
+      ## Gradients
+
+      A gradient is an image the browser paints from colours:
+
+      ```html
+      <div class="sunset">linear-gradient</div>
+      <div class="diagonal">at an angle, three colours</div>
+      <div class="glow">radial-gradient</div>
+      ```
+      ```css
+      div {
+        height: 80px;
+        margin-bottom: 8px;
+        color: white;
+        font: bold 1.2rem sans-serif;
+        padding: 8px;
+      }
+
+      .sunset {
+        background-image: linear-gradient(to right, #ff7e5f, #feb47b);
+      }
+
+      .diagonal {
+        background-image: linear-gradient(135deg, navy, purple 50%, crimson);
+      }
+
+      .glow {
+        background-image: radial-gradient(circle, gold, darkorange 60%, maroon);
+      }
+      ```
+
+      - `linear-gradient(direction, colour, colour, …)` — the direction can be `to right`, `to bottom right` or an angle like `135deg`.
+      - `radial-gradient(shape, colours…)` spreads from the centre.
+      - A colour can have a **stop** position: `purple 50%`.
+
+      ## Layers and the shorthand
+
+      Several backgrounds, separated by commas, are painted **top first** —
+      handy to darken a photo so text on it is readable:
+
+      ```css static
+      .hero {
+        background:
+          linear-gradient(rgb(0 0 0 / 50%), rgb(0 0 0 / 50%)),
+          url("city.jpg") center / cover no-repeat;
+      }
+      ```
+
+      The `background` shorthand sets colour, image, position, size and
+      repeat in one go.
+
+      {{check cover}}
+
+      {{task hero}}
+    checks:
+      - id: cover
+        type: mcq
+        prompt: "Which `background-size` fills the whole box, cropping the image if needed?"
+        options:
+          - "`contain`"
+          - "`cover`"
+          - "`fill`"
+          - "`auto`"
+        answer: 1
+        why: "`cover` fills; `contain` fits the whole image, possibly leaving gaps."
+    tasks:
+      - id: hero
+        title: A gradient banner
+        prompt: |
+          Style the `.banner`:
+
+          - a `linear-gradient` background image going `to right` from `#43cea2` to `#185a9d`
+          - `white` text, centred
+          - a height of `150px`
+        given:
+          index.html: |
+            <div class="banner">
+              <h1>Welcome aboard</h1>
+            </div>
+        files:
+          style.css: |
+            /* Paint the banner */
+        solution:
+          style.css: |
+            .banner {
+              background-image: linear-gradient(to right, #43cea2, #185a9d);
+              color: white;
+              text-align: center;
+              height: 150px;
+            }
+        harness: |
+          const bg = style('.banner', 'background-image');
+          check(bg.startsWith('linear-gradient'), true);
+          check(bg.includes(color('#43cea2')) && bg.includes(color('#185a9d')), true);
+          check(bg.indexOf(color('#43cea2')) < bg.indexOf(color('#185a9d')), true);
+          check(bg.includes('to right') || bg.includes('90deg'), true);
+          check(style('.banner', 'color'), color('white'));
+          check(style('.banner', 'text-align'), 'center');
+          check(style('.banner', 'height'), '150px');
+        hints:
+          - "`background-image: linear-gradient(to right, #43cea2, #185a9d);`"
+    cards:
+      - front: How do you make a background image fill a box?
+        back: "`background-size: cover;` (with `background-position: center;` and `background-repeat: no-repeat;`)."
+      - front: How do you write a left-to-right gradient?
+        back: "`background-image: linear-gradient(to right, red, blue);`"
+      - front: When should an image be an `<img>` rather than a background?
+        back: When it means something — backgrounds are decoration and have no alt text.
+
+  - type: quiz
+    id: css4-quiz2
+    title: "Quiz: variables and backgrounds"
+    questions:
+      - type: mcq
+        prompt: Which is a valid custom property name?
+        options:
+          - "`$brand`"
+          - "`--brand`"
+          - "`@brand`"
+          - "`var-brand`"
+        answer: 1
+        why: "Two dashes."
+      - type: tf
+        prompt: A variable defined on `:root` can be used anywhere on the page.
+        answer: true
+        why: "Custom properties inherit from the root to everything."
+      - type: mcq
+        prompt: "`linear-gradient(to bottom, white, black)` goes…"
+        options:
+          - white at the top to black at the bottom
+          - black at the top to white at the bottom
+          - white on the left to black on the right
+          - in a circle
+        answer: 0
+        why: "The first colour is where it starts."
+      - type: mcq
+        prompt: "Several comma-separated background layers: which is painted on top?"
+        options:
+          - The first
+          - The last
+          - The largest
+          - The one with the highest opacity
+        answer: 0
+        why: "The first listed is the top layer."
+
+  - type: challenge
+    id: css4-ch-theme
+    title: Light and dark themes
+    difficulty: 2
+    tags: [variables, colours]
+    prompt: |
+      Build a theme with variables:
+
+      - on `:root`: `--bg: #ffffff`, `--text: #1f2933`, `--accent: #d6336c`
+      - on `.dark`: `--bg: #1f2933`, `--text: #f5f7fa`, `--accent: #faa2c1`
+      - `.page` uses `var(--bg)` for its background colour and `var(--text)` for its colour
+      - `.page a` uses `var(--accent)` for its colour
+
+      The HTML has one light page and one dark page — the same rules must
+      style both.
+    given:
+      index.html: |
+        <div class="page">
+          <p>Light page with <a href="#">a link</a>.</p>
+        </div>
+        <div class="page dark">
+          <p>Dark page with <a href="#">a link</a>.</p>
+        </div>
+    files:
+      style.css: |
+        /* Variables for two themes */
+    solution:
+      style.css: |
+        :root {
+          --bg: #ffffff;
+          --text: #1f2933;
+          --accent: #d6336c;
+        }
+
+        .dark {
+          --bg: #1f2933;
+          --text: #f5f7fa;
+          --accent: #faa2c1;
+        }
+
+        .page {
+          background-color: var(--bg);
+          color: var(--text);
+        }
+
+        .page a {
+          color: var(--accent);
+        }
+    harness: |
+      const [light, dark] = $$('.page');
+      check(getComputedStyle(light).backgroundColor, color('#ffffff'));
+      check(getComputedStyle(light).color, color('#1f2933'));
+      check(getComputedStyle(light.querySelector('a')).color, color('#d6336c'));
+      check(getComputedStyle(dark).backgroundColor, color('#1f2933'));
+      check(getComputedStyle(dark).color, color('#f5f7fa'));
+      check(getComputedStyle(dark.querySelector('a')).color, color('#faa2c1'));
+      check(rule('.page', 'background-color'), 'var(--bg)');
+      check(rule('.page a', 'color'), 'var(--accent)');
+    hints:
+      - "Define the variables twice: once on `:root`, once on `.dark`."
+      - "Only one `.page` rule and one `.page a` rule — both use `var()`."
+
+  - type: challenge
+    id: css4-ch-card
+    title: A ticket card
+    difficulty: 2
+    tags: [units, backgrounds]
+    prompt: |
+      Style the concert ticket:
+
+      - `.ticket`: width `60%` of the page, padding `1.5rem`, `white` text, and a background image that is a `linear-gradient` at `135deg` from `#667eea` to `#764ba2`
+      - `.ticket h2`: font size `2rem`
+      - `.ticket .price`: font size `1.5em` (relative to the ticket's text) and the background colour white at 20% opacity (`rgb(255 255 255 / 20%)`)
+    given:
+      index.html: |
+        <div class="ticket">
+          <h2>Rock the Harbour</h2>
+          <p>Saturday 12 July · Gates 18:00</p>
+          <p><span class="price">€35</span></p>
+        </div>
+    files:
+      style.css: |
+        /* Style the ticket */
+    solution:
+      style.css: |
+        .ticket {
+          width: 60%;
+          padding: 1.5rem;
+          color: white;
+          background-image: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .ticket h2 {
+          font-size: 2rem;
+        }
+
+        .ticket .price {
+          font-size: 1.5em;
+          background-color: rgb(255 255 255 / 20%);
+        }
+    harness: |
+      check(Math.round(parseFloat(style('.ticket', 'width'))), Math.round(box('body').width * 0.6));
+      check(style('.ticket', 'padding-top'), '24px');
+      check(style('.ticket', 'color'), color('white'));
+      const bg = style('.ticket', 'background-image');
+      check(bg.startsWith('linear-gradient(135deg'), true);
+      check(bg.includes(color('#667eea')) && bg.includes(color('#764ba2')), true);
+      check(style('.ticket h2', 'font-size'), '32px');
+      check(style('.price', 'font-size'), '24px');
+      check(style('.price', 'background-color'), color('rgb(255 255 255 / 20%)'));
+    hints:
+      - "1.5rem = 24px of padding; the price is 1.5em of 16px = 24px."
+      - "`background-image: linear-gradient(135deg, #667eea, #764ba2);`"
+
+  - type: review
+    id: css4-review
+    title: "Chapter 4 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      color: tomato;                 /* name */
+      color: #1a73e8;  color: #f60;  /* hex */
+      color: rgb(26 115 232);
+      color: hsl(215 80% 50%);       /* hue, saturation, lightness */
+      color: rgb(0 0 0 / 50%);       /* with alpha */
+      opacity: 0.5;                  /* whole element */
+
+      font-size: 1.25rem;   /* × root size (16px) */
+      padding: 0.5em;       /* × own font size */
+      width: 50%;           /* of the parent */
+      height: 100vh;        /* whole window height */
+
+      :root { --brand: #0b7285; }
+      h1 { color: var(--brand, black); }
+
+      background-image: url("photo.jpg");
+      background-size: cover;  background-position: center;  background-repeat: no-repeat;
+      background-image: linear-gradient(to right, #43cea2, #185a9d);
+      background-image: radial-gradient(circle, gold, maroon);
+      ```
+
+      ## Key ideas
+
+      - `hsl()` makes palettes easy; check text contrast (4.5 : 1).
+      - `rem` for font sizes, `em` for spacing tied to text, `%` for widths, `px` for fine details.
+      - Custom properties keep a design consistent and make themes simple.
+      - Background images are decoration — meaningful images belong in `<img>`.
+    questions:
+      - type: mcq
+        prompt: "The root font size is 16px. A `.card` has `font-size: 1.25rem` and `padding: 1em`. The padding is…"
+        options:
+          - 16px
+          - 20px
+          - 1.25px
+          - 25px
+        answer: 1
+        why: "The card's font size is 20px, and em uses the element's own font size."
+      - type: mcq
+        prompt: Which colour is the same as `#ffffff`?
+        options:
+          - "`hsl(0 0% 100%)`"
+          - "`rgb(0 0 0)`"
+          - "`hsl(0 100% 50%)`"
+          - "`transparent`"
+        answer: 0
+        why: "Lightness 100% is white."
+
+  - type: exam
+    id: css4-exam
+    title: "Chapter 4 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: What colour is `rgb(0 0 255)`?
+        options:
+          - Red
+          - Green
+          - Blue
+          - White
+        answer: 2
+        why: "Only blue is on."
+      - type: mcq
+        prompt: "What does `#abc` expand to?"
+        options:
+          - "`#abcabc`"
+          - "`#aabbcc`"
+          - "`#abc000`"
+          - "`#000abc`"
+        answer: 1
+        why: "Each digit is doubled."
+      - type: mcq
+        prompt: "In `hsl(120 100% 25%)`, what does `25%` control?"
+        options:
+          - Hue
+          - Saturation
+          - Lightness — a dark green
+          - Opacity
+        answer: 2
+        why: "The third value is lightness."
+      - type: tf
+        prompt: Light grey text on a white background is fine as long as it looks elegant.
+        answer: false
+        why: "It usually fails the 4.5 : 1 contrast requirement."
+      - type: mcq
+        prompt: Which unit is best for font sizes that respect the reader's browser settings?
+        options:
+          - "`px`"
+          - "`rem`"
+          - "`vw`"
+          - "`cm`"
+        answer: 1
+        why: "rem follows the root font size, which follows the setting."
+      - type: mcq
+        prompt: "`.list { font-size: 1.5em; }` with a `.list` inside another `.list`, and a 16px page. The inner list's text is…"
+        options:
+          - 24px
+          - 36px
+          - 16px
+          - 1.5px
+        answer: 1
+        why: "em compounds: 16 × 1.5 × 1.5 = 36."
+      - type: fill
+        prompt: Define a variable on the root and use it.
+        code: |
+          :root { ___: #333; }
+          p { color: var(--ink); }
+        blanks:
+          - ["--ink"]
+        why: "Custom properties start with two dashes."
+      - type: mcq
+        prompt: "What does `width: 50%` refer to?"
+        options:
+          - Half of the screen
+          - Half of the parent's width
+          - Half of the element's content
+          - Half of 100px
+        answer: 1
+        why: "Percentages for width refer to the parent (the containing block)."
+      - type: mcq
+        prompt: Which draws a gradient from top-left to bottom-right?
+        options:
+          - "`linear-gradient(to bottom right, red, blue)`"
+          - "`radial-gradient(red, blue)`"
+          - "`linear-gradient(to top, red, blue)`"
+          - "`gradient(red, blue)`"
+        answer: 0
+        why: "`to bottom right`."
+      - type: tf
+        prompt: "`var(--missing, green)` is green when `--missing` isn't defined."
+        answer: true
+        why: "The second argument is the fallback."
+      - type: code
+        prompt: |
+          Define `--accent: #e8590c` on `:root`. Use it for the `h1` colour
+          and for the `.tag` background colour. Give `.tag` a padding of
+          `0.25em` and a font size of `0.875rem`.
+        given:
+          index.html: |
+            <h1>Blog</h1>
+            <span class="tag">News</span>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            :root {
+              --accent: #e8590c;
+            }
+
+            h1 {
+              color: var(--accent);
+            }
+
+            .tag {
+              background-color: var(--accent);
+              padding: 0.25em;
+              font-size: 0.875rem;
+            }
+        harness: |
+          check(style(':root', '--accent'), '#e8590c');
+          check(style('h1', 'color'), color('#e8590c'));
+          check(style('.tag', 'background-color'), color('#e8590c'));
+          check(rule('h1', 'color'), 'var(--accent)');
+          check(style('.tag', 'font-size'), '14px');
+          check(style('.tag', 'padding-left'), '3.5px');

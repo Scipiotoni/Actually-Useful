@@ -521,6 +521,13 @@
         if (blanks !== q.blanks.length) report(where, blanks + ' blanks but ' + q.blanks.length + ' answers');
       }
       if (q.type === 'order' && q.lines.length < 3) report(where, 'an order puzzle needs at least three lines');
+      if (q.type === 'order') {
+        q.alternatives.forEach(function (alt) {
+          var ok = Array.isArray(alt) && alt.length === q.lines.length &&
+            alt.map(Number).slice().sort(function (a, b) { return a - b; }).every(function (v, i) { return v === i; });
+          if (!ok) report(where, 'an alternative order must list every line number (0 to ' + (q.lines.length - 1) + ') once');
+        });
+      }
       if (q.type === 'spot') {
         var count = q.code.split('\n').length;
         list(q.answer).forEach(function (a) {

@@ -1,0 +1,736 @@
+id: css03
+number: 3
+part: css-p1
+title: The Cascade and Inheritance
+blurb: When two rules disagree, who wins? Order, specificity, importance — and which properties pass down to children.
+hours: 2
+goals:
+  - Predict which rule wins when several set the same property
+  - Calculate and compare the specificity of selectors
+  - Explain which properties are inherited, and control it with `inherit`
+  - Keep stylesheets easy to override, without `!important`
+
+items:
+  - type: lesson
+    id: css3-order
+    title: When rules disagree
+    minutes: 20
+    objectives:
+      - Explain what "the cascade" is
+      - Predict the winner between two equally specific rules
+      - Know where browser default styles come from
+    body: |
+      An element is often matched by several rules that set the **same**
+      property. The browser settles the conflict with a fixed procedure
+      called **the cascade** — the "C" in CSS.
+
+      ## 1. Later wins
+
+      When two rules are equally specific, the one that comes **later** wins:
+
+      ```html
+      <p>What colour am I?</p>
+      ```
+      ```css
+      p {
+        color: blue;
+      }
+
+      p {
+        color: green;
+      }
+      ```
+
+      Green: both rules are `p`, so the later one wins. Swap them and the
+      text turns blue. "Later" also counts across files — a stylesheet
+      linked after another one beats it.
+
+      ## 2. Declarations don't fight unless they must
+
+      Only the **property in conflict** is decided. Other declarations in the
+      losing rule still apply:
+
+      ```html
+      <h2>Two rules, both used</h2>
+      ```
+      ```css
+      h2 {
+        color: navy;
+        font-style: italic;
+      }
+
+      h2 {
+        color: teal;
+      }
+      ```
+
+      The heading is teal (the later rule wins `color`) **and** italic (no one
+      disagrees about `font-style`).
+
+      ## 3. Browser defaults come first
+
+      Before your CSS, every browser applies its own **default stylesheet**:
+      that's why headings are big and bold, links blue and underlined, and
+      the body has a margin of 8 pixels. Any rule you write beats a default.
+
+      {{check later}}
+
+      {{task order}}
+    checks:
+      - id: later
+        type: mcq
+        prompt: "`h1 { color: red; }` comes first and `h1 { color: black; }` later. The heading is…"
+        options:
+          - red
+          - black
+          - dark red — they mix
+          - whatever the browser prefers
+        answer: 1
+        why: "Equal selectors: the later rule wins."
+    tasks:
+      - id: order
+        title: Fix the order
+        prompt: |
+          Every button has the class `btn`, which makes it `gray` and
+          `18px`. The main button also has the class `btn-primary`, which
+          should make it `royalblue` — but it comes out gray. Fix it by
+          **reordering** the rules only: change no selector and no value.
+        given:
+          index.html: |
+            <button class="btn btn-primary">Buy now</button>
+            <button class="btn">Cancel</button>
+        files:
+          style.css: |
+            .btn-primary {
+              background-color: royalblue;
+            }
+
+            .btn {
+              background-color: gray;
+              font-size: 18px;
+            }
+        solution:
+          style.css: |
+            .btn {
+              background-color: gray;
+              font-size: 18px;
+            }
+
+            .btn-primary {
+              background-color: royalblue;
+            }
+        harness: |
+          check(style('.btn-primary', 'background-color'), color('royalblue'));
+          check(style('.btn:not(.btn-primary)', 'background-color'), color('gray'));
+          check($$('.btn').every((b) => getComputedStyle(b).fontSize === '18px'), true);
+          check(rule('.btn-primary', 'background-color'), 'royalblue');
+          check(rule('.btn', 'background-color'), 'gray');
+        hints:
+          - "`.btn` and `.btn-primary` are equally specific, so the later one wins."
+          - "Move the `.btn-primary` rule below the `.btn` rule."
+    cards:
+      - front: What is the cascade?
+        back: The procedure the browser uses to decide which declaration wins when several rules set the same property on an element.
+      - front: Two equally specific rules set the same property. Which wins?
+        back: The one that comes later in the CSS.
+      - front: Where do default styles (big headings, blue links) come from?
+        back: The browser's own default stylesheet — any rule you write beats it.
+
+  - type: lesson
+    id: css3-specificity
+    title: Specificity
+    minutes: 25
+    objectives:
+      - Rank selectors by specificity
+      - Count a selector's specificity as (ids, classes, types)
+      - Explain why `!important` and ids make CSS hard to maintain
+    body: |
+      Order only decides between **equally specific** selectors. Before
+      that, the browser compares **specificity**: a more *specific* selector
+      wins, wherever it is.
+
+      ```html
+      <p id="intro" class="lead">Which colour wins?</p>
+      ```
+      ```css
+      #intro {
+        color: purple;
+      }
+
+      .lead {
+        color: orange;
+      }
+
+      p {
+        color: green;
+      }
+      ```
+
+      Purple — even though `#intro` comes **first**. An id is more specific
+      than a class, and a class more than a type.
+
+      ## Counting specificity
+
+      Count three numbers, like a score **(ids, classes, types)**:
+
+      | Counts as | What |
+      |---|---|
+      | **ids** | each `#id` |
+      | **classes** | each `.class`, `[attribute]` and `:pseudo-class` |
+      | **types** | each element name and `::pseudo-element` |
+
+      | Selector | Specificity |
+      |---|---|
+      | `p` | (0, 0, 1) |
+      | `nav a` | (0, 0, 2) |
+      | `.lead` | (0, 1, 0) |
+      | `p.lead` | (0, 1, 1) |
+      | `nav a:hover` | (0, 1, 2) |
+      | `.card .title` | (0, 2, 0) |
+      | `#intro` | (1, 0, 0) |
+
+      Compare from the **left**: more ids wins; if equal, more classes wins;
+      if equal, more types wins; if *still* equal, the later rule wins. One
+      id beats *any* number of classes.
+
+      The universal selector `*` and combinators (`>`, `+`, space) count as
+      nothing. A `style` attribute beats every selector.
+
+      ## !important
+
+      Adding `!important` to a declaration makes it beat everything else:
+
+      ```css static
+      p { color: red !important; }
+      ```
+
+      It's a sledgehammer: to override it you need *another* `!important`,
+      and soon every rule has one. Avoid it (it has rare legitimate uses,
+      such as utility classes and overriding third-party CSS).
+
+      > [!tip]
+      > **Keep specificity low and flat.** Style with single classes, avoid
+      > ids and long selectors, and let order do the rest. Then any rule is
+      > easy to override.
+
+      {{check count}}
+
+      {{check winner}}
+
+      {{task override}}
+    checks:
+      - id: count
+        type: mcq
+        prompt: "What is the specificity of `ul li.active`?"
+        options:
+          - (0, 1, 2)
+          - (0, 2, 1)
+          - (1, 1, 2)
+          - (0, 0, 3)
+        answer: 0
+        why: "One class (`.active`) and two types (`ul`, `li`)."
+      - id: winner
+        type: mcq
+        prompt: "Which wins for the same element: `.menu .link` or `nav a`?"
+        options:
+          - "`.menu .link` — (0, 2, 0) beats (0, 0, 2)"
+          - "`nav a` — it has more elements"
+          - Whichever comes later
+          - They combine
+        answer: 0
+        why: "Classes outrank types, whatever the order."
+    tasks:
+      - id: override
+        title: Win without !important
+        prompt: |
+          Links in the sidebar's `.links` list are `darkgray`. The `.promo`
+          rule should make the sale link `crimson`, but it loses — even
+          though it comes later. Why?
+
+          Add **one** rule at the end that wins, **without** `!important` and
+          without an id. Don't change the two existing rules.
+        given:
+          index.html: |
+            <div class="sidebar">
+              <nav class="links">
+                <a href="#">Archive</a>
+                <a href="#" class="promo">Spring sale</a>
+              </nav>
+            </div>
+        files:
+          style.css: |
+            .sidebar .links a {
+              color: darkgray;
+            }
+
+            .promo {
+              color: crimson;
+            }
+
+            /* Add your rule below */
+        solution:
+          style.css: |
+            .sidebar .links a {
+              color: darkgray;
+            }
+
+            .promo {
+              color: crimson;
+            }
+
+            /* (0, 3, 1) beats (0, 2, 1) */
+            .sidebar .links a.promo {
+              color: crimson;
+            }
+        harness: |
+          check(style('.promo', 'color'), color('crimson'));
+          check(style('.links a:not(.promo)', 'color'), color('darkgray'));
+          check(rule('.sidebar .links a', 'color'), 'darkgray');
+          check(rule('.promo', 'color'), 'crimson');
+          check([...document.styleSheets].some((s) => [...s.cssRules].some((r) => (r.cssText || '').includes('!important') || (r.selectorText || '').includes('#'))), false);
+        hints:
+          - "`.sidebar .links a` scores (0, 2, 1); `.promo` only (0, 1, 0). Specificity is compared before order."
+          - "`.sidebar .links a.promo` scores (0, 3, 1) and wins. (`.links a.promo` would also work: it ties at (0, 2, 1) and comes later.)"
+    cards:
+      - front: What is specificity?
+        back: A score (ids, classes, types) that decides which of several matching rules wins. Higher wins, regardless of order.
+      - front: "Specificity of `nav ul li a.active`?"
+        back: "(0, 1, 4) — one class, four types."
+      - front: What counts in the "classes" column?
+        back: "Classes, attribute selectors (`[type=\"email\"]`) and pseudo-classes (`:hover`)."
+      - front: Why avoid `!important`?
+        back: It beats everything, so overriding it needs another !important — stylesheets become impossible to maintain.
+
+  - type: quiz
+    id: css3-quiz1
+    title: "Quiz: order and specificity"
+    questions:
+      - type: mcq
+        prompt: "Which is the most specific?"
+        options:
+          - "`div p span`"
+          - "`.note`"
+          - "`#main`"
+          - "`body *`"
+        answer: 2
+        why: "Any id beats any number of classes and types."
+      - type: mcq
+        prompt: "`.btn { color: white; }` comes after `button.btn { color: black; }`. A `<button class=\"btn\">` is…"
+        options:
+          - white — later wins
+          - black — (0, 1, 1) beats (0, 1, 0)
+          - grey
+          - it depends on the browser
+        answer: 1
+        why: "Specificity is compared before order."
+      - type: tf
+        prompt: "Two rules with the same specificity: the one written later wins."
+        answer: true
+        why: "Order is the tie-breaker."
+      - type: mcq
+        prompt: "What's the specificity of `a:hover`?"
+        options:
+          - (0, 0, 1)
+          - (0, 1, 1)
+          - (0, 0, 2)
+          - (1, 0, 1)
+        answer: 1
+        why: "A pseudo-class counts as a class; `a` as a type."
+
+  - type: lesson
+    id: css3-inherit
+    title: Inheritance
+    minutes: 20
+    objectives:
+      - Tell inherited properties from non-inherited ones
+      - Use `inherit`, `initial` and `unset`
+      - Set sensible defaults on `body` and let them flow down
+    body: |
+      Some properties pass from an element to everything inside it —
+      they're **inherited**. Mostly, these are **text** properties:
+
+      | Inherited | Not inherited |
+      |---|---|
+      | `color`, `font-family`, `font-size`, `font-weight`, `font-style`, `line-height`, `text-align`, `letter-spacing`, `list-style`, `visibility`, `cursor` | `background-color`, `border`, `margin`, `padding`, `width`, `height`, `display`, `position` |
+
+      It makes sense: you want the whole article in the same font, but you
+      don't want every paragraph to get its own copy of the article's border.
+
+      ```html
+      <article class="post">
+        <h2>Inheritance</h2>
+        <p>This text inherits the colour and font from the article.</p>
+        <p>But the border isn't repeated around each paragraph.</p>
+      </article>
+      ```
+      ```css
+      .post {
+        color: darkslategray;
+        font-family: Georgia, serif;
+        border: 2px solid teal;
+      }
+      ```
+
+      ## An inherited value is the weakest of all
+
+      Any rule that targets the element directly — even a plain type
+      selector — beats a value it inherits:
+
+      ```html
+      <div class="box">
+        <p>A paragraph in the box.</p>
+        <a href="#">A link in the box</a>
+      </div>
+      ```
+      ```css
+      .box {
+        color: green;
+      }
+      ```
+
+      The paragraph is green, but the link stays blue: the browser's default
+      stylesheet has a rule for `a` that sets its colour directly, and that
+      beats inheriting.
+
+      ## Controlling inheritance
+
+      | Value | Means |
+      |---|---|
+      | `inherit` | take the parent's value (works on any property) |
+      | `initial` | reset to the property's default value from the CSS specification |
+      | `unset` | inherit if the property normally inherits, otherwise `initial` |
+
+      ```css static
+      .box a { color: inherit; }   /* links take the box's colour */
+      ```
+
+      ## Set defaults once
+
+      Because of inheritance, a good stylesheet sets the text basics on
+      `body` once, and only overrides where needed:
+
+      ```css static
+      body {
+        font-family: system-ui, sans-serif;
+        color: #222;
+        line-height: 1.5;
+      }
+      ```
+
+      {{check which}}
+
+      {{task inherit}}
+    checks:
+      - id: which
+        type: mcq
+        prompt: Which property is **not** inherited?
+        options:
+          - "`color`"
+          - "`font-family`"
+          - "`border`"
+          - "`text-align`"
+        answer: 2
+        why: "Box properties like border, margin and background aren't inherited."
+    tasks:
+      - id: inherit
+        title: Make the footer consistent
+        prompt: |
+          - Set `color: white` and `font-family: sans-serif` on `footer` (not on each child)
+          - Make the links in the footer use their parent's colour with `inherit` (don't write `white` again)
+          - Give the footer the background colour `#333`
+        given:
+          index.html: |
+            <footer>
+              <p>&copy; 2026 Tiny Shop</p>
+              <p><a href="#">Privacy</a> · <a href="#">Terms</a></p>
+            </footer>
+        files:
+          style.css: |
+            /* Style the footer */
+        solution:
+          style.css: |
+            footer {
+              background-color: #333;
+              color: white;
+              font-family: sans-serif;
+            }
+
+            footer a {
+              color: inherit;
+            }
+        harness: |
+          check(style('footer', 'background-color'), color('#333'));
+          check($$('footer p').every((p) => getComputedStyle(p).color === color('white')), true);
+          check($$('footer a').every((a) => getComputedStyle(a).color === color('white')), true);
+          check(style('footer a', 'font-family'), 'sans-serif');
+          check(rule('footer a', 'color'), 'inherit');
+          check(rule('footer p', 'color'), null);
+        hints:
+          - "`footer { color: white; … }` — the paragraphs inherit it."
+          - "Links have a default colour, so: `footer a { color: inherit; }`."
+    cards:
+      - front: Which kinds of properties are inherited?
+        back: Mostly text properties — color, font-*, line-height, text-align. Box properties (margin, border, background, width) are not.
+      - front: Why do links ignore a colour set on their parent?
+        back: The browser's default stylesheet sets `a`'s colour directly, and any direct rule beats an inherited value.
+      - front: "What does `color: inherit` do?"
+        back: Takes the parent's value for that property.
+
+  - type: quiz
+    id: css3-quiz2
+    title: "Quiz: inheritance"
+    questions:
+      - type: tf
+        prompt: "`background-color` on a `<div>` is inherited by the paragraphs inside it."
+        answer: false
+        why: "It isn't inherited — the paragraphs are transparent, so the div's background shows through them."
+      - type: mcq
+        prompt: "`body { color: navy; }` and `p { color: black; }`. A paragraph is…"
+        options:
+          - navy — body is its ancestor
+          - black — a direct rule beats inheritance
+          - dark blue-black
+          - it depends on the order
+        answer: 1
+        why: "Inherited values are the weakest."
+      - type: fill
+        prompt: Make buttons use the same font as the page (browsers give them their own).
+        code: |
+          button {
+            font-family: ___;
+          }
+        blanks:
+          - [inherit]
+        why: "`inherit` takes the parent's value."
+
+  - type: challenge
+    id: css3-ch-cascade
+    title: Predict, then fix
+    difficulty: 3
+    tags: [specificity, cascade]
+    prompt: |
+      This page should look like this:
+
+      - all `.note` paragraphs have the background colour `lightyellow`
+      - the `.note.warning` paragraph has the background colour `mistyrose` and `darkred` text
+      - text inside `#content` is `#333`
+      - links in notes are `inherit`-coloured (same colour as their note)
+
+      But the styles fight each other. Fix the stylesheet — you may change
+      selectors and order, but **don't** use `!important` or add ids.
+    given:
+      index.html: |
+        <div id="content">
+          <p class="note">Remember to <a href="#">save</a>.</p>
+          <p class="note warning">Unsaved work will be lost. <a href="#">Why?</a></p>
+          <p>Normal text.</p>
+        </div>
+    files:
+      style.css: |
+        .warning {
+          background-color: mistyrose;
+          color: darkred;
+        }
+
+        .note {
+          background-color: lightyellow;
+        }
+
+        #content p {
+          color: #333;
+        }
+
+        .note a {
+          color: inherit;
+        }
+    solution:
+      style.css: |
+        #content {
+          color: #333;
+        }
+
+        .note {
+          background-color: lightyellow;
+        }
+
+        .note.warning {
+          background-color: mistyrose;
+          color: darkred;
+        }
+
+        .note a {
+          color: inherit;
+        }
+    harness: |
+      const notes = $$('.note');
+      check(getComputedStyle(notes[0]).backgroundColor, color('lightyellow'));
+      check(style('.note.warning', 'background-color'), color('mistyrose'));
+      check(style('.note.warning', 'color'), color('darkred'));
+      check(style('#content > p:not(.note)', 'color'), color('#333'));
+      check(getComputedStyle(notes[0]).color, color('#333'));
+      check(style('.warning a', 'color'), color('darkred'));
+      check(style('.note:not(.warning) a', 'color'), color('#333'));
+    hints:
+      - "`.note` comes after `.warning` with the same specificity, so it wins the background. Use `.note.warning` (0, 2, 0), or move the rule down."
+      - "`#content p` is (1, 0, 1) — it beats `.warning`'s colour. Set the colour on `#content` itself and let it be inherited instead."
+
+  - type: review
+    id: css3-review
+    title: "Chapter 3 review"
+    body: |
+      ## How the browser picks a winner
+
+      1. `!important` declarations first (avoid them).
+      2. Then the **most specific** selector: compare (ids, classes, types) from the left. A `style` attribute beats any selector.
+      3. Then the one that comes **last**.
+      4. If no rule targets the element, **inherited** properties take the parent's value; others use their initial value.
+
+      ## Specificity examples
+
+      | Selector | Score |
+      |---|---|
+      | `li` | (0, 0, 1) |
+      | `ul li` | (0, 0, 2) |
+      | `.item` · `[type]` · `:hover` | (0, 1, 0) |
+      | `li.item:hover` | (0, 2, 1) |
+      | `#menu` | (1, 0, 0) |
+
+      ## Habits
+
+      - Style with single classes. Avoid ids and deep selectors.
+      - Order the stylesheet from general (body, elements) to specific (components, states).
+      - Set text defaults on `body`; use `inherit` where elements have their own defaults (links, buttons).
+    questions:
+      - type: order
+        prompt: Order from **least** to **most** specific.
+        lines:
+          - "p"
+          - "article p"
+          - ".intro"
+          - "p.intro:first-child"
+          - "#lead"
+        why: "(0,0,1) < (0,0,2) < (0,1,0) < (0,2,1) < (1,0,0)."
+      - type: mcq
+        prompt: "What beats even an id selector?"
+        options:
+          - Two classes
+          - A `style` attribute (or `!important`)
+          - A later rule
+          - "`body`"
+        answer: 1
+        why: "Inline styles beat all selectors; `!important` beats those."
+
+  - type: exam
+    id: css3-exam
+    title: "Chapter 3 exam"
+    minutes: 20
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: "What does the \"cascade\" decide?"
+        options:
+          - The order of elements on the page
+          - Which declaration wins when several set the same property
+          - How fast the page loads
+          - Which fonts are installed
+        answer: 1
+        why: "It resolves conflicts."
+      - type: mcq
+        prompt: "Specificity of `#nav .item a`?"
+        options:
+          - (1, 1, 1)
+          - (0, 2, 1)
+          - (1, 0, 2)
+          - (0, 1, 2)
+        answer: 0
+        why: "One id, one class, one type."
+      - type: mcq
+        prompt: "`p { color: red; }` then `p { color: blue; }`. The paragraph is…"
+        options:
+          - red
+          - blue
+          - purple
+          - black
+        answer: 1
+        why: "Same specificity: later wins."
+      - type: mcq
+        prompt: "`.title { color: red; }` then `h1 { color: blue; }`. An `<h1 class=\"title\">` is…"
+        options:
+          - red
+          - blue
+          - purple
+          - black
+        answer: 0
+        why: "A class beats a type, whatever the order."
+      - type: tf
+        prompt: "`margin` is an inherited property."
+        answer: false
+        why: "Box properties aren't inherited."
+      - type: tf
+        prompt: One id selector beats a selector with ten classes.
+        answer: true
+        why: "Compare from the left: ids first."
+      - type: fill
+        prompt: Make the links take their parent's colour.
+        code: |
+          .card a { color: ___; }
+        blanks:
+          - [inherit]
+        why: "`inherit`."
+      - type: mcq
+        prompt: Why is `!important` best avoided?
+        options:
+          - It's not valid CSS
+          - It only works in some browsers
+          - Overriding it needs another !important, so stylesheets get harder and harder to change
+          - It makes pages slow
+        answer: 2
+        why: "It escalates."
+      - type: mcq
+        prompt: "A `<div>` has `font-family: serif`. A `<p>` inside it has no font rule. Its font is…"
+        options:
+          - The browser default
+          - serif — inherited
+          - sans-serif
+          - monospace
+        answer: 1
+        why: "font-family is inherited."
+      - type: mcq
+        prompt: "What counts in the \"classes\" column of specificity?"
+        options:
+          - Only `.class`
+          - "Classes, attribute selectors and pseudo-classes"
+          - Classes and ids
+          - Classes and element names
+        answer: 1
+        why: "`.x`, `[attr]` and `:state` all count as classes."
+      - type: code
+        prompt: |
+          The first rule is locked in place. Make the `.special` item
+          `orange` by adding a rule **after it** that wins by specificity —
+          no `!important`, no ids.
+        given:
+          index.html: |
+            <ul class="list">
+              <li>Plain</li>
+              <li class="special">Special</li>
+            </ul>
+        files:
+          style.css: |
+            .list li {
+              color: slategray;
+            }
+        solution:
+          style.css: |
+            .list li {
+              color: slategray;
+            }
+
+            .list li.special {
+              color: orange;
+            }
+        harness: |
+          check(style('.special', 'color'), color('orange'));
+          check(style('li:not(.special)', 'color'), color('slategray'));
+          check(rule('.list li', 'color'), 'slategray');
+          check([...document.styleSheets].some((s) => [...s.cssRules].some((r) => (r.cssText || '').includes('!important') || (r.selectorText || '').includes('#'))), false);

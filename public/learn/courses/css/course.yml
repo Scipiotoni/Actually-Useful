@@ -1,0 +1,44 @@
+id: css
+lang: web
+code_lang: css
+short: CSS
+icon: 🎨
+final: css-final
+graduate: CSS Graduate
+title: CSS Styling
+subtitle: Make web pages beautiful — colours, fonts, spacing, layouts, and designs that work on every screen.
+
+intro: |
+  CSS is the language that gives web pages their looks. This course starts
+  from your first rule and ends with a polished, responsive website that
+  looks good on a phone and a big screen alike. Every example shows its
+  result live as you edit it, and your styles are checked automatically in
+  a real browser.
+
+  You only need to know basic HTML — elements, attributes, classes. If you
+  haven't done the HTML course yet, it's a good place to start.
+
+parts:
+  - id: css-p1
+    title: Part I — Styling Basics
+    blurb: Rules, selectors, the cascade, colours, units and typography — how CSS decides what every element looks like.
+  - id: css-p2
+    title: Part II — Layout
+    blurb: The box model, Flexbox, Grid and positioning — putting things exactly where you want them.
+  - id: css-p3
+    title: Part III — Responsive and Modern CSS
+    blurb: Pages that adapt to every screen, motion and animation, and a complete styled website.
+
+chapters:
+  - css01
+  - css02
+  - css03
+  - css04
+  - css05
+  - css06
+  - css07
+  - css08
+  - css09
+  - css10
+  - css11
+  - css12

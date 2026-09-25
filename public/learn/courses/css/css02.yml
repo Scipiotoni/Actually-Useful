@@ -1,0 +1,1022 @@
+id: css02
+number: 2
+part: css-p1
+title: Selectors
+blurb: Pick exactly the elements you want — by type, class, id, position, attribute or state.
+hours: 3
+goals:
+  - Select elements by type, class and id, and group selectors
+  - Select by relationship — descendants, children and siblings
+  - Use attribute selectors and pseudo-classes like `:hover` and `:nth-child`
+  - Add decorative content with `::before` and `::after`
+
+items:
+  - type: lesson
+    id: css2-basic
+    title: Type, class and id selectors
+    minutes: 20
+    objectives:
+      - Select elements by type, class and id
+      - Combine a type with a class, and require several classes
+      - Group selectors with commas
+    body: |
+      So far every selector was an element name, like `p`. That styles
+      **every** paragraph. To style *some* of them, give them a class in
+      the HTML and select the class in CSS with a dot:
+
+      ```html
+      <h1 id="top">Today's menu</h1>
+      <p>All dishes are made fresh.</p>
+      <p class="dish">Tomato soup <span class="price">€4</span></p>
+      <p class="dish special">Mushroom risotto <span class="price">€9</span></p>
+      <p class="note">Ask us about allergies.</p>
+      ```
+      ```css
+      #top {
+        color: firebrick;
+      }
+
+      .dish {
+        font-size: 20px;
+      }
+
+      .special {
+        background-color: lightyellow;
+      }
+
+      .price {
+        font-weight: bold;
+        color: green;
+      }
+
+      .note {
+        font-style: italic;
+        color: gray;
+      }
+      ```
+
+      | Selector | Selects | Example |
+      |---|---|---|
+      | `p` | every `<p>` element (a **type** selector) | `p { … }` |
+      | `.name` | every element with `class="name"` | `.price { … }` |
+      | `#name` | the element with `id="name"` | `#top { … }` |
+      | `*` | every element (the **universal** selector) | `* { … }` |
+
+      ## Combining and grouping
+
+      - `p.note` — a `<p>` **that has** the class `note` (no space!).
+      - `.dish.special` — an element with **both** classes.
+      - `h1, h2, h3` — a **group**: the rule applies to each selector in the list.
+
+      ```css static
+      h1, h2, h3 { font-family: sans-serif; }   /* all three headings */
+      p.note { color: gray; }                     /* only paragraphs with class note */
+      .dish.special { border: 1px solid gold; }   /* elements with both classes */
+      ```
+
+      > [!tip]
+      > Style with **classes**. They are reusable, and — as Chapter 3
+      > shows — ids are so strong they make rules hard to override. Keep ids
+      > for links (`#top`) and JavaScript.
+
+      {{check dot}}
+
+      {{check both}}
+
+      {{task menu}}
+    checks:
+      - id: dot
+        type: mcq
+        prompt: "Which selector matches `<div class=\"card\">`?"
+        options:
+          - "`card`"
+          - "`#card`"
+          - "`.card`"
+          - "`div#card`"
+        answer: 2
+        why: "A dot selects a class; `#` an id; a bare name an element type."
+      - id: both
+        type: mcq
+        prompt: "What does `.btn.primary` select?"
+        options:
+          - Elements with the class `btn` or `primary`
+          - Elements with both classes `btn` and `primary`
+          - "`.primary` elements inside a `.btn`"
+          - Nothing — it's invalid
+        answer: 1
+        why: "No space means both conditions on the same element."
+    tasks:
+      - id: menu
+        title: A café menu
+        prompt: |
+          Using the classes and the id in the HTML, style the menu:
+
+          - the heading with the id `title` is `saddlebrown`
+          - every `.item` is `18px`
+          - every `.price` is `bold`
+          - the item that is **both** `.item` and `.vegan` has the background colour `honeydew`
+          - `h2` and `h3` elements (use one grouped rule) are `darkolivegreen`
+        given:
+          index.html: |
+            <h1 id="title">Café Luna</h1>
+            <h2>Drinks</h2>
+            <p class="item">Espresso <span class="price">€2</span></p>
+            <p class="item">Hot chocolate <span class="price">€3</span></p>
+            <h3>Food</h3>
+            <p class="item vegan">Hummus toast <span class="price">€6</span></p>
+            <p class="vegan">All our bread is vegan.</p>
+        files:
+          style.css: |
+            /* Style the menu */
+        solution:
+          style.css: |
+            #title {
+              color: saddlebrown;
+            }
+
+            .item {
+              font-size: 18px;
+            }
+
+            .price {
+              font-weight: bold;
+            }
+
+            .item.vegan {
+              background-color: honeydew;
+            }
+
+            h2, h3 {
+              color: darkolivegreen;
+            }
+        harness: |
+          check(style('#title', 'color'), color('saddlebrown'));
+          check($$('.item').every((p) => getComputedStyle(p).fontSize === '18px'), true);
+          check($$('.price').every((p) => getComputedStyle(p).fontWeight === '700'), true);
+          check(style('.item.vegan', 'background-color'), color('honeydew'));
+          check(style('p.vegan:not(.item)', 'background-color'), color('transparent'));
+          check(style('h2', 'color'), color('darkolivegreen'));
+          check(style('h3', 'color'), color('darkolivegreen'));
+        hints:
+          - "`#title { … }`, `.item { … }`, `.price { … }`."
+          - "Both classes: `.item.vegan` (no space). A group: `h2, h3 { … }`."
+    cards:
+      - front: How do you select by class? By id?
+        back: "`.name` for a class, `#name` for an id."
+      - front: "`p.note` vs `p .note`?"
+        back: "`p.note` is a paragraph with the class note; `p .note` (with a space) is a .note element *inside* a paragraph."
+      - front: How do you apply one rule to several selectors?
+        back: "Separate them with commas: `h1, h2, h3 { … }`."
+      - front: Why style with classes rather than ids?
+        back: Classes are reusable and easy to override; ids are unique and very strong in the cascade.
+
+  - type: lesson
+    id: css2-relations
+    title: Descendants, children and siblings
+    minutes: 20
+    objectives:
+      - Select elements inside other elements with the descendant combinator
+      - Select direct children with `>`
+      - Select following siblings with `+` and `~`
+    body: |
+      Often you want elements **in a certain place**: the links in the
+      navigation, but not the links in the text. **Combinators** describe
+      relationships:
+
+      | Selector | Selects |
+      |---|---|
+      | `nav a` (a space) | every `<a>` **anywhere inside** a `<nav>` — a *descendant* |
+      | `ul > li` | `<li>`s that are **direct children** of a `<ul>` |
+      | `h2 + p` | a `<p>` **right after** an `<h2>` (the next sibling) |
+      | `h2 ~ p` | every `<p>` **after** an `<h2>`, with the same parent |
+
+      ```html
+      <nav>
+        <a href="#">Home</a>
+        <a href="#">Blog</a>
+      </nav>
+      <article>
+        <h2>Hello</h2>
+        <p>The first paragraph after the heading is the intro.</p>
+        <p>This one is ordinary. Here is <a href="#">a link in the text</a>.</p>
+      </article>
+      ```
+      ```css
+      nav {
+        background-color: #222;
+      }
+
+      nav a {
+        color: white;
+        font-weight: bold;
+      }
+
+      h2 + p {
+        font-size: 20px;
+        color: #555;
+      }
+      ```
+
+      Only the navigation links are white; the link in the text is left
+      alone. And only the paragraph *directly after* the heading is large.
+
+      ## Descendant or child?
+
+      ```html
+      <ul class="menu">
+        <li>Fruit
+          <ul>
+            <li>Apples</li>
+            <li>Pears</li>
+          </ul>
+        </li>
+        <li>Vegetables</li>
+      </ul>
+      ```
+      ```css
+      .menu > li {
+        color: crimson;
+        font-weight: bold;
+      }
+
+      .menu li li {
+        color: gray;
+        font-weight: normal;
+      }
+      ```
+
+      `.menu > li` picks only the top-level items; `.menu li li` picks items
+      nested inside another item.
+
+      > [!tip]
+      > Keep selectors short. `nav a` is great; `body div.main ul li a` is
+      > fragile — any change to the HTML breaks it. If you need more than
+      > two or three parts, add a class instead.
+
+      {{check space}}
+
+      {{check plus}}
+
+      {{task nav}}
+    checks:
+      - id: space
+        type: mcq
+        prompt: "Which elements does `footer a` select?"
+        options:
+          - "Only links that are direct children of a `<footer>`"
+          - "Every link anywhere inside a `<footer>`"
+          - "Footers that contain links"
+          - "Links that come right after a footer"
+        answer: 1
+        why: "A space means descendant — at any depth."
+      - id: plus
+        type: mcq
+        prompt: "`h1 + p` selects…"
+        options:
+          - Every paragraph on a page with an h1
+          - The paragraph directly after each h1
+          - Paragraphs inside an h1
+          - h1 and p
+        answer: 1
+        why: "`+` is the next sibling only."
+    tasks:
+      - id: nav
+        title: Only in the right place
+        prompt: |
+          Without changing the HTML:
+
+          - links **inside the `nav`** are `white` (the link in the article stays as it is)
+          - the `nav` itself has the background colour `darkslateblue`
+          - the paragraph **directly after** the `h2` is `italic` (`font-style`)
+          - list items that are **direct children** of `.steps` are `bold` — but the nested items are not
+        given:
+          index.html: |
+            <nav>
+              <a href="#">Home</a>
+              <a href="#">Recipes</a>
+            </nav>
+            <article>
+              <h2>Pancakes</h2>
+              <p>Fluffy pancakes in twenty minutes.</p>
+              <p>Read <a href="#">the story</a> behind the recipe.</p>
+              <ol class="steps">
+                <li>Mix
+                  <ul>
+                    <li>flour</li>
+                    <li>milk</li>
+                  </ul>
+                </li>
+                <li>Fry</li>
+              </ol>
+            </article>
+        files:
+          style.css: |
+            /* Style by position */
+        solution:
+          style.css: |
+            nav {
+              background-color: darkslateblue;
+            }
+
+            nav a {
+              color: white;
+            }
+
+            h2 + p {
+              font-style: italic;
+            }
+
+            .steps > li {
+              font-weight: bold;
+            }
+
+            .steps li li {
+              font-weight: normal;
+            }
+        harness: |
+          check($$('nav a').every((a) => getComputedStyle(a).color === color('white')), true);
+          check(style('article a', 'color') === color('white'), false);
+          check(style('nav', 'background-color'), color('darkslateblue'));
+          check(style('h2 + p', 'font-style'), 'italic');
+          check(style('article p:nth-of-type(2)', 'font-style'), 'normal');
+          check($$('.steps > li').map((li) => getComputedStyle(li).fontWeight), ['700', '700']);
+          check($$('.steps ul li').map((li) => getComputedStyle(li).fontWeight), ['400', '400']);
+        hints:
+          - "`nav a { … }` only matches links inside the nav."
+          - "`.steps > li` matches the top level. The nested items *inherit* bold from their parent `li`, so they need their own rule: `.steps li li { font-weight: normal; }`."
+    cards:
+      - front: "`nav a` vs `nav > a`?"
+        back: "`nav a` — links anywhere inside the nav. `nav > a` — only links that are direct children."
+      - front: "What does `h2 + p` select?"
+        back: The paragraph immediately after an h2 (the next sibling).
+      - front: "What does `h2 ~ p` select?"
+        back: Every paragraph after an h2 that shares its parent.
+
+  - type: quiz
+    id: css2-quiz1
+    title: "Quiz: class, id and combinators"
+    questions:
+      - type: fill
+        prompt: Select the element with `id="header"`.
+        code: |
+          ___ {
+            background-color: navy;
+          }
+        blanks:
+          - ["#header"]
+        why: "`#` for ids."
+      - type: mcq
+        prompt: "Which selector matches `<em>` elements inside paragraphs with the class `intro`?"
+        options:
+          - "`p.intro em`"
+          - "`p .intro em`"
+          - "`em.intro`"
+          - "`p, .intro, em`"
+        answer: 0
+        why: "`p.intro` is the paragraph; a space then `em` means inside it."
+      - type: tf
+        prompt: "`h1, h2 { color: red; }` makes both h1 and h2 elements red."
+        answer: true
+        why: "A comma groups selectors."
+      - type: mcq
+        prompt: "Which selector picks only the **top-level** items of `<ul class=\"menu\">`?"
+        options:
+          - "`.menu li`"
+          - "`.menu > li`"
+          - "`.menu + li`"
+          - "`li.menu`"
+        answer: 1
+        why: "`>` means direct children only."
+
+  - type: lesson
+    id: css2-pseudo
+    title: Attributes and pseudo-classes
+    minutes: 25
+    objectives:
+      - Select elements by their attributes
+      - Style links and buttons when hovered or focused
+      - Select by position with `:first-child`, `:last-child` and `:nth-child`
+      - Exclude elements with `:not()`
+    body: |
+      ## Attribute selectors
+
+      Square brackets select by attribute:
+
+      | Selector | Selects |
+      |---|---|
+      | `[required]` | elements that **have** the attribute |
+      | `input[type="email"]` | inputs whose `type` **is** `email` |
+      | `a[href^="https"]` | links whose `href` **starts with** `https` |
+      | `a[href$=".pdf"]` | links whose `href` **ends with** `.pdf` |
+
+      ## Pseudo-classes: states
+
+      A **pseudo-class**, written with a colon, selects elements in a
+      certain **state**:
+
+      ```html
+      <p>
+        <a href="#">Hover over me</a> or press Tab to focus the button:
+        <button>Save</button>
+      </p>
+      <p><input type="email" placeholder="Email" required></p>
+      ```
+      ```css
+      a:hover {
+        color: crimson;
+      }
+
+      button:hover {
+        background-color: gold;
+      }
+
+      button:focus-visible {
+        outline: 3px solid dodgerblue;
+      }
+
+      input[required] {
+        background-color: lightyellow;
+      }
+      ```
+
+      | Pseudo-class | When |
+      |---|---|
+      | `:hover` | the mouse pointer is over it |
+      | `:focus` | it has keyboard focus (a field you're typing in, a button you tabbed to) |
+      | `:focus-visible` | focused, and the browser thinks a focus ring should show (keyboard use) |
+      | `:active` | while being clicked |
+      | `:visited` | a link to a page you've already visited |
+      | `:checked` | a ticked checkbox or selected radio button |
+      | `:disabled` | a disabled form control |
+
+      > [!warning]
+      > Never remove the focus outline (`outline: none`) without giving a
+      > clear replacement. Keyboard users need to see where they are.
+
+      ## Pseudo-classes: position
+
+      ```html
+      <ul>
+        <li>One</li>
+        <li>Two</li>
+        <li>Three</li>
+        <li>Four</li>
+        <li>Five</li>
+      </ul>
+      ```
+      ```css
+      li:first-child {
+        font-weight: bold;
+      }
+
+      li:nth-child(even) {
+        background-color: #eee;
+      }
+
+      li:last-child {
+        color: crimson;
+      }
+
+      li:not(:first-child) {
+        font-style: italic;
+      }
+      ```
+
+      - `:first-child` / `:last-child` — the first or last child of its parent.
+      - `:nth-child(3)` — the third; `:nth-child(odd)` / `:nth-child(even)`; `:nth-child(3n)` — every third.
+      - `:not(selector)` — everything that does *not* match.
+
+      `:nth-child(even)` gives tables and lists **zebra stripes** that make
+      rows easier to follow.
+
+      {{check hover}}
+
+      {{check nth}}
+
+      {{task zebra}}
+    checks:
+      - id: hover
+        type: fill
+        prompt: Make buttons turn orange when the mouse is over them.
+        code: |
+          button___ {
+            background-color: orange;
+          }
+        blanks:
+          - [":hover"]
+        why: "`:hover` — the state of being pointed at."
+      - id: nth
+        type: mcq
+        prompt: "`tr:nth-child(odd)` selects…"
+        options:
+          - Rows 1, 3, 5…
+          - Rows 2, 4, 6…
+          - Only the first row
+          - Rows with odd content
+        answer: 0
+        why: "Odd positions: 1, 3, 5 and so on."
+    tasks:
+      - id: zebra
+        title: A striped, friendly table
+        prompt: |
+          Style the table:
+
+          - even rows of the body (`tbody tr:nth-child(even)`) have the background colour `whitesmoke`
+          - when the mouse is over a body row (`tbody tr:hover`), its background colour is `lightyellow`
+          - the first cell of every row (`td:first-child`) is `bold`
+          - links whose `href` ends with `.pdf` are `crimson`
+        given:
+          index.html: |
+            <table>
+              <thead>
+                <tr><th>Document</th><th>Size</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Report</td><td><a href="report.pdf">PDF</a></td></tr>
+                <tr><td>Slides</td><td><a href="slides.html">Web</a></td></tr>
+                <tr><td>Budget</td><td><a href="budget.pdf">PDF</a></td></tr>
+                <tr><td>Notes</td><td><a href="notes.html">Web</a></td></tr>
+              </tbody>
+            </table>
+        files:
+          style.css: |
+            /* Stripes, hover, first cells and PDF links */
+        solution:
+          style.css: |
+            tbody tr:nth-child(even) {
+              background-color: whitesmoke;
+            }
+
+            tbody tr:hover {
+              background-color: lightyellow;
+            }
+
+            td:first-child {
+              font-weight: bold;
+            }
+
+            a[href$=".pdf"] {
+              color: crimson;
+            }
+        harness: |
+          check($$('tbody tr').map((r) => getComputedStyle(r).backgroundColor), [color('transparent'), color('whitesmoke'), color('transparent'), color('whitesmoke')]);
+          check(color(hover('tbody tr', 'background-color')), color('lightyellow'));
+          check($$('td:first-child').every((td) => getComputedStyle(td).fontWeight === '700'), true);
+          check(style('td:last-child', 'font-weight'), '400');
+          check($$('a').map((a) => getComputedStyle(a).color === color('crimson')), [true, false, true, false]);
+        hints:
+          - "`tbody tr:nth-child(even) { … }` and `tbody tr:hover { … }`."
+          - "Ends with: `a[href$=\".pdf\"]`."
+    cards:
+      - front: "How do you select links whose href starts with `https`?"
+        back: "`a[href^=\"https\"]` (`$=` for ends with)."
+      - front: "What does `:hover` select?"
+        back: The element the mouse pointer is over.
+      - front: "Why keep a visible focus style?"
+        back: Keyboard users need to see which element is focused. Never remove outlines without a clear replacement.
+      - front: "How do you stripe every other row?"
+        back: "`tr:nth-child(even) { background-color: … }`"
+
+  - type: lesson
+    id: css2-elements
+    title: Pseudo-elements
+    minutes: 15
+    objectives:
+      - Insert decorative content with `::before` and `::after`
+      - Style the first letter or line of a paragraph
+    body: |
+      A **pseudo-element**, written with **two** colons, styles a *part* of an
+      element — or adds a new decorative part.
+
+      ```html
+      <p class="intro">Once upon a time, in a land of tidy stylesheets, there lived a web designer who never used inline styles.</p>
+      <p class="tip">Save your work often.</p>
+      <p><a href="https://example.com" class="external">An external link</a></p>
+      ```
+      ```css
+      .intro::first-letter {
+        font-size: 48px;
+        color: darkred;
+      }
+
+      .intro::first-line {
+        font-weight: bold;
+      }
+
+      .tip::before {
+        content: "💡 ";
+      }
+
+      .external::after {
+        content: " ↗";
+      }
+      ```
+
+      | Pseudo-element | Styles |
+      |---|---|
+      | `::before` / `::after` | a new piece of content at the start / end of the element — it needs a `content` property |
+      | `::first-letter` | the first letter (drop caps) |
+      | `::first-line` | the first line as displayed |
+      | `::placeholder` | the grey placeholder text of a field |
+      | `::selection` | the part the user has selected |
+
+      `::before` and `::after` are for **decoration** only: some screen
+      readers skip their content, and it can't be selected or copied. Real
+      content belongs in the HTML.
+
+      {{check colons}}
+
+      {{task stars}}
+    checks:
+      - id: colons
+        type: mcq
+        prompt: What does `::before` need to show anything?
+        options:
+          - A `display` property
+          - A `content` property
+          - An `id`
+          - Nothing
+        answer: 1
+        why: "Without `content`, the pseudo-element isn't created."
+    tasks:
+      - id: stars
+        title: Decorations
+        prompt: |
+          - Put `★ ` (a star and a space) **before** every `.featured` heading, with `::before`
+          - Make the first letter of `.story` paragraphs `40px`
+          - Put ` (new)` **after** every `.new` link, in `green`
+        given:
+          index.html: |
+            <h2 class="featured">Best seller</h2>
+            <p class="story">Long ago, a small bookshop opened on a quiet street.</p>
+            <h2>Other books</h2>
+            <p><a href="#" class="new">The Glass Garden</a> and <a href="#">Old Roads</a></p>
+        files:
+          style.css: |
+            /* Decorate with pseudo-elements */
+        solution:
+          style.css: |
+            .featured::before {
+              content: "★ ";
+            }
+
+            .story::first-letter {
+              font-size: 40px;
+            }
+
+            .new::after {
+              content: " (new)";
+              color: green;
+            }
+        harness: |
+          check(style('.featured', 'content', '::before'), '"★ "');
+          check(style('h2:not(.featured)', 'content', '::before'), 'none');
+          check(style('.story', 'font-size', '::first-letter'), '40px');
+          check(style('.new', 'content', '::after'), '" (new)"');
+          check(style('.new', 'color', '::after'), color('green'));
+        hints:
+          - "`.featured::before { content: \"★ \"; }` — the content is a quoted string."
+          - "`.story::first-letter { font-size: 40px; }`"
+    cards:
+      - front: Pseudo-class vs pseudo-element?
+        back: "A pseudo-class (`:hover`) selects an element in a state; a pseudo-element (`::before`) styles a part of an element or adds one."
+      - front: What are `::before` and `::after` for?
+        back: Decorative content added with the `content` property. Real content belongs in the HTML.
+
+  - type: quiz
+    id: css2-quiz2
+    title: "Quiz: attributes and pseudo-selectors"
+    questions:
+      - type: mcq
+        prompt: "Which selector matches `<input type=\"checkbox\">` only?"
+        options:
+          - "`input.checkbox`"
+          - "`input[type=\"checkbox\"]`"
+          - "`input#checkbox`"
+          - "`input:checkbox`"
+        answer: 1
+        why: "Square brackets test attributes."
+      - type: mcq
+        prompt: Which selects every list item **except** the last?
+        options:
+          - "`li:last-child`"
+          - "`li:not(:last-child)`"
+          - "`li:first-child`"
+          - "`li::last`"
+        answer: 1
+        why: "`:not()` excludes what matches inside it."
+      - type: tf
+        prompt: Important information should be added with `::before` so the HTML stays short.
+        answer: false
+        why: "Pseudo-element content may be skipped by screen readers and can't be copied. It's for decoration."
+      - type: fill
+        prompt: Make the first letter of every paragraph large.
+        code: |
+          p___ {
+            font-size: 2em;
+          }
+        blanks:
+          - ["::first-letter"]
+        why: "Two colons for pseudo-elements."
+
+  - type: challenge
+    id: css2-ch-target
+    title: Target practice
+    difficulty: 2
+    tags: [selectors]
+    prompt: |
+      Style **exactly** the elements described — nothing else — without
+      changing the HTML:
+
+      1. the **first** item of the list is `bold`
+      2. the item with the class `done` is `gray`
+      3. links inside the `.links` paragraph that point to `https` addresses are `seagreen`
+      4. the paragraph right after the `h3` is `18px`
+      5. every **third** list item has the background colour `lavender`
+    given:
+      index.html: |
+        <h3>Chores</h3>
+        <p>Things to do this week.</p>
+        <ul>
+          <li>Water the plants</li>
+          <li class="done">Buy bread</li>
+          <li>Walk the dog</li>
+          <li>Call grandma</li>
+          <li class="done">Take out the bins</li>
+          <li>Tidy the desk</li>
+        </ul>
+        <p class="links">
+          <a href="https://example.com">Secure</a>
+          <a href="http://old.example.com">Old</a>
+          <a href="/local">Local</a>
+        </p>
+    files:
+      style.css: |
+        /* Five precise rules */
+    solution:
+      style.css: |
+        li:first-child {
+          font-weight: bold;
+        }
+
+        .done {
+          color: gray;
+        }
+
+        .links a[href^="https"] {
+          color: seagreen;
+        }
+
+        h3 + p {
+          font-size: 18px;
+        }
+
+        li:nth-child(3n) {
+          background-color: lavender;
+        }
+    harness: |
+      check($$('li').map((li) => getComputedStyle(li).fontWeight), ['700', '400', '400', '400', '400', '400']);
+      check($$('li').map((li) => getComputedStyle(li).color === color('gray')), [false, true, false, false, true, false]);
+      check($$('.links a').map((a) => getComputedStyle(a).color === color('seagreen')), [true, false, false]);
+      check($$('p').map((p) => getComputedStyle(p).fontSize), ['18px', '16px']);
+      check($$('li').map((li) => getComputedStyle(li).backgroundColor === color('lavender')), [false, false, true, false, false, true]);
+    hints:
+      - "`li:first-child`, `.done`, `h3 + p`."
+      - "Starts with: `a[href^=\"https\"]`. Every third: `:nth-child(3n)`."
+
+  - type: challenge
+    id: css2-ch-nav
+    title: A navigation bar with states
+    difficulty: 2
+    tags: [selectors, states]
+    prompt: |
+      Style the navigation:
+
+      - `nav` background `midnightblue`
+      - links inside `nav` are `white` and have no underline (`text-decoration: none`)
+      - on hover, nav links are `gold`
+      - the link for the current page has the class `current`: make it `bold`
+      - when a nav link has keyboard focus (`nav a:focus-visible`), give it `outline: 2px solid gold`
+    given:
+      index.html: |
+        <nav>
+          <a href="#" class="current">Home</a>
+          <a href="#">Shop</a>
+          <a href="#">Contact</a>
+        </nav>
+        <p>Welcome! <a href="#">Read our story</a>.</p>
+    files:
+      style.css: |
+        /* Style the nav */
+    solution:
+      style.css: |
+        nav {
+          background-color: midnightblue;
+        }
+
+        nav a {
+          color: white;
+          text-decoration: none;
+        }
+
+        nav a:hover {
+          color: gold;
+        }
+
+        nav a.current {
+          font-weight: bold;
+        }
+
+        nav a:focus-visible {
+          outline: 2px solid gold;
+        }
+    harness: |
+      check(style('nav', 'background-color'), color('midnightblue'));
+      check($$('nav a').every((a) => getComputedStyle(a).color === color('white')), true);
+      check($$('nav a').every((a) => getComputedStyle(a).textDecorationLine === 'none'), true);
+      check(style('p a', 'text-decoration-line'), 'underline');
+      check(color(hover('nav a', 'color')), color('gold'));
+      check(color(hover('p a', 'color')) === color('gold'), false);
+      check($$('nav a').map((a) => getComputedStyle(a).fontWeight), ['700', '400', '400']);
+      check(focus('nav a', 'outline-style'), 'solid');
+      check(focus('nav a', 'outline-width'), '2px');
+      check(color(focus('nav a', 'outline-color')), color('gold'));
+    hints:
+      - "`nav a:hover { color: gold; }` — only nav links, not the one in the paragraph."
+      - "`nav a.current { font-weight: bold; }`"
+
+  - type: review
+    id: css2-review
+    title: "Chapter 2 review"
+    body: |
+      ## Cheat sheet
+
+      ```css static
+      p            /* type */
+      .card        /* class */
+      #top         /* id */
+      *            /* everything */
+      h1, h2       /* group */
+      p.note       /* p with class note */
+      .a.b         /* both classes */
+
+      nav a        /* descendant (anywhere inside) */
+      ul > li      /* direct child */
+      h2 + p       /* next sibling */
+      h2 ~ p       /* later siblings */
+
+      [required]   input[type="email"]   a[href^="https"]   a[href$=".pdf"]
+
+      a:hover   input:focus   button:focus-visible   :checked   :disabled
+      li:first-child   li:last-child   tr:nth-child(even)   li:nth-child(3n)   :not(.done)
+
+      .tip::before { content: "💡 "; }   p::first-letter   p::first-line   ::placeholder
+      ```
+
+      ## Key ideas
+
+      - Style with **classes**; keep ids for links and scripts.
+      - A space means "inside"; no space means "the same element".
+      - Pseudo-classes (`:`) select states and positions; pseudo-elements (`::`) style parts or add decoration.
+      - Keep selectors short, and never hide focus outlines without a replacement.
+    questions:
+      - type: mcq
+        prompt: "`.card p` vs `.card.p`?"
+        options:
+          - They're the same
+          - "The first is paragraphs inside a .card; the second elements with the classes card and p"
+          - "The first is invalid"
+          - "The second is paragraphs inside a .card"
+        answer: 1
+        why: "Space = inside; no space = same element."
+      - type: mcq
+        prompt: How do you select the third item of a list?
+        options:
+          - "`li:third`"
+          - "`li:nth-child(3)`"
+          - "`li[3]`"
+          - "`li + 3`"
+        answer: 1
+        why: "`:nth-child(3)`."
+
+  - type: exam
+    id: css2-exam
+    title: "Chapter 2 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: "Which selects `<p class=\"warning\">`?"
+        options:
+          - "`p#warning`"
+          - "`.warning`"
+          - "`warning`"
+          - "`p > warning`"
+        answer: 1
+        why: "Dot for class."
+      - type: mcq
+        prompt: "Which selects every `<a>` inside `<footer>`, at any depth?"
+        options:
+          - "`footer > a`"
+          - "`footer + a`"
+          - "`footer a`"
+          - "`footer.a`"
+        answer: 2
+        why: "A space is the descendant combinator."
+      - type: fill
+        prompt: Select the direct `li` children of `.menu`.
+        code: |
+          .menu ___ li { font-weight: bold; }
+        blanks:
+          - [">"]
+        why: "`>` is the child combinator."
+      - type: mcq
+        prompt: Which selector styles the email field?
+        options:
+          - "`input.email`"
+          - "`input[type=\"email\"]`"
+          - "`#input-email`"
+          - "`email input`"
+        answer: 1
+        why: "Attribute selector on `type`."
+      - type: tf
+        prompt: "`h1, p { color: red; }` only styles paragraphs inside h1 elements."
+        answer: false
+        why: "A comma groups: both h1 and p elements are styled."
+      - type: mcq
+        prompt: "Which selects even table rows?"
+        options:
+          - "`tr:even`"
+          - "`tr:nth-child(even)`"
+          - "`tr:nth(2)`"
+          - "`tr + tr`"
+        answer: 1
+        why: "`:nth-child(even)`."
+      - type: mcq
+        prompt: "Which is a pseudo-**element**?"
+        options:
+          - "`:hover`"
+          - "`:first-child`"
+          - "`::after`"
+          - "`:focus`"
+        answer: 2
+        why: "Two colons: it styles a part or adds content."
+      - type: fill
+        prompt: Change a link's colour while the mouse is over it.
+        code: |
+          a___ { color: red; }
+        blanks:
+          - [":hover"]
+        why: "`:hover`."
+      - type: mcq
+        prompt: "Which selects paragraphs that do **not** have the class `intro`?"
+        options:
+          - "`p:not(.intro)`"
+          - "`p!intro`"
+          - "`p:except(.intro)`"
+          - "`p.not-intro`"
+        answer: 0
+        why: "`:not()`."
+      - type: tf
+        prompt: It's fine to remove focus outlines as long as the design looks cleaner.
+        answer: false
+        why: "Keyboard users need a visible focus style."
+      - type: mcq
+        prompt: "`h2 + p` selects…"
+        options:
+          - Paragraphs inside h2
+          - The paragraph immediately after each h2
+          - All paragraphs and h2s
+          - The h2 before a paragraph
+        answer: 1
+        why: "Next sibling."
+      - type: code
+        prompt: |
+          Without changing the HTML: make the links **inside the nav**
+          `tomato`, and make **every other** list item (the even ones) have
+          the background colour `beige`.
+        given:
+          index.html: |
+            <nav><a href="#">Home</a> <a href="#">About</a></nav>
+            <ul>
+              <li>One</li>
+              <li>Two</li>
+              <li>Three</li>
+              <li>Four</li>
+            </ul>
+            <p><a href="#">Other link</a></p>
+        files:
+          style.css: |
+        solution:
+          style.css: |
+            nav a {
+              color: tomato;
+            }
+
+            li:nth-child(even) {
+              background-color: beige;
+            }
+        harness: |
+          check($$('nav a').every((a) => getComputedStyle(a).color === color('tomato')), true);
+          check(style('p a', 'color') === color('tomato'), false);
+          check($$('li').map((li) => getComputedStyle(li).backgroundColor === color('beige')), [false, true, false, true]);

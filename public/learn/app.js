@@ -920,7 +920,7 @@
   function fileTabs(files, opts) {
     opts = opts || {};
     let list = files.map((f) => ({ name: f.name, content: f.content, locked: Boolean(f.locked) }));
-    let active = list.length ? list[0].name : '';
+    let active = opts.active && list.some((f) => f.name === opts.active) ? opts.active : (list.length ? list[0].name : '');
     const editors = {};
     let editing = Boolean(opts.editing);
     const tabs = h('div', { class: 'file-tabs', role: 'tablist' });
@@ -993,6 +993,8 @@
     let timer = null;
     const tabs = fileTabs(files, {
       minLines: 3,
+      // In the CSS course the stylesheet is what the example is about.
+      active: course && course.codeLang === 'css' ? 'style.css' : '',
       onChange: () => { clearTimeout(timer); timer = setTimeout(() => result.update(tabs.files()), 350); },
       onRun: () => result.update(tabs.files())
     });
