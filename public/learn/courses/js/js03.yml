@@ -1,0 +1,809 @@
+id: js03
+number: 3
+part: js-p1
+title: Decisions
+blurb: Compare values, combine conditions, and make your programs choose what to do with if, else, the ternary operator and switch.
+hours: 3
+goals:
+  - Compare values with `===`, `!==`, `<`, `>`, `<=`, `>=`
+  - Combine conditions with `&&`, `||` and `!`
+  - Know which values are truthy and falsy
+  - Choose between paths with `if`, `else if` and `else`
+  - Use the ternary operator, `switch` and `??`
+
+items:
+  - type: lesson
+    id: js3-compare
+    title: Comparisons and booleans
+    minutes: 25
+    objectives:
+      - Compare values and get `true` or `false`
+      - Always use `===` rather than `==`
+      - Combine conditions with `&&`, `||` and `!`
+      - Tell truthy from falsy values
+    body: |
+      A **boolean** is `true` or `false`. Comparisons produce booleans:
+
+      ```js
+      const age = 17;
+      console.log(age >= 18);
+      console.log(age === 17);
+      console.log(age !== 17);
+      console.log('apple' < 'banana');
+      ```
+      ```output
+      false
+      true
+      false
+      true
+      ```
+
+      | Operator | Means |
+      |---|---|
+      | `===` | equal (same value **and** same type) |
+      | `!==` | not equal |
+      | `<` `>` | less than, greater than |
+      | `<=` `>=` | less or equal, greater or equal |
+
+      > [!warning]
+      > `=` **stores** a value; `===` **compares**. And avoid `==` (two
+      > equals): it converts types in surprising ways — `'0' == 0` and
+      > `'' == 0` are both `true`. With `===`, `'5' === 5` is `false`, as it
+      > should be.
+
+      Strings compare alphabetically, but capital letters come before
+      lowercase ones: `'Zebra' < 'apple'` is `true`.
+
+      ## Combining conditions
+
+      | Operator | True when |
+      |---|---|
+      | `a && b` | **both** are true ("and") |
+      | `a \|\| b` | **at least one** is true ("or") |
+      | `!a` | a is false ("not") |
+
+      ```js
+      const hasTicket = true;
+      const hasId = false;
+      console.log(hasTicket && hasId);
+      console.log(hasTicket || hasId);
+      console.log(!hasId);
+      ```
+      ```output
+      false
+      true
+      true
+      ```
+
+      ## Truthy and falsy
+
+      Conditions don't need real booleans. Six values count as **falsy**:
+      `false`, `0`, `''` (the empty string), `null`, `undefined` and `NaN`.
+      **Everything else** is **truthy** — including `'0'`, `'false'` and
+      `[]`. `Boolean(x)` shows which one a value is.
+
+      {{check strict}}
+
+      {{check logic}}
+
+      {{task bools}}
+    checks:
+      - id: strict
+        type: output
+        prompt: What does this print?
+        code: |
+          console.log(5 === 5);
+          console.log('5' === 5);
+          console.log(3 !== 4);
+        answer: |
+          true
+          false
+          true
+        why: "=== also compares types: a string is never === a number."
+      - id: logic
+        type: output
+        prompt: What does this print?
+        code: |
+          const sunny = true;
+          const warm = false;
+          console.log(sunny && warm);
+          console.log(sunny || warm);
+          console.log(!(sunny && warm));
+        answer: |
+          false
+          true
+          true
+        why: "&& needs both; || needs one; ! flips."
+    tasks:
+      - id: bools
+        title: Entry rules
+        prompt: |
+          Using the given values, create these booleans (each is a single
+          comparison or combination — no `if` needed):
+
+          - `isAdult`: `age` is 18 or more
+          - `isWeekend`: `day` is `'Sat'` or `'Sun'`
+          - `canEnter`: an adult **and** has a ticket
+          - `isQuiet`: it is **not** the weekend
+        starter: |
+          const age = 20;
+          const day = 'Sun';
+          const hasTicket = true;
+        solution: |
+          const age = 20;
+          const day = 'Sun';
+          const hasTicket = true;
+          const isAdult = age >= 18;
+          const isWeekend = day === 'Sat' || day === 'Sun';
+          const canEnter = isAdult && hasTicket;
+          const isQuiet = !isWeekend;
+        harness: |
+          check(isAdult, true);
+          check(isWeekend, true);
+          check(canEnter, true);
+          check(isQuiet, false);
+        hints:
+          - "`const isAdult = age >= 18;` — a comparison is already true or false."
+          - "`day === 'Sat' || day === 'Sun'`, then `isAdult && hasTicket` and `!isWeekend`."
+    cards:
+      - front: "`=` vs `===`?"
+        back: "`=` stores a value; `===` compares (value and type)."
+      - front: Why avoid `==`?
+        back: "It converts types in surprising ways (`'' == 0` is true). Use `===` and `!==`."
+      - front: Which six values are falsy?
+        back: "false, 0, '' (empty string), null, undefined, NaN. Everything else is truthy."
+      - front: "`&&` vs `||`?"
+        back: "&& — both must be true; || — at least one."
+
+  - type: lesson
+    id: js3-if
+    title: if, else if, else
+    minutes: 25
+    objectives:
+      - Run code only when a condition is true
+      - Choose between several paths with `else if`
+      - Order conditions correctly
+    body: |
+      `if` runs a **block** of code only when its condition is true;
+      `else` runs otherwise:
+
+      ```js
+      const temperature = 28;
+
+      if (temperature > 25) {
+        console.log('Shorts weather!');
+      } else {
+        console.log('Bring a jacket.');
+      }
+      ```
+      ```output
+      Shorts weather!
+      ```
+
+      - The condition goes in **brackets** `( )`.
+      - The code to run goes in **braces** `{ }` — a block. Indent it, so the structure is easy to see.
+
+      ## More than two paths
+
+      ```js
+      const score = 72;
+
+      if (score >= 90) {
+        console.log('A');
+      } else if (score >= 80) {
+        console.log('B');
+      } else if (score >= 70) {
+        console.log('C');
+      } else {
+        console.log('Keep practising');
+      }
+      ```
+      ```output
+      C
+      ```
+
+      JavaScript checks the conditions **in order** and runs the **first**
+      matching block only. Order matters: if `score >= 70` came first,
+      a 95 would get a C!
+
+      ## Code in a function
+
+      To check your decisions with **many** values, exercises from now on
+      put your code inside a **function**, like this:
+
+      ```js
+      function sign(n) {
+        if (n > 0) {
+          return 'positive';
+        } else if (n < 0) {
+          return 'negative';
+        }
+        return 'zero';
+      }
+
+      console.log(sign(5));
+      console.log(sign(-2));
+      console.log(sign(0));
+      ```
+      ```output
+      positive
+      negative
+      zero
+      ```
+
+      `n` is the value the function is given, and `return` hands back the
+      answer (and stops the function). Chapter 5 explains functions fully —
+      for now, write your code between the braces and `return` the result.
+
+      {{check order}}
+
+      {{task grade}}
+    checks:
+      - id: order
+        type: output
+        prompt: What does this print?
+        code: |
+          const n = 15;
+          if (n > 5) {
+            console.log('big');
+          } else if (n > 10) {
+            console.log('bigger');
+          } else {
+            console.log('small');
+          }
+        answer: |
+          big
+        why: "The first true condition wins; the rest are skipped."
+    tasks:
+      - id: grade
+        title: Letter grades
+        prompt: |
+          Complete `grade(score)` so it returns:
+
+          - `'A'` for 90 and above
+          - `'B'` for 80–89
+          - `'C'` for 70–79
+          - `'D'` for 60–69
+          - `'F'` below 60
+        starter: |
+          function grade(score) {
+            // return 'A', 'B', 'C', 'D' or 'F'
+          }
+        solution: |
+          function grade(score) {
+            if (score >= 90) {
+              return 'A';
+            } else if (score >= 80) {
+              return 'B';
+            } else if (score >= 70) {
+              return 'C';
+            } else if (score >= 60) {
+              return 'D';
+            }
+            return 'F';
+          }
+        harness: |
+          check(grade(95), 'A');
+          check(grade(90), 'A');
+          check(grade(89), 'B');
+          check(grade(80), 'B');
+          check(grade(75), 'C');
+          check(grade(60), 'D');
+          check(grade(59), 'F');
+          check(grade(0), 'F');
+        hints:
+          - "Start from the top: `if (score >= 90) { return 'A'; }`"
+          - "Continue with `else if (score >= 80)` and so on; the final `return 'F';` catches the rest."
+    cards:
+      - front: How does an if / else if / else chain decide?
+        back: It checks the conditions in order and runs only the first block whose condition is true (or else, if none is).
+      - front: "What does `return` do in a function?"
+        back: Hands back a value and stops the function.
+
+  - type: quiz
+    id: js3-quiz1
+    title: "Quiz: comparisons and if"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const items = 0;
+          if (items) {
+            console.log('You have items');
+          } else {
+            console.log('Empty');
+          }
+        answer: |
+          Empty
+        why: "0 is falsy."
+      - type: mcq
+        prompt: "Which condition checks that `x` is between 1 and 10 (inclusive)?"
+        options:
+          - "`1 <= x <= 10`"
+          - "`x >= 1 && x <= 10`"
+          - "`x >= 1 || x <= 10`"
+          - "`x === 1..10`"
+        answer: 1
+        why: "Both must hold. (`1 <= x <= 10` doesn't do what it looks like in JavaScript.)"
+      - type: tf
+        prompt: "The string `'0'` is falsy."
+        answer: false
+        why: "Only the empty string is falsy; '0' has a character."
+      - type: spot
+        prompt: Which line has a bug?
+        code: |
+          let status = 'closed';
+          const hour = 10;
+          if (hour = 9) {
+            status = 'open';
+          }
+        answer: 3
+        why: "`=` assigns 9 (truthy!) instead of comparing. Use `===`."
+
+  - type: lesson
+    id: js3-more
+    title: Ternary, switch and ??
+    minutes: 20
+    objectives:
+      - Choose between two values with the ternary operator
+      - Compare one value against many with `switch`
+      - Supply defaults with `??`
+    body: |
+      ## The ternary operator
+
+      For choosing between **two values**, `condition ? a : b` is a compact
+      `if`/`else`:
+
+      ```js
+      const age = 15;
+      const ticket = age < 16 ? 'child' : 'adult';
+      console.log(ticket);
+
+      const n = 1;
+      console.log(`${n} ${n === 1 ? 'item' : 'items'}`);
+      ```
+      ```output
+      child
+      1 item
+      ```
+
+      Keep ternaries short. For more than two options, use `if`.
+
+      ## switch
+
+      `switch` compares one value against several **exact** matches:
+
+      ```js
+      const day = 'Tue';
+      switch (day) {
+        case 'Sat':
+        case 'Sun':
+          console.log('Weekend');
+          break;
+        case 'Fri':
+          console.log('Almost weekend');
+          break;
+        default:
+          console.log('Weekday');
+      }
+      ```
+      ```output
+      Weekday
+      ```
+
+      - Each `case` is compared with `===`.
+      - `break` ends the switch. Without it, execution **falls through** into the next case — useful for sharing code (`'Sat'` and `'Sun'` above), a bug otherwise.
+      - `default` runs when nothing matches.
+
+      ## Defaults with ?? and ||
+
+      `a ?? b` gives `a`, unless it's `null` or `undefined` — then `b`.
+      Perfect for "use this, or a default":
+
+      ```js
+      const nickname = null;
+      console.log(nickname ?? 'Guest');
+
+      const volume = 0;
+      console.log(volume ?? 50);
+      console.log(volume || 50);
+      ```
+      ```output
+      Guest
+      0
+      50
+      ```
+
+      `||` also gives defaults, but it replaces **any** falsy value — so a
+      real volume of `0` became `50`. Use `??` when `0` or `''` are valid.
+
+      {{check tern}}
+
+      {{task price}}
+    checks:
+      - id: tern
+        type: output
+        prompt: What does this print?
+        code: |
+          const points = 120;
+          console.log(points >= 100 ? 'Gold' : 'Silver');
+          console.log(null ?? 'none');
+          console.log(0 ?? 'none');
+        answer: |
+          Gold
+          none
+          0
+        why: "`??` only replaces null and undefined, so 0 stays."
+    tasks:
+      - id: price
+        title: Cinema tickets
+        prompt: |
+          Complete the three functions:
+
+          - `ticketPrice(age)`: `5` for under 12, otherwise `9` — use a **ternary**
+          - `dayType(day)`: with a **switch**: `'Sat'` and `'Sun'` → `'weekend'`, `'Fri'` → `'friday'`, anything else → `'weekday'`
+          - `seatLabel(seat)`: the seat, or `'any seat'` if it's `null` or `undefined` — use `??`
+        starter: |
+          function ticketPrice(age) {
+          }
+
+          function dayType(day) {
+          }
+
+          function seatLabel(seat) {
+          }
+        solution: |
+          function ticketPrice(age) {
+            return age < 12 ? 5 : 9;
+          }
+
+          function dayType(day) {
+            switch (day) {
+              case 'Sat':
+              case 'Sun':
+                return 'weekend';
+              case 'Fri':
+                return 'friday';
+              default:
+                return 'weekday';
+            }
+          }
+
+          function seatLabel(seat) {
+            return seat ?? 'any seat';
+          }
+        harness: |
+          check(ticketPrice(8), 5);
+          check(ticketPrice(11), 5);
+          check(ticketPrice(12), 9);
+          check(ticketPrice(40), 9);
+          check(dayType('Sat'), 'weekend');
+          check(dayType('Sun'), 'weekend');
+          check(dayType('Fri'), 'friday');
+          check(dayType('Mon'), 'weekday');
+          check(seatLabel('C7'), 'C7');
+          check(seatLabel(null), 'any seat');
+          check(seatLabel(undefined), 'any seat');
+          check(seatLabel(''), '');
+        hints:
+          - "`return age < 12 ? 5 : 9;`"
+          - "Inside a function, `return` can replace `break` in a switch."
+          - "`return seat ?? 'any seat';` — `||` would wrongly replace an empty string."
+    cards:
+      - front: How does the ternary operator work?
+        back: "`condition ? valueIfTrue : valueIfFalse`"
+      - front: What happens if you forget `break` in a switch?
+        back: Execution falls through into the next case.
+      - front: "`??` vs `||` for defaults?"
+        back: "?? only replaces null/undefined; || replaces any falsy value, including 0 and ''."
+
+  - type: quiz
+    id: js3-quiz2
+    title: "Quiz: ternary, switch and defaults"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const fruit = 'apple';
+          switch (fruit) {
+            case 'apple':
+              console.log('red');
+            case 'banana':
+              console.log('yellow');
+              break;
+            default:
+              console.log('unknown');
+          }
+        answer: |
+          red
+          yellow
+        why: "No break after 'red', so it falls through into the banana case."
+      - type: fill
+        prompt: Use `name`, or `'Anonymous'` if it's null or undefined.
+        code: |
+          const shown = name ___ 'Anonymous';
+        blanks:
+          - ["??"]
+        why: "Nullish coalescing."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const count = 0;
+          console.log(count || 10);
+          console.log(count ?? 10);
+        answer: |
+          10
+          0
+        why: "0 is falsy, but not null/undefined."
+
+  - type: challenge
+    id: js3-ch-leap
+    title: Leap years
+    difficulty: 2
+    tags: [conditions]
+    prompt: |
+      Complete `isLeap(year)`. A year is a leap year if it's divisible by 4
+      — **except** years divisible by 100, which are **not** leap years —
+      **except** years divisible by 400, which **are**.
+
+      So 2024 is a leap year, 1900 isn't, and 2000 is.
+    starter: |
+      function isLeap(year) {
+        // return true or false
+      }
+    solution: |
+      function isLeap(year) {
+        if (year % 400 === 0) {
+          return true;
+        }
+        if (year % 100 === 0) {
+          return false;
+        }
+        return year % 4 === 0;
+      }
+    harness: |
+      check(isLeap(2024), true);
+      check(isLeap(2023), false);
+      check(isLeap(1900), false);
+      check(isLeap(2000), true);
+      check(isLeap(2100), false);
+      check(isLeap(1996), true);
+      check(isLeap(2400), true);
+    hints:
+      - "Divisible by n means `year % n === 0`."
+      - "Check the most specific rule (400) first, then 100, then 4."
+
+  - type: challenge
+    id: js3-ch-shipping
+    title: Shipping costs
+    difficulty: 3
+    tags: [conditions, logic]
+    prompt: |
+      Complete `shipping(total, country, member)`:
+
+      - members (`member` is `true`) always ship **free**: `0`
+      - orders of **50 or more** to `'ES'` also ship free
+      - otherwise, `'ES'` costs `4.99`, other EU countries (`'FR'`, `'DE'`, `'IT'`, `'PT'`) cost `9.99`, and anywhere else costs `19.99`
+    starter: |
+      function shipping(total, country, member) {
+      }
+    solution: |
+      function shipping(total, country, member) {
+        if (member) {
+          return 0;
+        }
+        if (country === 'ES') {
+          return total >= 50 ? 0 : 4.99;
+        }
+        if (country === 'FR' || country === 'DE' || country === 'IT' || country === 'PT') {
+          return 9.99;
+        }
+        return 19.99;
+      }
+    harness: |
+      check(shipping(20, 'US', true), 0);
+      check(shipping(50, 'ES', false), 0);
+      check(shipping(49.99, 'ES', false), 4.99);
+      check(shipping(80, 'FR', false), 9.99);
+      check(shipping(10, 'PT', false), 9.99);
+      check(shipping(100, 'US', false), 19.99);
+      check(shipping(100, 'JP', false), 19.99);
+    hints:
+      - "Handle members first — they're free no matter what."
+      - "For Spain, a ternary: `total >= 50 ? 0 : 4.99`."
+
+  - type: review
+    id: js3-review
+    title: "Chapter 3 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      a === b   a !== b   a < b   a >= b
+      a && b    a || b    !a
+      // falsy: false, 0, '', null, undefined, NaN
+
+      if (cond) {
+        …
+      } else if (other) {
+        …
+      } else {
+        …
+      }
+
+      const label = n === 1 ? 'item' : 'items';
+
+      switch (value) {
+        case 'x':
+          …
+          break;
+        default:
+          …
+      }
+
+      const shown = name ?? 'Guest';
+      ```
+
+      ## Key ideas
+
+      - Use `===` and `!==`, never `==`.
+      - In an `if` chain, the first true condition wins — order matters.
+      - Ternaries for two values; `if` for more; `switch` for many exact matches.
+      - `??` for defaults when `0` or `''` are valid values.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const x = 7;
+          if (x % 2 === 0) {
+            console.log('even');
+          } else {
+            console.log('odd');
+          }
+        answer: |
+          odd
+        why: "7 % 2 is 1."
+      - type: mcq
+        prompt: Which is truthy?
+        options:
+          - "`0`"
+          - "`''`"
+          - "`'false'`"
+          - "`null`"
+        answer: 2
+        why: "A non-empty string — even 'false' — is truthy."
+
+  - type: exam
+    id: js3-exam
+    title: "Chapter 3 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log(10 > 9);
+          console.log(10 === '10');
+          console.log('b' > 'a');
+        answer: |
+          true
+          false
+          true
+        why: "Different types are never ===."
+      - type: mcq
+        prompt: "What is `true && false || true`?"
+        options:
+          - "`true`"
+          - "`false`"
+          - "An error"
+          - "`undefined`"
+        answer: 0
+        why: "&& first: false; then false || true is true."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const temp = 12;
+          if (temp > 20) {
+            console.log('warm');
+          } else if (temp > 10) {
+            console.log('mild');
+          } else {
+            console.log('cold');
+          }
+        answer: |
+          mild
+        why: "12 isn't > 20, but is > 10."
+      - type: mcq
+        prompt: Which is falsy?
+        options:
+          - "`'0'`"
+          - "`[]`"
+          - "`NaN`"
+          - "`-1`"
+        answer: 2
+        why: "NaN is one of the six falsy values."
+      - type: fill
+        prompt: Choose `'yes'` or `'no'` in one expression.
+        code: |
+          const answer = ok ___ 'yes' ___ 'no';
+        blanks:
+          - ["?"]
+          - [":"]
+        why: "The ternary operator."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const size = 'M';
+          switch (size) {
+            case 'S':
+              console.log('small');
+              break;
+            case 'M':
+              console.log('medium');
+              break;
+            default:
+              console.log('other');
+          }
+        answer: |
+          medium
+        why: "The 'M' case matches, then break."
+      - type: tf
+        prompt: "`if (score > 50)` needs the brackets around the condition."
+        answer: true
+        why: "The condition of an if always goes in brackets."
+      - type: output
+        prompt: What does this print?
+        code: |
+          let price;
+          console.log(price ?? 'free');
+          price = 0;
+          console.log(price ?? 'free');
+        answer: |
+          free
+          0
+        why: "undefined is replaced; 0 isn't."
+      - type: spot
+        prompt: Which line has the bug?
+        code: |
+          function canDrive(age, hasLicence) {
+            if (age >= 18 || hasLicence) {
+              return true;
+            }
+            return false;
+          }
+        answer: 2
+        why: "It should be `&&`: both conditions are needed."
+      - type: mcq
+        prompt: "What does `!true` give?"
+        options:
+          - "`true`"
+          - "`false`"
+          - "`undefined`"
+          - "`'!true'`"
+        answer: 1
+        why: "! flips a boolean."
+      - type: code
+        prompt: |
+          Complete `bmiCategory(bmi)`: under 18.5 → `'under'`, under 25 →
+          `'normal'`, under 30 → `'over'`, otherwise `'obese'`.
+        starter: |
+          function bmiCategory(bmi) {
+          }
+        solution: |
+          function bmiCategory(bmi) {
+            if (bmi < 18.5) {
+              return 'under';
+            } else if (bmi < 25) {
+              return 'normal';
+            } else if (bmi < 30) {
+              return 'over';
+            }
+            return 'obese';
+          }
+        harness: |
+          check(bmiCategory(17), 'under');
+          check(bmiCategory(18.5), 'normal');
+          check(bmiCategory(24.9), 'normal');
+          check(bmiCategory(25), 'over');
+          check(bmiCategory(29.9), 'over');
+          check(bmiCategory(30), 'obese');

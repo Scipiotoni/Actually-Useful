@@ -1,0 +1,824 @@
+id: js02
+number: 2
+part: js-p1
+title: Values and Variables
+blurb: Store values in variables, calculate with numbers, build text with strings, and understand JavaScript's types.
+hours: 3
+goals:
+  - Declare variables with `const` and `let`, and name them well
+  - Calculate with numbers, operators and `Math`
+  - Build strings with `+` and template literals
+  - Check and convert types with `typeof`, `Number()` and `String()`
+
+items:
+  - type: lesson
+    id: js2-variables
+    title: Variables
+    minutes: 20
+    objectives:
+      - Store a value in a variable and use it
+      - Choose between `const` and `let`
+      - Name variables following the rules and conventions
+    body: |
+      A **variable** is a name for a value, so you can use it — and change
+      it — later:
+
+      ```js
+      const name = 'Ada';
+      let score = 10;
+
+      console.log(name);
+      console.log(score);
+
+      score = score + 5;
+      console.log(score);
+      ```
+      ```output
+      Ada
+      10
+      15
+      ```
+
+      - `const` declares a variable that will **not** be reassigned.
+      - `let` declares one that **can** be reassigned later with `=`.
+      - `=` means "store this value" — it isn't "equals" in the maths sense. `score = score + 5` means "take score, add 5, store the result back in score".
+
+      **Prefer `const`.** Use `let` only when the value really changes.
+      Trying to change a `const` is an error:
+
+      ```js error
+      const year = 2026;
+      year = 2027;
+      ```
+
+      (You'll see `var` in old code — it's the old way to declare variables,
+      with some confusing rules. Use `const` and `let`.)
+
+      ## Naming
+
+      - Letters, digits, `_` and `$` — but not starting with a digit. No spaces or hyphens.
+      - Case-sensitive: `score` and `Score` are different variables.
+      - Some words are reserved: `let`, `const`, `if`, `function`, `class`…
+      - The convention is **camelCase**: `firstName`, `totalPrice`, `isLoggedIn`.
+      - Choose names that say what the value **means**: `price` beats `p`, `x` or `thing`.
+
+      {{check reassign}}
+
+      {{check names}}
+
+      {{task vars}}
+    checks:
+      - id: reassign
+        type: output
+        prompt: What does this print?
+        code: |
+          let lives = 3;
+          lives = lives - 1;
+          lives = lives - 1;
+          console.log(lives);
+        answer: |
+          1
+        why: "3 − 1 − 1."
+      - id: names
+        type: mcq
+        prompt: Which is a valid variable name?
+        options:
+          - "`2ndPlace`"
+          - "`first-name`"
+          - "`totalPrice`"
+          - "`let`"
+        answer: 2
+        why: "No leading digit, no hyphen, and `let` is reserved."
+    tasks:
+      - id: vars
+        title: A player profile
+        prompt: |
+          - Declare a **constant** `player` with the value `'Sam'`
+          - Declare a variable `points` (with `let`) starting at `0`
+          - Add `50` to `points`, then add `25` more (reassign it twice)
+          - Print `player`, then `points`
+        starter: |
+          // Declare player and points here
+        solution: |
+          const player = 'Sam';
+          let points = 0;
+          points = points + 50;
+          points = points + 25;
+          console.log(player);
+          console.log(points);
+        harness: |
+          check(player, 'Sam');
+          check(points, 75);
+          check(printed(), 'Sam\n75');
+        hints:
+          - "`const player = 'Sam';` and `let points = 0;`"
+          - "`points = points + 50;` adds 50 and stores the result back."
+    cards:
+      - front: "`const` vs `let`?"
+        back: const can't be reassigned; let can. Prefer const.
+      - front: "What does `x = x + 1` mean?"
+        back: Take x's value, add 1, and store the result back in x.
+      - front: What naming style do JavaScript variables use?
+        back: "camelCase: `totalPrice`, `isOpen`."
+
+  - type: lesson
+    id: js2-numbers
+    title: Numbers and maths
+    minutes: 25
+    objectives:
+      - Use arithmetic operators, including `%` and `**`
+      - Update variables with `+=`, `-=`, `++`
+      - Round numbers and use `Math`
+      - Know why `0.1 + 0.2` isn't exactly `0.3`
+    body: |
+      JavaScript has one number type for whole numbers and decimals.
+
+      | Operator | Meaning | Example | Result |
+      |---|---|---|---|
+      | `+` `-` | add, subtract | `7 - 2` | `5` |
+      | `*` `/` | multiply, divide | `7 / 2` | `3.5` |
+      | `%` | remainder | `7 % 2` | `1` |
+      | `**` | power | `2 ** 3` | `8` |
+
+      Multiplication and division happen before addition and subtraction;
+      use brackets to change the order: `(2 + 3) * 4` is `20`.
+
+      `%` (remainder) is surprisingly useful: `n % 2` is `0` for even
+      numbers and `1` for odd ones.
+
+      ## Shortcuts
+
+      ```js
+      let count = 10;
+      count += 5;   // count = count + 5
+      count -= 3;   // count = count - 3
+      count *= 2;   // count = count * 2
+      count++;      // count = count + 1
+      console.log(count);
+      ```
+      ```output
+      25
+      ```
+
+      ## Math
+
+      The built-in `Math` object has many helpers:
+
+      ```js
+      console.log(Math.round(4.6));
+      console.log(Math.floor(4.6));
+      console.log(Math.ceil(4.1));
+      console.log(Math.max(3, 9, 5));
+      console.log(Math.sqrt(81));
+      console.log((19.987).toFixed(2));
+      ```
+      ```output
+      5
+      4
+      5
+      9
+      9
+      19.99
+      ```
+
+      `Math.random()` gives a random number from 0 up to (not including) 1;
+      `Math.floor(Math.random() * 6) + 1` is a dice roll.
+
+      ## A decimal surprise
+
+      ```js
+      console.log(0.1 + 0.2);
+      ```
+      ```output
+      0.30000000000000004
+      ```
+
+      Computers store decimals in binary, and some (like 0.1) can't be
+      stored exactly — the same way 1/3 can't be written exactly as a
+      decimal. For money, round when you display (`toFixed(2)`), or count in
+      cents.
+
+      Dividing by zero gives `Infinity`, and nonsense maths gives `NaN`
+      ("not a number"): `'hello' * 2` is `NaN`.
+
+      {{check order}}
+
+      {{check mod}}
+
+      {{task rect}}
+    checks:
+      - id: order
+        type: output
+        prompt: What does this print?
+        code: |
+          console.log(2 + 3 * 4);
+          console.log((2 + 3) * 4);
+          console.log(10 % 3);
+        answer: |
+          14
+          20
+          1
+        why: "Multiplication first; brackets change the order; 10 = 3 × 3 + 1."
+      - id: mod
+        type: mcq
+        prompt: "`n % 2 === 0` is true when n is…"
+        options:
+          - odd
+          - even
+          - negative
+          - a decimal
+        answer: 1
+        why: "Even numbers leave no remainder when divided by 2."
+    tasks:
+      - id: rect
+        title: A garden plot
+        prompt: |
+          A garden is `width` 7.5 metres by `length` 4 metres.
+
+          - declare `width` and `length` as constants
+          - `area`: width × length
+          - `perimeter`: 2 × (width + length)
+          - `fenceCost`: the perimeter × 12.5 euros per metre, rounded to the **nearest whole euro** with `Math.round`
+          - print the three values, one per line
+        starter: |
+          const width = 7.5;
+          const length = 4;
+        solution: |
+          const width = 7.5;
+          const length = 4;
+          const area = width * length;
+          const perimeter = 2 * (width + length);
+          const fenceCost = Math.round(perimeter * 12.5);
+          console.log(area);
+          console.log(perimeter);
+          console.log(fenceCost);
+        harness: |
+          check(area, 30);
+          check(perimeter, 23);
+          check(fenceCost, 288);
+          check(printed(), '30\n23\n288');
+        hints:
+          - "`const perimeter = 2 * (width + length);` — the brackets matter."
+          - "23 × 12.5 = 287.5, which rounds to 288."
+    cards:
+      - front: "What does `%` do?"
+        back: "Gives the remainder of a division: `7 % 3` is 1."
+      - front: "`x += 5` means…"
+        back: "`x = x + 5`"
+      - front: "Why is `0.1 + 0.2` not exactly `0.3`?"
+        back: Decimals are stored in binary and some can't be stored exactly. Round when displaying.
+      - front: What is `NaN`?
+        back: '"Not a Number" — the result of maths that makes no sense, like `"hi" * 2`.'
+
+  - type: quiz
+    id: js2-quiz1
+    title: "Quiz: variables and numbers"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          let a = 5;
+          let b = a;
+          a = 10;
+          console.log(b);
+        answer: |
+          5
+        why: "b got a copy of the value 5; changing a later doesn't change b."
+      - type: mcq
+        prompt: "`const total = 0; total = 5;` —"
+        options:
+          - total is 5
+          - "TypeError: Assignment to constant variable"
+          - total is 0 and nothing happens
+          - SyntaxError
+        answer: 1
+        why: "A const can't be reassigned."
+      - type: fill
+        prompt: Two to the power of ten.
+        code: |
+          console.log(2 ___ 10);
+        blanks:
+          - ["**"]
+        output: "1024"
+        why: "`**` is the power operator."
+      - type: output
+        prompt: What does this print?
+        code: |
+          let n = 7;
+          n++;
+          n *= 2;
+          console.log(n);
+        answer: |
+          16
+        why: "7 → 8 → 16."
+
+  - type: lesson
+    id: js2-strings
+    title: Strings and template literals
+    minutes: 20
+    objectives:
+      - Join strings with `+`
+      - Insert values into text with template literals
+      - Get a string's length and change its case
+    body: |
+      ## Joining strings
+
+      `+` between strings **joins** them (it's called *concatenation*):
+
+      ```js
+      const first = 'Grace';
+      const last = 'Hopper';
+      console.log(first + ' ' + last);
+      console.log('Age: ' + 85);
+      ```
+      ```output
+      Grace Hopper
+      Age: 85
+      ```
+
+      ## Template literals
+
+      Strings in **backticks** can contain `${…}` — any value or expression
+      inside is inserted. Much easier to read than lots of `+`:
+
+      ```js
+      const item = 'coffee';
+      const price = 2.5;
+      const cups = 3;
+      console.log(`${cups} cups of ${item} cost ${cups * price} euros.`);
+      ```
+      ```output
+      3 cups of coffee cost 7.5 euros.
+      ```
+
+      Template literals can also span several lines.
+
+      ## A few string tools
+
+      ```js
+      const word = 'JavaScript';
+      console.log(word.length);
+      console.log(word.toUpperCase());
+      console.log(word.toLowerCase());
+      console.log(word[0]);
+      console.log(word[word.length - 1]);
+      ```
+      ```output
+      10
+      JAVASCRIPT
+      javascript
+      J
+      t
+      ```
+
+      - `.length` — the number of characters.
+      - `word[0]` — the first character. Positions (called **indexes**) start at **0**, so the last one is `length - 1`.
+      - `.toUpperCase()`, `.toLowerCase()` — a new string in a different case.
+
+      Chapter 7 covers many more string tools.
+
+      {{check tpl}}
+
+      {{task greeting}}
+    checks:
+      - id: tpl
+        type: output
+        prompt: What does this print?
+        code: |
+          const n = 4;
+          console.log(`${n} + ${n} = ${n + n}`);
+        answer: |
+          4 + 4 = 8
+        why: "Each `${…}` is replaced by its value."
+    tasks:
+      - id: greeting
+        title: A badge
+        prompt: |
+          Given `firstName`, `lastName` and `year`:
+
+          - `fullName` is the first and last name with a space between
+          - `badge` is a template literal: `` `ADA LOVELACE (since 1843)` `` — the full name in **upper case**, then the year in brackets
+          - `initials` is the first letter of each name: `AL`
+          - print `badge`
+        starter: |
+          const firstName = 'Ada';
+          const lastName = 'Lovelace';
+          const year = 1843;
+        solution: |
+          const firstName = 'Ada';
+          const lastName = 'Lovelace';
+          const year = 1843;
+          const fullName = firstName + ' ' + lastName;
+          const badge = `${fullName.toUpperCase()} (since ${year})`;
+          const initials = firstName[0] + lastName[0];
+          console.log(badge);
+        harness: |
+          check(fullName, 'Ada Lovelace');
+          check(badge, 'ADA LOVELACE (since 1843)');
+          check(initials, 'AL');
+          check(printed(), 'ADA LOVELACE (since 1843)');
+        hints:
+          - "`const fullName = firstName + ' ' + lastName;`"
+          - "`` const badge = `${fullName.toUpperCase()} (since ${year})`; `` and `firstName[0] + lastName[0]`."
+    cards:
+      - front: What is a template literal?
+        back: "A string in backticks where `${expression}` inserts a value: `` `Hi ${name}` ``."
+      - front: What is the index of the first character of a string?
+        back: 0 — the last is at `length - 1`.
+      - front: How do you get a string in capitals?
+        back: "`text.toUpperCase()`"
+
+  - type: lesson
+    id: js2-types
+    title: Types and conversion
+    minutes: 20
+    objectives:
+      - Name JavaScript's basic types and check them with `typeof`
+      - Predict what `+` does with strings and numbers
+      - Convert between strings and numbers
+      - Tell `undefined` from `null`
+    body: |
+      Every value has a **type**:
+
+      | Type | Examples |
+      |---|---|
+      | number | `42`, `3.14`, `-1`, `NaN` |
+      | string | `'hello'`, `"42"`, `` `hi` `` |
+      | boolean | `true`, `false` |
+      | undefined | `undefined` — "no value was given" |
+      | null | `null` — "intentionally empty" |
+
+      (There are also objects, arrays and functions — later chapters.)
+
+      ```js
+      console.log(typeof 42);
+      console.log(typeof '42');
+      console.log(typeof true);
+      let nothing;
+      console.log(nothing);
+      console.log(typeof nothing);
+      ```
+      ```output
+      number
+      string
+      boolean
+      undefined
+      undefined
+      ```
+
+      ## The + trap
+
+      `'42'` is text that happens to contain digits. With a string on
+      either side, `+` **joins** instead of adding. Other operators convert
+      to numbers:
+
+      ```js
+      console.log('5' + 3);
+      console.log('5' - 3);
+      console.log('5' * '2');
+      console.log(1 + 2 + '3');
+      ```
+      ```output
+      53
+      2
+      10
+      33
+      ```
+
+      (The last one: `1 + 2` is `3` first, then `3 + '3'` joins.)
+
+      ## Converting on purpose
+
+      Text from forms and user input always arrives as a **string**.
+      Convert it before doing maths:
+
+      ```js
+      const input = '19.5';
+      console.log(Number(input) + 1);
+      console.log(parseInt('42px'));
+      console.log(Number('hello'));
+      console.log(String(99) + 1);
+      ```
+      ```output
+      20.5
+      42
+      NaN
+      991
+      ```
+
+      - `Number(x)` — the whole string must be a number, or you get `NaN`.
+      - `parseInt(x)` / `parseFloat(x)` — read a number from the start of a string.
+      - `String(x)` — convert anything to text.
+      - `Number.isNaN(x)` checks for `NaN` (it isn't even equal to itself!).
+
+      {{check plus}}
+
+      {{task convert}}
+    checks:
+      - id: plus
+        type: output
+        prompt: What does this print?
+        code: |
+          console.log('10' + 5);
+          console.log('10' - 5);
+          console.log(Number('10') + 5);
+        answer: |
+          105
+          5
+          15
+        why: "+ joins when there's a string; - converts; Number() converts on purpose."
+    tasks:
+      - id: convert
+        title: Add up the order
+        prompt: |
+          The quantities come from a form, so they're strings. Compute:
+
+          - `total`: the **number** of items (`apples` + `pears`) — it must be the number `12`, not the string `'75'`
+          - `label`: `` `12 items` `` (use a template literal)
+          - `kind`: the result of `typeof total`
+        starter: |
+          const apples = '7';
+          const pears = '5';
+        solution: |
+          const apples = '7';
+          const pears = '5';
+          const total = Number(apples) + Number(pears);
+          const label = `${total} items`;
+          const kind = typeof total;
+        harness: |
+          check(total, 12);
+          check(label, '12 items');
+          check(kind, 'number');
+        hints:
+          - "`'7' + '5'` is `'75'` — convert each first with `Number(…)`."
+    cards:
+      - front: Name five basic types.
+        back: number, string, boolean, undefined, null.
+      - front: "What is `'5' + 3`?"
+        back: "`'53'` — with a string, + joins."
+      - front: How do you turn the string `'42'` into a number?
+        back: "`Number('42')` (or `parseInt`, `parseFloat`)."
+      - front: "`undefined` vs `null`?"
+        back: undefined means no value was given; null means intentionally empty.
+
+  - type: quiz
+    id: js2-quiz2
+    title: "Quiz: strings and types"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const city = 'Rome';
+          console.log(city.length);
+          console.log(city[1]);
+        answer: |
+          4
+          o
+        why: "Four letters; index 1 is the second character."
+      - type: mcq
+        prompt: "What is `typeof '3.5'`?"
+        options:
+          - "`'number'`"
+          - "`'string'`"
+          - "`'decimal'`"
+          - "`'float'`"
+        answer: 1
+        why: "It's in quotes."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log(2 + 2 + '2');
+          console.log('2' + 2 + 2);
+        answer: |
+          42
+          222
+        why: "Left to right: 4 + '2' = '42'; '2' + 2 = '22', then + 2 = '222'."
+      - type: fill
+        prompt: Insert the value of `name`.
+        code: |
+          console.log(`Hi, ___!`);
+        blanks:
+          - ["${name}"]
+        why: "`${…}` inside backticks."
+
+  - type: challenge
+    id: js2-ch-temp
+    title: Temperature converter
+    difficulty: 1
+    tags: [numbers, strings]
+    prompt: |
+      Convert `celsius` to Fahrenheit: F = C × 9 / 5 + 32.
+
+      - `fahrenheit`: the converted number
+      - `message`: `` `21.5°C is 70.7°F` `` — with Fahrenheit shown to **1 decimal place** (`toFixed(1)`)
+      - print `message`
+    starter: |
+      const celsius = 21.5;
+    solution: |
+      const celsius = 21.5;
+      const fahrenheit = celsius * 9 / 5 + 32;
+      const message = `${celsius}°C is ${fahrenheit.toFixed(1)}°F`;
+      console.log(message);
+    harness: |
+      check(fahrenheit, 70.7);
+      check(message, '21.5°C is 70.7°F');
+      check(printed(), '21.5°C is 70.7°F');
+    hints:
+      - "`const fahrenheit = celsius * 9 / 5 + 32;`"
+      - "`fahrenheit.toFixed(1)` gives a string with one decimal."
+
+  - type: challenge
+    id: js2-ch-bill
+    title: Split the bill
+    difficulty: 2
+    tags: [numbers, conversion]
+    prompt: |
+      Friends split a restaurant bill with a tip. The amounts arrive as
+      strings from a form:
+
+      - `total`: the bill plus the tip (`tipPercent` percent of the bill), as a number
+      - `each`: the total divided by `people`, **rounded to cents** — use `Math.round(x * 100) / 100`
+      - `summary`: `Each pays …… euros`, with `each` shown to exactly two decimals (`toFixed(2)`)
+    starter: |
+      const bill = '81.20';
+      const tipPercent = '10';
+      const people = '4';
+    solution: |
+      const bill = '81.20';
+      const tipPercent = '10';
+      const people = '4';
+      const total = Number(bill) * (1 + Number(tipPercent) / 100);
+      const each = Math.round(total / Number(people) * 100) / 100;
+      const summary = `Each pays ${each.toFixed(2)} euros`;
+    harness: |
+      check(Math.round(total * 100) / 100, 89.32);
+      check(each, 22.33);
+      check(summary, 'Each pays 22.33 euros');
+    hints:
+      - "Convert each string with `Number(…)` first."
+      - "The tip is `bill * tipPercent / 100`; the total is bill + tip."
+
+  - type: review
+    id: js2-review
+    title: "Chapter 2 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      const name = 'Ada';        // can't be reassigned
+      let score = 0;             // can
+      score += 10; score++;
+
+      7 % 2        // 1 (remainder)
+      2 ** 3       // 8
+      Math.round(4.5)  Math.floor(4.9)  Math.max(1, 5)  (3.14159).toFixed(2)
+
+      `Hi ${name}, you have ${score} points`
+      name.length   name[0]   name.toUpperCase()
+
+      typeof 42           // 'number'
+      '5' + 3             // '53'
+      Number('5') + 3     // 8
+      String(5)           // '5'
+      ```
+
+      ## Key ideas
+
+      - Prefer `const`; use `let` when the value changes.
+      - `=` stores; it isn't "equals".
+      - With a string involved, `+` joins.
+      - Form input is text: convert before maths.
+      - Round decimals when you display them.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const price = 4;
+          let qty = 3;
+          qty += 2;
+          console.log(`${qty} × ${price} = ${qty * price}`);
+        answer: |
+          5 × 4 = 20
+        why: "qty becomes 5."
+      - type: mcq
+        prompt: "Which gives the number 15?"
+        options:
+          - "`'10' + '5'`"
+          - "`Number('10') + Number('5')`"
+          - "`'10' + 5`"
+          - "`String(10 + 5)`"
+        answer: 1
+        why: "The others give strings."
+
+  - type: exam
+    id: js2-exam
+    title: "Chapter 2 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: Which declaration should you use for a value that never changes?
+        options:
+          - "`let`"
+          - "`const`"
+          - "`var`"
+          - "`fixed`"
+        answer: 1
+        why: "`const`."
+      - type: output
+        prompt: What does this print?
+        code: |
+          let x = 2;
+          x = x * 5;
+          x -= 1;
+          console.log(x);
+        answer: |
+          9
+        why: "2 → 10 → 9."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log(17 % 5);
+          console.log(3 ** 2);
+        answer: |
+          2
+          9
+        why: "17 = 3 × 5 + 2; 3² = 9."
+      - type: mcq
+        prompt: Which variable name follows the JavaScript convention?
+        options:
+          - "`user_name`"
+          - "`UserName`"
+          - "`userName`"
+          - "`username!`"
+        answer: 2
+        why: "camelCase."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const word = 'hello';
+          console.log(word.toUpperCase());
+          console.log(word.length);
+          console.log(word[4]);
+        answer: |
+          HELLO
+          5
+          o
+        why: "Indexes start at 0, so index 4 is the fifth letter."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('3' * '4');
+          console.log('3' + '4');
+        answer: |
+          12
+          34
+        why: "* converts to numbers; + joins strings."
+      - type: fill
+        prompt: Convert the text to a number.
+        code: |
+          const age = ___('36');
+          console.log(age + 1);
+        blanks:
+          - [Number, parseInt]
+        output: "37"
+        why: "`Number('36')` is 36."
+      - type: mcq
+        prompt: "What is `typeof undefined`?"
+        options:
+          - "`'null'`"
+          - "`'undefined'`"
+          - "`'object'`"
+          - "`'nothing'`"
+        answer: 1
+        why: "`'undefined'`."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log((2.456).toFixed(1));
+          console.log(Math.ceil(2.1));
+        answer: |
+          2.5
+          3
+        why: "Rounded to one decimal; ceil rounds up."
+      - type: tf
+        prompt: "`0.1 + 0.2 === 0.3` is true in JavaScript."
+        answer: false
+        why: "It's 0.30000000000000004."
+      - type: code
+        prompt: |
+          Given `hours` and `rate` (strings from a form), set:
+
+          - `pay`: hours × rate, as a number
+          - `line`: `` `40 hours at 12.5 = 500` ``
+        starter: |
+          const hours = '40';
+          const rate = '12.5';
+        solution: |
+          const hours = '40';
+          const rate = '12.5';
+          const pay = Number(hours) * Number(rate);
+          const line = `${hours} hours at ${rate} = ${pay}`;
+        harness: |
+          check(pay, 500);
+          check(line, '40 hours at 12.5 = 500');

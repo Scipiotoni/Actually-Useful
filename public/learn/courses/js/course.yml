@@ -1,0 +1,47 @@
+id: js
+lang: web
+code_lang: js
+short: JavaScript
+icon: ⚡
+final: js-final
+graduate: JavaScript Graduate
+title: JavaScript Programming
+subtitle: Learn to program with the language of the web — from your first line to interactive web apps.
+
+intro: |
+  JavaScript is the programming language of the web: it runs in every
+  browser, and it's what makes pages interactive. This course teaches you
+  to program from scratch — values, decisions, loops, functions, arrays and
+  objects — and then to bring web pages to life with the DOM, events and
+  asynchronous code. It ends with a complete to-do app you build yourself.
+
+  Every example runs right here in your browser, and your code is checked
+  automatically. The HTML and CSS courses help for Part III, but aren't
+  needed for Parts I and II.
+
+parts:
+  - id: js-p1
+    title: Part I — Programming Basics
+    blurb: Values, variables, decisions, loops and functions — the building blocks of every program.
+  - id: js-p2
+    title: Part II — Working with Data
+    blurb: Arrays, strings, objects and classes, and what to do when things go wrong.
+  - id: js-p3
+    title: Part III — JavaScript in the Browser
+    blurb: Change pages with the DOM, respond to the user with events, wait for things with async code — and build an app.
+
+chapters:
+  - js01
+  - js02
+  - js03
+  - js04
+  - js05
+  - js06
+  - js07
+  - js08
+  - js09
+  - js10
+  - js11
+  - js12
+  - js13
+  - js14

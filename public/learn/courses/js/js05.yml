@@ -1,0 +1,892 @@
+id: js05
+number: 5
+part: js-p1
+title: Functions
+blurb: Package code into reusable, named functions — with parameters, return values, defaults, scope and arrow functions.
+hours: 3
+goals:
+  - Define functions and call them with arguments
+  - Return values, and know the difference between returning and printing
+  - Use default parameters and understand scope
+  - Write arrow functions and pass functions to other functions
+  - Write small, clear, pure functions
+
+items:
+  - type: lesson
+    id: js5-basics
+    title: Defining and calling functions
+    minutes: 25
+    objectives:
+      - Define a function with parameters
+      - Call it with arguments and use what it returns
+      - Tell `return` from `console.log`
+    body: |
+      A **function** is a named, reusable piece of code. You **define** it
+      once, then **call** it as often as you like:
+
+      ```js
+      function greet(name) {
+        return `Hello, ${name}!`;
+      }
+
+      console.log(greet('Ada'));
+      console.log(greet('Linus'));
+      ```
+      ```output
+      Hello, Ada!
+      Hello, Linus!
+      ```
+
+      - `function greet(name) { … }` defines a function called `greet` with one **parameter**, `name`.
+      - `greet('Ada')` **calls** it; `'Ada'` is the **argument** — the value the parameter gets for this call.
+      - `return` hands a value back to whoever called the function, and ends it.
+
+      Functions let you **name** an idea (`isValidEmail`, `calculateTax`),
+      write it **once**, and **reuse** it — if there's a bug, you fix it in
+      one place.
+
+      ## Several parameters
+
+      ```js
+      function area(width, height) {
+        return width * height;
+      }
+
+      const total = area(3, 4) + area(2, 5);
+      console.log(total);
+      ```
+      ```output
+      22
+      ```
+
+      Arguments match parameters **by position**: the first argument goes
+      to the first parameter.
+
+      ## return vs console.log
+
+      This is the most common beginner confusion. `console.log` only
+      **shows** a value to a human. `return` **gives** the value back to
+      the program, so it can be stored and used:
+
+      ```js
+      function doubleA(n) {
+        console.log(n * 2);
+      }
+
+      function doubleB(n) {
+        return n * 2;
+      }
+
+      const a = doubleA(5);   // prints 10, but a is undefined
+      const b = doubleB(5);   // prints nothing, b is 10
+      console.log(a, b);
+      ```
+      ```output
+      10
+      undefined 10
+      ```
+
+      A function without `return` returns `undefined`. Most functions
+      should **return** their result and leave printing to the caller.
+
+      {{check args}}
+
+      {{task basics}}
+    checks:
+      - id: args
+        type: output
+        prompt: What does this print?
+        code: |
+          function sub(a, b) {
+            return a - b;
+          }
+          console.log(sub(10, 3));
+          console.log(sub(3, 10));
+        answer: |
+          7
+          -7
+        why: "Arguments go to parameters by position."
+    tasks:
+      - id: basics
+        title: Three small functions
+        prompt: |
+          Complete (each **returns** its result):
+
+          - `perimeter(width, height)` — the perimeter of a rectangle: 2 × (width + height)
+          - `shout(text)` — the text in upper case with `!` added: `shout('hi')` is `'HI!'`
+          - `isEven(n)` — `true` if n is even
+        starter: |
+          function perimeter(width, height) {
+          }
+
+          function shout(text) {
+          }
+
+          function isEven(n) {
+          }
+        solution: |
+          function perimeter(width, height) {
+            return 2 * (width + height);
+          }
+
+          function shout(text) {
+            return text.toUpperCase() + '!';
+          }
+
+          function isEven(n) {
+            return n % 2 === 0;
+          }
+        harness: |
+          check(perimeter(3, 4), 14);
+          check(perimeter(0, 0), 0);
+          check(shout('hi'), 'HI!');
+          check(shout('wake up'), 'WAKE UP!');
+          check(isEven(4), true);
+          check(isEven(7), false);
+          check(isEven(0), true);
+        hints:
+          - "Each function needs a `return` — printing isn't enough."
+          - "`return n % 2 === 0;` — a comparison is already true or false."
+    cards:
+      - front: Parameter vs argument?
+        back: A parameter is the name in the definition (`function f(x)`); an argument is the value passed in a call (`f(5)`).
+      - front: "`return` vs `console.log`?"
+        back: return gives the value back to the program; console.log only shows it to a human.
+      - front: What does a function without return give back?
+        back: "`undefined`."
+
+  - type: lesson
+    id: js5-scope
+    title: Defaults and scope
+    minutes: 20
+    objectives:
+      - Give parameters default values
+      - Explain what happens with missing or extra arguments
+      - Understand local, block and global scope
+    body: |
+      ## Default parameters
+
+      A parameter can have a **default**, used when the argument is missing
+      (or `undefined`):
+
+      ```js
+      function greet(name = 'friend', greeting = 'Hello') {
+        return `${greeting}, ${name}!`;
+      }
+
+      console.log(greet('Sam', 'Hi'));
+      console.log(greet('Sam'));
+      console.log(greet());
+      ```
+      ```output
+      Hi, Sam!
+      Hello, Sam!
+      Hello, friend!
+      ```
+
+      Without a default, a missing argument is simply `undefined`; extra
+      arguments are ignored.
+
+      ## Scope: where a variable exists
+
+      Variables declared **inside** a function exist only inside it — they
+      are **local**. Each call gets fresh ones:
+
+      ```js error
+      function makeTotal() {
+        const total = 42;
+        return total;
+      }
+
+      console.log(makeTotal());
+      console.log(total);
+      ```
+
+      `let` and `const` are also **block-scoped**: declared inside `{ }` of an
+      `if` or a loop, they don't exist outside it.
+
+      Code inside a function **can** see variables from outside (the
+      enclosing scope). But functions that depend on outside variables are
+      harder to understand and test. Prefer passing values in as arguments
+      and getting results back with `return`.
+
+      ```js
+      const vat = 0.21;
+
+      // Works, but depends on the outside vat:
+      function withVatA(price) {
+        return price * (1 + vat);
+      }
+
+      // Clearer: everything it needs comes in as parameters.
+      function withVatB(price, rate = 0.21) {
+        return price * (1 + rate);
+      }
+
+      console.log(withVatA(100), withVatB(100), withVatB(100, 0.1));
+      ```
+      ```output
+      121 121 110.00000000000001
+      ```
+
+      {{check local}}
+
+      {{task defaults}}
+    checks:
+      - id: local
+        type: output
+        prompt: What does this print?
+        code: |
+          let count = 1;
+          function bump() {
+            let count = 100;
+            count++;
+            return count;
+          }
+          console.log(bump());
+          console.log(count);
+        answer: |
+          101
+          1
+        why: "The inner count is a different, local variable."
+    tasks:
+      - id: defaults
+        title: Sensible defaults
+        prompt: |
+          - `priceWithTax(amount, rate = 0.21)` returns `amount × (1 + rate)`, **rounded to cents** (`Math.round(x * 100) / 100`)
+          - `label(name, unit = 'pcs', qty = 1)` returns `` `3 kg of flour` `` — the quantity, unit and name
+        starter: |
+          function priceWithTax(amount, rate) {
+          }
+
+          function label(name, unit, qty) {
+          }
+        solution: |
+          function priceWithTax(amount, rate = 0.21) {
+            return Math.round(amount * (1 + rate) * 100) / 100;
+          }
+
+          function label(name, unit = 'pcs', qty = 1) {
+            return `${qty} ${unit} of ${name}`;
+          }
+        harness: |
+          check(priceWithTax(100), 121);
+          check(priceWithTax(100, 0.1), 110);
+          check(priceWithTax(9.99), 12.09);
+          check(label('flour', 'kg', 3), '3 kg of flour');
+          check(label('eggs', 'pcs', 12), '12 pcs of eggs');
+          check(label('candle'), '1 pcs of candle');
+          check(label('rice', 'g'), '1 g of rice');
+        hints:
+          - "`function priceWithTax(amount, rate = 0.21) { … }`"
+          - "`return Math.round(amount * (1 + rate) * 100) / 100;`"
+    cards:
+      - front: How do you give a parameter a default value?
+        back: "`function f(x = 10) { … }` — used when the argument is missing or undefined."
+      - front: What is a local variable?
+        back: One declared inside a function (or block); it only exists there.
+      - front: Why avoid functions that use outside variables?
+        back: They're harder to understand and test; pass values in as parameters instead.
+
+  - type: quiz
+    id: js5-quiz1
+    title: "Quiz: functions and scope"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          function hello(name) {
+            console.log('Hi ' + name);
+          }
+          const result = hello('Kim');
+          console.log(result);
+        answer: |
+          Hi Kim
+          undefined
+        why: "hello prints but returns nothing."
+      - type: output
+        prompt: What does this print?
+        code: |
+          function power(base, exp = 2) {
+            return base ** exp;
+          }
+          console.log(power(3));
+          console.log(power(2, 5));
+        answer: |
+          9
+          32
+        why: "The default exponent is 2."
+      - type: tf
+        prompt: A `const` declared inside an `if` block can be used after the block.
+        answer: false
+        why: "let and const are block-scoped."
+      - type: spot
+        prompt: Which line is the bug? (`total` should be returned.)
+        code: |
+          function sum(a, b) {
+            const total = a + b;
+            console.log(total);
+          }
+        answer: 3
+        why: "It prints instead of returning: `return total;`."
+
+  - type: lesson
+    id: js5-arrows
+    title: Arrow functions and callbacks
+    minutes: 25
+    objectives:
+      - Store functions in variables
+      - Write arrow functions
+      - Pass a function to another function
+      - Return a function from a function
+    body: |
+      In JavaScript, functions are **values**: you can store them in
+      variables, pass them to other functions, and return them.
+
+      ## Arrow functions
+
+      A shorter way to write functions, used everywhere in modern code:
+
+      ```js
+      const double = (n) => n * 2;
+      const add = (a, b) => a + b;
+      const hello = () => 'Hello!';
+      const describe = (n) => {
+        const kind = n % 2 === 0 ? 'even' : 'odd';
+        return `${n} is ${kind}`;
+      };
+
+      console.log(double(4), add(2, 3), hello());
+      console.log(describe(7));
+      ```
+      ```output
+      8 5 Hello!
+      7 is odd
+      ```
+
+      - Parameters in brackets, then `=>`, then the body.
+      - With a **single expression** as the body, its value is returned automatically — no braces, no `return`.
+      - With **braces**, you need `return` as usual.
+      - One parameter can skip the brackets: `n => n * 2`.
+
+      ## Passing functions around
+
+      A function passed to another function is called a **callback**:
+
+      ```js
+      function applyTwice(fn, value) {
+        return fn(fn(value));
+      }
+
+      console.log(applyTwice((n) => n + 10, 1));
+      console.log(applyTwice((s) => s + '!', 'Hey'));
+      ```
+      ```output
+      21
+      Hey!!
+      ```
+
+      Callbacks are how you'll tell arrays what to do with each item
+      (Chapter 6) and pages what to do when a button is clicked (Chapter 12).
+
+      ## Functions that make functions
+
+      ```js
+      function multiplier(factor) {
+        return (n) => n * factor;
+      }
+
+      const triple = multiplier(3);
+      console.log(triple(5));
+      console.log(multiplier(10)(7));
+      ```
+      ```output
+      15
+      70
+      ```
+
+      The returned function **remembers** `factor` from when it was made —
+      this is called a **closure**.
+
+      {{check arrow}}
+
+      {{task callbacks}}
+    checks:
+      - id: arrow
+        type: mcq
+        prompt: "Which is the same as `function square(x) { return x * x; }`?"
+        options:
+          - "`const square = x => { x * x };`"
+          - "`const square = x => x * x;`"
+          - "`const square => x * x;`"
+          - "`square = (x) -> x * x;`"
+        answer: 1
+        why: "Without braces, the expression is returned. With braces you'd need `return`."
+    tasks:
+      - id: callbacks
+        title: Functions as values
+        prompt: |
+          - `square`: an **arrow function** that returns its argument squared
+          - `repeat(fn, times, value)`: calls `fn` on `value` `times` times in a row and returns the result — `repeat(square, 2, 3)` is `square(square(3))` = `81`
+          - `adder(amount)`: returns a **function** that adds `amount` to its argument — `adder(5)(10)` is `15`
+        starter: |
+          const square = null; // make this an arrow function
+
+          function repeat(fn, times, value) {
+          }
+
+          function adder(amount) {
+          }
+        solution: |
+          const square = (n) => n * n;
+
+          function repeat(fn, times, value) {
+            let result = value;
+            for (let i = 0; i < times; i++) {
+              result = fn(result);
+            }
+            return result;
+          }
+
+          function adder(amount) {
+            return (n) => n + amount;
+          }
+        harness: |
+          check(typeof square, 'function');
+          check(square(7), 49);
+          check(repeat(square, 2, 3), 81);
+          check(repeat((s) => s + 'a', 3, 'b'), 'baaa');
+          check(repeat(square, 0, 5), 5);
+          check(adder(5)(10), 15);
+          const addTen = adder(10);
+          check(typeof addTen, 'function');
+          check(addTen(-3), 7);
+        hints:
+          - "`const square = (n) => n * n;`"
+          - "In `repeat`, keep a `result` variable, and replace it with `fn(result)` in a loop."
+          - "`adder` returns an arrow function: `return (n) => n + amount;`"
+    cards:
+      - front: Write an arrow function that adds two numbers.
+        back: "`const add = (a, b) => a + b;`"
+      - front: When does an arrow function need `return`?
+        back: When its body is in braces. A single expression without braces is returned automatically.
+      - front: What is a callback?
+        back: A function passed to another function, to be called by it.
+      - front: What is a closure?
+        back: A function that remembers variables from where it was created, even after that code has finished.
+
+  - type: quiz
+    id: js5-quiz2
+    title: "Quiz: arrows and callbacks"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const f = (x) => x + 1;
+          const g = (x) => x * 10;
+          console.log(g(f(2)));
+          console.log(f(g(2)));
+        answer: |
+          30
+          21
+        why: "Inside out: f(2) = 3, g(3) = 30; g(2) = 20, f(20) = 21."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const greet = (name) => {
+            `Hi ${name}`;
+          };
+          console.log(greet('Jo'));
+        answer: |
+          undefined
+        why: "With braces, you need `return`."
+      - type: mcq
+        prompt: "What does `run(() => 42)` pass to `run`?"
+        options:
+          - The number 42
+          - A function that returns 42
+          - "`undefined`"
+          - An error
+        answer: 1
+        why: "The arrow function itself is the argument."
+
+  - type: lesson
+    id: js5-good
+    title: Writing good functions
+    minutes: 15
+    objectives:
+      - Keep functions small and focused
+      - Prefer pure functions
+      - Name functions clearly
+      - Use early returns to keep code flat
+    body: |
+      A few habits make functions easy to read, test and reuse.
+
+      ## One job, a clear name
+
+      A function should do **one thing**, and its name should say what:
+      verbs for actions (`calculateTotal`, `formatDate`), questions for
+      booleans (`isValid`, `hasAccess`). If you need "and" to describe it,
+      it may want to be two functions.
+
+      ## Pure functions
+
+      A **pure** function only uses its parameters and only returns a
+      result: same input, same output, and no **side effects** (no
+      printing, no changing outside variables). Pure functions are the
+      easiest to test — exactly what the checks in this course do.
+
+      ```js static
+      // Pure
+      const withTax = (price, rate) => price * (1 + rate);
+
+      // Not pure: changes something outside, and prints
+      let grandTotal = 0;
+      function addToTotal(price) {
+        grandTotal += price;
+        console.log(grandTotal);
+      }
+      ```
+
+      Programs do need side effects — printing, changing the page — but keep
+      them at the edges, and the calculations pure.
+
+      ## Early returns
+
+      Handle special cases first and **return early**, so the main logic
+      isn't buried in nested `if`s:
+
+      ```js
+      function discount(price, code) {
+        if (price <= 0) {
+          return 0;
+        }
+        if (code !== 'SAVE10') {
+          return price;
+        }
+        return price * 0.9;
+      }
+
+      console.log(discount(50, 'SAVE10'), discount(50, 'NOPE'), discount(-5, 'SAVE10'));
+      ```
+      ```output
+      45 50 0
+      ```
+
+      {{check pure}}
+    checks:
+      - id: pure
+        type: mcq
+        prompt: Which function is pure?
+        options:
+          - "`(a, b) => a + b`"
+          - "`(msg) => console.log(msg)`"
+          - "`() => Math.random()`"
+          - "`(x) => { total += x; }`"
+        answer: 0
+        why: "Same input, same output, no side effects."
+    cards:
+      - front: What is a pure function?
+        back: One whose result depends only on its parameters and that has no side effects.
+      - front: What is an early return?
+        back: Returning at the start of a function for special cases, so the main logic stays unnested.
+
+  - type: challenge
+    id: js5-ch-password
+    title: Password strength
+    difficulty: 2
+    tags: [functions, strings, loops]
+    prompt: |
+      Write helper functions, then use them:
+
+      - `hasDigit(text)`: `true` if the text contains a digit (`'0123456789'.includes(ch)`)
+      - `hasUpper(text)`: `true` if it contains an uppercase letter (a character where `ch !== ch.toLowerCase()`)
+      - `strength(password)`: `'weak'` if shorter than 8 characters; otherwise `'strong'` if it has **both** a digit and an uppercase letter, else `'medium'`
+    starter: |
+      function hasDigit(text) {
+      }
+
+      function hasUpper(text) {
+      }
+
+      function strength(password) {
+      }
+    solution: |
+      function hasDigit(text) {
+        for (const ch of text) {
+          if ('0123456789'.includes(ch)) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function hasUpper(text) {
+        for (const ch of text) {
+          if (ch !== ch.toLowerCase()) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function strength(password) {
+        if (password.length < 8) {
+          return 'weak';
+        }
+        return hasDigit(password) && hasUpper(password) ? 'strong' : 'medium';
+      }
+    harness: |
+      check(hasDigit('abc1'), true);
+      check(hasDigit('abc'), false);
+      check(hasUpper('abC'), true);
+      check(hasUpper('abc1'), false);
+      check(strength('Ab1'), 'weak');
+      check(strength('abcdefgh'), 'medium');
+      check(strength('abcdefg1'), 'medium');
+      check(strength('Abcdefg1'), 'strong');
+      check(strength('PASSWORD99'), 'strong');
+    hints:
+      - "Loop with `for (const ch of text)` and `return true` as soon as you find one; `return false` after the loop."
+      - "`strength` can call the other two functions."
+
+  - type: challenge
+    id: js5-ch-coins
+    title: Fewest coins
+    difficulty: 3
+    tags: [functions, loops]
+    prompt: |
+      `coinCount(cents)` returns the **smallest number of coins** that make
+      up an amount, using euro coins: 200, 100, 50, 20, 10, 5, 2 and 1 cents.
+
+      Take as many of the largest coin as fit, then the next, and so on:
+      `coinCount(289)` is 200 + 50 + 20 + 10 + 5 + 2 + 2 = **7** coins.
+
+      Write a helper `take(amount, coin)` that returns how many of `coin`
+      fit into `amount` (`Math.floor(amount / coin)`), and use it.
+    starter: |
+      function take(amount, coin) {
+      }
+
+      function coinCount(cents) {
+      }
+    solution: |
+      function take(amount, coin) {
+        return Math.floor(amount / coin);
+      }
+
+      function coinCount(cents) {
+        let left = cents;
+        let count = 0;
+        for (const coin of [200, 100, 50, 20, 10, 5, 2, 1]) {
+          const n = take(left, coin);
+          count += n;
+          left -= n * coin;
+        }
+        return count;
+      }
+    harness: |
+      check(take(289, 200), 1);
+      check(take(89, 20), 4);
+      check(coinCount(289), 7);
+      check(coinCount(0), 0);
+      check(coinCount(1), 1);
+      check(coinCount(4), 2);
+      check(coinCount(500), 3);
+      check(coinCount(388), 8);
+    hints:
+      - "Go through the coins from largest to smallest — `for (const coin of [200, 100, 50, 20, 10, 5, 2, 1])` works."
+      - "For each coin: `const n = take(left, coin); count += n; left -= n * coin;`"
+
+  - type: review
+    id: js5-review
+    title: "Chapter 5 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      function area(w, h = 1) {      // parameters, with a default
+        return w * h;                // give the result back
+      }
+      area(3, 4);                    // call with arguments
+
+      const double = (n) => n * 2;   // arrow, implicit return
+      const info = (n) => {          // arrow with a block
+        return `n is ${n}`;
+      };
+
+      function applyTwice(fn, x) {   // a callback
+        return fn(fn(x));
+      }
+      const adder = (a) => (b) => a + b;   // a function that returns a function (closure)
+      ```
+
+      ## Key ideas
+
+      - Functions name an idea and let you reuse it.
+      - `return` gives a value back; printing only shows it.
+      - Variables inside a function are local.
+      - Functions are values: store them, pass them, return them.
+      - Small, pure, well-named functions with early returns.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          const calc = (a, b = 3) => a * b;
+          console.log(calc(2));
+          console.log(calc(2, 5));
+        answer: |
+          6
+          10
+        why: "b defaults to 3."
+      - type: mcq
+        prompt: Which describes a pure function?
+        options:
+          - It never uses parameters
+          - Same inputs always give the same output, with no side effects
+          - It always prints its result
+          - It's an arrow function
+        answer: 1
+        why: "Predictable and self-contained."
+
+  - type: exam
+    id: js5-exam
+    title: "Chapter 5 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          function f(x) {
+            return x * 3;
+            console.log('never');
+          }
+          console.log(f(4));
+        answer: |
+          12
+        why: "return ends the function; the log after it never runs."
+      - type: mcq
+        prompt: "In `function add(a, b)`, what are `a` and `b`?"
+        options:
+          - Arguments
+          - Parameters
+          - Return values
+          - Global variables
+        answer: 1
+        why: "Parameters are in the definition."
+      - type: output
+        prompt: What does this print?
+        code: |
+          function greet(name = 'you') {
+            return 'Hi ' + name;
+          }
+          console.log(greet());
+          console.log(greet(undefined));
+          console.log(greet('Bo'));
+        answer: |
+          Hi you
+          Hi you
+          Hi Bo
+        why: "undefined also uses the default."
+      - type: output
+        prompt: What does this print?
+        code: |
+          const x = 'outer';
+          function show() {
+            const x = 'inner';
+            return x;
+          }
+          console.log(show(), x);
+        answer: |
+          inner outer
+        why: "The local x shadows the outer one inside the function only."
+      - type: mcq
+        prompt: Which arrow function returns the larger of two numbers?
+        options:
+          - "`(a, b) => { a > b ? a : b }`"
+          - "`(a, b) => a > b ? a : b`"
+          - "`a, b => a > b ? a : b`"
+          - "`(a, b) -> Math.max(a, b)`"
+        answer: 1
+        why: "Several parameters need brackets; braces would need return."
+      - type: output
+        prompt: What does this print?
+        code: |
+          function times(n) {
+            return (x) => x * n;
+          }
+          const byFour = times(4);
+          console.log(byFour(3));
+        answer: |
+          12
+        why: "The returned function remembers n = 4."
+      - type: tf
+        prompt: A function can be passed as an argument to another function.
+        answer: true
+        why: "Functions are values — that's a callback."
+      - type: output
+        prompt: What does this print?
+        code: |
+          function check(n) {
+            if (n < 0) {
+              return 'negative';
+            }
+            return 'ok';
+          }
+          console.log(check(-1), check(1));
+        answer: |
+          negative ok
+        why: "An early return."
+      - type: mcq
+        prompt: "`const r = console.log('x');` — what is `r`?"
+        options:
+          - "`'x'`"
+          - "`undefined`"
+          - "`true`"
+          - "`null`"
+        answer: 1
+        why: "console.log returns undefined."
+      - type: fill
+        prompt: An arrow function that returns its argument plus one.
+        code: |
+          const inc = (n) ___ n + 1;
+          console.log(inc(1));
+        blanks:
+          - ["=>"]
+        output: "2"
+        why: "`=>`."
+      - type: code
+        prompt: |
+          Write `clamp(value, min = 0, max = 100)`: returns `min` if value is
+          below it, `max` if above it, otherwise the value. Also write
+          `percent(part, whole)`: `part / whole * 100`, rounded to a whole
+          number and **clamped** to 0–100 using `clamp`.
+        starter: |
+          function clamp(value, min, max) {
+          }
+
+          function percent(part, whole) {
+          }
+        solution: |
+          function clamp(value, min = 0, max = 100) {
+            if (value < min) {
+              return min;
+            }
+            if (value > max) {
+              return max;
+            }
+            return value;
+          }
+
+          function percent(part, whole) {
+            return clamp(Math.round(part / whole * 100));
+          }
+        harness: |
+          check(clamp(50), 50);
+          check(clamp(-5), 0);
+          check(clamp(150), 100);
+          check(clamp(5, 10, 20), 10);
+          check(percent(1, 3), 33);
+          check(percent(5, 4), 100);
+          check(percent(0, 9), 0);

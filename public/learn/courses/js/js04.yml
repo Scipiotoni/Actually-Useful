@@ -1,0 +1,814 @@
+id: js04
+number: 4
+part: js-p1
+title: Loops
+blurb: Repeat work with while and for loops, go through text character by character, and control loops with break and continue.
+hours: 3
+goals:
+  - Repeat code with `while` and `for`
+  - Build up results with counters and accumulators
+  - Loop over the characters of a string with `for...of`
+  - Stop or skip with `break` and `continue`
+  - Nest loops for rows and columns
+
+items:
+  - type: lesson
+    id: js4-while
+    title: while loops
+    minutes: 20
+    objectives:
+      - Repeat code while a condition is true
+      - Make sure a loop ends
+    body: |
+      A **loop** repeats code. The simplest is `while`: it runs its block
+      again and again **as long as** its condition is true.
+
+      ```js
+      let count = 1;
+      while (count <= 3) {
+        console.log(`Round ${count}`);
+        count++;
+      }
+      console.log('Done');
+      ```
+      ```output
+      Round 1
+      Round 2
+      Round 3
+      Done
+      ```
+
+      Step by step: `count` is 1, `1 <= 3` is true, print, count becomes 2;
+      … count becomes 4, `4 <= 3` is false, so the loop ends and the program
+      continues after it.
+
+      ## Every loop must end
+
+      Something inside the loop has to make the condition false eventually.
+      Forget `count++` and the condition stays true forever — an **infinite
+      loop**. (In these lessons, a loop that runs for more than a few
+      seconds is stopped with a message. In a real browser, the tab
+      freezes.)
+
+      `while` is best when you **don't know in advance** how many times to
+      repeat — "keep halving until it's below 1":
+
+      ```js
+      let n = 100;
+      let steps = 0;
+      while (n >= 1) {
+        n = n / 2;
+        steps++;
+      }
+      console.log(steps);
+      ```
+      ```output
+      7
+      ```
+
+      {{check trace}}
+
+      {{task countdown}}
+    checks:
+      - id: trace
+        type: output
+        prompt: What does this print?
+        code: |
+          let x = 10;
+          while (x > 0) {
+            console.log(x);
+            x -= 4;
+          }
+        answer: |
+          10
+          6
+          2
+        why: "10, 6, 2, then x is -2 and the loop stops."
+    tasks:
+      - id: countdown
+        title: Countdown
+        prompt: |
+          Complete `countdown(n)` so it prints the numbers from `n` down to
+          `1`, one per line, then `Liftoff!` — using a `while` loop.
+
+          `countdown(3)` prints:
+
+          ```text
+          3
+          2
+          1
+          Liftoff!
+          ```
+        starter: |
+          function countdown(n) {
+          }
+        solution: |
+          function countdown(n) {
+            while (n >= 1) {
+              console.log(n);
+              n--;
+            }
+            console.log('Liftoff!');
+          }
+        harness: |
+          check(capture(() => countdown(3)), '3\n2\n1\nLiftoff!');
+          check(capture(() => countdown(1)), '1\nLiftoff!');
+          check(capture(() => countdown(0)), 'Liftoff!');
+          check(capture(() => countdown(5)), '5\n4\n3\n2\n1\nLiftoff!');
+        hints:
+          - "`while (n >= 1) { … }` — print n, then decrease it with `n--`."
+          - "`Liftoff!` goes after the loop, so it's printed once."
+    cards:
+      - front: When does a while loop stop?
+        back: When its condition is false (checked before each repetition).
+      - front: What is an infinite loop?
+        back: A loop whose condition never becomes false — usually a missing update like `i++`.
+
+  - type: lesson
+    id: js4-for
+    title: for loops
+    minutes: 25
+    objectives:
+      - Write a `for` loop with a start, a condition and a step
+      - Count up, down and in steps
+      - Build a result with an accumulator
+    body: |
+      Most loops count. `for` puts the three counting parts on one line:
+
+      ```js
+      for (let i = 1; i <= 5; i++) {
+        console.log(i);
+      }
+      ```
+      ```output
+      1
+      2
+      3
+      4
+      5
+      ```
+
+      ```js static
+      for (start; condition; step) { … }
+      ```
+
+      1. **start** runs once: `let i = 1`.
+      2. **condition** is checked before each round: `i <= 5`.
+      3. **step** runs after each round: `i++`.
+
+      Programmers often count from **0** — you'll see why with strings and
+      arrays: `for (let i = 0; i < 5; i++)` also runs 5 times (0 to 4).
+
+      Other counts:
+
+      ```js
+      for (let i = 10; i > 0; i -= 3) {
+        console.log(i);
+      }
+      ```
+      ```output
+      10
+      7
+      4
+      1
+      ```
+
+      ## The accumulator pattern
+
+      To build up a result, start a variable **before** the loop and update
+      it **inside**:
+
+      ```js
+      let total = 0;
+      for (let i = 1; i <= 4; i++) {
+        total += i;
+      }
+      console.log(total);
+
+      let stars = '';
+      for (let i = 0; i < 5; i++) {
+        stars += '*';
+      }
+      console.log(stars);
+      ```
+      ```output
+      10
+      *****
+      ```
+
+      ## Looping over a string by index
+
+      ```js
+      const word = 'code';
+      for (let i = 0; i < word.length; i++) {
+        console.log(`${i}: ${word[i]}`);
+      }
+      ```
+      ```output
+      0: c
+      1: o
+      2: d
+      3: e
+      ```
+
+      `i < word.length` (not `<=`) because the last index is `length - 1`.
+
+      {{check count}}
+
+      {{task sums}}
+    checks:
+      - id: count
+        type: mcq
+        prompt: "How many times does `for (let i = 0; i < 10; i += 2)` run?"
+        options:
+          - "10"
+          - "5"
+          - "6"
+          - "4"
+        answer: 1
+        why: "i is 0, 2, 4, 6, 8."
+    tasks:
+      - id: sums
+        title: Sums and products
+        prompt: |
+          Using `for` loops:
+
+          - `sumTo(n)` returns 1 + 2 + … + n (and `0` when n is 0)
+          - `factorial(n)` returns 1 × 2 × … × n (and `1` when n is 0)
+          - `repeatWord(word, times)` returns the word repeated with a space between: `repeatWord('hip', 3)` is `'hip hip hip'`
+        starter: |
+          function sumTo(n) {
+          }
+
+          function factorial(n) {
+          }
+
+          function repeatWord(word, times) {
+          }
+        solution: |
+          function sumTo(n) {
+            let total = 0;
+            for (let i = 1; i <= n; i++) {
+              total += i;
+            }
+            return total;
+          }
+
+          function factorial(n) {
+            let product = 1;
+            for (let i = 2; i <= n; i++) {
+              product *= i;
+            }
+            return product;
+          }
+
+          function repeatWord(word, times) {
+            let result = '';
+            for (let i = 0; i < times; i++) {
+              result += i === 0 ? word : ' ' + word;
+            }
+            return result;
+          }
+        harness: |
+          check(sumTo(4), 10);
+          check(sumTo(100), 5050);
+          check(sumTo(0), 0);
+          check(factorial(5), 120);
+          check(factorial(1), 1);
+          check(factorial(0), 1);
+          check(repeatWord('hip', 3), 'hip hip hip');
+          check(repeatWord('go', 1), 'go');
+          check(repeatWord('no', 0), '');
+        hints:
+          - "Accumulator: `let total = 0;` before the loop, `total += i;` inside, `return total;` after."
+          - "A product starts at `1`, not 0."
+          - "For the words, add a space before every word except the first."
+    cards:
+      - front: What are the three parts of a for loop?
+        back: "start; condition; step — `for (let i = 0; i < n; i++)`."
+      - front: What is the accumulator pattern?
+        back: Start a variable before the loop (0, 1 or ''), update it inside, use it after.
+      - front: "Why `i < text.length` and not `<=`?"
+        back: The last index is length − 1.
+
+  - type: quiz
+    id: js4-quiz1
+    title: "Quiz: while and for"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          for (let i = 3; i >= 1; i--) {
+            console.log(i * 2);
+          }
+        answer: |
+          6
+          4
+          2
+        why: "i is 3, 2, 1."
+      - type: output
+        prompt: What does this print?
+        code: |
+          let s = '';
+          for (let i = 0; i < 3; i++) {
+            s += i;
+          }
+          console.log(s);
+        answer: |
+          012
+        why: "Numbers joined to a string."
+      - type: spot
+        prompt: Which line makes this loop run forever?
+        code: |
+          let i = 0;
+          while (i < 5) {
+            console.log(i);
+            i--;
+          }
+        answer: 4
+        why: "i goes down, so `i < 5` stays true forever. It should be `i++`."
+      - type: fill
+        prompt: Print 1 to 10.
+        code: |
+          for (let i = 1; i ___ 10; i++) {
+            console.log(i);
+          }
+        blanks:
+          - ["<="]
+        output: |
+          1
+          2
+          3
+          4
+          5
+          6
+          7
+          8
+          9
+          10
+        why: "`<=` includes 10."
+
+  - type: lesson
+    id: js4-control
+    title: for...of, break and continue
+    minutes: 25
+    objectives:
+      - Loop over each character with `for...of`
+      - Stop a loop early with `break`
+      - Skip a round with `continue`
+      - Nest loops
+    body: |
+      ## for...of
+
+      When you need each **item** but not its index, `for...of` is simpler.
+      It works on strings (and, soon, arrays):
+
+      ```js
+      let vowels = 0;
+      for (const ch of 'education') {
+        if ('aeiou'.includes(ch)) {
+          vowels++;
+        }
+      }
+      console.log(vowels);
+      ```
+      ```output
+      5
+      ```
+
+      (`'aeiou'.includes(ch)` is true when `ch` is one of those letters.)
+
+      ## break and continue
+
+      - `break` **stops** the loop at once.
+      - `continue` **skips** the rest of this round and goes to the next.
+
+      ```js
+      for (let i = 1; i <= 10; i++) {
+        if (i % 3 === 0) {
+          continue;          // skip multiples of 3
+        }
+        if (i > 7) {
+          break;             // stop after 7
+        }
+        console.log(i);
+      }
+      ```
+      ```output
+      1
+      2
+      4
+      5
+      7
+      ```
+
+      In a function, `return` inside a loop stops both the loop and the
+      function — handy for "find the first…" problems.
+
+      ## Nested loops
+
+      A loop inside a loop runs completely for **each** round of the outer
+      one — perfect for rows and columns:
+
+      ```js
+      for (let row = 1; row <= 3; row++) {
+        let line = '';
+        for (let col = 1; col <= 4; col++) {
+          line += row * col + ' ';
+        }
+        console.log(line);
+      }
+      ```
+      ```output
+      1 2 3 4
+      2 4 6 8
+      3 6 9 12
+      ```
+
+      {{check brk}}
+
+      {{task prime}}
+    checks:
+      - id: brk
+        type: output
+        prompt: What does this print?
+        code: |
+          for (const ch of 'hello world') {
+            if (ch === ' ') {
+              break;
+            }
+            if (ch === 'l') {
+              continue;
+            }
+            console.log(ch);
+          }
+        answer: |
+          h
+          e
+          o
+        why: "The l's are skipped, and the loop stops at the space."
+    tasks:
+      - id: prime
+        title: Vowels and primes
+        prompt: |
+          - `countVowels(text)` returns how many of the letters a, e, i, o, u are in the text — **uppercase too** (tip: `ch.toLowerCase()`). Use `for...of`.
+          - `isPrime(n)` returns `true` if n is a prime number (greater than 1, and divisible only by 1 and itself). Try dividers from 2 up; as soon as one divides n, return `false`.
+        starter: |
+          function countVowels(text) {
+          }
+
+          function isPrime(n) {
+          }
+        solution: |
+          function countVowels(text) {
+            let count = 0;
+            for (const ch of text) {
+              if ('aeiou'.includes(ch.toLowerCase())) {
+                count++;
+              }
+            }
+            return count;
+          }
+
+          function isPrime(n) {
+            if (n < 2) {
+              return false;
+            }
+            for (let d = 2; d * d <= n; d++) {
+              if (n % d === 0) {
+                return false;
+              }
+            }
+            return true;
+          }
+        harness: |
+          check(countVowels('education'), 5);
+          check(countVowels('AEIOU and sky'), 6);
+          check(countVowels('rhythm'), 0);
+          check(countVowels(''), 0);
+          check(isPrime(2), true);
+          check(isPrime(17), true);
+          check(isPrime(1), false);
+          check(isPrime(0), false);
+          check(isPrime(9), false);
+          check(isPrime(97), true);
+          check(isPrime(100), false);
+        hints:
+          - "`for (const ch of text) { if ('aeiou'.includes(ch.toLowerCase())) count++; }`"
+          - "In `isPrime`, return `false` for n < 2 first. Then loop `d` from 2 while `d < n`; if `n % d === 0`, return false. After the loop, return true."
+    cards:
+      - front: When is `for...of` better than a counting `for`?
+        back: When you need each item (character, element) but not its index.
+      - front: "`break` vs `continue`?"
+        back: break stops the whole loop; continue skips to the next round.
+      - front: How many times does the inner loop body run in two nested loops of 3 and 4?
+        back: 3 × 4 = 12 times.
+
+  - type: quiz
+    id: js4-quiz2
+    title: "Quiz: for...of and control"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          let total = 0;
+          for (let i = 1; i <= 5; i++) {
+            if (i === 3) {
+              continue;
+            }
+            total += i;
+          }
+          console.log(total);
+        answer: |
+          12
+        why: "1 + 2 + 4 + 5."
+      - type: output
+        prompt: What does this print?
+        code: |
+          for (let a = 1; a <= 2; a++) {
+            for (let b = 1; b <= 2; b++) {
+              console.log(`${a}${b}`);
+            }
+          }
+        answer: |
+          11
+          12
+          21
+          22
+        why: "The inner loop runs fully for each a."
+      - type: tf
+        prompt: "`for (const ch of 'abc')` gives the characters 'a', 'b', 'c' in turn."
+        answer: true
+        why: "for...of goes over each character."
+
+  - type: challenge
+    id: js4-ch-fizz
+    title: FizzBuzz
+    difficulty: 2
+    tags: [loops, conditions]
+    prompt: |
+      The classic interview question. `fizzBuzz(n)` prints the numbers from
+      1 to n, one per line, except:
+
+      - multiples of 3 print `Fizz`
+      - multiples of 5 print `Buzz`
+      - multiples of both 3 and 5 print `FizzBuzz`
+
+      `fizzBuzz(5)` prints `1`, `2`, `Fizz`, `4`, `Buzz`.
+    starter: |
+      function fizzBuzz(n) {
+      }
+    solution: |
+      function fizzBuzz(n) {
+        for (let i = 1; i <= n; i++) {
+          if (i % 15 === 0) {
+            console.log('FizzBuzz');
+          } else if (i % 3 === 0) {
+            console.log('Fizz');
+          } else if (i % 5 === 0) {
+            console.log('Buzz');
+          } else {
+            console.log(i);
+          }
+        }
+      }
+    harness: |
+      check(capture(() => fizzBuzz(5)), '1\n2\nFizz\n4\nBuzz');
+      check(capture(() => fizzBuzz(15)).split('\n').slice(-3), ['13', '14', 'FizzBuzz']);
+      check(capture(() => fizzBuzz(30)).split('\n').filter((l) => l === 'FizzBuzz').length, 2);
+      check(capture(() => fizzBuzz(0)), '');
+    hints:
+      - "Check the \"both\" case first — `i % 15 === 0` (or `i % 3 === 0 && i % 5 === 0`)."
+
+  - type: challenge
+    id: js4-ch-pyramid
+    title: A pyramid
+    difficulty: 3
+    tags: [nested loops, strings]
+    prompt: |
+      `pyramid(height)` returns a string with a pyramid of `*`, one row per
+      line (joined with `\n`), centred with spaces on the left (no spaces
+      on the right). `pyramid(3)` is:
+
+      ```text
+        *
+       ***
+      *****
+      ```
+
+      Row `r` (counting from 1) has `height - r` spaces and `2 * r - 1` stars.
+    starter: |
+      function pyramid(height) {
+      }
+    solution: |
+      function pyramid(height) {
+        let rows = '';
+        for (let r = 1; r <= height; r++) {
+          let line = '';
+          for (let s = 0; s < height - r; s++) {
+            line += ' ';
+          }
+          for (let k = 0; k < 2 * r - 1; k++) {
+            line += '*';
+          }
+          rows += r === 1 ? line : '\n' + line;
+        }
+        return rows;
+      }
+    harness: |
+      check(pyramid(3), '  *\n ***\n*****');
+      check(pyramid(1), '*');
+      check(pyramid(4).split('\n'), ['   *', '  ***', ' *****', '*******']);
+      check(pyramid(0), '');
+    hints:
+      - "An outer loop for the rows; inside it, build `line` with one loop for the spaces and one for the stars."
+      - "Join rows with `'\\n'` — but not before the first one."
+
+  - type: review
+    id: js4-review
+    title: "Chapter 4 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      while (condition) { … }
+
+      for (let i = 0; i < n; i++) { … }
+      for (let i = n; i > 0; i--) { … }
+
+      for (const ch of text) { … }
+
+      break;      // stop the loop
+      continue;   // next round
+
+      let total = 0;             // accumulator
+      for (…) { total += x; }
+      ```
+
+      ## Key ideas
+
+      - `while` when you don't know how many rounds; `for` when you count.
+      - Every loop needs a way to end.
+      - Accumulators start before the loop and are updated inside.
+      - Indexes go from 0 to `length - 1`.
+      - `return` inside a loop in a function stops everything.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          let n = 0;
+          for (const c of 'banana') {
+            if (c === 'a') {
+              n++;
+            }
+          }
+          console.log(n);
+        answer: |
+          3
+        why: "Three a's."
+      - type: mcq
+        prompt: "Which loop fits \"ask until the answer is right\" best?"
+        options:
+          - "`for` with a fixed count"
+          - "`while`"
+          - "`for...of` over a string"
+          - "No loop"
+        answer: 1
+        why: "You don't know how many tries in advance."
+
+  - type: exam
+    id: js4-exam
+    title: "Chapter 4 exam"
+    minutes: 25
+    pick: 10
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          let i = 1;
+          while (i < 20) {
+            i *= 3;
+          }
+          console.log(i);
+        answer: |
+          27
+        why: "1 → 3 → 9 → 27, and 27 < 20 is false."
+      - type: output
+        prompt: What does this print?
+        code: |
+          for (let i = 0; i < 3; i++) {
+            console.log('Hi ' + i);
+          }
+        answer: |
+          Hi 0
+          Hi 1
+          Hi 2
+        why: "i is 0, 1, 2."
+      - type: mcq
+        prompt: "How many times does `for (let i = 1; i <= 100; i++)` run?"
+        options:
+          - "99"
+          - "100"
+          - "101"
+          - "1"
+        answer: 1
+        why: "1 to 100 inclusive."
+      - type: output
+        prompt: What does this print?
+        code: |
+          let product = 1;
+          for (let i = 1; i <= 4; i++) {
+            product *= i;
+          }
+          console.log(product);
+        answer: |
+          24
+        why: "1 × 2 × 3 × 4."
+      - type: tf
+        prompt: "`continue` ends the loop completely."
+        answer: false
+        why: "That's break; continue only skips the current round."
+      - type: output
+        prompt: What does this print?
+        code: |
+          for (const ch of 'abc') {
+            console.log(ch.toUpperCase());
+          }
+        answer: |
+          A
+          B
+          C
+        why: "Each character in turn."
+      - type: output
+        prompt: What does this print?
+        code: |
+          for (let i = 1; i <= 10; i++) {
+            if (i * i > 20) {
+              console.log(i);
+              break;
+            }
+          }
+        answer: |
+          5
+        why: "25 is the first square above 20."
+      - type: mcq
+        prompt: "What happens with `for (let i = 0; i < 5; )` (no step) and nothing changing i inside?"
+        options:
+          - It runs 5 times
+          - It never runs
+          - It runs forever
+          - SyntaxError
+        answer: 2
+        why: "i stays 0, so the condition is always true."
+      - type: fill
+        prompt: Count down from 5 to 1.
+        code: |
+          for (let i = 5; i >= 1; ___) {
+            console.log(i);
+          }
+        blanks:
+          - ["i--", "i -= 1", "i = i - 1"]
+        output: |
+          5
+          4
+          3
+          2
+          1
+        why: "Decrease by one each round."
+      - type: output
+        prompt: What does this print?
+        code: |
+          let count = 0;
+          for (let a = 0; a < 3; a++) {
+            for (let b = 0; b < 2; b++) {
+              count++;
+            }
+          }
+          console.log(count);
+        answer: |
+          6
+        why: "3 × 2."
+      - type: code
+        prompt: |
+          `digitSum(n)` returns the sum of the digits of a non-negative
+          whole number: `digitSum(4213)` is `10`. (Tip: `n % 10` is the last
+          digit, and `Math.floor(n / 10)` removes it. Or loop over
+          `String(n)`.)
+        starter: |
+          function digitSum(n) {
+          }
+        solution: |
+          function digitSum(n) {
+            let sum = 0;
+            while (n > 0) {
+              sum += n % 10;
+              n = Math.floor(n / 10);
+            }
+            return sum;
+          }
+        harness: |
+          check(digitSum(4213), 10);
+          check(digitSum(0), 0);
+          check(digitSum(9), 9);
+          check(digitSum(99999), 45);
+          check(digitSum(1000), 1);

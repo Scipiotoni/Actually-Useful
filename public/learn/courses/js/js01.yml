@@ -1,0 +1,685 @@
+id: js01
+number: 1
+part: js-p1
+title: Hello, JavaScript
+blurb: What JavaScript is, your first programs, how code is written — and how to read the error messages that will help you fix it.
+hours: 2
+goals:
+  - Explain what JavaScript is and where it runs
+  - Print text and numbers with `console.log`
+  - Write statements and comments, and follow the basic rules of the language
+  - Read error messages and fix syntax and reference errors
+  - Run a script on a web page
+
+items:
+  - type: lesson
+    id: js1-hello
+    title: Your first program
+    minutes: 15
+    objectives:
+      - Say what JavaScript is used for
+      - Print text and numbers with `console.log`
+      - Run and edit examples
+    body: |
+      **JavaScript** is a programming language. It was made for web
+      browsers — every browser can run it — and it's what makes pages
+      interactive: menus, games, maps, chat apps. Today it also runs on
+      servers, phones and even robots.
+
+      A **program** is a list of instructions for the computer. Here's the
+      traditional first one. Press **▶ Run**:
+
+      ```js
+      console.log('Hello, world!');
+      ```
+      ```output
+      Hello, world!
+      ```
+
+      `console.log(…)` prints whatever is in the brackets to the
+      **console** — a text panel for programmers. (In a real browser, press
+      [[F12]] and open the **Console** tab to see it.)
+
+      ## Text and numbers
+
+      Text must be in quotes — it's called a **string**. Numbers are written
+      without quotes, and JavaScript can do maths with them:
+
+      ```js
+      console.log('I am learning JavaScript.');
+      console.log(2 + 3);
+      console.log(10 * 4 - 2);
+      console.log('2 + 3');
+      ```
+      ```output
+      I am learning JavaScript.
+      5
+      38
+      2 + 3
+      ```
+
+      The last line is in quotes, so it's text: printed exactly as written,
+      not calculated.
+
+      The instructions run **from top to bottom**, one after the other.
+      Press **Edit** on any example, change it, and run it again — you can't
+      break anything.
+
+      {{check quotes}}
+
+      {{task first}}
+    checks:
+      - id: quotes
+        type: output
+        prompt: What does this print?
+        code: |
+          console.log(6 * 7);
+          console.log('6 * 7');
+        answer: |
+          42
+          6 * 7
+        why: "Without quotes it's maths; with quotes it's text."
+    tasks:
+      - id: first
+        title: Three lines
+        prompt: |
+          Write a program that prints exactly these three lines:
+
+          ```text
+          Hello, JavaScript!
+          42
+          Bye!
+          ```
+
+          Print the `42` by calculating `7 * 6` — not by typing 42.
+        starter: |
+          // Print three lines with console.log
+        solution: |
+          console.log('Hello, JavaScript!');
+          console.log(7 * 6);
+          console.log('Bye!');
+        harness: |
+          check(printed(), 'Hello, JavaScript!\n42\nBye!');
+        hints:
+          - "One `console.log(…);` per line."
+          - "`console.log(7 * 6);` — no quotes around the maths."
+    cards:
+      - front: What does `console.log(…)` do?
+        back: Prints what's in the brackets to the console.
+      - front: What is a string?
+        back: Text, written in quotes — like `'Hello'`.
+      - front: In what order do statements run?
+        back: From top to bottom, one after another.
+
+  - type: lesson
+    id: js1-rules
+    title: Statements and comments
+    minutes: 15
+    objectives:
+      - Write statements with semicolons
+      - Add comments to explain code
+      - Know that JavaScript is case-sensitive
+    body: |
+      Each instruction is a **statement**. Statements usually end with a
+      semicolon `;` and go one per line:
+
+      ```js
+      console.log('One');   // a comment: the rest of the line is ignored
+      console.log('Two');
+      /*
+        A comment over
+        several lines.
+      */
+      // console.log('Three');   ← commented out, so it doesn't run
+      console.log('Four');
+      ```
+      ```output
+      One
+      Two
+      Four
+      ```
+
+      **Comments** are notes for humans — the computer skips them:
+
+      - `//` comments out the rest of the line.
+      - `/* … */` can span several lines.
+
+      "Commenting out" a line is a handy way to switch it off without
+      deleting it.
+
+      ## A few rules
+
+      - **Case matters**: `console.log` works, `Console.Log` doesn't.
+      - Strings can use single quotes `'…'`, double quotes `"…"` or backticks `` `…` `` — just start and end with the same kind.
+      - Extra spaces and blank lines don't matter (outside strings) — use them to make code readable.
+      - `\n` inside a string starts a new line.
+
+      ```js
+      console.log("Double quotes work too.");
+      console.log('It\'s fine to escape a quote with a backslash.');
+      console.log("Line one\nLine two");
+      ```
+      ```output
+      Double quotes work too.
+      It's fine to escape a quote with a backslash.
+      Line one
+      Line two
+      ```
+
+      {{check comment}}
+
+      {{task switch}}
+    checks:
+      - id: comment
+        type: output
+        prompt: What does this print?
+        code: |
+          console.log('A'); // console.log('B');
+          // console.log('C');
+          console.log('D');
+        answer: |
+          A
+          D
+        why: "Everything after `//` on a line is ignored."
+    tasks:
+      - id: switch
+        title: Switch lines off
+        prompt: |
+          This program prints five lines. **Comment out** lines so that it
+          prints only:
+
+          ```text
+          Ready
+          Set
+          Go!
+          ```
+
+          Don't delete or change any line — only comment lines out.
+        starter: |
+          console.log('Ready');
+          console.log('Wait…');
+          console.log('Set');
+          console.log('Not yet');
+          console.log('Go!');
+        solution: |
+          console.log('Ready');
+          // console.log('Wait…');
+          console.log('Set');
+          // console.log('Not yet');
+          console.log('Go!');
+        harness: |
+          check(printed(), 'Ready\nSet\nGo!');
+        hints:
+          - "Put `//` at the start of the two lines you don't want."
+    cards:
+      - front: How do you write a comment in JavaScript?
+        back: "`// to the end of the line` or `/* over several lines */`."
+      - front: Is JavaScript case-sensitive?
+        back: "Yes — `console.log` works, `Console.log` doesn't."
+      - front: How do you start a new line inside a string?
+        back: "`\\n`, as in `'one\\ntwo'`."
+
+  - type: quiz
+    id: js1-quiz1
+    title: "Quiz: first programs"
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log(10 - 3);
+          console.log('10 - 3');
+          console.log(2 * 2 * 2);
+        answer: |
+          7
+          10 - 3
+          8
+        why: "Only the unquoted maths is calculated."
+      - type: mcq
+        prompt: Which line prints `Hi`?
+        options:
+          - "`console.log(Hi);`"
+          - "`console.log('Hi');`"
+          - "`Console.log('Hi');`"
+          - "`console.log('Hi\");`"
+        answer: 1
+        why: "Text in matching quotes, and `console` in lower case."
+      - type: tf
+        prompt: A line starting with `//` is ignored by JavaScript.
+        answer: true
+        why: "It's a comment."
+      - type: fill
+        prompt: Print the text `Done`.
+        code: |
+          console.___('Done');
+        blanks:
+          - [log]
+        output: Done
+        why: "`console.log`."
+
+  - type: lesson
+    id: js1-errors
+    title: Reading error messages
+    minutes: 20
+    objectives:
+      - Tell a syntax error from a runtime error
+      - Read an error's type, message and line number
+      - Fix the most common beginner mistakes
+    body: |
+      Everyone's code has mistakes — professionals just get faster at
+      fixing them. JavaScript tells you what went wrong with an **error
+      message**. Learn to read it, and most bugs take seconds to fix.
+
+      Run this example:
+
+      ```js error
+      console.log('Start');
+      consol.log('Oops');
+      console.log('End');
+      ```
+
+      The message says `ReferenceError: consol is not defined`, with the
+      **line number**. Three parts:
+
+      1. The **type** — `ReferenceError`: a name JavaScript doesn't know.
+      2. The **message** — which name: `consol`.
+      3. The **line** — where it happened.
+
+      Notice `Start` was printed: the program ran until the error, then
+      stopped. `End` never ran.
+
+      ## Syntax errors
+
+      A **syntax error** means the code isn't valid JavaScript at all —
+      like a sentence with missing punctuation. Nothing runs:
+
+      ```js error
+      console.log('Start');
+      console.log('Missing the closing quote);
+      ```
+
+      ## The usual suspects
+
+      | Mistake | Error |
+      |---|---|
+      | Missing quote or bracket | `SyntaxError: Invalid or unexpected token` / `missing ) after argument list` |
+      | Misspelled name (`consol`, `console.lg`) | `ReferenceError: … is not defined` / `TypeError: console.lg is not a function` |
+      | Wrong case (`Console.log`) | `ReferenceError: Console is not defined` |
+      | Text without quotes (`console.log(Hello)`) | `ReferenceError: Hello is not defined` |
+
+      > [!tip]
+      > Read the error **before** changing anything. Go to the line it
+      > names, and look at that line (and the one before — a missing
+      > bracket is often noticed one line late).
+
+      {{check which}}
+
+      {{task fix}}
+    checks:
+      - id: which
+        type: mcq
+        prompt: "`console.log(Hello);` gives `ReferenceError: Hello is not defined`. What's wrong?"
+        options:
+          - "`console` is misspelled"
+          - "`Hello` needs quotes to be text"
+          - The semicolon
+          - Nothing — it's a bug in JavaScript
+        answer: 1
+        why: "Without quotes, JavaScript looks for something named Hello."
+    tasks:
+      - id: fix
+        title: Fix the program
+        prompt: |
+          This program has **three** mistakes. Fix them so it prints:
+
+          ```text
+          Welcome!
+          2 + 2 is 4
+          See you soon.
+          ```
+        starter: |
+          console.log('Welcome!);
+          Console.log('2 + 2 is ' + (2 + 2));
+          console.log(See you soon.);
+        solution: |
+          console.log('Welcome!');
+          console.log('2 + 2 is ' + (2 + 2));
+          console.log('See you soon.');
+        harness: |
+          check(printed(), 'Welcome!\n2 + 2 is 4\nSee you soon.');
+        hints:
+          - "Line 1 is missing a quote. Run it after each fix to see the next error."
+          - "`Console` should be `console`, and the last text needs quotes."
+    cards:
+      - front: What are the three parts of an error message?
+        back: "The type (e.g. ReferenceError), the message, and the line number."
+      - front: What does `ReferenceError: x is not defined` mean?
+        back: You used a name JavaScript doesn't know — often a typo or text without quotes.
+      - front: What does a syntax error mean?
+        back: The code isn't valid JavaScript (e.g. a missing quote or bracket), so nothing runs.
+
+  - type: lesson
+    id: js1-page
+    title: JavaScript on a web page
+    minutes: 15
+    objectives:
+      - Add a script to a web page
+      - Change something on the page from JavaScript
+    body: |
+      On a real site, JavaScript is loaded by the HTML page with a
+      `<script>` element — usually from its own file:
+
+      ```html static
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <title>My page</title>
+          <script src="script.js" defer></script>
+        </head>
+        <body>
+          <h1>Hello</h1>
+        </body>
+      </html>
+      ```
+
+      `defer` makes the browser run the script **after** the page has been
+      read, so the script can find every element. (Scripts at the very end
+      of `<body>` have the same effect.)
+
+      From a script you can reach into the page. You'll learn this properly
+      in Part III — for now, here's a taste. The **JS** tab is `script.js`:
+
+      ```html
+      <h1>Original title</h1>
+      <p>Press ▶ Run in your mind — or just look at the result below.</p>
+      ```
+      ```js
+      document.querySelector('h1').textContent = 'Changed by JavaScript!';
+      console.log('The script ran.');
+      ```
+
+      `document.querySelector('h1')` finds the first `<h1>` on the page, and
+      setting its `textContent` replaces its text.
+
+      Parts I and II of this course focus on the language itself, using
+      the console. Part III comes back to pages.
+
+      {{check defer}}
+
+      {{task change}}
+    checks:
+      - id: defer
+        type: mcq
+        prompt: "Why use `defer` on `<script src=\"script.js\">` in the `<head>`?"
+        options:
+          - It makes the script download faster
+          - The script runs after the page has been read, so it can find the elements
+          - It hides the script from users
+          - It's required for all scripts
+        answer: 1
+        why: "Without it, a head script runs before the body exists."
+    tasks:
+      - id: change
+        title: Change the page
+        prompt: |
+          Following the example, write a script that changes the text of
+          the paragraph (`p`) to `JavaScript was here!`
+        given:
+          index.html: |
+            <h1>My page</h1>
+            <p>Nothing has happened yet.</p>
+        files:
+          script.js: |
+            // Change the paragraph's text
+        solution:
+          script.js: |
+            document.querySelector('p').textContent = 'JavaScript was here!';
+        harness: |
+          check(text('p'), 'JavaScript was here!');
+          check(text('h1'), 'My page');
+        hints:
+          - "`document.querySelector('p')` finds the paragraph."
+          - "`document.querySelector('p').textContent = 'JavaScript was here!';`"
+    cards:
+      - front: How does a page load a JavaScript file?
+        back: "`<script src=\"script.js\" defer></script>` in the head (or a script at the end of the body)."
+      - front: How do you change the text of the first `<h1>`?
+        back: "`document.querySelector('h1').textContent = 'New text';`"
+
+  - type: quiz
+    id: js1-quiz2
+    title: "Quiz: errors and pages"
+    questions:
+      - type: mcq
+        prompt: "`console.lg('x');` — which error do you get?"
+        options:
+          - "SyntaxError"
+          - "TypeError: console.lg is not a function"
+          - "Nothing — it prints x"
+          - "ReferenceError: x is not defined"
+        answer: 1
+        why: "`console` exists, but it has no `lg`, so it can't be called."
+      - type: output
+        prompt: What is printed before the error stops the program?
+        code: |
+          console.log('one');
+          console.log('two');
+          nope();
+          console.log('three');
+        answer: |
+          one
+          two
+        error: true
+        why: "Lines run until the error; the rest never runs."
+      - type: tf
+        prompt: When there's a syntax error anywhere in the code, none of it runs.
+        answer: true
+        why: "The code can't even be read, so nothing starts."
+
+  - type: challenge
+    id: js1-ch-art
+    title: A tiny rocket
+    difficulty: 1
+    tags: [console.log]
+    prompt: |
+      Print this rocket exactly — five lines, spaces included:
+
+      ```text
+        /\
+       /  \
+       |JS|
+       |  |
+      /____\
+      ```
+
+      Remember: a backslash inside a string must be written as `\\`.
+    starter: |
+      // Print the rocket
+    solution: |
+      console.log('  /\\');
+      console.log(' /  \\');
+      console.log(' |JS|');
+      console.log(' |  |');
+      console.log('/____\\');
+    harness: |
+      check(printed(), '  /\\\n /  \\\n |JS|\n |  |\n/____\\');
+    hints:
+      - "`console.log('  /\\\\');` prints `  /\\` — two backslashes in the code make one."
+
+  - type: challenge
+    id: js1-ch-receipt
+    title: A shop receipt
+    difficulty: 2
+    tags: [maths, strings]
+    prompt: |
+      Print a receipt. Calculate every number with JavaScript maths (for
+      example `3 * 2`) — don't work them out yourself:
+
+      ```text
+      3 apples: 6
+      2 breads: 5
+      Total: 11
+      ```
+
+      Apples cost 2 each, bread costs 2.5. Join text and numbers with `+`,
+      like `'Total: ' + (6 + 5)`.
+    starter: |
+      // Apples cost 2, bread costs 2.5
+    solution: |
+      console.log('3 apples: ' + 3 * 2);
+      console.log('2 breads: ' + 2 * 2.5);
+      console.log('Total: ' + (3 * 2 + 2 * 2.5));
+    harness: |
+      check(printed(), '3 apples: 6\n2 breads: 5\nTotal: 11');
+    hints:
+      - "`'3 apples: ' + 3 * 2` — multiplication happens before joining."
+      - "For the total, put the sum in brackets: `'Total: ' + (3 * 2 + 2 * 2.5)`. Without brackets, the numbers would be joined as text."
+
+  - type: review
+    id: js1-review
+    title: "Chapter 1 review"
+    body: |
+      ## Cheat sheet
+
+      ```js static
+      console.log('Text in quotes');   // a string
+      console.log(2 + 3 * 4);          // maths: 14
+      console.log('Total: ' + 5);      // joined: Total: 5
+      /* a comment
+         over several lines */
+      ```
+
+      ```html static
+      <script src="script.js" defer></script>
+      ```
+
+      ## Key ideas
+
+      - A program is a list of statements that run top to bottom.
+      - `console.log` prints to the console.
+      - Strings go in quotes; case matters.
+      - Errors tell you the type, the message and the line. Read them first.
+      - Pages load scripts with `<script src="…" defer>`.
+    questions:
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('a' + 'b');
+          console.log(1 + 2 + 3);
+        answer: |
+          ab
+          6
+        why: "Strings join; numbers add."
+      - type: mcq
+        prompt: Which is a valid statement?
+        options:
+          - "`console.log('Hi')`"
+          - "`console.log(\"Hi')`"
+          - "`console log('Hi');`"
+          - "`log.console('Hi');`"
+        answer: 0
+        why: "The semicolon is optional; mismatched quotes and the other spellings aren't."
+
+  - type: exam
+    id: js1-exam
+    title: "Chapter 1 exam"
+    minutes: 20
+    pick: 10
+    questions:
+      - type: mcq
+        prompt: Where does JavaScript run?
+        options:
+          - Only on servers
+          - In every web browser (and on servers and elsewhere too)
+          - Only in Chrome
+          - Only in the HTML file
+        answer: 1
+        why: "Every browser runs it."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log(8 / 2);
+          console.log('8 / 2');
+        answer: |
+          4
+          8 / 2
+        why: "Maths vs text."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('first');
+          // console.log('second');
+          console.log('third'); // the end
+        answer: |
+          first
+          third
+        why: "The middle line is a comment."
+      - type: mcq
+        prompt: "`console.log('Hello);` — what's the error?"
+        options:
+          - A missing closing quote — a SyntaxError
+          - A ReferenceError
+          - A missing semicolon
+          - None
+        answer: 0
+        why: "The string never ends."
+      - type: tf
+        prompt: "`CONSOLE.LOG('x')` works the same as `console.log('x')`."
+        answer: false
+        why: "JavaScript is case-sensitive."
+      - type: mcq
+        prompt: "A program throws an error on line 5 of 10. What happens?"
+        options:
+          - Lines 1–4 run, then it stops
+          - Nothing runs
+          - Line 5 is skipped and the rest runs
+          - It runs all ten lines, then shows the error
+        answer: 0
+        why: "Runtime errors stop the program where they happen."
+      - type: fill
+        prompt: Load the script after the page has been read.
+        code: |
+          <script src="app.js" ___></script>
+        blanks:
+          - [defer]
+        why: "`defer`."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log('Result: ' + (4 * 5));
+        answer: |
+          Result: 20
+        why: "The brackets are calculated first, then joined."
+      - type: mcq
+        prompt: How do you write a comment that spans several lines?
+        options:
+          - "`// … //`"
+          - "`/* … */`"
+          - "`<!-- … -->`"
+          - "`# …`"
+        answer: 1
+        why: "`/* … */`."
+      - type: output
+        prompt: What does this print?
+        code: |
+          console.log("Line 1\nLine 2");
+        answer: |
+          Line 1
+          Line 2
+        why: "`\\n` is a new line."
+      - type: code
+        prompt: |
+          Print exactly:
+
+          ```text
+          Name: Ada
+          Age next year: 37
+          ```
+
+          Calculate 37 as `36 + 1`.
+        starter: |
+        solution: |
+          console.log('Name: Ada');
+          console.log('Age next year: ' + (36 + 1));
+        harness: |
+          check(printed(), 'Name: Ada\nAge next year: 37');

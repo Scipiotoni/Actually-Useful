@@ -147,8 +147,11 @@
     var lines = 0;
     var chars = 0;
     var cut = false;
+    // What console.log printed, for checks: printed() and capture(fn).
+    var printedLines = [];
     function emit(level, text) {
       if (cut) return;
+      if (level === 'log') printedLines.push(text);
       lines += 1;
       chars += text.length;
       if (lines > maxLines || chars > maxChars) {
@@ -311,6 +314,16 @@
       realSetTimeout(tick, 0);
     }
 
+    function printed() { return printedLines.join('\n'); }
+    // What fn prints. Synchronous for plain functions; a promise for async ones.
+    function capture(fn) {
+      var start = printedLines.length;
+      var since = function () { return printedLines.slice(start).join('\n'); };
+      var result = fn();
+      if (result && typeof result.then === 'function') return result.then(since);
+      return since();
+    }
+
     // ---------------------------------------------------------- page helpers
     var dom = null;
     if (scope.document) {
@@ -444,7 +457,9 @@
             realSetTimeout(finishResize, 400);
           });
         },
-        html: function () { return doc.documentElement.outerHTML; }
+        html: function () { return doc.documentElement.outerHTML; },
+        printed: printed,
+        capture: capture
       };
       // Links and forms in a preview: only this page exists here, so say
       // where a link or form would have gone instead of leaving a blank frame.
@@ -496,6 +511,8 @@
       finish: finish,
       fail: report,
       dom: dom,
+      printed: printed,
+      capture: capture,
       count: function () { return results; }
     };
     scope.__au = api;
@@ -786,7 +803,8 @@
     var offset = head.split('\n').length - 1;
     var user = String(code || '');
     var source = head + user + '\n;\n' +
-      'await (async function () {\n' + translateHarness(harness || '') + '\n})();\n' +
+      // Checks see the program's names; printed() and capture() read its output.
+      'await (async function () {\nconst printed = __au.printed, capture = __au.capture;\n{\n' + translateHarness(harness || '') + '\n}\n})();\n' +
       '})().then(function () { __au.finish(' + Number(opts && opts.settleMs || 4000) + '); }, function (e) { __au.fail(e, "run"); __au.finish(0); });\n';
     return { source: source, offset: offset, lines: user.split('\n').length };
   }
@@ -795,7 +813,7 @@
     return '<script>' + String(js).replace(/<\/script>/gi, '<\\/script>') + '\n//# sourceURL=' + name + '\n<\/script>';
   }
 
-  var PAGE_HELPERS = ['$', '$$', 'exists', 'count', 'text', 'attr', 'tag', 'style', 'rule', 'hover', 'focus', 'color', 'box', 'click', 'typeInto', 'submit', 'press', 'wait', 'viewport', 'html'];
+  var PAGE_HELPERS = ['$', '$$', 'exists', 'count', 'text', 'attr', 'tag', 'style', 'rule', 'hover', 'focus', 'color', 'box', 'click', 'typeInto', 'submit', 'press', 'wait', 'viewport', 'html', 'printed', 'capture'];
 
   /**
    * The document for a page: the learner's files composed like the editor
