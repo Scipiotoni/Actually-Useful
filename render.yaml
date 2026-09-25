@@ -27,3 +27,19 @@ services:
         sync: false
       - key: AU_GITHUB_REPO
         value: Scipiotoni/Actually-Useful
+
+  # The open version: same code, no password, publishing turned off. Visitors
+  # keep their work in their own browser and in backup files, and their C++
+  # runs on Compiler Explorer (godbolt.org) rather than on this server.
+  # It needs no secrets — deliberately no GitHub token here.
+  - type: web
+    name: actually-useful-open
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: AU_OPEN
+        value: "1"

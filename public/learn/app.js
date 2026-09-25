@@ -22,6 +22,7 @@
   const main = document.getElementById('main');
   const outline = document.getElementById('outline');
   const syncState = document.getElementById('sync-state');
+  syncState.addEventListener('click', () => { if (sync.storage === 'local') location.hash = '#/progress'; });
 
   let course = null;
   let P = Engine.emptyProgress();
@@ -150,6 +151,13 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       sync.storage = data.storage;
+      if (sync.storage === 'local') {
+        // The open version keeps nothing on the server: this browser is the only copy.
+        sync.online = true;
+        sync.dirty = false;
+        setSync('local', syncLabel());
+        return;
+      }
       const merged = Engine.mergeProgress(P, data.progress);
       const serverHasAll = JSON.stringify(Engine.mergeProgress(data.progress, {})) === JSON.stringify(merged);
       P = merged;
@@ -163,10 +171,12 @@
   }
 
   function syncLabel() {
+    if (sync.storage === 'local') return 'Saved in this browser — download a backup';
     return sync.storage === 'github' ? 'Progress synced to GitHub' : 'Progress saved on the server';
   }
 
   async function push() {
+    if (sync.storage === 'local') { sync.dirty = false; return; }
     if (sync.busy || !sync.dirty) return;
     sync.busy = true;
     sync.dirty = false;
@@ -236,6 +246,13 @@
       doneAt: cur.doneAt || iso()
     });
     if (gained) addDayXp(gained);
+    if (!cur.doneAt && sync.storage === 'local') {
+      // With no server copy, a nudge every ten finished items keeps a recent backup around.
+      const finished = Object.keys(P.items).filter((k) => P.items[k].status === 'done').length;
+      if (finished % 10 === 0) {
+        setTimeout(() => toast('<b>' + finished + ' done!</b> Your progress lives only in this browser — <a href="#/progress">download a backup</a> to keep it safe.', 'ok'), 1500);
+      }
+    }
     const hour = new Date().getHours();
     if (hour >= 0 && hour < 4) bump('nightOwl');
     return gained;
@@ -2460,34 +2477,46 @@
       const file = fileInput.files[0];
       if (!file) return;
       file.text().then((text) => {
-        const data = JSON.parse(text);
-        P = Engine.mergeProgress(P, data.progress || data);
-        save();
-        toast('Progress imported and merged', 'ok');
+        let parsed;
+        try { parsed = Backup.parse(text); } catch (e) { toast(esc(e.message), 'err'); return; }
+        if (parsed.learn) {
+          P = Engine.mergeProgress(P, parsed.learn);
+          save();
+        }
+        // A full backup also carries the editor's project; the editor reads it from this browser.
+        if (parsed.editor && confirm('This backup also holds the editor project "' + (parsed.editor.name || 'Untitled page') +
+          '". Put it in the editor too? (It replaces the project there now.)')) {
+          try { localStorage.setItem(Backup.KEYS.editor, JSON.stringify(parsed.editor)); } catch (e) { toast('No room in this browser for the project', 'err'); }
+        }
+        toast(parsed.learn ? 'Progress restored and merged — nothing was lost' : 'Backup restored', 'ok');
         route();
-      }).catch(() => toast('That file is not a progress backup', 'err'));
+      }).catch(() => toast('Could not read that file', 'err'));
     });
-    p.append(h('p', { class: 'page-sub' }, sync.storage === 'github'
-      ? 'Your progress is saved in this browser and synced to your GitHub repository (branch au-learn), so it follows you to any device where you sign in.'
-      : 'Your progress is saved in this browser and on the server. (With GitHub storage configured, it also survives server restarts.)'));
+    fileInput.addEventListener('click', () => { fileInput.value = ''; });
+    p.append(h('p', { class: 'page-sub' }, sync.storage === 'local'
+      ? 'This is the open version: your progress is kept only in this browser. Download a backup now and then — clearing the browser, or switching to another device, would otherwise lose it. The backup also holds the project in the editor.'
+      : sync.storage === 'github'
+        ? 'Your progress is saved in this browser and synced to your GitHub repository (branch au-learn), so it follows you to any device where you sign in.'
+        : 'Your progress is saved in this browser and on the server. (With GitHub storage configured, it also survives server restarts.)'));
     p.append(h('div', { class: 'row-actions' },
       h('button', {
-        class: 'btn',
+        class: 'btn' + (sync.storage === 'local' ? ' btn-primary' : ''),
         onclick: () => {
-          const blob = new Blob([JSON.stringify({ progress: P }, null, 2)], { type: 'application/json' });
-          const a = h('a', { href: URL.createObjectURL(blob), download: 'learn-cpp-progress-' + today() + '.json' });
-          document.body.append(a);
-          a.click();
-          a.remove();
+          persistLocal();
+          const doc = Backup.collect(localStorage);
+          Backup.download(doc, Backup.fileName());
+          toast('Backup downloaded — ' + esc(Backup.describe(doc)), 'ok');
         }
       }, 'Download a backup'),
-      h('button', { class: 'btn', onclick: () => fileInput.click() }, 'Import a backup'),
-      h('button', { class: 'btn', onclick: () => { sync.dirty = true; push(); } }, 'Sync now'),
+      h('button', { class: 'btn', onclick: () => fileInput.click() }, 'Restore a backup'),
+      sync.storage === 'local' ? null : h('button', { class: 'btn', onclick: () => { sync.dirty = true; push(); } }, 'Sync now'),
       h('button', {
         class: 'btn',
         style: { color: 'var(--err)' },
         onclick: () => {
-          if (!confirm('Reset ALL your Learn progress — lessons, scores, flashcards, notes, snippets — on every device?')) return;
+          if (!confirm(sync.storage === 'local'
+            ? 'Reset ALL your Learn progress — lessons, scores, flashcards, notes, snippets — in this browser?'
+            : 'Reset ALL your Learn progress — lessons, scores, flashcards, notes, snippets — on every device?')) return;
           if (!confirm('Really? This cannot be undone (unless you downloaded a backup).')) return;
           const at = iso();
           P = Engine.mergeProgress(Engine.emptyProgress(), Object.assign(Engine.emptyProgress(), { resetAt: at, updatedAt: at }));
@@ -2648,7 +2677,7 @@
   });
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && sync.dirty) {
+    if (document.visibilityState === 'hidden' && sync.dirty && sync.storage !== 'local') {
       try {
         const body = JSON.stringify({ progress: P });
         if (body.length < 60000) {
@@ -2711,7 +2740,9 @@
     refreshChrome();
     // Re-render once the server's copy (maybe from another device) is merged in.
     const focused = document.activeElement && document.activeElement.closest && document.activeElement.closest('.ed, textarea, input');
-    if (JSON.stringify(P) !== before && !view.guard && !focused) route();
+    // The progress page describes where progress is kept, which is only known now.
+    const onProgressPage = location.hash.indexOf('#/progress') === 0;
+    if ((JSON.stringify(P) !== before || onProgressPage) && !view.guard && !focused) route();
     else if (!compiler.available) route();
     setInterval(() => { if (sync.dirty) push(); }, 60000);
   }

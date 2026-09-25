@@ -26,6 +26,7 @@
     </label>
     <button id="btn-run" class="btn" title="Render preview (Ctrl/Cmd+Enter)">Run</button>
     <button id="btn-download" class="btn" title="Download a standalone .html file">Download</button>
+    <button id="btn-backup" class="btn" title="Download or restore a backup of your code and Learn C++ progress">Backup</button>
     <button id="btn-deploy" class="btn btn-primary" title="Publish this page (Ctrl/Cmd+S)">Deploy</button>
     <button id="btn-images" class="btn btn-ghost" title="Uploaded images" aria-expanded="false">
       Images <span id="images-count" class="pill pill-quiet">0</span>
@@ -177,6 +178,22 @@
   </div>
 </div>
 
+<div class="modal" id="backup-modal" hidden>
+  <div class="modal-card">
+    <h2>Backup</h2>
+    <p class="field-hint" id="backup-note">
+      One file with the project in the editor and your Learn C++ progress.
+      Keep it somewhere safe, or restore it in another browser.
+    </p>
+    <div class="modal-actions modal-actions-wide">
+      <button type="button" class="btn btn-primary" id="backup-download">Download backup</button>
+      <button type="button" class="btn" id="backup-restore">Restore from a file…</button>
+      <button type="button" class="btn btn-ghost" id="backup-cancel">Cancel</button>
+    </div>
+    <input type="file" id="backup-file" accept="application/json,.json" hidden>
+  </div>
+</div>
+
 <div class="dropveil" id="dropveil" hidden><span>Drop files to add them to the project</span></div>
 
 <div class="modal" id="file-modal" hidden>
@@ -219,6 +236,8 @@
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
 
 <script src="compose.js"></script>
+<script src="learn/engine.js"></script>
+<script src="backup.js"></script>
 <script src="editor.js"></script>
 <script src="app.js"></script>
 </body>

@@ -367,6 +367,28 @@ With no `AU_PASSWORD` set the app runs open, which is the sensible default on
 **refuses to start** if `HOST` is non-loopback and no password is set. Override
 with `AU_ALLOW_PUBLIC_WRITES=1` if you really mean it.
 
+## The open version
+
+Set `AU_OPEN=1` and the same code runs as a public version anyone can use
+without a password:
+
+- **Nothing can be published.** Deploy, Pages and Images disappear, and the
+  server refuses to publish, delete or upload.
+- **Nothing is kept on the server.** Each visitor's project and Learn C++
+  progress live in their own browser.
+- **Backup** (in the editor, and on Learn's Progress page) downloads one file
+  with both the project and the learning progress; **Restore** brings it back
+  in any browser. Restored learning progress is merged, never overwritten.
+  Learn reminds people to take a backup every ten finished items.
+- **C++ runs on Compiler Explorer** (godbolt.org), so strangers' programs
+  never run on your server, and each visitor gets at most 30 runs a minute.
+  Set `AU_CPP_BACKEND=local` to compile on the server instead.
+- A password or GitHub token set on the service is ignored.
+
+`render.yaml` defines it as a second service, `actually-useful-open`, next to
+the password-protected one. Your private editor is unchanged. The Backup
+button is there too, as an extra safety net.
+
 ## Configuration
 
 | Variable | Default | Meaning |
@@ -379,7 +401,8 @@ with `AU_ALLOW_PUBLIC_WRITES=1` if you really mean it.
 | `AU_GITHUB_REPO` | *(unset)* | `owner/repo` to store published pages in |
 | `AU_GITHUB_BRANCH` | *(repo default)* | Branch to commit pages to |
 | `AU_ALLOW_PUBLIC_WRITES` | *(unset)* | Permit a public bind with no password |
-| `AU_CPP_BACKEND` | `auto` | How Learn C++ runs code: `auto`, `local`, `godbolt`, `wandbox` or `off` |
+| `AU_OPEN` | *(unset)* | `1` runs [the open version](#the-open-version): no password, no publishing |
+| `AU_CPP_BACKEND` | `auto` (`godbolt` in the open version) | How Learn C++ runs code: `auto`, `local`, `godbolt`, `wandbox` or `off` |
 | `AU_CXX` | `g++` | The local C++ compiler to use |
 | `AU_LEARN_BRANCH` | `au-learn` | Branch that stores learning progress when GitHub storage is on |
 
@@ -520,6 +543,7 @@ test/editor.test.js        The editor's text operations, as pure functions
 test/github-store.test.js  GitHub storage, against a stand-in GitHub API
 server/cpp.js      Compiles and runs C++ for Learn mode (local g++ or a remote service)
 server/learn-store.js  Learning progress on disk or on its own GitHub branch
+public/backup.js   Backup files: the editor project and Learn progress in one JSON file
 public/learn/      Learn C++: the app, its engine, and the course in course/*.yml
 test/learn-*.test.js, test/cpp-runner.test.js, test/course.test.js  Learn mode tests
 ```

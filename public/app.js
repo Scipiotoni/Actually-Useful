@@ -1614,6 +1614,70 @@
     setTimeout(function () { node.remove(); }, ms || 4000);
   }
 
+  // ----------------------------------------------------------------- backup
+  // One file with this project and the Learn C++ progress kept in this
+  // browser. In the open version it is the only way work leaves the browser.
+  var backupModal = $('backup-modal');
+  var backupFile = $('backup-file');
+
+  function openBackup() { backupModal.hidden = false; }
+  function closeBackup() { backupModal.hidden = true; }
+
+  function downloadBackup() {
+    saveLocal();
+    var doc = Backup.collect(localStorage);
+    Backup.download(doc, Backup.fileName());
+    closeBackup();
+    toast('Backup downloaded — ' + Compose.escapeHtml(Backup.describe(doc)) + '.', 'ok', 6000);
+  }
+
+  function restoreBackup(text) {
+    var parsed;
+    try {
+      parsed = Backup.parse(text);
+    } catch (err) {
+      return toast(Compose.escapeHtml(err.message), 'err', 7000);
+    }
+    if (parsed.editor && !window.confirm(
+      'Restore ' + Backup.describe(parsed) + '?\n\n' +
+      'The project in the editor is replaced by the one in the backup. ' +
+      'Learn C++ progress is merged, so nothing you have done there is lost.')) return;
+
+    if (parsed.learn && window.LearnEngine) {
+      var current = null;
+      try { current = JSON.parse(localStorage.getItem(Backup.KEYS.learn) || 'null'); } catch (err) { current = null; }
+      var merged = LearnEngine.mergeProgress(current || LearnEngine.emptyProgress(), parsed.learn);
+      try {
+        localStorage.setItem(Backup.KEYS.learn, JSON.stringify(merged));
+      } catch (err) {
+        return toast('This browser has no room to store the Learn C++ progress.', 'err', 7000);
+      }
+    }
+    if (parsed.editor) {
+      load(parsed.editor);
+      saveLocal();
+      render();
+    }
+    closeBackup();
+    toast('Restored ' + Compose.escapeHtml(Backup.describe(parsed)) + '.', 'ok', 6000);
+  }
+
+  $('btn-backup').addEventListener('click', openBackup);
+  $('backup-download').addEventListener('click', downloadBackup);
+  $('backup-cancel').addEventListener('click', closeBackup);
+  $('backup-restore').addEventListener('click', function () { backupFile.value = ''; backupFile.click(); });
+  backupFile.addEventListener('change', function () {
+    var file = backupFile.files[0];
+    if (!file) return;
+    file.text().then(restoreBackup, function () { toast('Could not read that file.', 'err'); });
+  });
+  backupModal.addEventListener('click', function (event) {
+    if (event.target === backupModal) closeBackup();
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && !backupModal.hidden) closeBackup();
+  });
+
   // ------------------------------------------------------------------ boot
   els.run.addEventListener('click', render);
   els.deploy.addEventListener('click', deploy);
@@ -1623,7 +1687,15 @@
     if (!(event.ctrlKey || event.metaKey)) return;
     var key = event.key.toLowerCase();
 
-    if (key === 's') { event.preventDefault(); return deploy(); }
+    if (key === 's') {
+      event.preventDefault();
+      if (state.open) {
+        saveLocal();
+        return toast('Saved in this browser. Publishing is off in the open version — ' +
+          'use <strong>Backup</strong> to keep a copy.', '', 6000);
+      }
+      return deploy();
+    }
     if (event.key === 'Enter') { event.preventDefault(); return render(); }
     if (key === 'f') { event.preventDefault(); return openFind(false); }
     if (key === 'h') { event.preventDefault(); return openFind(true); }
@@ -1656,12 +1728,24 @@
     api('/api/config').then(function (config) {
       document.getElementById('logout').hidden = !config.auth;
       state.storage = config.storage || 'disk';
+      if (config.open) enterOpenMode();
       if (state.storage === 'github') {
         els.drawer.querySelector('.drawer-note').textContent =
           'Pages are committed to your GitHub repository and served by GitHub Pages, ' +
           'so they survive restarts. A new page can take a minute to appear the first time.';
       }
     }).catch(function () { /* the drawer already reports an unreachable server */ });
+  }
+
+  /** The open version: no publishing, so no Deploy, Pages or Images. */
+  function enterOpenMode() {
+    state.open = true;
+    document.body.classList.add('is-open-version');
+    [els.deploy, els.sites, $('btn-images')].forEach(function (button) { if (button) button.hidden = true; });
+    $('backup-note').textContent = 'This is the open version: nothing is published or kept on the server. ' +
+      'Your project and Learn C++ progress live in this browser — download a backup now and then ' +
+      'so clearing the browser can never cost you your work.';
+    els.previewUrl.textContent = 'preview — open version, publishing is off';
   }
 
   if (OFFLINE) {

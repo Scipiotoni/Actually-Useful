@@ -93,6 +93,9 @@ body.learn {
 .lt-side-foot.is-ok::before { content: '● '; color: var(--ok); }
 .lt-side-foot.is-busy::before { content: '● '; color: var(--warn); }
 .lt-side-foot.is-off::before { content: '● '; color: var(--text-dim); }
+.lt-side-foot.is-local { cursor: pointer; }
+.lt-side-foot.is-local::before { content: '● '; color: var(--warn); }
+.lt-side-foot.is-local:hover { color: var(--text); text-decoration: underline; }
 
 .lt-main {
   flex: 1 1 auto;

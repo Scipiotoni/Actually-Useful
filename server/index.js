@@ -11,6 +11,43 @@ const { contentType, ASSET_NAME_RE } = require('./assets.js');
 const { createRunner } = require('./cpp.js');
 const { createProgressStore, validate: validateProgress } = require('./learn-store.js');
 const Compose = require('../public/compose.js');
+const Engine = require('../public/learn/engine.js');
+
+/** Why a write is refused in the open version. */
+const OPEN_NOTE = 'This is the open version of the editor: publishing is turned off here. ' +
+  'Your work stays in your browser — use Backup to download a copy.';
+
+/** AU_OPEN=1 (or true/yes) turns on the open version. */
+function openFromEnv() {
+  return /^(1|true|yes|on)$/i.test(String(process.env.AU_OPEN || '').trim());
+}
+
+/**
+ * At most `limit` requests per minute from one address — enough for a
+ * learner, not enough to use the server as a free compile farm.
+ */
+function rateLimiter(limit, windowMs = 60000) {
+  const hits = new Map();
+  return (key) => {
+    const now = Date.now();
+    const recent = (hits.get(key) || []).filter((t) => now - t < windowMs);
+    if (recent.length >= limit) {
+      hits.set(key, recent);
+      return false;
+    }
+    recent.push(now);
+    hits.set(key, recent);
+    if (hits.size > 5000) {
+      for (const [k, list] of hits) if (!list.some((t) => now - t < windowMs)) hits.delete(k);
+    }
+    return true;
+  };
+}
+
+function clientAddress(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || req.socket.remoteAddress || 'unknown';
+}
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const DATA_DIR = process.env.AU_DATA_DIR || path.join(__dirname, '..', 'data', 'sites');
@@ -130,6 +167,8 @@ function serveStatic(res, urlPath) {
 
 /** GitHub storage when a token is configured, local disk otherwise. */
 function createStore(options) {
+  // The open version never publishes, so it never touches the repository.
+  if (options.open) return new DeployStore(options.dataDir || DATA_DIR).init();
   const token = options.githubToken !== undefined ? options.githubToken : process.env.AU_GITHUB_TOKEN;
   const repo = options.githubRepo !== undefined ? options.githubRepo : process.env.AU_GITHUB_REPO;
   if (token && repo) {
@@ -145,15 +184,24 @@ function createStore(options) {
 }
 
 function createApp(options = {}) {
-  const store = createStore(options);
-  const runner = options.runner || createRunner(options.cpp || {});
+  // The open version: no password, no publishing, nothing kept on the server.
+  // People keep their work in their own browser and in backup files.
+  const open = options.open !== undefined ? Boolean(options.open) : openFromEnv();
+  const store = createStore({ ...options, open });
+  // Strangers' code runs on Compiler Explorer, not on this machine, unless
+  // AU_CPP_BACKEND says otherwise.
+  const runner = options.runner || createRunner({
+    ...(open ? { backend: process.env.AU_CPP_BACKEND || 'godbolt' } : {}),
+    ...(options.cpp || {})
+  });
+  const allowRun = open ? rateLimiter(options.openRunLimit || 30) : () => true;
   const progress = createProgressStore(store, {
     file: options.learnFile || path.join(options.dataDir || DATA_DIR, '.learn', 'progress.json'),
     branch: options.learnBranch
   });
   // No password configured means no login — the local-tool default.
   const password = options.password !== undefined ? options.password : process.env.AU_PASSWORD;
-  const authOn = Boolean(password);
+  const authOn = !open && Boolean(password);
   const throttle = new auth.Throttle();
 
   const server = http.createServer(async (req, res) => {
@@ -279,8 +327,16 @@ function createApp(options = {}) {
       if (pathname === '/api/config' && req.method === 'GET') {
         return sendJson(res, 200, {
           auth: authOn,
-          storage: typeof store.pagesUrl === 'function' ? 'github' : 'disk'
+          open,
+          storage: open ? 'none' : typeof store.pagesUrl === 'function' ? 'github' : 'disk'
         });
+      }
+
+      if (open && /^\/api\/(deploys|assets)(\/|$)/.test(pathname)) {
+        if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 403, { error: OPEN_NOTE });
+        if (pathname === '/api/deploys') return sendJson(res, 200, { deploys: [] });
+        if (pathname === '/api/assets') return sendJson(res, 200, { assets: [] });
+        return sendJson(res, 404, { error: 'Not found' });
       }
 
       if (pathname === '/api/deploys' && req.method === 'GET') {
@@ -338,8 +394,17 @@ function createApp(options = {}) {
       }
 
       if (pathname === '/api/cpp/run' && req.method === 'POST') {
+        if (!allowRun(clientAddress(req))) {
+          return sendJson(res, 429, { error: 'Too many runs in a minute — wait a moment and try again.' });
+        }
         const body = await readBody(req);
         return sendJson(res, 200, await runner.run(body));
+      }
+
+      if (open && pathname === '/api/learn/progress') {
+        // Progress belongs to each visitor's browser, not to a shared server.
+        if (req.method === 'GET') return sendJson(res, 200, { progress: Engine.emptyProgress(), storage: 'local' });
+        return sendJson(res, 403, { error: OPEN_NOTE });
       }
 
       if (pathname === '/api/learn/progress' && req.method === 'GET') {
@@ -375,6 +440,7 @@ function createApp(options = {}) {
     }
   });
 
+  server.open = open;
   server.store = store;
   server.runner = runner;
   server.progress = progress;
@@ -422,7 +488,7 @@ if (require.main === module) {
   const port = Number(process.env.PORT) || 3000;
   const host = process.env.HOST || '127.0.0.1';
 
-  if (!isLoopback(host) && !process.env.AU_PASSWORD && !process.env.AU_ALLOW_PUBLIC_WRITES) {
+  if (!isLoopback(host) && !process.env.AU_PASSWORD && !process.env.AU_ALLOW_PUBLIC_WRITES && !openFromEnv()) {
     console.error([
       '',
       `Refusing to start: HOST is ${host}, so this server would be reachable from`,
@@ -459,9 +525,13 @@ if (require.main === module) {
         console.log('  No local network address found — is this machine online?');
       }
     }
-    console.log(process.env.AU_PASSWORD
-      ? 'Password protection is ON (published pages stay public).'
-      : 'No AU_PASSWORD set — anyone who can reach this port can edit and deploy.');
+    if (openFromEnv()) {
+      console.log('Open version (AU_OPEN): no password, publishing is off, work stays in each browser.');
+    } else {
+      console.log(process.env.AU_PASSWORD
+        ? 'Password protection is ON (published pages stay public).'
+        : 'No AU_PASSWORD set — anyone who can reach this port can edit and deploy.');
+    }
   });
 }
 
