@@ -23,11 +23,15 @@ let skip = false;
 if (!process.env.AU_COURSE_CHECK) skip = 'set AU_COURSE_CHECK=1 to compile the whole course';
 else if (!hasCompiler) skip = 'no C++ compiler installed';
 
-test('every code sample, question and exercise in the course works', { skip, timeout: 30 * 60 * 1000 }, async () => {
+test('every code sample, question and exercise in the C++ and Arduino courses works', { skip, timeout: 30 * 60 * 1000 }, async () => {
   const lib = require('./course-lib.js');
-  const { course, missing } = lib.loadCourse();
-  assert.deepStrictEqual(missing, []);
-  const problems = await lib.checkAll(lib.makeRunners(), lib.jobs(course), 4);
+  const jobs = [];
+  for (const dir of lib.cppCourseDirs()) {
+    const { course, missing } = lib.loadCourse(null, dir);
+    assert.deepStrictEqual(missing, [], `${course.id} lists chapters that have no file`);
+    jobs.push(...lib.jobs(course));
+  }
+  const problems = await lib.checkAll(lib.makeRunners(), jobs, 4);
   assert.deepStrictEqual(problems, []);
 });
 

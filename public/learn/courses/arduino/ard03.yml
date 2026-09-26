@@ -1,0 +1,751 @@
+id: ard03
+number: 3
+part: ard-p1
+title: The Serial Monitor and Time
+blurb: Talk to your computer through the Serial Monitor, print numbers in any format, and keep time with millis() so a sketch can do several things at once.
+hours: 2.5
+goals:
+  - Print text and values to the Serial Monitor
+  - Show numbers in decimal, hexadecimal and binary
+  - Choose the right number type (int, long, unsigned long, float)
+  - Measure time with millis() instead of blocking with delay()
+  - Run two timers at different speeds in one sketch
+
+items:
+  - type: lesson
+    id: ard3-serial
+    title: Printing to the Serial Monitor
+    minutes: 18
+    objectives:
+      - Start Serial and print with print and println
+      - Build lines from text and values
+      - Print numbers in HEX, BIN and with chosen decimals
+    body: |
+      An Arduino has no screen, but it can send text over the USB cable to
+      the **Serial Monitor** on your computer. It's how you see what a
+      sketch is doing — and how you find bugs.
+
+      ```cpp
+      void setup() {
+        Serial.begin(9600);
+        Serial.println("Hello from the board!");
+        Serial.print("2 + 3 = ");
+        Serial.println(2 + 3);
+      }
+
+      void loop() {}
+      ```
+
+      ```output
+      Hello from the board!
+      2 + 3 = 5
+      ```
+
+      - `Serial.begin(9600)` starts the serial port at **9600 baud** (bits
+        per second). The Serial Monitor must be set to the same speed.
+      - `Serial.print(x)` sends `x`; `Serial.println(x)` sends it and then
+        **starts a new line**.
+
+      A line with several parts is several `print`s and one `println` at
+      the end.
+
+      ## Numbers in other formats
+
+      A second argument picks the format:
+
+      ```cpp
+      void setup() {
+        Serial.begin(9600);
+        int n = 200;
+        Serial.println(n);
+        Serial.println(n, HEX);
+        Serial.println(n, BIN);
+        float volts = 3.14159;
+        Serial.println(volts);
+        Serial.println(volts, 4);
+      }
+
+      void loop() {}
+      ```
+
+      ```output
+      200
+      C8
+      11001000
+      3.14
+      3.1416
+      ```
+
+      `HEX` is base 16 and `BIN` base 2 — you'll meet both in Chapter 7. A
+      `float` prints with **2 decimals** unless you ask for more.
+
+      > [!tip]
+      > Printing values is the number one debugging tool on an Arduino.
+      > When something doesn't work, print what the sketch *thinks* is
+      > happening: `Serial.println(sensorValue);`.
+
+      {{check println}}
+
+      {{check hex}}
+
+      {{task table}}
+    checks:
+      - id: println
+        type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            Serial.print("A");
+            Serial.print("B");
+            Serial.println("C");
+            Serial.println("D");
+          }
+
+          void loop() {}
+        answer: |
+          ABC
+          D
+        why: "print doesn't end the line, so A, B and C share one. println ends it after C; D goes on the next."
+      - id: hex
+        type: mcq
+        prompt: What does `Serial.println(255, HEX);` print?
+        options:
+          - "255"
+          - "FF"
+          - "11111111"
+          - "0xFF"
+        answer: 1
+        why: "255 in hexadecimal is FF. Arduino prints the digits without a 0x in front."
+    tasks:
+      - id: table
+        title: A table of squares
+        prompt: |
+          In `setup()`, print the squares of 1 to 5, one per line, like
+          this:
+
+          ```text
+          1 squared is 1
+          2 squared is 4
+          ```
+
+          …up to `5 squared is 25`.
+        starter: |
+          void setup() {
+            Serial.begin(9600);
+
+          }
+
+          void loop() {}
+        tests:
+          - out: |
+              1 squared is 1
+              2 squared is 4
+              3 squared is 9
+              4 squared is 16
+              5 squared is 25
+        hints:
+          - "A for loop from 1 to 5: `for (int i = 1; i <= 5; i++)`."
+          - "Inside it: print i, print \" squared is \", println i * i."
+        solution: |
+          void setup() {
+            Serial.begin(9600);
+            for (int i = 1; i <= 5; i++) {
+              Serial.print(i);
+              Serial.print(" squared is ");
+              Serial.println(i * i);
+            }
+          }
+
+          void loop() {}
+    cards:
+      - front: "`Serial.print` vs `Serial.println`?"
+        back: println starts a new line after printing; print doesn't.
+      - front: What does `Serial.begin(9600)` do?
+        back: Starts the serial port at 9600 baud (bits per second); the Serial Monitor must use the same speed.
+      - front: How do you print a number in hexadecimal or binary?
+        back: "`Serial.println(n, HEX);` or `Serial.println(n, BIN);`"
+
+  - type: lesson
+    id: ard3-types
+    title: Number types on a small chip
+    minutes: 14
+    objectives:
+      - Pick int, long, unsigned long, float or bool for a value
+      - Explain why a number can overflow
+      - Avoid integer division surprises
+    body: |
+      An Uno has only **2 KB** of memory, so number types matter.
+
+      | Type | Size on an Uno | Holds |
+      |---|---|---|
+      | `bool` | 1 byte | `true` or `false` |
+      | `byte` | 1 byte | 0 to 255 |
+      | `int` | 2 bytes | −32,768 to 32,767 |
+      | `long` | 4 bytes | about ±2.1 billion |
+      | `unsigned long` | 4 bytes | 0 to about 4.29 billion |
+      | `float` | 4 bytes | decimals, about 6–7 digits |
+
+      > [!warning]
+      > On an Uno an `int` stops at **32,767**. Count milliseconds in an
+      > `int` and after 32.7 seconds it **overflows** and jumps to a
+      > negative number. Times belong in `unsigned long`. (The simulator —
+      > and boards like the ESP32 — use bigger ints, but write your sketches
+      > for the Uno.)
+
+      ## Whole-number division
+
+      When both sides are whole numbers, `/` throws the remainder away,
+      and `%` gives the remainder:
+
+      ```cpp
+      void setup() {
+        Serial.begin(9600);
+        Serial.println(7 / 2);
+        Serial.println(7 % 2);
+        Serial.println(7 / 2.0);
+        int seconds = 125;
+        Serial.print(seconds / 60);
+        Serial.print(" min ");
+        Serial.print(seconds % 60);
+        Serial.println(" s");
+      }
+
+      void loop() {}
+      ```
+
+      ```output
+      3
+      1
+      3.50
+      2 min 5 s
+      ```
+
+      Writing `2.0` makes it a decimal division. `/` and `%` together turn
+      seconds into minutes and seconds.
+
+      {{check overflow}}
+
+      {{check div}}
+
+      {{task minsec}}
+    checks:
+      - id: overflow
+        type: mcq
+        prompt: Which type should hold the value of `millis()`, the milliseconds since the board started?
+        options:
+          - "`byte`"
+          - "`int`"
+          - "`unsigned long`"
+          - "`bool`"
+        answer: 2
+        why: "millis() returns an unsigned long. An int on an Uno would overflow after 32.7 seconds."
+      - id: div
+        type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            Serial.println(17 / 5);
+            Serial.println(17 % 5);
+          }
+
+          void loop() {}
+        answer: |
+          3
+          2
+        why: "17 ÷ 5 is 3 with 2 left over. Whole-number / gives 3, and % gives the remainder 2."
+    tasks:
+      - id: minsec
+        title: Minutes and seconds
+        prompt: |
+          Write `void printTime(unsigned long ms)` that prints a time in
+          milliseconds as **minutes:seconds** with two digits for the
+          seconds, and ends the line. For example `65000` prints `1:05` and
+          `600000` prints `10:00`.
+        starter: |
+          void printTime(unsigned long ms) {
+
+          }
+        harness: |
+          CHECK(OUTPUT(printTime(65000)), "1:05\n");
+          CHECK(OUTPUT(printTime(600000)), "10:00\n");
+          CHECK(OUTPUT(printTime(59999)), "0:59\n");
+          CHECK(OUTPUT(printTime(0)), "0:00\n");
+          CHECK(OUTPUT(printTime(754000)), "12:34\n");
+        hints:
+          - "First turn ms into whole seconds: ms / 1000."
+          - "Minutes = seconds / 60; the seconds left = seconds % 60."
+          - "If the seconds left are under 10, print a \"0\" before them."
+        solution: |
+          void printTime(unsigned long ms) {
+            unsigned long seconds = ms / 1000;
+            Serial.print(seconds / 60);
+            Serial.print(":");
+            if (seconds % 60 < 10) {
+              Serial.print("0");
+            }
+            Serial.println(seconds % 60);
+          }
+    cards:
+      - front: How big is an `int` on an Arduino Uno?
+        back: 2 bytes — from −32,768 to 32,767.
+      - front: What is `7 / 2` in Arduino C++? And `7 % 2`?
+        back: "3 (whole-number division drops the remainder) and 1 (the remainder)."
+      - front: What type holds times from `millis()`?
+        back: "`unsigned long`."
+
+  - type: lesson
+    id: ard3-millis
+    title: millis() — doing several things at once
+    minutes: 22
+    objectives:
+      - Explain why delay() blocks everything else
+      - Read the time with millis()
+      - Write a non-blocking blink with "time since last"
+      - Run two timers at different speeds
+    body: |
+      `delay()` is easy, but while it waits the board does **nothing else**:
+      it can't notice a button, read a sensor or blink a second LED. Real
+      sketches use a clock instead.
+
+      `millis()` gives the number of **milliseconds since the board
+      started**. It keeps counting while your code runs.
+
+      ## Blink without delay
+
+      Remember when you last switched the LED. On every pass of `loop()`,
+      check whether enough time has passed:
+
+      ```cpp
+      const int LED = 13;
+      unsigned long lastChange = 0;
+      int state = LOW;
+
+      void setup() {
+        pinMode(LED, OUTPUT);
+      }
+
+      void loop() {
+        unsigned long now = millis();
+        if (now - lastChange >= 500) {
+          lastChange = now;
+          if (state == LOW) {
+            state = HIGH;
+          } else {
+            state = LOW;
+          }
+          digitalWrite(LED, state);
+        }
+      }
+      ```
+
+      ```stdin
+      trace
+      run 1600
+      ```
+
+      ```output
+      [500 ms] pin 13 HIGH
+      [1000 ms] pin 13 LOW
+      [1500 ms] pin 13 HIGH
+      ```
+
+      `loop()` now runs thousands of times a second and almost always does
+      nothing — it just checks the clock. That leaves it free for other
+      work.
+
+      > [!note]
+      > Always write `now - lastChange >= 500`, never
+      > `now >= lastChange + 500`. After about 49 days `millis()` wraps back
+      > to 0, and only the subtraction keeps working through that.
+
+      ## Two timers
+
+      Each job gets its own "last time" variable:
+
+      ```cpp
+      unsigned long lastBlink = 0;
+      unsigned long lastReport = 0;
+      int led = LOW;
+
+      void setup() {
+        Serial.begin(9600);
+        pinMode(13, OUTPUT);
+      }
+
+      void loop() {
+        unsigned long now = millis();
+        if (now - lastBlink >= 300) {
+          lastBlink = now;
+          led = !led;
+          digitalWrite(13, led);
+        }
+        if (now - lastReport >= 1000) {
+          lastReport = now;
+          Serial.print("Running for ");
+          Serial.print(now / 1000);
+          Serial.println(" s");
+        }
+      }
+      ```
+
+      ```stdin
+      run 3100
+      ```
+
+      ```output
+      Running for 1 s
+      Running for 2 s
+      Running for 3 s
+      ```
+
+      Run it and look at the board: the LED keeps blinking every 300 ms
+      while the report comes every second. `led = !led` flips it: `!`
+      turns 0 into 1 and 1 into 0.
+
+      {{check block}}
+
+      {{check when}}
+
+      {{task nonblock}}
+    checks:
+      - id: block
+        type: tf
+        prompt: While `delay(1000)` is waiting, the sketch can still notice a button press.
+        answer: false
+        why: "delay() blocks: nothing else runs until it ends. That's why bigger sketches use millis()."
+      - id: when
+        type: output
+        code: |
+          unsigned long last = 0;
+
+          void setup() {
+            Serial.begin(9600);
+          }
+
+          void loop() {
+            if (millis() - last >= 250) {
+              last = millis();
+              Serial.println(millis());
+            }
+          }
+        stdin: |
+          run 1100
+        answer: |
+          250
+          500
+          750
+          1000
+        why: "Every time 250 ms have passed since the last print, it prints the time and remembers it."
+    tasks:
+      - id: nonblock
+        title: A non-blocking blink
+        prompt: |
+          Blink the LED on pin **8**: switch it every **200 ms**, starting
+          with **HIGH at 200 ms**. Use `millis()` — no `delay()` allowed.
+        starter: |
+          unsigned long lastChange = 0;
+          int state = LOW;
+
+          void setup() {
+            pinMode(8, OUTPUT);
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              trace
+              run 900
+            out: |
+              [200 ms] pin 8 HIGH
+              [400 ms] pin 8 LOW
+              [600 ms] pin 8 HIGH
+              [800 ms] pin 8 LOW
+        hints:
+          - "`if (millis() - lastChange >= 200) { … }`"
+          - "Inside: remember the time, flip the state with `state = !state;`, and digitalWrite it."
+        solution: |
+          unsigned long lastChange = 0;
+          int state = LOW;
+
+          void setup() {
+            pinMode(8, OUTPUT);
+          }
+
+          void loop() {
+            if (millis() - lastChange >= 200) {
+              lastChange = millis();
+              state = !state;
+              digitalWrite(8, state);
+            }
+          }
+    cards:
+      - front: What does `millis()` return?
+        back: The number of milliseconds since the board started, as an unsigned long.
+      - front: Why avoid `delay()` in bigger sketches?
+        back: While it waits, nothing else runs — no buttons, no sensors, no other LEDs.
+      - front: The pattern for "every 500 ms, do something" without delay?
+        back: "`if (millis() - last >= 500) { last = millis(); … }`"
+
+  - type: quiz
+    id: ard3-quiz
+    title: "Quiz: Serial and time"
+    questions:
+      - type: mcq
+        prompt: What must match between `Serial.begin()` and the Serial Monitor?
+        options:
+          - The baud rate, such as 9600
+          - The pin number
+          - The LED colour
+          - Nothing
+        answer: 0
+        why: "Both sides must use the same speed, or the text arrives as garbage."
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            Serial.println(10, BIN);
+            Serial.println(10, HEX);
+          }
+
+          void loop() {}
+        answer: |
+          1010
+          A
+        why: "10 is 1010 in binary and A in hexadecimal."
+      - type: mcq
+        prompt: What does `Serial.println(9 / 4);` print?
+        options:
+          - "2.25"
+          - "2"
+          - "3"
+          - "1"
+        answer: 1
+        why: "Both are whole numbers, so the division drops the remainder: 2."
+      - type: tf
+        prompt: An `int` on an Arduino Uno can hold 50,000.
+        answer: false
+        why: "An Uno int stops at 32,767. Use long or unsigned long for bigger numbers."
+      - type: mcq
+        prompt: Which condition means "500 ms have passed since `last`"?
+        options:
+          - "`millis() == 500`"
+          - "`millis() - last >= 500`"
+          - "`delay(500)`"
+          - "`last - millis() > 500`"
+        answer: 1
+        why: "Subtract the time you remembered from now; if the difference is at least 500, it's time."
+
+  - type: challenge
+    id: ard3-ch-uptime
+    title: An uptime clock
+    difficulty: 2
+    tags: [String, "%", formatting]
+    prompt: |
+      Write `String uptime(unsigned long ms)` that turns milliseconds into
+      **hours:minutes:seconds**, with two digits for minutes and seconds:
+      `3725000` (1 hour, 2 minutes, 5 seconds) gives `"1:02:05"`.
+
+      Build the text with `String`: `String("a") + 5` gives `"a5"`.
+    starter: |
+      String uptime(unsigned long ms) {
+        return "";
+      }
+    harness: |
+      CHECK(uptime(0), "0:00:00");
+      CHECK(uptime(3725000), "1:02:05");
+      CHECK(uptime(59000), "0:00:59");
+      CHECK(uptime(600000), "0:10:00");
+      CHECK(uptime(90061000), "25:01:01");
+    hints:
+      - "Seconds in total: ms / 1000. Hours: total / 3600. Minutes: (total / 60) % 60. Seconds: total % 60."
+      - "A small helper that adds a leading 0 to numbers under 10 keeps it short."
+    solution: |
+      String twoDigits(unsigned long n) {
+        if (n < 10) {
+          return String("0") + n;
+        }
+        return String(n);
+      }
+
+      String uptime(unsigned long ms) {
+        unsigned long total = ms / 1000;
+        String h = String(total / 3600);
+        return h + ":" + twoDigits((total / 60) % 60) + ":" + twoDigits(total % 60);
+      }
+
+  - type: challenge
+    id: ard3-ch-two
+    title: Two blinkers, two speeds
+    difficulty: 3
+    tags: [millis, non-blocking]
+    prompt: |
+      Blink **two** LEDs at different speeds, at the same time:
+
+      - pin **10** switches every **300 ms**
+      - pin **11** switches every **500 ms**
+
+      Both start LOW and switch for the first time after their own
+      interval. No `delay()`.
+    starter: |
+      void setup() {
+        pinMode(10, OUTPUT);
+        pinMode(11, OUTPUT);
+      }
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          trace
+          run 1250
+        out: |
+          [300 ms] pin 10 HIGH
+          [500 ms] pin 11 HIGH
+          [600 ms] pin 10 LOW
+          [900 ms] pin 10 HIGH
+          [1000 ms] pin 11 LOW
+          [1200 ms] pin 10 LOW
+    hints:
+      - "Two \"last\" variables and two states — one of each per LED."
+      - "Two separate if blocks in loop(), each checking its own interval."
+    solution: |
+      unsigned long lastA = 0;
+      unsigned long lastB = 0;
+      int stateA = LOW;
+      int stateB = LOW;
+
+      void setup() {
+        pinMode(10, OUTPUT);
+        pinMode(11, OUTPUT);
+      }
+
+      void loop() {
+        unsigned long now = millis();
+        if (now - lastA >= 300) {
+          lastA = now;
+          stateA = !stateA;
+          digitalWrite(10, stateA);
+        }
+        if (now - lastB >= 500) {
+          lastB = now;
+          stateB = !stateB;
+          digitalWrite(11, stateB);
+        }
+      }
+
+  - type: exam
+    id: ard3-exam
+    title: "Chapter 3 exam"
+    minutes: 20
+    questions:
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            int a = 4;
+            Serial.print("a=");
+            Serial.print(a);
+            Serial.print(", a*a=");
+            Serial.println(a * a);
+          }
+
+          void loop() {}
+        answer: |
+          a=4, a*a=16
+        why: "Three prints and a println build one line."
+      - type: mcq
+        prompt: What does `Serial.println(2.5);` print?
+        options:
+          - "2.5"
+          - "2.50"
+          - "2"
+          - "3"
+        answer: 1
+        why: "A decimal number prints with 2 decimals by default."
+      - type: fill
+        prompt: Print 12 in binary.
+        code: |
+          Serial.println(12, ___);
+        blanks:
+          - [BIN]
+        why: "The second argument BIN prints base 2: 1100."
+      - type: mcq
+        prompt: How many seconds is `millis()` = 125000?
+        options:
+          - "12.5"
+          - "125"
+          - "1250"
+          - "125000"
+        answer: 1
+        why: "1000 milliseconds per second: 125000 / 1000 = 125."
+      - type: tf
+        prompt: "`17 % 3` is 2."
+        answer: true
+        why: "17 = 5 × 3 + 2, so the remainder is 2."
+      - type: mcq
+        prompt: A sketch uses `delay(5000)` in loop() and also needs to react to a button quickly. What's the fix?
+        options:
+          - Use a bigger delay
+          - Replace the delay with a millis() timer so loop() keeps running
+          - Put the button in setup()
+          - Use Serial.println instead
+        answer: 1
+        why: "With a millis() timer, loop() runs constantly and can check the button every pass."
+      - type: spot
+        prompt: This timer breaks after 32.7 seconds on an Uno. Which line is the problem?
+        code: |
+          int last = 0;
+
+          void loop() {
+            if (millis() - last >= 1000) {
+              last = millis();
+              Serial.println("tick");
+            }
+          }
+        answer: 1
+        why: "An Uno int only goes up to 32,767, so last overflows. Times belong in unsigned long."
+      - type: output
+        code: |
+          unsigned long last = 0;
+          int count = 0;
+
+          void setup() {
+            Serial.begin(9600);
+          }
+
+          void loop() {
+            if (millis() - last >= 400) {
+              last = millis();
+              count++;
+              Serial.println(count);
+            }
+          }
+        stdin: |
+          run 1300
+        answer: |
+          1
+          2
+          3
+        why: "It prints at 400, 800 and 1200 ms. The next would be at 1600, after the run."
+      - type: code
+        prompt: |
+          Write `float average(int a, int b, int c)` that returns the
+          average of three whole numbers **with its decimals**:
+          `average(1, 2, 2)` is `1.6666…`, not `1`.
+        starter: |
+          float average(int a, int b, int c) {
+            return 0;
+          }
+        harness: |
+          CHECK(average(3, 3, 3), 3);
+          CHECK(average(1, 2, 3), 2);
+          CHECK(average(1, 2, 2) > 1.66, true);
+          CHECK(average(1, 2, 2) < 1.67, true);
+          CHECK(average(0, 0, 1) > 0.33, true);
+        solution: |
+          float average(int a, int b, int c) {
+            return (a + b + c) / 3.0;
+          }

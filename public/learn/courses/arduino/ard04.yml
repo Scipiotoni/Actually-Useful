@@ -1,0 +1,752 @@
+id: ard04
+number: 4
+part: ard-p1
+title: Buttons and Digital Inputs
+blurb: Read buttons and switches, understand pull-up resistors, count presses by spotting the moment a button changes, and tame bouncing contacts.
+hours: 2.5
+goals:
+  - Read a pin with digitalRead
+  - Explain floating inputs and pull-up / pull-down resistors
+  - Use INPUT_PULLUP and its "pressed is LOW" logic
+  - Detect the moment a button is pressed (an edge)
+  - Debounce a button with millis()
+
+items:
+  - type: lesson
+    id: ard4-read
+    title: digitalRead and pull-up resistors
+    minutes: 20
+    objectives:
+      - Read a button with digitalRead
+      - Explain why an unconnected input floats
+      - Wire a button with INPUT_PULLUP and read it correctly
+    body: |
+      A pin set to **INPUT** listens instead of talking. `digitalRead(pin)`
+      tells you whether the voltage on it is **HIGH** (near 5 V) or **LOW**
+      (near 0 V).
+
+      ## The floating input problem
+
+      A button just connects two wires. If a pin is joined to 5 V only
+      *while* the button is pressed, what is it the rest of the time?
+      **Nothing** — it **floats**, picking up noise from your hand and
+      nearby wires, and reads HIGH and LOW at random.
+
+      The cure is a resistor that gently pulls the pin to a known level
+      when the button is open:
+
+      | Wiring | Button open | Button pressed |
+      |---|---|---|
+      | **pull-down**: 10 kΩ from pin to GND, button to 5 V | LOW | HIGH |
+      | **pull-up**: 10 kΩ from pin to 5 V, button to GND | HIGH | LOW |
+
+      ## INPUT_PULLUP: the resistor is already inside
+
+      The Uno has a pull-up resistor built into every pin. Switch it on
+      with `INPUT_PULLUP` and wire the button from the pin **straight to
+      GND** — no resistor needed. The catch: **pressed reads LOW**.
+
+      ```cpp
+      const int BUTTON = 2;
+      const int LED = 13;
+
+      void setup() {
+        pinMode(BUTTON, INPUT_PULLUP);
+        pinMode(LED, OUTPUT);
+      }
+
+      void loop() {
+        if (digitalRead(BUTTON) == LOW) {
+          digitalWrite(LED, HIGH);
+        } else {
+          digitalWrite(LED, LOW);
+        }
+      }
+      ```
+
+      ```stdin
+      2 LOW @300
+      2 HIGH @800
+      trace
+      run 1000
+      ```
+
+      ```output
+      [300 ms] pin 13 HIGH
+      [800 ms] pin 13 LOW
+      ```
+
+      The input box is your hand on the button: `2 LOW @300` presses the
+      button on pin 2 at 300 ms, and `2 HIGH @800` lets go. The LED is on
+      exactly while the button is held. Try changing the times and run
+      again.
+
+      > [!tip]
+      > `INPUT_PULLUP` is the usual way to wire buttons — fewer parts and no
+      > floating. Just remember: **LOW means pressed**.
+
+      {{check float}}
+
+      {{check pullup}}
+
+      {{task hold}}
+    checks:
+      - id: float
+        type: mcq
+        prompt: A button connects pin 7 to 5 V, and nothing else is connected to pin 7. What does `digitalRead(7)` give while the button is **not** pressed?
+        options:
+          - Always LOW
+          - Always HIGH
+          - Random values — the pin is floating
+          - An error
+        answer: 2
+        why: "Nothing holds the pin at a level, so it floats. A pull-down (or pull-up) resistor fixes it."
+      - id: pullup
+        type: tf
+        prompt: With `INPUT_PULLUP` and the button wired to GND, a pressed button reads HIGH.
+        answer: false
+        why: "Pressing connects the pin to GND, so it reads LOW. Open, the internal pull-up makes it HIGH."
+    tasks:
+      - id: hold
+        title: Press to light
+        prompt: |
+          A button is on pin **4**, wired to GND and read with
+          `INPUT_PULLUP`. Keep the LED on pin **9** **on while the button is
+          held** and off otherwise.
+        starter: |
+          void setup() {
+
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              4 LOW @200
+              4 HIGH @500
+              4 LOW @700
+              trace
+              run 900
+            out: |
+              [200 ms] pin 9 HIGH
+              [500 ms] pin 9 LOW
+              [700 ms] pin 9 HIGH
+        hints:
+          - "setup(): `pinMode(4, INPUT_PULLUP);` and `pinMode(9, OUTPUT);`"
+          - "loop(): if digitalRead(4) is LOW, write HIGH to 9; otherwise LOW."
+        solution: |
+          void setup() {
+            pinMode(4, INPUT_PULLUP);
+            pinMode(9, OUTPUT);
+          }
+
+          void loop() {
+            if (digitalRead(4) == LOW) {
+              digitalWrite(9, HIGH);
+            } else {
+              digitalWrite(9, LOW);
+            }
+          }
+    cards:
+      - front: What is a floating input?
+        back: An input pin connected to nothing definite; it reads random HIGHs and LOWs from electrical noise.
+      - front: With `INPUT_PULLUP`, what does a pressed button read?
+        back: LOW — the button connects the pin to GND. Released, it reads HIGH.
+      - front: What does a pull-down resistor do?
+        back: Holds an input LOW when the button is open; the button then pulls it HIGH.
+
+  - type: video
+    id: ard4-video-press
+    title: "Watch: counting presses, not loops"
+    body: |
+      **What you just saw**
+
+      - `loop()` runs thousands of times while a finger is on the button.
+      - Counting "is it pressed?" counts every pass. Count only the moment it **changes** from HIGH to LOW.
+      - Keep the previous reading in a variable, compare, then update it at the end of `loop()`.
+    video:
+      steps:
+        - scene: Counting presses
+          sub: Catch the moment, not the state
+        - type: "int last = HIGH;\nint presses = 0;\n\nvoid loop() {\n  int now = digitalRead(2);\n}\n"
+          say: "`last` remembers what the button read on the previous pass."
+          mark: "int last = HIGH;"
+        - type: "  if (now == LOW && last == HIGH) {\n    presses++;\n  }\n  last = now;\n"
+          at: "  int now = digitalRead(2);\n"
+          speed: 1.4
+          say: "A press is the moment it goes from **HIGH** to **LOW**."
+          mark:
+            text: "now == LOW && last == HIGH"
+            color: green
+        - scene: Hold the button
+          sub: loop() runs again and again
+        - run: true
+          line: 5
+          vars:
+            now: "HIGH"
+            last: "HIGH"
+            presses: "0"
+          say: "Not pressed: nothing happens."
+        - line: 5
+          vars:
+            now: "LOW 👇"
+            last: "HIGH"
+          say: "The finger goes down: now is LOW, last was HIGH…"
+        - line: 7
+          vars:
+            presses: "1"
+          say: "…that's a change, so count **one** press."
+          mark:
+            text: "presses++;"
+            color: green
+        - line: 9
+          vars:
+            last: "LOW"
+          say: "Remember LOW for the next pass."
+        - line: 5
+          vars:
+            now: "LOW 👇"
+            last: "LOW"
+          say: "Still held on the next pass: LOW and LOW is **no change** — no count."
+          mark:
+            text: "last == HIGH"
+            color: pink
+        - line: 5
+          vars:
+            now: "LOW 👇"
+            last: "LOW"
+            presses: "1"
+          say: "A thousand more passes while held… still one press."
+          hold: 1.4
+        - line: 9
+          vars:
+            now: "HIGH"
+            last: "HIGH"
+          say: "Let go, and it's ready for the next press."
+
+  - type: lesson
+    id: ard4-edges
+    title: Counting presses and debouncing
+    minutes: 24
+    objectives:
+      - Detect a press as a change from HIGH to LOW
+      - Toggle something on each press
+      - Explain contact bounce
+      - Debounce with a millis() timer
+    body: |
+      To **count** presses, reacting to "the button is down" isn't enough:
+      `loop()` runs thousands of times while your finger is on it. Count
+      the **edge** — the moment the reading changes.
+
+      ```cpp
+      const int BUTTON = 2;
+      int lastState = HIGH;
+      int presses = 0;
+
+      void setup() {
+        Serial.begin(9600);
+        pinMode(BUTTON, INPUT_PULLUP);
+      }
+
+      void loop() {
+        int state = digitalRead(BUTTON);
+        if (state == LOW && lastState == HIGH) {
+          presses++;
+          Serial.print("Presses: ");
+          Serial.println(presses);
+        }
+        lastState = state;
+      }
+      ```
+
+      ```stdin
+      2 LOW @100
+      2 HIGH @300
+      2 LOW @500
+      2 HIGH @700
+      run 1000
+      ```
+
+      ```output
+      Presses: 1
+      Presses: 2
+      ```
+
+      Two presses, two counts — even though each lasted 200 ms.
+
+      ## Bouncing
+
+      A real button's metal contacts **bounce**: for a few milliseconds
+      they touch, spring apart and touch again. The board is fast enough
+      to see every bounce as a press:
+
+      ```cpp
+      int lastState = HIGH;
+      int presses = 0;
+
+      void setup() {
+        Serial.begin(9600);
+        pinMode(2, INPUT_PULLUP);
+      }
+
+      void loop() {
+        int state = digitalRead(2);
+        if (state == LOW && lastState == HIGH) {
+          presses++;
+          Serial.println(presses);
+        }
+        lastState = state;
+      }
+      ```
+
+      ```stdin
+      2 LOW @100
+      2 HIGH @101
+      2 LOW @102
+      2 HIGH @103
+      2 LOW @104
+      2 HIGH @400
+      run 600
+      ```
+
+      ```output
+      1
+      2
+      3
+      ```
+
+      One press, three counts. The fix is **debouncing**: only believe a
+      new reading once it has stayed the same for a while — 20 ms is plenty.
+
+      ```cpp
+      int lastReading = HIGH;
+      int stable = HIGH;
+      unsigned long lastChange = 0;
+      int presses = 0;
+
+      void setup() {
+        Serial.begin(9600);
+        pinMode(2, INPUT_PULLUP);
+      }
+
+      void loop() {
+        int reading = digitalRead(2);
+        if (reading != lastReading) {
+          lastChange = millis();
+          lastReading = reading;
+        }
+        if (millis() - lastChange >= 20 && reading != stable) {
+          stable = reading;
+          if (stable == LOW) {
+            presses++;
+            Serial.println(presses);
+          }
+        }
+      }
+      ```
+
+      ```stdin
+      2 LOW @100
+      2 HIGH @101
+      2 LOW @102
+      2 HIGH @103
+      2 LOW @104
+      2 HIGH @400
+      run 600
+      ```
+
+      ```output
+      1
+      ```
+
+      Every bounce restarts the 20 ms timer. Only when the reading has
+      been calm for 20 ms does `stable` change — and then it counts once.
+
+      {{check edge}}
+
+      {{check bounce}}
+
+      {{task toggle}}
+    checks:
+      - id: edge
+        type: mcq
+        prompt: Why does `if (digitalRead(2) == LOW) presses++;` count far too many presses?
+        options:
+          - digitalRead is slow
+          - loop() runs thousands of times while the button is held, adding one each time
+          - INPUT_PULLUP is wrong
+          - presses should be a float
+        answer: 1
+        why: "It counts every pass of loop() while the button is down. Counting the change from HIGH to LOW counts each press once."
+      - id: bounce
+        type: tf
+        prompt: Button bounce means the contacts open and close several times in a few milliseconds when pressed.
+        answer: true
+        why: "The metal springs back a few times before settling. Debouncing ignores those quick changes."
+    tasks:
+      - id: toggle
+        title: Press on, press off
+        prompt: |
+          Each press of the button on pin **2** (`INPUT_PULLUP`) should
+          **toggle** the LED on pin **13**: the first press switches it on,
+          the next switches it off, and so on. Holding the button must not
+          toggle it again.
+        starter: |
+          int lastState = HIGH;
+          int led = LOW;
+
+          void setup() {
+            pinMode(2, INPUT_PULLUP);
+            pinMode(13, OUTPUT);
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              2 LOW @100
+              2 HIGH @300
+              2 LOW @500
+              2 HIGH @900
+              2 LOW @1100
+              trace
+              run 1300
+            out: |
+              [100 ms] pin 13 HIGH
+              [500 ms] pin 13 LOW
+              [1100 ms] pin 13 HIGH
+        hints:
+          - "Find the edge: `state == LOW && lastState == HIGH`."
+          - "On the edge: `led = !led; digitalWrite(13, led);`. Always finish with `lastState = state;`."
+        solution: |
+          int lastState = HIGH;
+          int led = LOW;
+
+          void setup() {
+            pinMode(2, INPUT_PULLUP);
+            pinMode(13, OUTPUT);
+          }
+
+          void loop() {
+            int state = digitalRead(2);
+            if (state == LOW && lastState == HIGH) {
+              led = !led;
+              digitalWrite(13, led);
+            }
+            lastState = state;
+          }
+    cards:
+      - front: What is an edge, for a button?
+        back: The moment its reading changes — HIGH to LOW is a press (with INPUT_PULLUP), LOW to HIGH a release.
+      - front: What is contact bounce?
+        back: A button's contacts opening and closing several times in the first few milliseconds of a press.
+      - front: How does a millis() debounce work?
+        back: Every change restarts a timer; only a reading that stays the same for ~20 ms is believed.
+
+  - type: quiz
+    id: ard4-quiz
+    title: "Quiz: buttons"
+    questions:
+      - type: mcq
+        prompt: Which pin mode turns on the Uno's built-in pull-up resistor?
+        options:
+          - "`OUTPUT`"
+          - "`INPUT`"
+          - "`INPUT_PULLUP`"
+          - "`PULLUP`"
+        answer: 2
+        why: "INPUT_PULLUP makes the pin an input and connects the internal pull-up resistor."
+      - type: tf
+        prompt: An input pin with nothing connected can read HIGH and LOW at random.
+        answer: true
+        why: "That's a floating input. A pull-up or pull-down resistor gives it a definite level."
+      - type: output
+        code: |
+          int last = HIGH;
+
+          void setup() {
+            Serial.begin(9600);
+            pinMode(3, INPUT_PULLUP);
+          }
+
+          void loop() {
+            int now = digitalRead(3);
+            if (now == LOW && last == HIGH) {
+              Serial.println(millis());
+            }
+            last = now;
+          }
+        stdin: |
+          3 LOW @250
+          3 HIGH @400
+          3 LOW @650
+          run 1000
+        answer: |
+          250
+          650
+        why: "It prints the time of each press: the changes to LOW at 250 and 650 ms."
+      - type: mcq
+        prompt: What does debouncing do?
+        options:
+          - Makes the button louder
+          - Ignores the quick flickers when contacts bounce, so one press counts once
+          - Turns on the pull-up resistor
+          - Makes the LED brighter
+        answer: 1
+        why: "A debounce waits until the reading has been steady for a short time before believing it."
+      - type: spot
+        prompt: This should count each press once, but it counts one press as hundreds. Which line is missing?
+        code: |
+          int last = HIGH;
+          int count = 0;
+
+          void loop() {
+            int now = digitalRead(2);
+            if (now == LOW && last == HIGH) {
+              count++;
+            }
+          }
+        answer: 8
+        why: "`last = now;` is missing after the if, so last stays HIGH and every pass while held looks like a new press."
+
+  - type: challenge
+    id: ard4-ch-counter
+    title: Press counter with a reset
+    difficulty: 2
+    tags: [edges, Serial]
+    prompt: |
+      Two buttons, both `INPUT_PULLUP`:
+
+      - each press of pin **2** adds one and prints `Count: ` and the count
+      - a press of pin **3** sets the count back to 0 and prints `Reset`
+
+      The inputs are clean (no bounce).
+    starter: |
+      void setup() {
+        Serial.begin(9600);
+        pinMode(2, INPUT_PULLUP);
+        pinMode(3, INPUT_PULLUP);
+      }
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          2 LOW @100
+          2 HIGH @200
+          2 LOW @300
+          2 HIGH @400
+          3 LOW @500
+          3 HIGH @600
+          2 LOW @700
+          run 1000
+        out: |
+          Count: 1
+          Count: 2
+          Reset
+          Count: 1
+    hints:
+      - "You need a lastState for each button."
+      - "Two edge checks in loop(), one per button, and update both lastStates at the end."
+    solution: |
+      int count = 0;
+      int lastAdd = HIGH;
+      int lastReset = HIGH;
+
+      void setup() {
+        Serial.begin(9600);
+        pinMode(2, INPUT_PULLUP);
+        pinMode(3, INPUT_PULLUP);
+      }
+
+      void loop() {
+        int add = digitalRead(2);
+        int reset = digitalRead(3);
+        if (add == LOW && lastAdd == HIGH) {
+          count++;
+          Serial.print("Count: ");
+          Serial.println(count);
+        }
+        if (reset == LOW && lastReset == HIGH) {
+          count = 0;
+          Serial.println("Reset");
+        }
+        lastAdd = add;
+        lastReset = reset;
+      }
+
+  - type: challenge
+    id: ard4-ch-debounce
+    title: A bouncy doorbell
+    difficulty: 3
+    tags: [debounce, millis]
+    prompt: |
+      A doorbell button on pin **2** (`INPUT_PULLUP`) bounces badly. Print
+      `Ding dong!` **once per press**, using a **20 ms** debounce. The test
+      presses it twice, with bounces on both press and release.
+    starter: |
+      void setup() {
+        Serial.begin(9600);
+        pinMode(2, INPUT_PULLUP);
+      }
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          2 LOW @100
+          2 HIGH @102
+          2 LOW @103
+          2 HIGH @400
+          2 LOW @401
+          2 HIGH @403
+          2 LOW @700
+          2 HIGH @701
+          2 LOW @702
+          2 HIGH @900
+          run 1200
+        out: |
+          Ding dong!
+          Ding dong!
+    hints:
+      - "Follow the debounce sketch from the lesson: lastReading, stable and lastChange."
+      - "Print when stable becomes LOW."
+    solution: |
+      int lastReading = HIGH;
+      int stable = HIGH;
+      unsigned long lastChange = 0;
+
+      void setup() {
+        Serial.begin(9600);
+        pinMode(2, INPUT_PULLUP);
+      }
+
+      void loop() {
+        int reading = digitalRead(2);
+        if (reading != lastReading) {
+          lastChange = millis();
+          lastReading = reading;
+        }
+        if (millis() - lastChange >= 20 && reading != stable) {
+          stable = reading;
+          if (stable == LOW) {
+            Serial.println("Ding dong!");
+          }
+        }
+      }
+
+  - type: exam
+    id: ard4-exam
+    title: "Chapter 4 exam"
+    minutes: 20
+    questions:
+      - type: mcq
+        prompt: What does `digitalRead(pin)` return?
+        options:
+          - A number from 0 to 1023
+          - HIGH or LOW
+          - The voltage in volts
+          - Nothing
+        answer: 1
+        why: "digitalRead gives HIGH or LOW. Measuring a voltage is analogRead (Chapter 5)."
+      - type: mcq
+        prompt: A button is wired from pin 5 to 5 V. What else is needed so the pin doesn't float?
+        options:
+          - A pull-down resistor from pin 5 to GND
+          - Nothing
+          - A capacitor from 5 V to 5 V
+          - A second button
+        answer: 0
+        why: "A pull-down (about 10 kΩ) keeps the pin LOW when the button is open; pressing pulls it HIGH."
+      - type: fill
+        prompt: Use the built-in pull-up on pin 2.
+        code: |
+          pinMode(2, ___);
+        blanks:
+          - [INPUT_PULLUP]
+        why: "INPUT_PULLUP switches the internal pull-up resistor on."
+      - type: tf
+        prompt: With INPUT_PULLUP, a released button reads HIGH.
+        answer: true
+        why: "The pull-up holds the pin at 5 V while the button is open."
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            pinMode(6, INPUT_PULLUP);
+            Serial.println(digitalRead(6));
+            delay(500);
+            Serial.println(digitalRead(6));
+          }
+
+          void loop() {}
+        stdin: |
+          6 LOW @200
+        answer: |
+          1
+          0
+        why: "At 0 ms the button is open: HIGH, printed as 1. At 500 ms it's pressed (since 200 ms): LOW, 0."
+      - type: mcq
+        prompt: Which condition spots the moment a pull-up button is **released**?
+        options:
+          - "`now == LOW && last == HIGH`"
+          - "`now == HIGH && last == LOW`"
+          - "`now == HIGH`"
+          - "`last == LOW`"
+        answer: 1
+        why: "Released means it was LOW (pressed) and is now HIGH."
+      - type: mcq
+        prompt: How long does a typical debounce wait for the reading to settle?
+        options:
+          - About 20 ms
+          - About 2 seconds
+          - About 1 microsecond
+          - A minute
+        answer: 0
+        why: "Bounces last a few milliseconds, so 10–50 ms of calm is plenty and still feels instant."
+      - type: code
+        prompt: |
+          A tilt switch on pin **7** (`INPUT_PULLUP`) reads LOW when tipped.
+          Print `Tipped` each time it **becomes** tipped, and `Level` each
+          time it becomes level again. The input is clean.
+        starter: |
+          void setup() {
+            Serial.begin(9600);
+            pinMode(7, INPUT_PULLUP);
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              7 LOW @100
+              7 HIGH @500
+              7 LOW @800
+              run 1000
+            out: |
+              Tipped
+              Level
+              Tipped
+        solution: |
+          int last = HIGH;
+
+          void setup() {
+            Serial.begin(9600);
+            pinMode(7, INPUT_PULLUP);
+          }
+
+          void loop() {
+            int now = digitalRead(7);
+            if (now == LOW && last == HIGH) {
+              Serial.println("Tipped");
+            }
+            if (now == HIGH && last == LOW) {
+              Serial.println("Level");
+            }
+            last = now;
+          }

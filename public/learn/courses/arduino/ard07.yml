@@ -1,0 +1,762 @@
+id: ard07
+number: 7
+part: ard-p2
+title: Bits, Bytes and Registers
+blurb: Count in binary and hexadecimal, switch single bits on and off with bitwise operators, pack many yes/no values into one byte, and drive eight LEDs from three pins with a shift register.
+hours: 3
+goals:
+  - Convert between decimal, binary and hexadecimal
+  - Use &, |, ^, ~, << and >> on bits
+  - Set, clear, flip and test one bit with a mask
+  - Pack several flags into one byte
+  - Drive a 74HC595 shift register with shiftOut
+  - Explain what a hardware register is
+
+items:
+  - type: lesson
+    id: ard7-binary
+    title: Binary and hexadecimal
+    minutes: 20
+    objectives:
+      - Read and write numbers in binary
+      - Explain bits and bytes
+      - Read and write hexadecimal
+    body: |
+      Inside a chip everything is **on or off** — 1 or 0. One of those is a
+      **bit**; eight bits make a **byte**. A byte holds 0 to 255.
+
+      ## Binary
+
+      Each bit is worth double the one to its right:
+
+      | Bit | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+      |---|---|---|---|---|---|---|---|---|
+      | Worth | 128 | 64 | 32 | 16 | 8 | 4 | 2 | 1 |
+      | 0b00001101 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 1 |
+
+      `0b00001101` is 8 + 4 + 1 = **13**. Bit 0, on the right, is the
+      **lowest** bit. In C++ a `0b` in front means "binary".
+
+      ## Hexadecimal
+
+      Binary gets long. **Hex** (base 16) uses the digits 0–9 and then A–F
+      for 10–15. One hex digit is exactly **four bits**, so a byte is always
+      two hex digits:
+
+      | Binary | Hex | Decimal |
+      |---|---|---|
+      | 0000 | 0 | 0 |
+      | 1001 | 9 | 9 |
+      | 1010 | A | 10 |
+      | 1111 | F | 15 |
+      | 1111 1111 | FF | 255 |
+      | 0010 1100 | 2C | 44 |
+
+      In C++ hex is written with `0x`: `0x2C` is 44. Colours (`#FF8800`),
+      memory addresses and I²C device addresses (`0x27`) are all hex.
+
+      ```cpp
+      void setup() {
+        Serial.begin(9600);
+        byte b = 0b00101100;
+        Serial.println(b);
+        Serial.println(b, HEX);
+        Serial.println(0xFF);
+        Serial.println(0x10, BIN);
+      }
+
+      void loop() {}
+      ```
+
+      ```output
+      44
+      2C
+      255
+      10000
+      ```
+
+      {{check bin}}
+
+      {{check hex}}
+
+      {{task ones}}
+    checks:
+      - id: bin
+        type: mcq
+        prompt: What is `0b00010011` in decimal?
+        options:
+          - "13"
+          - "19"
+          - "35"
+          - "11"
+        answer: 1
+        why: "16 + 2 + 1 = 19."
+      - id: hex
+        type: mcq
+        prompt: What is `0x1F` in decimal?
+        options:
+          - "31"
+          - "115"
+          - "16"
+          - "25"
+        answer: 0
+        why: "1 × 16 + F (15) = 31."
+    tasks:
+      - id: ones
+        title: Count the ones
+        prompt: |
+          Write `int onesIn(byte value)` that returns how many of the eight
+          bits of `value` are 1. `bitRead(value, n)` gives bit number `n`
+          (0 or 1).
+        starter: |
+          int onesIn(byte value) {
+            return 0;
+          }
+        harness: |
+          CHECK(onesIn(0), 0);
+          CHECK(onesIn(255), 8);
+          CHECK(onesIn(0b00101101), 4);
+          CHECK(onesIn(128), 1);
+          CHECK(onesIn(0x0F), 4);
+        hints:
+          - "Loop n from 0 to 7 and add up bitRead(value, n)."
+        solution: |
+          int onesIn(byte value) {
+            int count = 0;
+            for (int n = 0; n < 8; n++) {
+              count += bitRead(value, n);
+            }
+            return count;
+          }
+    cards:
+      - front: How many bits are in a byte, and what range does it hold?
+        back: 8 bits; 0 to 255.
+      - front: What are the values of the 8 bits, from bit 7 to bit 0?
+        back: 128, 64, 32, 16, 8, 4, 2, 1.
+      - front: What is 0xFF? And 0x10?
+        back: 255 and 16. One hex digit is four bits.
+
+  - type: lesson
+    id: ard7-bitwise
+    title: Bitwise operators and masks
+    minutes: 24
+    objectives:
+      - Use &, |, ^, ~, << and >>
+      - Build a mask for one bit with 1 << n
+      - Set, clear, flip and test bits
+    body: |
+      Bitwise operators work on every bit of a number at once:
+
+      | Operator | Name | Bit is 1 when… | Example |
+      |---|---|---|---|
+      | `a & b` | AND | both are 1 | `0b1100 & 0b1010` = `0b1000` |
+      | `a \| b` | OR | either is 1 | `0b1100 \| 0b1010` = `0b1110` |
+      | `a ^ b` | XOR | they differ | `0b1100 ^ 0b1010` = `0b0110` |
+      | `~a` | NOT | a's bit is 0 | flips every bit |
+      | `a << n` | shift left | — | moves bits n places left |
+      | `a >> n` | shift right | — | moves bits n places right |
+
+      > [!mistake]
+      > `&` and `&&` are different. `&&` is "and" for true/false; `&` works
+      > bit by bit. Same for `|` and `||`.
+
+      ## Masks
+
+      `1 << n` is a number with **only bit n** on — a **mask**. With it you
+      can change one bit and leave the others alone:
+
+      | To… | Write |
+      |---|---|
+      | set bit n (make it 1) | `value \|= (1 << n);` |
+      | clear bit n (make it 0) | `value &= ~(1 << n);` |
+      | flip bit n | `value ^= (1 << n);` |
+      | test bit n | `if (value & (1 << n))` |
+
+      Arduino also has `bitSet(value, n)`, `bitClear(value, n)` and
+      `bitRead(value, n)`, which do the same.
+
+      ```cpp
+      void setup() {
+        Serial.begin(9600);
+        byte leds = 0b00000000;
+        leds |= (1 << 3);
+        Serial.println(leds, BIN);
+        leds |= (1 << 0);
+        Serial.println(leds, BIN);
+        leds &= ~(1 << 3);
+        Serial.println(leds, BIN);
+        leds ^= 0b11110000;
+        Serial.println(leds, BIN);
+        Serial.println(leds & (1 << 4) ? "bit 4 on" : "bit 4 off");
+      }
+
+      void loop() {}
+      ```
+
+      ```output
+      1000
+      1001
+      1
+      11110001
+      bit 4 on
+      ```
+
+      `Serial.println(x, BIN)` leaves out the zeros in front, so 0b00001000
+      prints as `1000`.
+
+      ## Packing flags
+
+      Eight yes/no values fit in one byte — one bit each. On a 2 KB chip, or
+      when sending data by radio, that's a big saving:
+
+      ```cpp static
+      const int DOOR = 0;
+      const int WINDOW = 1;
+      byte alarms = 0;
+      alarms |= (1 << WINDOW);
+      if (alarms & (1 << DOOR)) { … }
+      ```
+
+      ## Shifting is multiplying
+
+      `x << 1` doubles a number and `x >> 1` halves it (dropping the
+      remainder): `5 << 2` is 20, `20 >> 1` is 10.
+
+      {{check and}}
+
+      {{check mask}}
+
+      {{task bits}}
+    checks:
+      - id: and
+        type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            Serial.println(0b1010 & 0b0110, BIN);
+            Serial.println(0b1010 | 0b0110, BIN);
+            Serial.println(0b1010 ^ 0b0110, BIN);
+            Serial.println(3 << 2);
+          }
+
+          void loop() {}
+        answer: |
+          10
+          1110
+          1100
+          12
+        why: "AND keeps bits on in both (0010), OR in either (1110), XOR where they differ (1100). 3 << 2 is 3 × 4 = 12."
+      - id: mask
+        type: mcq
+        prompt: Which line switches **off** bit 2 of `flags` and leaves the rest alone?
+        options:
+          - "`flags = 0;`"
+          - "`flags |= (1 << 2);`"
+          - "`flags &= ~(1 << 2);`"
+          - "`flags ^= 2;`"
+        answer: 2
+        why: "~(1 << 2) is all ones except bit 2; AND with it clears just that bit."
+    tasks:
+      - id: bits
+        title: Set, clear and test
+        prompt: |
+          Write three functions:
+
+          - `byte turnOn(byte value, int n)` — returns value with bit n set
+          - `byte turnOff(byte value, int n)` — returns value with bit n cleared
+          - `bool isOn(byte value, int n)` — true if bit n is 1
+        starter: |
+          byte turnOn(byte value, int n) {
+            return value;
+          }
+
+          byte turnOff(byte value, int n) {
+            return value;
+          }
+
+          bool isOn(byte value, int n) {
+            return false;
+          }
+        harness: |
+          CHECK((int) turnOn(0, 3), 8);
+          CHECK((int) turnOn(0b0001, 1), 3);
+          CHECK((int) turnOn(8, 3), 8);
+          CHECK((int) turnOff(255, 7), 127);
+          CHECK((int) turnOff(0b0101, 1), 5);
+          CHECK(isOn(0b0100, 2), true);
+          CHECK(isOn(0b0100, 1), false);
+          CHECK(isOn(128, 7), true);
+        hints:
+          - "The mask for bit n is `(1 << n)`."
+          - "Set: value | mask. Clear: value & ~mask. Test: (value & mask) != 0."
+        solution: |
+          byte turnOn(byte value, int n) {
+            return value | (1 << n);
+          }
+
+          byte turnOff(byte value, int n) {
+            return value & ~(1 << n);
+          }
+
+          bool isOn(byte value, int n) {
+            return (value & (1 << n)) != 0;
+          }
+    cards:
+      - front: "`&` vs `&&`?"
+        back: "`&` is bitwise AND on every bit; `&&` is logical and for true/false."
+      - front: How do you set, clear and flip bit n?
+        back: "`v |= (1 << n);` `v &= ~(1 << n);` `v ^= (1 << n);`"
+      - front: What does `x << 1` do?
+        back: Shifts the bits one place left — it doubles x.
+
+  - type: lesson
+    id: ard7-shift
+    title: Shift registers and hardware registers
+    minutes: 22
+    objectives:
+      - Drive 8 outputs from 3 pins with a 74HC595
+      - Use shiftOut with a latch pin
+      - Explain what a hardware register is
+    body: |
+      An Uno has 20 pins. A cube of 64 LEDs needs more. A **shift register**
+      like the **74HC595** turns three pins into **eight outputs** — and
+      chips can be chained for 16, 24, 32…
+
+      It needs three wires:
+
+      | Wire | Job |
+      |---|---|
+      | **data** | the bits, one at a time |
+      | **clock** | a pulse for each bit: "take the next one" |
+      | **latch** | when it goes HIGH, all 8 outputs update at once |
+
+      `shiftOut(dataPin, clockPin, MSBFIRST, value)` sends the 8 bits of a
+      byte, highest bit first. Put the latch LOW before and HIGH after:
+
+      ```cpp
+      const int DATA = 11;
+      const int CLOCK = 12;
+      const int LATCH = 8;
+
+      void show(byte pattern) {
+        digitalWrite(LATCH, LOW);
+        shiftOut(DATA, CLOCK, MSBFIRST, pattern);
+        digitalWrite(LATCH, HIGH);
+      }
+
+      void setup() {
+        pinMode(DATA, OUTPUT);
+        pinMode(CLOCK, OUTPUT);
+        pinMode(LATCH, OUTPUT);
+        show(0b10000001);
+        delay(500);
+        show(0b01000010);
+      }
+
+      void loop() {}
+      ```
+
+      ```stdin
+      trace
+      ```
+
+      ```output
+      [0 ms] shiftOut 10000001
+      [0 ms] pin 8 HIGH
+      [500 ms] pin 8 LOW
+      [500 ms] shiftOut 01000010
+      [500 ms] pin 8 HIGH
+      ```
+
+      Each 1 in the pattern is a lit LED. The board view shows the eight
+      outputs of the chip as a row of lights.
+
+      ## Registers: the bits behind the pins
+
+      A **register** is a byte inside the microcontroller where each bit
+      *is* a piece of hardware. On an Uno, pins 8–13 are the bits of a
+      register called **PORTB**: bit 5 is pin 13. `digitalWrite(13, HIGH)`
+      works out the register and the bit, and does
+
+      ```cpp static
+      PORTB |= (1 << 5);
+      ```
+
+      — the same mask trick you just learned. Writing registers directly is
+      about 50 times faster and can change several pins at the exact same
+      moment. Datasheets describe every chip this way: registers and bits.
+      (The simulator doesn't have registers, so stay with `digitalWrite`
+      here.)
+
+      {{check latch}}
+
+      {{check register}}
+
+      {{task alternate}}
+    checks:
+      - id: latch
+        type: mcq
+        prompt: What does the latch pin of a 74HC595 do?
+        options:
+          - Sends the bits one at a time
+          - Makes all eight outputs update at once to the bits sent
+          - Powers the chip
+          - Resets the Arduino
+        answer: 1
+        why: "The bits shift in while the latch is LOW; the rising edge copies them to the outputs together."
+      - id: register
+        type: tf
+        prompt: A register is a byte inside the chip where each bit controls or reports a piece of hardware.
+        answer: true
+        why: "For example each bit of PORTB is the output level of one pin."
+    tasks:
+      - id: alternate
+        title: Flashing halves
+        prompt: |
+          Using the `show()` function from the lesson, alternate the pattern
+          `0b11110000` and `0b00001111` every **250 ms**, starting with
+          `0b11110000`.
+        starter: |
+          const int DATA = 11;
+          const int CLOCK = 12;
+          const int LATCH = 8;
+
+          void show(byte pattern) {
+            digitalWrite(LATCH, LOW);
+            shiftOut(DATA, CLOCK, MSBFIRST, pattern);
+            digitalWrite(LATCH, HIGH);
+          }
+
+          void setup() {
+            pinMode(DATA, OUTPUT);
+            pinMode(CLOCK, OUTPUT);
+            pinMode(LATCH, OUTPUT);
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              trace
+              run 600
+            out: |
+              [0 ms] shiftOut 11110000
+              [0 ms] pin 8 HIGH
+              [250 ms] pin 8 LOW
+              [250 ms] shiftOut 00001111
+              [250 ms] pin 8 HIGH
+              [500 ms] pin 8 LOW
+              [500 ms] shiftOut 11110000
+              [500 ms] pin 8 HIGH
+        hints:
+          - "`show(0b11110000); delay(250); show(0b00001111); delay(250);`"
+        solution: |
+          const int DATA = 11;
+          const int CLOCK = 12;
+          const int LATCH = 8;
+
+          void show(byte pattern) {
+            digitalWrite(LATCH, LOW);
+            shiftOut(DATA, CLOCK, MSBFIRST, pattern);
+            digitalWrite(LATCH, HIGH);
+          }
+
+          void setup() {
+            pinMode(DATA, OUTPUT);
+            pinMode(CLOCK, OUTPUT);
+            pinMode(LATCH, OUTPUT);
+          }
+
+          void loop() {
+            show(0b11110000);
+            delay(250);
+            show(0b00001111);
+            delay(250);
+          }
+    cards:
+      - front: What does a 74HC595 shift register do?
+        back: Turns three pins (data, clock, latch) into eight outputs; chips can be chained for more.
+      - front: The steps to show a byte on a 74HC595?
+        back: latch LOW, shiftOut(data, clock, MSBFIRST, value), latch HIGH.
+      - front: What is a register?
+        back: A byte inside the microcontroller whose bits control or report hardware — e.g. PORTB holds the levels of pins 8–13.
+
+  - type: quiz
+    id: ard7-quiz
+    title: "Quiz: bits and bytes"
+    questions:
+      - type: mcq
+        prompt: What is 10 in binary?
+        options:
+          - "0b1010"
+          - "0b1100"
+          - "0b0110"
+          - "0b1001"
+        answer: 0
+        why: "8 + 2 = 10, so bits 3 and 1 are on: 1010."
+      - type: mcq
+        prompt: How many bits does one hex digit stand for?
+        options:
+          - "2"
+          - "4"
+          - "8"
+          - "16"
+        answer: 1
+        why: "16 values need 4 bits, so a byte is exactly two hex digits."
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            byte b = 0b0110;
+            b |= 0b0001;
+            Serial.println(b);
+            b &= 0b0011;
+            Serial.println(b);
+          }
+
+          void loop() {}
+        answer: |
+          7
+          3
+        why: "0110 | 0001 = 0111 (7). Then 0111 & 0011 = 0011 (3)."
+      - type: tf
+        prompt: "`x << 3` is the same as multiplying x by 8."
+        answer: true
+        why: "Each shift left doubles: 2 × 2 × 2 = 8."
+      - type: mcq
+        prompt: Why use a shift register?
+        options:
+          - To get more output pins from just three Arduino pins
+          - To make the Arduino faster
+          - To read analog sensors
+          - To store the sketch
+        answer: 0
+        why: "One 74HC595 gives eight outputs from three pins, and chips can be chained."
+
+  - type: challenge
+    id: ard7-ch-counter
+    title: A binary counter
+    difficulty: 2
+    tags: [shiftOut, byte]
+    prompt: |
+      Count in binary on eight LEDs: show 0, 1, 2, 3… on the shift register,
+      one number every **100 ms**. After 255 it should go back to 0 — a
+      `byte` does that by itself.
+
+      The `show()` function is ready for you.
+    starter: |
+      const int DATA = 11;
+      const int CLOCK = 12;
+      const int LATCH = 8;
+
+      void show(byte pattern) {
+        digitalWrite(LATCH, LOW);
+        shiftOut(DATA, CLOCK, MSBFIRST, pattern);
+        digitalWrite(LATCH, HIGH);
+      }
+
+      void setup() {
+        pinMode(DATA, OUTPUT);
+        pinMode(CLOCK, OUTPUT);
+        pinMode(LATCH, OUTPUT);
+      }
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          trace
+          run 350
+        out: |
+          [0 ms] shiftOut 00000000
+          [0 ms] pin 8 HIGH
+          [100 ms] pin 8 LOW
+          [100 ms] shiftOut 00000001
+          [100 ms] pin 8 HIGH
+          [200 ms] pin 8 LOW
+          [200 ms] shiftOut 00000010
+          [200 ms] pin 8 HIGH
+          [300 ms] pin 8 LOW
+          [300 ms] shiftOut 00000011
+          [300 ms] pin 8 HIGH
+    hints:
+      - "Keep `byte count = 0;` outside loop()."
+      - "In loop(): show(count), count++, delay(100)."
+    solution: |
+      const int DATA = 11;
+      const int CLOCK = 12;
+      const int LATCH = 8;
+      byte count = 0;
+
+      void show(byte pattern) {
+        digitalWrite(LATCH, LOW);
+        shiftOut(DATA, CLOCK, MSBFIRST, pattern);
+        digitalWrite(LATCH, HIGH);
+      }
+
+      void setup() {
+        pinMode(DATA, OUTPUT);
+        pinMode(CLOCK, OUTPUT);
+        pinMode(LATCH, OUTPUT);
+      }
+
+      void loop() {
+        show(count);
+        count++;
+        delay(100);
+      }
+
+  - type: challenge
+    id: ard7-ch-flags
+    title: Packing sensor flags
+    difficulty: 3
+    tags: [bitwise, masks]
+    prompt: |
+      A home alarm sends its sensors as one byte:
+
+      | Bit | Sensor |
+      |---|---|
+      | 0 | door open |
+      | 1 | window open |
+      | 2 | motion |
+      | 3 | smoke |
+
+      Write:
+
+      - `byte pack(bool door, bool window, bool motion, bool smoke)` —
+        puts the four values in their bits; the other bits are 0
+      - `bool danger(byte flags)` — true if **smoke** is set, or if
+        **motion** is set together with the **door or window**
+    starter: |
+      byte pack(bool door, bool window, bool motion, bool smoke) {
+        return 0;
+      }
+
+      bool danger(byte flags) {
+        return false;
+      }
+    harness: |
+      CHECK((int) pack(false, false, false, false), 0);
+      CHECK((int) pack(true, false, false, false), 1);
+      CHECK((int) pack(false, true, true, false), 6);
+      CHECK((int) pack(true, true, true, true), 15);
+      CHECK(danger(0b1000), true);
+      CHECK(danger(0b0100), false);
+      CHECK(danger(0b0101), true);
+      CHECK(danger(0b0110), true);
+      CHECK(danger(0b0011), false);
+    hints:
+      - "`if (door) flags |= (1 << 0);` and so on — or `flags = door | (window << 1) | …`."
+      - "Test a bit with `(flags & (1 << 3)) != 0`."
+    solution: |
+      byte pack(bool door, bool window, bool motion, bool smoke) {
+        byte flags = 0;
+        if (door) flags |= (1 << 0);
+        if (window) flags |= (1 << 1);
+        if (motion) flags |= (1 << 2);
+        if (smoke) flags |= (1 << 3);
+        return flags;
+      }
+
+      bool danger(byte flags) {
+        bool open = (flags & 0b0011) != 0;
+        bool motion = (flags & (1 << 2)) != 0;
+        bool smoke = (flags & (1 << 3)) != 0;
+        return smoke || (motion && open);
+      }
+
+  - type: exam
+    id: ard7-exam
+    title: "Chapter 7 exam"
+    minutes: 25
+    questions:
+      - type: mcq
+        prompt: What is `0b11111111` in decimal?
+        options:
+          - "8"
+          - "128"
+          - "255"
+          - "256"
+        answer: 2
+        why: "All eight bits on: 128 + 64 + … + 1 = 255."
+      - type: mcq
+        prompt: What is 200 in hex?
+        options:
+          - "0xC8"
+          - "0x200"
+          - "0xA0"
+          - "0x8C"
+        answer: 0
+        why: "200 = 12 × 16 + 8, and 12 is C: 0xC8."
+      - type: fill
+        prompt: A mask with only bit 5 on.
+        code: |
+          byte mask = 1 ___ 5;
+        blanks:
+          - ["<<"]
+        why: "1 << 5 moves the 1 five places left: 0b00100000 (32)."
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            byte v = 0b10110000;
+            Serial.println(v >> 4, BIN);
+            Serial.println(v & 0x0F);
+            Serial.println(bitRead(v, 7));
+          }
+
+          void loop() {}
+        answer: |
+          1011
+          0
+          1
+        why: "Shifting right 4 leaves the top four bits, 1011. The low four bits are all 0. Bit 7 is 1."
+      - type: tf
+        prompt: "`flags ^= (1 << 2);` flips bit 2."
+        answer: true
+        why: "XOR with a 1 flips a bit; XOR with 0 leaves it."
+      - type: mcq
+        prompt: Which condition is true when **bit 0** of `status` is on?
+        options:
+          - "`status && 1`"
+          - "`status & 1`"
+          - "`status | 1`"
+          - "`status == 1`"
+        answer: 1
+        why: "`status & 1` keeps only bit 0. `status == 1` would be false if any other bit were on too."
+      - type: mcq
+        prompt: Which three wires does a 74HC595 need?
+        options:
+          - Data, clock and latch
+          - Red, green and blue
+          - TX, RX and GND
+          - SDA, SCL and reset
+        answer: 0
+        why: "Data carries the bits, clock takes each one, latch shows them all."
+      - type: code
+        prompt: |
+          Write `byte reverseBits(byte b)` that reverses the order of the 8
+          bits: `0b00000001` becomes `0b10000000`, `0b11010000` becomes
+          `0b00001011`.
+        starter: |
+          byte reverseBits(byte b) {
+            return b;
+          }
+        harness: |
+          CHECK((int) reverseBits(0b00000001), 0b10000000);
+          CHECK((int) reverseBits(0b11010000), 0b00001011);
+          CHECK((int) reverseBits(0), 0);
+          CHECK((int) reverseBits(255), 255);
+          CHECK((int) reverseBits(0b01100001), 0b10000110);
+        solution: |
+          byte reverseBits(byte b) {
+            byte out = 0;
+            for (int n = 0; n < 8; n++) {
+              if (b & (1 << n)) {
+                out |= (1 << (7 - n));
+              }
+            }
+            return out;
+          }

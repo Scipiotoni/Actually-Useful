@@ -17,10 +17,22 @@ const Engine = require('../public/learn/engine.js');
 const Build = require('../public/learn/build.js');
 const Video = require('../public/learn/video.js');
 const Explain = require('../public/learn/explain.js');
+const Arduino = require('../public/learn/arduino.js');
 
-const DIR = path.join(__dirname, '..', 'public', 'learn', 'course');
+const LEARN = path.join(__dirname, '..', 'public', 'learn');
+const DIR = path.join(LEARN, 'course');
 
-function loadCourse(only) {
+/** The C++ courses in courses.yml: the C++ course, and Arduino (C++ on a simulated board). */
+function cppCourseDirs() {
+  const list = Course.parseYaml(fs.readFileSync(path.join(LEARN, 'courses.yml'), 'utf8'), 'courses.yml');
+  return list.courses.map((c) => path.join(LEARN, String(c.dir))).filter((dir) => {
+    const index = Course.parseYaml(fs.readFileSync(path.join(dir, 'course.yml'), 'utf8'), 'course.yml');
+    return index.lang !== 'web';
+  });
+}
+
+function loadCourse(only, dir = DIR) {
+  const DIR = dir;
   const index = Course.parseYaml(fs.readFileSync(path.join(DIR, 'course.yml'), 'utf8'), 'course.yml');
   let names = index.chapters || [];
   const missing = names.filter((n) => !fs.existsSync(path.join(DIR, n + '.yml')));
@@ -34,11 +46,15 @@ function loadCourse(only) {
   return { course: Course.buildCourse(index, docs, { glossary }), missing };
 }
 
-const isProgram = (code) => /\bint\s+main\s*\(/.test(code);
+let isProgram = (code) => /\bint\s+main\s*\(/.test(code);
 
 /** Every compile-and-run job the course implies. */
 function jobs(course) {
   const list = [];
+  const sim = course.sim === 'arduino';
+  // On the simulated board a sketch (setup and loop) is a whole program too.
+  const plainProgram = (code) => /\bint\s+main\s*\(/.test(code);
+  isProgram = sim ? (code) => plainProgram(code) || Arduino.isSketch(code) : plainProgram;
   const std = (x) => (x && x.std === 'c++20' ? 'c++20' : 'c++17');
 
   Course.codeSamples(course).forEach((s) => {
@@ -99,6 +115,13 @@ function jobs(course) {
       list.push({ where: item.id + ' starter', std: 'c++20', source: item.build.starter, build: item.build, expect: 'not-pass' });
     }
   });
+  if (sim) {
+    // Every program is compiled together with the simulated board.
+    list.forEach((job) => {
+      job.original = job.source;
+      job.source = Arduino.wrap(job.source);
+    });
+  }
   return list;
 }
 
@@ -118,7 +141,7 @@ async function runJob(runners, job) {
       const run = data.runs[0];
       const problem = Explain.runtime(run);
       const clean = !run.timedOut && !run.signal && !problem;
-      const g = Build.grade(job.build.requirements, [{ name: 'main.cpp', content: job.source }], { clean, output: run.stdout || '', problem });
+      const g = Build.grade(job.build.requirements, [{ name: 'main.cpp', content: job.original || job.source }], { clean, output: run.stdout || '', problem });
       passed = g.ok;
       detail = g.checks.filter((c) => !c.ok).map((c) => c.expr).join('; ');
     } else {
@@ -212,16 +235,23 @@ function makeRunners() {
   };
 }
 
-module.exports = { loadCourse, jobs, checkAll, makeRunners, DIR };
+module.exports = { loadCourse, cppCourseDirs, jobs, checkAll, makeRunners, DIR };
 
 if (require.main === module) {
   (async () => {
+    // Course ids (cpp, ard) or chapter ids; nothing means every C++ course.
     const only = process.argv.slice(2);
-    const { course, missing } = loadCourse(only);
-    const problems = Course.validate(course);
-    if (missing.length) console.log('Missing chapter files:', missing.join(', '));
-    problems.forEach((p) => console.log('STRUCTURE', p));
-    const list = jobs(course);
+    const problems = [];
+    const list = [];
+    cppCourseDirs().forEach((dir) => {
+      const index = Course.parseYaml(fs.readFileSync(path.join(dir, 'course.yml'), 'utf8'), 'course.yml');
+      const wanted = !only.length || only.includes(String(index.id)) ? null : only;
+      if (wanted && !(index.chapters || []).some((c) => wanted.includes(c))) return;
+      const { course, missing } = loadCourse(wanted, dir);
+      if (missing.length) console.log(course.id + ': missing chapter files:', missing.join(', '));
+      Course.validate(course).forEach((p) => { problems.push(p); console.log('STRUCTURE', course.id, p); });
+      list.push(...jobs(course));
+    });
     const runners = makeRunners();
     const status = await runners['c++17'].status();
     if (!status.available) { console.log('No compiler: skipping code checks'); return; }

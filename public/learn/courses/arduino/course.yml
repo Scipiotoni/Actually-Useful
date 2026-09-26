@@ -1,0 +1,45 @@
+id: ard
+short: Arduino
+icon: 🔌
+category: Electronics
+lang: cpp
+code_lang: cpp
+sim: arduino
+final: ard-final
+graduate: Arduino Graduate
+title: Arduino & Electronics
+subtitle: Make things that blink, sense and move — electricity, circuits and the code that controls them.
+
+intro: |
+  Build real electronics projects, from your first blinking LED to gadgets
+  that sense the world and react to it. You'll learn how electricity works —
+  voltage, current, resistance, LEDs, buttons, sensors, motors — and how to
+  program an Arduino to control them.
+
+  No hardware needed to start: every sketch runs on a **simulated Arduino
+  board** right here, with the Serial Monitor and a board you can replay pin
+  by pin. When you do get a real Arduino, the same code works on it.
+
+method: |
+  Every chapter mixes a little electronics with a little code. Read the
+  lesson, run the examples (the board shows exactly what each pin did),
+  answer the checks, then write sketches yourself — each is checked
+  automatically by running it on the simulated board.
+
+parts:
+  - id: ard-p1
+    title: Part I — Electricity and Your First Sketches
+    blurb: Voltage, current and resistance, LEDs and their resistors — and the sketches that blink them, talk over Serial and react to buttons.
+  - id: ard-p2
+    title: Part II — Sensing, Controlling and Building
+    blurb: Sensors and analog readings, brightness and motors with PWM, bits and registers — ending with gadgets of your own.
+
+chapters:
+  - ard01
+  - ard02
+  - ard03
+  - ard04
+  - ard05
+  - ard06
+  - ard07
+  - ard08

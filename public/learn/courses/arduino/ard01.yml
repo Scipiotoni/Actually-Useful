@@ -1,0 +1,601 @@
+id: ard01
+number: 1
+part: ard-p1
+title: Electricity in Plain Words
+blurb: Voltage, current and resistance, Ohm's law, and how to give an LED the right resistor — with your first sketches doing the maths.
+hours: 2
+goals:
+  - Explain voltage, current and resistance, and their units
+  - Use Ohm's law to work out one from the other two
+  - Wire an LED the right way round, with the right resistor
+  - Recognise a short circuit and why it is dangerous
+  - Print results from a sketch with the Serial Monitor
+
+items:
+  - type: lesson
+    id: ard1-circuit
+    title: Voltage, current and resistance
+    minutes: 15
+    objectives:
+      - Describe a circuit as a loop that current flows around
+      - Explain voltage, current and resistance with their units
+      - Calculate with Ohm's law, V = I × R
+    body: |
+      Electronics is about making **electric current** flow where you want
+      it. Current only flows around a **closed loop** — a *circuit* — from
+      the positive side of a battery, through the parts, and back to the
+      negative side. Break the loop anywhere (a switch, a loose wire) and
+      everything stops.
+
+      Three quantities describe what happens in a circuit. A water pipe is a
+      good way to picture them:
+
+      | Quantity | Symbol | Unit | Like water… |
+      |---|---|---|---|
+      | **Voltage** | V | volt (V) | the *pressure* pushing the water |
+      | **Current** | I | ampere, amp (A) | how much water *flows* each second |
+      | **Resistance** | R | ohm (Ω) | how *narrow* the pipe is |
+
+      More pressure pushes more water; a narrower pipe lets less through.
+      Electricity works the same way.
+
+      ## Ohm's law
+
+      The three are tied together by one of the most useful rules in
+      electronics:
+
+      ```text
+      V = I × R        voltage = current × resistance
+      I = V / R        current = voltage ÷ resistance
+      R = V / I        resistance = voltage ÷ current
+      ```
+
+      Currents in small electronics are tiny, so they are usually given in
+      **milliamps**: 1 mA = 0.001 A. An LED uses about 20 mA.
+
+      ## Your first sketch: doing the maths
+
+      An Arduino program is called a **sketch**. This one works out the
+      current through a 220 Ω resistor on 5 V, and prints it on the
+      **Serial Monitor** — the text window where an Arduino talks to you.
+      Press **▶ Run**:
+
+      ```cpp
+      void setup() {
+        Serial.begin(9600);
+        float volts = 5.0;
+        float ohms = 220.0;
+        float amps = volts / ohms;
+        Serial.print("Current: ");
+        Serial.print(amps * 1000);
+        Serial.println(" mA");
+      }
+
+      void loop() {}
+      ```
+
+      ```output
+      Current: 22.73 mA
+      ```
+
+      `float` is a number with a decimal point. `Serial.print` prints without
+      starting a new line; `Serial.println` ends the line. Decimals are
+      printed with two digits. You'll meet `setup` and `loop` properly in the
+      next chapter — for now, the code in `setup` runs once.
+
+      > [!tip]
+      > This course runs your sketches on a **simulated Arduino**, so you
+      > need no hardware. Everything you write also works on a real board.
+
+      {{check units}}
+
+      {{check ohm}}
+
+      {{task current}}
+    checks:
+      - id: units
+        type: mcq
+        prompt: Which unit measures **current**?
+        options:
+          - The volt (V)
+          - The ampere (A)
+          - The ohm (Ω)
+          - The watt (W)
+        answer: 1
+        why: "Current is measured in amperes (amps). Volts measure voltage, ohms resistance, watts power."
+      - id: ohm
+        type: fill
+        prompt: Complete Ohm's law to work out the current.
+        code: |
+          float amps = volts ___ ohms;
+        blanks:
+          - [/]
+        why: "Current = voltage ÷ resistance: `I = V / R`."
+    tasks:
+      - id: current
+        title: Current from Ohm's law
+        prompt: |
+          Write the function `float current(float volts, float ohms)` so it
+          returns the current, in **amperes**, that flows when `volts` push
+          through `ohms`. The checker calls it with different values.
+        starter: |
+          float current(float volts, float ohms) {
+            return 0;
+          }
+        harness: |
+          CHECK(current(5, 250), 0.02);
+          CHECK(current(9, 450), 0.02);
+          CHECK(current(3.3, 330), 0.01);
+          CHECK(current(12, 1000), 0.012);
+        hints:
+          - "Ohm's law says I = V / R."
+          - "`return volts / ohms;`"
+        solution: |
+          float current(float volts, float ohms) {
+            return volts / ohms;
+          }
+    cards:
+      - front: What are voltage, current and resistance, and their units?
+        back: Voltage is the push (volts, V), current the flow (amps, A), resistance how much a part resists the flow (ohms, Ω).
+      - front: State Ohm's law in its three forms.
+        back: V = I × R, I = V / R, R = V / I.
+      - front: How many amps is 20 mA?
+        back: 0.020 A — 1 mA is a thousandth of an amp.
+
+  - type: video
+    id: ard1-video-resistor
+    title: "Watch: choosing an LED's resistor"
+    body: |
+      **What you just saw**
+
+      - An LED takes a fixed voltage (about 2 V for red); the resistor takes the rest.
+      - The resistor sets the current: R = (supply − LED voltage) ÷ current.
+      - 5 V supply, 2 V LED, 20 mA: (5 − 2) ÷ 0.020 = **150 Ω**. Use the next size up you have, like 220 Ω.
+    video:
+      steps:
+        - scene: How big a resistor?
+          sub: Every LED needs one
+        - say: "An LED on a 5 V pin needs a resistor to limit the current. Let's work out how big."
+        - type: "void setup() {\n  Serial.begin(9600);\n}\n\nvoid loop() {}\n"
+          speed: 2
+          say: "A sketch that will do the maths for us."
+        - type: "  float supply = 5.0;\n"
+          at: "Serial.begin(9600);\n"
+          say: "The Arduino's pin gives **5 volts**."
+          mark: "float supply = 5.0;"
+        - run: true
+          line: 3
+          vars:
+            supply: "5.0 V"
+          hold: 1.2
+        - type: "  float ledVolts = 2.0;\n"
+          at: "supply = 5.0;\n"
+          say: "A red LED always takes about **2 volts** for itself."
+          mark:
+            text: "float ledVolts = 2.0;"
+            color: pink
+        - line: 4
+          vars:
+            ledVolts: "2.0 V"
+          hold: 1.2
+        - type: "  float current = 0.020;\n"
+          at: "ledVolts = 2.0;\n"
+          say: "We want **20 mA** — 0.020 amps — a safe, bright current."
+          mark:
+            text: "float current = 0.020;"
+            color: green
+        - line: 5
+          vars:
+            current: "0.020 A"
+          hold: 1.2
+        - scene: The resistor gets the rest
+          sub: R = V ÷ I
+        - type: "  float ohms = (supply - ledVolts) / current;\n"
+          at: "current = 0.020;\n"
+          say: "The resistor takes what the LED doesn't: 5 − 2 = **3 volts**. Ohm's law: R = V ÷ I."
+          mark:
+            text: "(supply - ledVolts) / current"
+            color: blue
+        - line: 6
+          vars:
+            ohms: "150.0 Ω"
+          say: "3 ÷ 0.020 = **150 ohms**."
+        - type: "  Serial.print(\"Resistor: \");\n  Serial.print(ohms);\n  Serial.println(\" ohms\");\n"
+          at: "/ current;\n"
+          speed: 1.6
+          say: "Print the answer on the Serial Monitor…"
+        - line: 7
+          print: "Resistor: 150.00 ohms"
+          say: "**150 Ω.** Shops sell standard sizes: pick the next one up, like 220 Ω — a little less current is fine."
+        - line: 0
+          say: "Change the supply or the LED colour, and the sketch works it out again."
+    
+  - type: lesson
+    id: ard1-led
+    title: LEDs, resistors and short circuits
+    minutes: 18
+    objectives:
+      - Connect an LED the right way round
+      - Work out the resistor an LED needs
+      - Explain what a short circuit is and why it's dangerous
+      - Calculate the power a part uses
+    body: |
+      An **LED** (light-emitting diode) lights up when current flows through
+      it — but only in **one direction**. Its two legs are different:
+
+      | Leg | Name | Goes to |
+      |---|---|---|
+      | Longer leg | **anode** (+) | the positive side (an Arduino pin) |
+      | Shorter leg, flat side of the rim | **cathode** (−) | the negative side (GND, "ground") |
+
+      Put it in backwards and nothing happens — no harm done, just turn it
+      round.
+
+      ## Why an LED needs a resistor
+
+      An LED doesn't limit its own current. Connect one straight to 5 V and
+      far too much current flows — it gets hot and burns out (and can damage
+      the Arduino pin, which can give at most about 20–40 mA).
+
+      Every LED "uses up" a roughly fixed voltage, its **forward voltage**:
+      about 2 V for red, yellow and green, about 3 V for blue and white. A
+      resistor in the same loop takes the rest and sets the current:
+
+      ```text
+      R = (supply voltage − LED voltage) / current
+      ```
+
+      ```cpp
+      void setup() {
+        Serial.begin(9600);
+        float supply = 5.0;
+        float ledVolts = 2.0;
+        float current = 0.020;
+        float ohms = (supply - ledVolts) / current;
+        Serial.print("Resistor: ");
+        Serial.print(ohms);
+        Serial.println(" ohms");
+      }
+
+      void loop() {}
+      ```
+
+      ```output
+      Resistor: 150.00 ohms
+      ```
+
+      Resistors come in standard sizes (100, 150, 220, 330, 470, 1k Ω…).
+      Pick the calculated value or the next one **up** — slightly less
+      current is always safe. That's why kits come with 220 Ω resistors for
+      their LEDs.
+
+      ## Reading a resistor
+
+      A resistor's value is printed as **colour bands**. On the common
+      4-band kind, the first two bands are digits, the third is how many
+      zeros follow, and the fourth (gold or silver) is the tolerance:
+
+      | Colour | black | brown | red | orange | yellow | green | blue | violet | grey | white |
+      |---|---|---|---|---|---|---|---|---|---|---|
+      | Digit | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+
+      **Red, red, brown** = 2, 2, one zero = **220 Ω**. **Brown, black,
+      orange** = 1, 0, three zeros = **10 kΩ**. When in doubt, measure it
+      with a multimeter.
+
+      ## Building it on a breadboard
+
+      A **breadboard** lets you build circuits without soldering. Inside,
+      metal strips join the holes:
+
+      - each short **row of five holes** is connected (the two halves, on
+        either side of the middle gap, are separate);
+      - the long **rails** along the edges, marked + and −, run the whole
+        length — use them for 5 V and GND.
+
+      Push the LED's legs into two different rows, the resistor from the
+      LED's row to another, and wires from the Arduino to each end. Two
+      legs in the **same** row would be joined — a short circuit around the
+      part.
+
+      ## Short circuits
+
+      A **short circuit** is a path from + to − with (almost) no resistance —
+      a bare wire straight across a battery. By Ohm's law, a tiny R means a
+      huge I: wires get hot, batteries swell, and boards die. Always have
+      something that limits the current in every loop.
+
+      ## Power
+
+      **Power** (in watts, W) is how much energy a part uses each second —
+      and turns into heat:
+
+      ```text
+      P = V × I
+      ```
+
+      The 150 Ω resistor above has 3 V across it and 0.02 A through it:
+      0.06 W. Common resistors can handle ¼ W, so it's fine.
+
+      > [!warning]
+      > Only ever connect an Arduino to low voltages: its own 5 V or 3.3 V,
+      > or batteries up to 9 V on the right pin. **Never mains electricity.**
+
+      {{check legs}}
+
+      {{check led-output}}
+
+      {{task resistor}}
+    checks:
+      - id: legs
+        type: mcq
+        prompt: Which leg of an LED goes towards the **positive** side?
+        options:
+          - The longer leg (the anode)
+          - The shorter leg (the cathode)
+          - Either leg — LEDs work both ways
+          - The leg next to the flat side of the rim
+        answer: 0
+        why: "The longer leg is the anode (+). The shorter leg, by the flat side, is the cathode (−) and goes to ground."
+      - id: led-output
+        type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            float supply = 9.0;
+            float ledVolts = 3.0;
+            float current = 0.02;
+            Serial.println((supply - ledVolts) / current);
+          }
+
+          void loop() {}
+        answer: |
+          300.00
+        why: "The resistor takes 9 − 3 = 6 V. 6 ÷ 0.02 = 300 Ω, printed with two decimals."
+    tasks:
+      - id: resistor
+        title: An LED resistor calculator
+        prompt: |
+          Write `int ledResistor(float supply, float ledVolts, float milliamps)`.
+          It returns the resistor an LED needs, in ohms, **rounded to the
+          nearest whole number**. The current is given in **milliamps**, so
+          turn it into amps first.
+
+          For example, `ledResistor(5, 2, 20)` is `150`.
+        starter: |
+          int ledResistor(float supply, float ledVolts, float milliamps) {
+            return 0;
+          }
+        harness: |
+          CHECK(ledResistor(5, 2, 20), 150);
+          CHECK(ledResistor(3.3, 2, 10), 130);
+          CHECK(ledResistor(9, 2, 20), 350);
+          CHECK(ledResistor(12, 3, 15), 600);
+        hints:
+          - "Amps are milliamps divided by 1000."
+          - "`round(x)` rounds to the nearest whole number; `(int)` turns it into an `int`."
+        solution: |
+          int ledResistor(float supply, float ledVolts, float milliamps) {
+            float amps = milliamps / 1000.0;
+            return (int) round((supply - ledVolts) / amps);
+          }
+    cards:
+      - front: Which LED leg is the anode, and where does it go?
+        back: The longer leg; it goes to the positive side (an Arduino pin).
+      - front: How do you work out an LED's resistor?
+        back: R = (supply voltage − LED forward voltage) ÷ current.
+      - front: What is a short circuit?
+        back: A path from + to − with almost no resistance, so a huge current flows. Dangerous — it heats wires and destroys parts.
+      - front: What is the formula for power?
+        back: P = V × I, in watts.
+
+  - type: quiz
+    id: ard1-quiz
+    title: "Quiz: circuits and LEDs"
+    questions:
+      - type: tf
+        prompt: Current is measured in volts.
+        answer: false
+        why: "Current is measured in amperes (amps). Voltage is measured in volts."
+      - type: mcq
+        prompt: 5 V across a 1000 Ω resistor. How much current flows?
+        options:
+          - 5 mA
+          - 5 A
+          - 0.2 mA
+          - 200 mA
+        answer: 0
+        why: "I = V / R = 5 / 1000 = 0.005 A, which is 5 mA."
+      - type: mcq
+        prompt: What happens if you connect an LED straight to 5 V with no resistor?
+        options:
+          - It lights up normally
+          - Too much current flows and it can burn out
+          - Nothing — LEDs need 12 V
+          - It lights up more gently
+        answer: 1
+        why: "An LED doesn't limit its own current. Without a resistor the current is far too high and it overheats."
+      - type: fill
+        prompt: Complete the formula for an LED's resistor.
+        code: |
+          float ohms = (supply ___ ledVolts) / current;
+        blanks:
+          - [-]
+        why: "The resistor takes what's left of the supply after the LED's own voltage: supply − ledVolts."
+      - type: mcq
+        prompt: Which of these is a **short circuit**?
+        options:
+          - An LED and a 220 Ω resistor between 5 V and GND
+          - A bare wire straight from + to − of a battery
+          - A switch that is open
+          - A resistor between two pins
+        answer: 1
+        why: "A wire from + to − has almost no resistance, so an enormous current flows — that's a short circuit."
+
+  - type: challenge
+    id: ard1-ch-parallel
+    title: Resistors side by side
+    difficulty: 1
+    tags: [ohms-law, functions]
+    prompt: |
+      Two resistors connected **in parallel** (side by side, both across the
+      same two points) act like one smaller resistor:
+
+      ```text
+      R = (R1 × R2) / (R1 + R2)
+      ```
+
+      Write `float parallel(float r1, float r2)` that returns it. Two 100 Ω
+      resistors in parallel make 50 Ω.
+    starter: |
+      float parallel(float r1, float r2) {
+        return 0;
+      }
+    harness: |
+      CHECK(parallel(100, 100), 50);
+      CHECK(parallel(220, 330), 132);
+      CHECK(parallel(1000, 1000), 500);
+      CHECK(parallel(300, 600), 200);
+    hints:
+      - "Write the formula exactly as given: `(r1 * r2) / (r1 + r2)`."
+    solution: |
+      float parallel(float r1, float r2) {
+        return (r1 * r2) / (r1 + r2);
+      }
+
+  - type: challenge
+    id: ard1-ch-battery
+    title: How long will the battery last?
+    difficulty: 2
+    tags: [units, functions]
+    prompt: |
+      A battery's capacity is given in **milliamp-hours** (mAh): a 2000 mAh
+      battery can give 20 mA for 100 hours, or 200 mA for 10 hours.
+
+      Write `float hours(float capacity, float milliamps)` that returns how
+      many hours a battery lasts. And because a real circuit wastes some
+      energy, the second function `float realHours(float capacity, float milliamps)`
+      returns **80%** of that.
+    starter: |
+      float hours(float capacity, float milliamps) {
+        return 0;
+      }
+
+      float realHours(float capacity, float milliamps) {
+        return 0;
+      }
+    harness: |
+      CHECK(hours(2000, 20), 100);
+      CHECK(hours(1200, 40), 30);
+      CHECK(hours(500, 200), 2.5);
+      CHECK(realHours(2000, 20), 80);
+      CHECK(realHours(500, 200), 2);
+    hints:
+      - "Hours = capacity ÷ current (both in milli-units, so they cancel out)."
+      - "`realHours` can call `hours` and multiply by 0.8."
+    solution: |
+      float hours(float capacity, float milliamps) {
+        return capacity / milliamps;
+      }
+
+      float realHours(float capacity, float milliamps) {
+        return hours(capacity, milliamps) * 0.8;
+      }
+
+  - type: exam
+    id: ard1-exam
+    title: "Chapter 1 exam"
+    minutes: 20
+    questions:
+      - type: mcq
+        prompt: What is **voltage**?
+        options:
+          - How much current flows each second
+          - The push that drives current around a circuit
+          - How much a part resists current
+          - The heat a part gives off
+        answer: 1
+        why: "Voltage is the 'pressure' that pushes current. Current is the flow; resistance limits it."
+      - type: tf
+        prompt: Current can only flow around a closed loop.
+        answer: true
+        why: "A circuit must be a complete loop. Break it anywhere and the current stops."
+      - type: mcq
+        prompt: 12 V across a 60 Ω resistor. What current flows?
+        options:
+          - 0.2 A
+          - 5 A
+          - 720 A
+          - 2 A
+        answer: 0
+        why: "I = V / R = 12 / 60 = 0.2 A (200 mA)."
+      - type: mcq
+        prompt: A resistor has 2 A flowing through it and 10 V across it. What is its resistance?
+        options:
+          - 20 Ω
+          - 5 Ω
+          - 0.2 Ω
+          - 12 Ω
+        answer: 1
+        why: "R = V / I = 10 / 2 = 5 Ω."
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            float volts = 3.0;
+            float amps = 0.5;
+            Serial.print("P = ");
+            Serial.print(volts * amps);
+            Serial.println(" W");
+          }
+
+          void loop() {}
+        answer: |
+          P = 1.50 W
+        why: "Power is P = V × I = 3 × 0.5 = 1.5 W, and Serial prints decimals with two digits."
+      - type: tf
+        prompt: An LED works whichever way round it is connected.
+        answer: false
+        why: "An LED is a diode: current flows through it in one direction only. Backwards, it stays dark."
+      - type: mcq
+        prompt: A blue LED (3 V) on a 5 V pin, at 20 mA. Which resistor does it need?
+        options:
+          - 100 Ω
+          - 250 Ω
+          - 150 Ω
+          - 400 Ω
+        answer: 0
+        why: "R = (5 − 3) / 0.020 = 100 Ω."
+      - type: fill
+        prompt: Complete the power formula.
+        code: |
+          float watts = volts ___ amps;
+        blanks:
+          - ["*"]
+        why: "P = V × I, so multiply."
+      - type: mcq
+        prompt: Why is a short circuit dangerous?
+        options:
+          - It makes the voltage drop to zero, so nothing works
+          - Almost no resistance means a huge current, which heats and destroys things
+          - It reverses the current
+          - It is not dangerous, only wasteful
+        answer: 1
+        why: "By Ohm's law, a tiny resistance means an enormous current — enough to melt wires and damage batteries and boards."
+      - type: code
+        prompt: |
+          Resistors connected **in series** (one after the other) simply add
+          up. Write `float seriesTotal(float r1, float r2, float r3)` that
+          returns the total resistance of three resistors in series.
+        starter: |
+          float seriesTotal(float r1, float r2, float r3) {
+            return 0;
+          }
+        harness: |
+          CHECK(seriesTotal(100, 220, 330), 650);
+          CHECK(seriesTotal(1000, 0, 0), 1000);
+          CHECK(seriesTotal(10, 20, 30), 60);
+        solution: |
+          float seriesTotal(float r1, float r2, float r3) {
+            return r1 + r2 + r3;
+          }

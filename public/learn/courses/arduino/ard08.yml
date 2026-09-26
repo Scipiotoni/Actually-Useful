@@ -1,0 +1,1114 @@
+id: ard08
+number: 8
+part: ard-p2
+title: "Projects: Putting It Together"
+blurb: Organise bigger sketches as state machines, learn how chips talk (UART, I²C, SPI), control a board with typed commands — then pass the final exam and build gadgets of your own.
+hours: 6
+goals:
+  - Structure a sketch as a state machine driven by millis()
+  - Explain UART, I²C and SPI and when each is used
+  - Parse text commands arriving over Serial
+  - Combine sensors, outputs, timing and logic in one sketch
+  - Plan the next steps with real hardware
+
+items:
+  - type: lesson
+    id: ard8-states
+    title: State machines
+    minutes: 25
+    objectives:
+      - Describe a gadget as states and transitions
+      - Write a state machine with an enum, switch and millis()
+      - React to inputs while waiting, without delay()
+    body: |
+      A washing machine, a traffic light, a vending machine: each is always
+      in one **state** (filling, washing, spinning…), and events — a button,
+      a timer running out — move it to the next. Writing a sketch that way
+      is called a **state machine**, and it's how real gadgets are built.
+
+      1. List the **states**.
+      2. For each state: what are the outputs, and what makes it move on?
+      3. Code it: a variable holds the state, and `loop()` does whatever the
+         current state needs — always without `delay()`.
+
+      ## A pedestrian crossing
+
+      Cars have green until someone presses the button. Then: yellow for
+      1 s, red for 3 s, back to green.
+
+      ```cpp
+      enum State { GREEN, YELLOW, RED };
+
+      State state = GREEN;
+      unsigned long since = 0;
+
+      void setState(State next) {
+        state = next;
+        since = millis();
+        digitalWrite(10, next == GREEN);
+        digitalWrite(11, next == YELLOW);
+        digitalWrite(12, next == RED);
+      }
+
+      void setup() {
+        pinMode(2, INPUT_PULLUP);
+        pinMode(10, OUTPUT);
+        pinMode(11, OUTPUT);
+        pinMode(12, OUTPUT);
+        setState(GREEN);
+      }
+
+      void loop() {
+        unsigned long waited = millis() - since;
+        switch (state) {
+          case GREEN:
+            if (digitalRead(2) == LOW) setState(YELLOW);
+            break;
+          case YELLOW:
+            if (waited >= 1000) setState(RED);
+            break;
+          case RED:
+            if (waited >= 3000) setState(GREEN);
+            break;
+        }
+      }
+      ```
+
+      ```stdin
+      2 LOW @500
+      2 HIGH @700
+      trace
+      run 6000
+      ```
+
+      ```output
+      [0 ms] pin 10 HIGH
+      [500 ms] pin 10 LOW
+      [500 ms] pin 11 HIGH
+      [1500 ms] pin 11 LOW
+      [1500 ms] pin 12 HIGH
+      [4500 ms] pin 10 HIGH
+      [4500 ms] pin 12 LOW
+      ```
+
+      - `enum State { GREEN, YELLOW, RED };` gives the states names.
+      - `setState` does everything that happens when entering a state:
+        remember it, restart the timer, set the lights. (`next == GREEN` is
+        true or false — HIGH or LOW.)
+      - `switch (state)` picks the code for the current state; each case
+        only checks what could move it on.
+
+      Because nothing blocks, adding a feature is easy: a beeper while red,
+      a second button, a night mode — just another state or another check.
+
+      {{check state}}
+
+      {{check switch}}
+
+      {{task wash}}
+    checks:
+      - id: state
+        type: mcq
+        prompt: In a state machine, what moves the machine from one state to another?
+        options:
+          - Only delay()
+          - Events, like a button press or a timer running out
+          - Restarting the board
+          - Nothing — it stays in one state
+        answer: 1
+        why: "Transitions happen on events: inputs changing, or enough time passing in the current state."
+      - id: switch
+        type: tf
+        prompt: In the crossing sketch, pressing the button while the light is red does nothing.
+        answer: true
+        why: "Only the GREEN case reads the button. In RED, only the timer can move it on."
+    tasks:
+      - id: wash
+        title: A tiny washing machine
+        prompt: |
+          States: **IDLE**, **FILL**, **WASH**.
+
+          - **IDLE**: all off. A press of the button on pin **2**
+            (`INPUT_PULLUP`) starts it → FILL.
+          - **FILL**: the valve on pin **5** is on. After **300 ms** → WASH.
+          - **WASH**: the motor on pin **6** is on. After **500 ms** → IDLE.
+
+          The `setState` helper is written for you.
+        starter: |
+          enum State { IDLE, FILL, WASH };
+
+          State state = IDLE;
+          unsigned long since = 0;
+
+          void setState(State next) {
+            state = next;
+            since = millis();
+            digitalWrite(5, next == FILL);
+            digitalWrite(6, next == WASH);
+          }
+
+          void setup() {
+            pinMode(2, INPUT_PULLUP);
+            pinMode(5, OUTPUT);
+            pinMode(6, OUTPUT);
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              2 LOW @100
+              2 HIGH @150
+              2 LOW @1200
+              2 HIGH @1250
+              trace
+              run 2200
+            out: |
+              [100 ms] pin 5 HIGH
+              [400 ms] pin 5 LOW
+              [400 ms] pin 6 HIGH
+              [900 ms] pin 6 LOW
+              [1200 ms] pin 5 HIGH
+              [1500 ms] pin 5 LOW
+              [1500 ms] pin 6 HIGH
+              [2000 ms] pin 6 LOW
+        hints:
+          - "In loop(): `unsigned long waited = millis() - since;` then `switch (state)`."
+          - "IDLE: if the button is LOW, setState(FILL). FILL: if waited >= 300, setState(WASH). WASH: if waited >= 500, setState(IDLE)."
+        solution: |
+          enum State { IDLE, FILL, WASH };
+
+          State state = IDLE;
+          unsigned long since = 0;
+
+          void setState(State next) {
+            state = next;
+            since = millis();
+            digitalWrite(5, next == FILL);
+            digitalWrite(6, next == WASH);
+          }
+
+          void setup() {
+            pinMode(2, INPUT_PULLUP);
+            pinMode(5, OUTPUT);
+            pinMode(6, OUTPUT);
+          }
+
+          void loop() {
+            unsigned long waited = millis() - since;
+            switch (state) {
+              case IDLE:
+                if (digitalRead(2) == LOW) setState(FILL);
+                break;
+              case FILL:
+                if (waited >= 300) setState(WASH);
+                break;
+              case WASH:
+                if (waited >= 500) setState(IDLE);
+                break;
+            }
+          }
+    cards:
+      - front: What is a state machine?
+        back: A design where the sketch is always in one named state, and events (inputs, timers) move it to another.
+      - front: How do you code a state machine on an Arduino?
+        back: An enum for the states, a variable for the current one, a switch in loop(), and millis() for timing — no delay().
+
+  - type: lesson
+    id: ard8-talk
+    title: How chips talk — UART, I²C and SPI
+    minutes: 22
+    objectives:
+      - Explain UART, I²C and SPI and their wires
+      - Choose a protocol for a module
+      - Mind 3.3 V and 5 V logic levels
+      - Read text commands from Serial
+    body: |
+      Sensors, displays and radios are chips of their own. They talk to the
+      Arduino over a few standard **protocols** — agreed ways of sending
+      bits down wires.
+
+      | | **UART** (Serial) | **I²C** | **SPI** |
+      |---|---|---|---|
+      | Wires | TX, RX (+ GND) | SDA, SCL (+ GND) | MOSI, MISO, SCK, CS (+ GND) |
+      | Devices | 2 (one each end) | up to ~100 on the same two wires, each with an **address** | many, one **CS** wire each |
+      | Speed | slow (9600–115200 baud) | medium (100–400 kHz) | fast (MHz) |
+      | Used for | USB to computer, GPS, Bluetooth modules | sensors, small displays, clocks | SD cards, big displays, radios |
+      | Uno pins | 0 (RX), 1 (TX) | A4 (SDA), A5 (SCL) | 11, 12, 13 + any CS |
+
+      - **UART**: each side's **TX goes to the other's RX** — crossed. Both
+        sides must agree on the baud rate. `Serial` is a UART.
+      - **I²C** uses the **Wire** library. Every device has an address, often
+        written in hex: a small LCD is usually **0x27**, a BME280 weather
+        sensor **0x76**. Both lines need pull-up resistors (modules usually
+        have them).
+      - **SPI** is the fastest: separate wires for each direction and a
+        **chip select** (CS) line to pick which device is listening.
+
+      > [!warning]
+      > Many modern modules and boards (ESP32, Raspberry Pi, Pico) work at
+      > **3.3 V**. Sending 5 V signals into them can damage them. Use a
+      > **level shifter** between 5 V and 3.3 V devices.
+
+      Whatever the protocol, the pattern is the same: the library sends
+      and receives bytes, and a datasheet tells you what the bytes mean.
+
+      ## Reading commands from Serial
+
+      Serial goes both ways: you can type into the Serial Monitor and the
+      sketch receives it. `Serial.available()` says how many characters are
+      waiting; `Serial.readStringUntil('\n')` reads one line.
+
+      ```cpp
+      void setup() {
+        Serial.begin(9600);
+        pinMode(13, OUTPUT);
+      }
+
+      void loop() {
+        if (Serial.available() > 0) {
+          String command = Serial.readStringUntil('\n');
+          if (command == "on") {
+            digitalWrite(13, HIGH);
+            Serial.println("LED on");
+          } else if (command == "off") {
+            digitalWrite(13, LOW);
+            Serial.println("LED off");
+          } else {
+            Serial.println("Unknown: " + command);
+          }
+        }
+      }
+      ```
+
+      ```stdin
+      serial on @100
+      serial off @300
+      serial dance @500
+      run 700
+      ```
+
+      ```output
+      LED on
+      LED off
+      Unknown: dance
+      ```
+
+      In the input box, `serial on @100` types "on" into the Serial Monitor
+      at 100 ms.
+
+      {{check wires}}
+
+      {{check address}}
+
+      {{task echo}}
+    checks:
+      - id: wires
+        type: mcq
+        prompt: Connecting a GPS module by UART, where does the Arduino's TX go?
+        options:
+          - To the module's TX
+          - To the module's RX
+          - To GND
+          - To 5V
+        answer: 1
+        why: "One side's transmit is the other's receive: TX → RX and RX → TX, plus a shared GND."
+      - id: address
+        type: mcq
+        prompt: Several sensors share the same two I²C wires. How does each know a message is for it?
+        options:
+          - Each has its own address
+          - They take turns by time
+          - They use different colours
+          - They can't share
+        answer: 0
+        why: "Every I²C message starts with the address of the device it's for, like 0x27 or 0x76."
+    tasks:
+      - id: echo
+        title: Shout back
+        prompt: |
+          Every line that arrives on Serial should be sent back in the form
+          `You said: ` followed by the line and its **length** in brackets:
+          `You said: hello (5)`.
+        starter: |
+          void setup() {
+            Serial.begin(9600);
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              serial hello @100
+              serial Arduino rocks @200
+              run 400
+            out: |
+              You said: hello (5)
+              You said: Arduino rocks (13)
+        hints:
+          - "`if (Serial.available() > 0) { String line = Serial.readStringUntil('\\n'); … }`"
+          - "`line.length()` gives the number of characters."
+        solution: |
+          void setup() {
+            Serial.begin(9600);
+          }
+
+          void loop() {
+            if (Serial.available() > 0) {
+              String line = Serial.readStringUntil('\n');
+              Serial.print("You said: ");
+              Serial.print(line);
+              Serial.print(" (");
+              Serial.print(line.length());
+              Serial.println(")");
+            }
+          }
+    cards:
+      - front: UART, I²C, SPI — how many wires (besides GND)?
+        back: UART 2 (TX, RX), I²C 2 (SDA, SCL), SPI 4 (MOSI, MISO, SCK, CS).
+      - front: How are UART wires connected between two devices?
+        back: Crossed — TX to RX and RX to TX — with a common GND and the same baud rate.
+      - front: How do you read a typed line in a sketch?
+        back: "`if (Serial.available() > 0) { String s = Serial.readStringUntil('\\n'); }`"
+      - front: Why be careful connecting a 5 V Arduino to a 3.3 V module?
+        back: 5 V signals can damage 3.3 V chips; use a level shifter.
+
+  - type: quiz
+    id: ard8-quiz
+    title: "Quiz: states and protocols"
+    questions:
+      - type: mcq
+        prompt: Which protocol would you choose for a fast SD card?
+        options:
+          - UART
+          - I²C
+          - SPI
+          - PWM
+        answer: 2
+        why: "SPI is the fast one, and SD cards speak it."
+      - type: mcq
+        prompt: Which pins are I²C on an Uno?
+        options:
+          - 0 and 1
+          - A4 (SDA) and A5 (SCL)
+          - 11, 12 and 13
+          - 9 and 10
+        answer: 1
+        why: "SDA is A4 and SCL is A5 (newer boards also label them near AREF)."
+      - type: tf
+        prompt: A state machine sketch should use `delay()` to wait in each state.
+        answer: false
+        why: "A delay would block the other checks. Each state compares millis() with the time it started."
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+          }
+
+          void loop() {
+            if (Serial.available() > 0) {
+              int n = Serial.readStringUntil('\n').toInt();
+              Serial.println(n * 2);
+            }
+          }
+        stdin: |
+          serial 21 @100
+          run 300
+        answer: |
+          42
+        why: "The line \"21\" arrives, toInt() turns it into the number 21, and the sketch prints double."
+
+  - type: challenge
+    id: ard8-ch-commands
+    title: A command console
+    difficulty: 3
+    tags: [Serial, String, parsing]
+    prompt: |
+      Control a board by typing commands:
+
+      | Command | Does |
+      |---|---|
+      | `led N` | sets the brightness of the LED on pin **9** to N (0–255) and prints `LED N` |
+      | `servo A` | moves the servo on pin **6** to A degrees and prints `Servo A` |
+      | anything else | prints `?` |
+
+      `line.startsWith("led ")` checks the start, and
+      `line.substring(4).toInt()` turns the rest into a number.
+    starter: |
+      #include <Servo.h>
+
+      Servo servo;
+
+      void setup() {
+        Serial.begin(9600);
+        servo.attach(6);
+      }
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          serial led 128 @100
+          serial servo 45 @200
+          serial fly @300
+          trace
+          run 500
+        out: |
+          [100 ms] pin 9 PWM 128
+          LED 128
+          [200 ms] servo on pin 6 at 45 degrees
+          Servo 45
+          ?
+    hints:
+      - "Read a line when `Serial.available() > 0`."
+      - "`servo ` is 6 characters, so the angle is `line.substring(6).toInt()`."
+    solution: |
+      #include <Servo.h>
+
+      Servo servo;
+
+      void setup() {
+        Serial.begin(9600);
+        servo.attach(6);
+      }
+
+      void loop() {
+        if (Serial.available() > 0) {
+          String line = Serial.readStringUntil('\n');
+          if (line.startsWith("led ")) {
+            int level = line.substring(4).toInt();
+            analogWrite(9, level);
+            Serial.println("LED " + String(level));
+          } else if (line.startsWith("servo ")) {
+            int angle = line.substring(6).toInt();
+            servo.write(angle);
+            Serial.println("Servo " + String(angle));
+          } else {
+            Serial.println("?");
+          }
+        }
+      }
+
+  - type: challenge
+    id: ard8-ch-reaction
+    title: A reaction timer game
+    difficulty: 3
+    tags: [millis, states, buttons]
+    prompt: |
+      A reaction game with an LED on pin **13** and a button on pin **2**
+      (`INPUT_PULLUP`):
+
+      1. Wait **2 seconds**, then switch the LED on.
+      2. When the button is pressed, switch it off and print
+         `Reaction: ` and the milliseconds since the LED came on, then
+         ` ms` — e.g. `Reaction: 234 ms`.
+      3. If the button is pressed **before** the LED came on, print
+         `Too soon!` and nothing else happens.
+
+      One round per run is enough.
+    starter: |
+      void setup() {
+        Serial.begin(9600);
+        pinMode(13, OUTPUT);
+        pinMode(2, INPUT_PULLUP);
+      }
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          2 LOW @2234
+          run 3000
+        out: |
+          Reaction: 234 ms
+      - in: |
+          2 LOW @1500
+          2 HIGH @1600
+          2 LOW @2500
+          run 3000
+        out: |
+          Too soon!
+      - in: |
+          2 LOW @2300
+          trace
+          run 3000
+        out: |
+          [2000 ms] pin 13 HIGH
+          [2300 ms] pin 13 LOW
+          Reaction: 300 ms
+    hints:
+      - "Use states: WAITING, LIT, DONE. WAITING: a press → `Too soon!` and DONE; 2000 ms passed → LED on, LIT."
+      - "LIT: a press → LED off, print millis() minus the time it came on, DONE. DONE does nothing."
+    solution: |
+      enum State { WAITING, LIT, DONE };
+
+      State state = WAITING;
+      unsigned long litAt = 0;
+
+      void setup() {
+        Serial.begin(9600);
+        pinMode(13, OUTPUT);
+        pinMode(2, INPUT_PULLUP);
+      }
+
+      void loop() {
+        bool pressed = digitalRead(2) == LOW;
+        if (state == WAITING) {
+          if (pressed) {
+            Serial.println("Too soon!");
+            state = DONE;
+          } else if (millis() >= 2000) {
+            digitalWrite(13, HIGH);
+            litAt = millis();
+            state = LIT;
+          }
+        } else if (state == LIT && pressed) {
+          digitalWrite(13, LOW);
+          Serial.print("Reaction: ");
+          Serial.print(millis() - litAt);
+          Serial.println(" ms");
+          state = DONE;
+        }
+      }
+
+  - type: review
+    id: ard8-review
+    title: "The whole course on one page"
+    body: |
+      Before the final exam, one page to review everything. For each line,
+      ask yourself: *could I explain this to a friend, with an example?*
+
+      ## Part I — Electricity and your first sketches
+
+      - **Voltage** (V) pushes, **current** (A) flows, **resistance** (Ω) resists: **V = I × R**. Power **P = V × I**.
+      - Series resistors add up; parallel ones give less than the smallest. A circuit needs a closed loop; a short circuit has no resistance.
+      - An LED needs a resistor: **R = (supply − LED voltage) ÷ current** (≈ 20 mA). Long leg (anode) to +.
+      - Every sketch: `setup()` once, `loop()` forever. `pinMode`, `digitalWrite(pin, HIGH/LOW)`, `delay(ms)`.
+      - `Serial.begin(9600)`, `print`/`println`, `HEX`/`BIN`. Uno `int` is 16-bit (max 32,767); times are `unsigned long`.
+      - `millis()` timers: `if (millis() - last >= interval) { last = millis(); … }` — never block with delay in bigger sketches.
+      - Buttons: `INPUT_PULLUP` (pressed = LOW), no floating inputs; count **edges**; **debounce** with a 20 ms timer.
+
+      ## Part II — Sensing, controlling and building
+
+      - `analogRead`: 0–1023 for 0–5 V; volts = reading × 5.0 ÷ 1023. Potentiometers, **voltage dividers** (Vout = Vin × R2 ÷ (R1 + R2)), LDRs, TMP36 (°C = (V − 0.5) × 100).
+      - `map`, `constrain`, **hysteresis** (two thresholds), averaging.
+      - **PWM**: `analogWrite(pin, 0–255)` on ~ pins sets the duty cycle — brightness, motor speed, RGB colours.
+      - `Servo`: `attach`, `write(angle)`. `tone(pin, Hz)`, `noTone`. Motors need a **transistor**, a **flyback diode**, their own supply and a common ground.
+      - Binary and hex; `& | ^ ~ << >>`; masks to set, clear, flip and test bits; packing flags; **74HC595** shift registers; hardware **registers**.
+      - **State machines**: enum + switch + millis. **UART** (TX↔RX), **I²C** (addresses, SDA/SCL), **SPI** (fast, CS per device). Mind 3.3 V vs 5 V.
+
+  - type: exam
+    id: ard-final
+    title: "Final exam"
+    minutes: 60
+    pick: 20
+    body: |
+      One exam covering **the whole course**, from Ohm's law to state
+      machines. Take your time and answer from understanding. Whatever your
+      score, the explanations afterwards are one last review.
+    questions:
+      - type: mcq
+        prompt: A 9 V battery drives 30 mA through a resistor. What is the resistance?
+        options:
+          - 30 Ω
+          - 270 Ω
+          - 300 Ω
+          - 3 kΩ
+        answer: 2
+        why: "R = V ÷ I = 9 ÷ 0.03 = 300 Ω."
+      - type: mcq
+        prompt: A red LED (2 V) runs from 5 V at 15 mA. Which resistor?
+        options:
+          - 100 Ω
+          - 200 Ω
+          - 330 Ω
+          - 3.3 kΩ
+        answer: 1
+        why: "(5 − 2) ÷ 0.015 = 200 Ω."
+      - type: tf
+        prompt: Two 1 kΩ resistors in parallel make 500 Ω.
+        answer: true
+        why: "Two equal resistors in parallel give half: current has two paths."
+      - type: mcq
+        prompt: How much power does a 5 V device drawing 0.4 A use?
+        options:
+          - 0.08 W
+          - 2 W
+          - 12.5 W
+          - 20 W
+        answer: 1
+        why: "P = V × I = 5 × 0.4 = 2 W."
+      - type: output
+        code: |
+          void setup() {
+            pinMode(13, OUTPUT);
+          }
+
+          void loop() {
+            digitalWrite(13, HIGH);
+            delay(300);
+            digitalWrite(13, LOW);
+            delay(700);
+          }
+        stdin: |
+          trace
+          run 1500
+        answer: |
+          [0 ms] pin 13 HIGH
+          [300 ms] pin 13 LOW
+          [1000 ms] pin 13 HIGH
+          [1300 ms] pin 13 LOW
+        why: "On for 300 ms, off for 700 ms: a one-second cycle."
+      - type: mcq
+        prompt: Why should times from `millis()` be kept in an `unsigned long`?
+        options:
+          - It's faster
+          - An Uno `int` overflows after 32,767 ms
+          - Serial can't print ints
+          - unsigned long uses less memory
+        answer: 1
+        why: "An int on the Uno tops out at 32,767 — about 33 seconds of milliseconds."
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            Serial.print(19 / 4);
+            Serial.print(" ");
+            Serial.println(19 % 4);
+            Serial.println(19, HEX);
+          }
+
+          void loop() {}
+        answer: |
+          4 3
+          13
+        why: "19 ÷ 4 is 4 remainder 3. 19 in hex is 1 × 16 + 3 = 13."
+      - type: mcq
+        prompt: A button uses `INPUT_PULLUP` and is wired to GND. Pressed, it reads…
+        options:
+          - HIGH
+          - LOW
+          - Random values
+          - 1023
+        answer: 1
+        why: "Pressing connects the pin to GND: LOW."
+      - type: mcq
+        prompt: Why debounce a button?
+        options:
+          - Its contacts bounce and can look like several presses
+          - To use less power
+          - Because digitalRead is slow
+          - To turn on the pull-up
+        answer: 0
+        why: "Bouncing contacts flicker for a few ms; a debounce ignores that."
+      - type: spot
+        prompt: This counts presses, but one press counts hundreds of times. Which line is wrong?
+        code: |
+          int last = HIGH;
+          int count = 0;
+
+          void loop() {
+            int now = digitalRead(2);
+            if (now == LOW) {
+              count++;
+            }
+            last = now;
+          }
+        answer: 6
+        why: "It must also check that last was HIGH — `now == LOW && last == HIGH` — or it counts every pass while held."
+      - type: mcq
+        prompt: analogRead gives 409. About what voltage is on the pin?
+        options:
+          - 0.4 V
+          - 2 V
+          - 4.09 V
+          - 1 V
+        answer: 1
+        why: "409 × 5 ÷ 1023 ≈ 2.0 V."
+      - type: mcq
+        prompt: "A divider has R1 = 20 kΩ (to 9 V) and R2 = 10 kΩ (to GND). The middle is…"
+        options:
+          - 3 V
+          - 4.5 V
+          - 6 V
+          - 9 V
+        answer: 0
+        why: "9 × 10 ÷ 30 = 3 V — safe for an Arduino pin."
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            Serial.println(map(768, 0, 1023, 0, 100));
+            Serial.println(constrain(120, 0, 100));
+          }
+
+          void loop() {}
+        answer: |
+          75
+          100
+        why: "768 is three quarters of 1023 → 75. constrain limits 120 to 100."
+      - type: mcq
+        prompt: A TMP36 gives 0.72 V. What temperature is it?
+        options:
+          - 7.2 °C
+          - 22 °C
+          - 72 °C
+          - 27 °C
+        answer: 1
+        why: "(0.72 − 0.5) × 100 = 22 °C."
+      - type: mcq
+        prompt: What does hysteresis prevent?
+        options:
+          - Overflow
+          - An output flickering on and off when a reading hovers near a threshold
+          - Bouncing buttons
+          - Short circuits
+        answer: 1
+        why: "Two thresholds with a gap between them stop the flicker."
+      - type: mcq
+        prompt: "`analogWrite(5, 128)` gives what duty cycle?"
+        options:
+          - About 12%
+          - About 50%
+          - About 128%
+          - 100%
+        answer: 1
+        why: "128 ÷ 255 ≈ 50%."
+      - type: tf
+        prompt: A small DC motor can be connected straight to an Arduino pin.
+        answer: false
+        why: "It needs far more current than a pin gives. Use a transistor, a flyback diode and its own supply."
+      - type: output
+        code: |
+          #include <Servo.h>
+
+          Servo s;
+
+          void setup() {
+            s.attach(3);
+            for (int a = 0; a <= 180; a += 90) {
+              s.write(a);
+              delay(200);
+            }
+          }
+
+          void loop() {}
+        stdin: |
+          trace
+        answer: |
+          [0 ms] servo on pin 3 at 0 degrees
+          [200 ms] servo on pin 3 at 90 degrees
+          [400 ms] servo on pin 3 at 180 degrees
+        why: "The loop writes 0, 90 and 180 degrees, 200 ms apart."
+      - type: mcq
+        prompt: What is `0b01010101` in hex?
+        options:
+          - "0x55"
+          - "0xAA"
+          - "0x85"
+          - "0x5A"
+        answer: 0
+        why: "Split into nibbles: 0101 0101 → 5 5 → 0x55."
+      - type: output
+        code: |
+          void setup() {
+            Serial.begin(9600);
+            byte f = 0b0000;
+            f |= (1 << 2);
+            f |= (1 << 0);
+            f &= ~(1 << 2);
+            Serial.println(f);
+          }
+
+          void loop() {}
+        answer: |
+          1
+        why: "Set bit 2 (4), set bit 0 (5), clear bit 2 again: 1."
+      - type: mcq
+        prompt: What does the latch pin of a 74HC595 do?
+        options:
+          - Updates all eight outputs at once
+          - Powers the chip
+          - Carries the data bits
+          - Resets it to zero
+        answer: 0
+        why: "Bits shift in first; the latch going HIGH copies them to the outputs together."
+      - type: mcq
+        prompt: Which protocol lets many devices share two wires, each with its own address?
+        options:
+          - UART
+          - I²C
+          - SPI
+          - PWM
+        answer: 1
+        why: "I²C: SDA and SCL, and every device has an address."
+      - type: mcq
+        prompt: A sketch must blink an LED **and** react to a button at once. What's the right structure?
+        options:
+          - delay() between everything
+          - millis() timers (or a state machine), so loop() never blocks
+          - Two loop() functions
+          - Put the button in setup()
+        answer: 1
+        why: "Non-blocking timing lets loop() check everything on every pass."
+      - type: code
+        prompt: |
+          A parking sensor: every **100 ms**, read the distance sensor on
+          **A0** (higher = closer). If the reading is **over 700**, the
+          buzzer on pin **8** plays **1000 Hz**; otherwise it's silent
+          (`noTone`).
+        starter: |
+          void setup() {}
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              A0 300
+              A0 800 @250
+              A0 500 @450
+              trace
+              run 600
+            out: |
+              [0 ms] tone on pin 8: 0 Hz
+              [300 ms] tone on pin 8: 1000 Hz
+              [500 ms] tone on pin 8: 0 Hz
+        solution: |
+          void setup() {}
+
+          void loop() {
+            if (analogRead(A0) > 700) {
+              tone(8, 1000);
+            } else {
+              noTone(8);
+            }
+            delay(100);
+          }
+      - type: code
+        prompt: |
+          Write `int ledResistor(float supply, float ledVolts, float amps)`
+          that returns the resistor for an LED, rounded to the nearest
+          whole ohm (`round`). 5 V, 2 V, 0.02 A → 150.
+        starter: |
+          int ledResistor(float supply, float ledVolts, float amps) {
+            return 0;
+          }
+        harness: |
+          CHECK(ledResistor(5, 2, 0.02), 150);
+          CHECK(ledResistor(5, 3.2, 0.02), 90);
+          CHECK(ledResistor(9, 2, 0.015), 467);
+          CHECK(ledResistor(3.3, 2, 0.01), 130);
+        solution: |
+          int ledResistor(float supply, float ledVolts, float amps) {
+            return round((supply - ledVolts) / amps);
+          }
+
+  - type: build
+    id: ard-build-gadget
+    title: "Final project: a gadget of your own"
+    minutes: 120
+    body: |
+      Build a gadget you'd actually want — from an empty sketch, with no
+      steps to follow. It should **sense** something, **decide**, and
+      **do** something. Plan it first: which inputs, which outputs, which
+      states. Then build it a piece at a time, running it as you go.
+
+      Use the input box to play with it: `2 LOW @500` presses a button,
+      `A0 700 @1000` turns a knob or changes a sensor, `serial hi @200`
+      types into the Serial Monitor.
+    ideas:
+      - A combination lock — three buttons in the right order open a servo latch
+      - A Simon-says memory game with LEDs and a buzzer
+      - A plant watering reminder with a soil sensor and a blinking LED
+      - A kitchen timer with a knob to set minutes and a buzzer
+      - A reaction game for two players
+    requirements:
+      - text: "Reads an input: `digitalRead` or `analogRead`"
+        code: "\\b(digitalRead|analogRead)\\s*\\("
+        hint: "Read a button (`digitalRead`) or a sensor (`analogRead`)."
+      - text: "Controls an output: `digitalWrite`, `analogWrite`, a servo or `tone`"
+        code: "\\b(digitalWrite|analogWrite|tone)\\s*\\(|\\.write\\s*\\("
+      - text: "Keeps time with `millis()` instead of blocking"
+        code: "\\bmillis\\s*\\(\\s*\\)"
+      - text: "Makes a decision with `if` or `switch`"
+        code: "\\b(if|switch)\\s*\\("
+      - text: "At least one function of your own, besides `setup` and `loop`"
+        code: "\\b(?!setup\\b|loop\\b|if\\b|for\\b|while\\b|switch\\b|return\\b)[A-Za-z_]\\w*\\s*\\([^;{}()]*\\)\\s*\\{"
+        hint: "Pull part of the work into a function, like `void showLevel(int level) { … }`."
+      - text: "Reports on the Serial Monitor"
+        output: "\\S"
+        hint: "`Serial.begin(9600);` in setup, then `Serial.println(…)`."
+    starter: |
+      void setup() {
+        Serial.begin(9600);
+        // Your gadget
+      }
+
+      void loop() {
+
+      }
+    example: |
+      // A kitchen timer: the knob on A0 sets 1–10 seconds, the button on
+      // pin 2 starts it, the LED on 13 is on while it runs, and the buzzer
+      // on 8 beeps at the end.
+      enum State { SETTING, RUNNING };
+
+      State state = SETTING;
+      unsigned long startedAt = 0;
+      unsigned long duration = 0;
+
+      unsigned long chosenTime() {
+        return map(analogRead(A0), 0, 1023, 1, 10) * 1000UL;
+      }
+
+      void setup() {
+        Serial.begin(9600);
+        pinMode(2, INPUT_PULLUP);
+        pinMode(13, OUTPUT);
+        Serial.println("Turn the knob, then press start");
+      }
+
+      void loop() {
+        if (state == SETTING && digitalRead(2) == LOW) {
+          duration = chosenTime();
+          startedAt = millis();
+          digitalWrite(13, HIGH);
+          Serial.print("Timer: ");
+          Serial.print(duration / 1000);
+          Serial.println(" s");
+          state = RUNNING;
+        } else if (state == RUNNING && millis() - startedAt >= duration) {
+          digitalWrite(13, LOW);
+          tone(8, 880, 500);
+          Serial.println("Done!");
+          state = SETTING;
+        }
+      }
+
+  - type: build
+    id: ard-build-monitor
+    title: "Final project: an environment monitor"
+    minutes: 150
+    body: |
+      Build a monitor for a room, a greenhouse, a fridge or an aquarium. It
+      reads at least one sensor, turns the raw readings into real units,
+      reports them regularly, and raises an alarm when something is wrong —
+      without flickering when a value sits right at the limit.
+
+      Test it by changing the readings over time in the input box: `A0 150`,
+      `A0 170 @3000`…
+    ideas:
+      - A greenhouse monitor with temperature (TMP36) and light (LDR)
+      - A fridge alarm that beeps if the door light stays on too long
+      - A room comfort meter with a green/yellow/red LED
+      - A battery monitor that measures voltage through a divider
+    requirements:
+      - text: "Reads a sensor with `analogRead`"
+        code: "\\banalogRead\\s*\\("
+      - text: "Converts readings to real units with decimals (a `float`)"
+        code: "\\bfloat\\s+\\w+"
+      - text: "Reports on a `millis()` timer"
+        code: "\\bmillis\\s*\\(\\s*\\)"
+      - text: "Has an alarm output: an LED, buzzer or relay"
+        code: "\\b(digitalWrite|analogWrite|tone)\\s*\\("
+      - text: "Uses two thresholds (hysteresis) or an average, so it doesn't flicker"
+        code: "(<|<=)[\\s\\S]*(>|>=)[\\s\\S]*|\\+=[\\s\\S]*/"
+        hint: "Switch the alarm on above one value and off below a lower one — or average several readings."
+      - text: "Prints readings with their units"
+        output: "\\d[\\s\\S]*[A-Za-z°%]"
+    starter: |
+      void setup() {
+        Serial.begin(9600);
+        // Your monitor
+      }
+
+      void loop() {
+
+      }
+    example: |
+      // A greenhouse monitor: TMP36 on A1, fan relay on pin 7.
+      // The fan goes on above 28 °C and off again below 25 °C.
+      bool fanOn = false;
+      unsigned long lastReport = 0;
+
+      float readCelsius() {
+        long total = 0;
+        for (int i = 0; i < 4; i++) {
+          total += analogRead(A1);
+        }
+        float volts = (total / 4.0) * 5.0 / 1023;
+        return (volts - 0.5) * 100;
+      }
+
+      void setup() {
+        Serial.begin(9600);
+        pinMode(7, OUTPUT);
+      }
+
+      void loop() {
+        float temp = readCelsius();
+        if (!fanOn && temp > 28) {
+          fanOn = true;
+        } else if (fanOn && temp < 25) {
+          fanOn = false;
+        }
+        digitalWrite(7, fanOn);
+        if (millis() - lastReport >= 1000) {
+          lastReport = millis();
+          Serial.print(temp);
+          Serial.print(" C, fan ");
+          Serial.println(fanOn ? "on" : "off");
+        }
+      }
+
+  - type: lesson
+    id: ard8-next
+    title: Where to go from here
+    minutes: 15
+    objectives:
+      - Choose a first real kit
+      - Know the next boards, languages and tools to learn
+      - Pick a first real project
+    body: |
+      Everything you've written here runs on a real Arduino — the simulator
+      only replaced the hardware. Time to hold a board in your hand.
+
+      ## 1. Get a kit
+
+      An **Arduino Uno starter kit** (official or a good clone) has
+      everything used in this course: a board, breadboard, jumper wires,
+      LEDs, resistors, buttons, a potentiometer, an LDR, a buzzer, a servo,
+      a 74HC595 and a temperature sensor. Add a cheap **multimeter** — it
+      lets you *see* voltage, current and resistance, and it finds most
+      wiring mistakes in seconds.
+
+      Install the free **Arduino IDE**, pick your board and port, paste a
+      sketch and press Upload. The Serial Monitor is under Tools.
+
+      ## 2. Next boards
+
+      - **ESP32** — Wi-Fi and Bluetooth, fast, cheap. Program it with the same Arduino code. Make things that talk to your phone or the internet. (3.3 V!)
+      - **Raspberry Pi Pico** — cheap and powerful; runs Arduino code or **MicroPython**, a Python for microcontrollers.
+      - **Raspberry Pi** — a full Linux computer; for cameras, web servers and projects that need a real operating system.
+
+      ## 3. Next skills
+
+      - **Soldering** — make projects permanent on perfboard.
+      - **Libraries** — the Arduino Library Manager has drivers for almost every sensor and display. Read their examples.
+      - **Datasheets** — the real manual for every chip. Look for the pinout, the voltage limits and the example circuit.
+      - **KiCad** — free software to draw schematics and design your own printed circuit boards (PCBs), which factories make for a few euros.
+      - **C++ and bits** — the C++ course here goes much deeper into the language your sketches are written in.
+
+      ## 4. Build things
+
+      Pick something you want to exist and start small: a weather station
+      that logs to an SD card, a Wi-Fi plant monitor on an ESP32, a
+      line-following robot, a MIDI controller, a smart lamp. Finish it,
+      then make version 2.
+
+      Congratulations on finishing the course. Go make something blink.

@@ -156,7 +156,7 @@ test('every course in courses.yml is complete, and ids are unique across courses
   // Progress is one record for all courses, so no two may share an id.
   const { loadCourseAt, courseDirs } = require('./web-course-lib.js');
   const loaded = courseDirs().map((dir) => loadCourseAt(dir));
-  assert.deepStrictEqual(loaded.map(({ course }) => course.id), ['cpp', 'html', 'css', 'js']);
+  assert.deepStrictEqual(loaded.map(({ course }) => course.id), ['cpp', 'html', 'css', 'js', 'ard']);
   const owner = {};
   const claim = (id, courseId) => {
     assert.ok(!owner[id] || owner[id] === courseId, `${id} is used by both ${owner[id]} and ${courseId}`);

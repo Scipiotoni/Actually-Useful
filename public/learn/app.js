@@ -18,6 +18,7 @@
   const Build = window.LearnBuild;
   const Lookup = window.LearnLookup;
   const Video = window.LearnVideo;
+  const Arduino = window.LearnArduino;
   const MiniEditor = window.MiniEditor;
 
   // Each account keeps its own progress in the browser (see backup.js).
@@ -545,13 +546,23 @@
     }
   }
 
+  /** Whether C++ here runs on the simulated Arduino board (the Arduino course). */
+  function onArduino() {
+    return Boolean(course && course.sim === 'arduino');
+  }
+
   async function runCpp(payload) {
+    // A sketch is compiled together with the simulated board (arduino.js).
+    const arduino = payload.arduino !== undefined ? payload.arduino : onArduino();
+    const body = Object.assign({}, payload);
+    delete body.arduino;
+    if (arduino && typeof body.source === 'string') body.source = Arduino.wrap(body.source);
     let res;
     try {
       res = await fetch('/api/cpp/run', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(body)
       });
     } catch (e) {
       throw new Error('Could not reach the server. Are you online?');
@@ -637,11 +648,15 @@
           h('summary', null, '⚠ The compiler has warnings — worth reading'), warns));
       }
     }
-    box.append(h('div', { class: 'out-head' }, h('b', null, 'Output'),
-      h('span', { class: 'out-time' }, (data.compile.cached ? 'cached build · ' : data.compile.ms ? 'built in ' + data.compile.ms + ' ms · ' : '') + 'ran in ' + (run.ms || 0) + ' ms')));
+    const board = Arduino.parseEvents(run.stderr);
+    const sketch = board.events.length > 0 || board.end > 0;
+    box.append(h('div', { class: 'out-head' }, h('b', null, sketch ? 'Serial Monitor' : 'Output'),
+      h('span', { class: 'out-time' }, (data.compile.cached ? 'cached build · ' : data.compile.ms ? 'built in ' + data.compile.ms + ' ms · ' : '') +
+        (sketch ? 'simulated ' + (board.end / 1000) + ' s in ' + (run.ms || 0) + ' ms' : 'ran in ' + (run.ms || 0) + ' ms'))));
     const printed = run.stdout || '';
-    box.append(h('pre', { class: 'out-text' + (printed ? '' : ' is-empty') }, printed || '(the program printed nothing)'));
-    if (run.stderr) box.append(h('pre', { class: 'out-text out-err' }, run.stderr));
+    box.append(h('pre', { class: 'out-text' + (printed ? '' : ' is-empty') }, printed || (sketch ? '(nothing was printed with Serial)' : '(the program printed nothing)')));
+    if (board.rest) box.append(h('pre', { class: 'out-text out-err' }, board.rest));
+    if (board.events.length) box.append(boardView(board));
     const why = Explain.runtime(run);
     if (why) box.append(h('div', { class: 'out-note', html: MD.inline(why) }));
     if (typeof opts.expected === 'string') {
@@ -652,6 +667,102 @@
           (opts.edited ? ' — fine if you changed the code on purpose.' : '.')));
       }
     }
+  }
+
+  /**
+   * The simulated Arduino board after a run: every pin the sketch used, what
+   * it is doing at a moment, and its whole history as a waveform (like a
+   * logic analyser) — replayable in real time.
+   */
+  function boardView(parsed) {
+    const end = Math.max(parsed.end, 1);
+    const byPin = {};
+    parsed.events.forEach((e) => { (byPin[e.pin] = byPin[e.pin] || []).push(e); });
+    const KIND = { D: 'digital', P: 'PWM', V: 'servo', T: 'buzzer', S: 'shift register' };
+    const level = (e) => (e.kind === 'D' ? e.value : e.kind === 'P' ? e.value / 255 : e.kind === 'V' ? e.value / 180 : e.kind === 'T' ? (e.value > 0 ? 1 : 0) : e.value / 255);
+    const W = 600;
+    const H = 26;
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const rows = Object.keys(byPin).map(Number).sort((a, b) => a - b).map((pin) => {
+      const list = byPin[pin];
+      const kind = list[list.length - 1].kind;
+      // A step line: each value holds until the next change.
+      let d = 'M0 ' + (H - 3);
+      let y = H - 3;
+      list.forEach((e) => {
+        const x = (e.ms / end) * W;
+        const ny = H - 3 - level(e) * (H - 6);
+        d += ' L' + x.toFixed(1) + ' ' + y.toFixed(1) + ' L' + x.toFixed(1) + ' ' + ny.toFixed(1);
+        y = ny;
+      });
+      d += ' L' + W + ' ' + y.toFixed(1);
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.setAttribute('class', 'board-wave');
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.append(path);
+      let indicator;
+      if (kind === 'V') indicator = h('span', { class: 'board-servo' }, h('i'));
+      else if (kind === 'T') indicator = h('span', { class: 'board-buzzer' }, '🔊');
+      else if (kind === 'S') indicator = h('span', { class: 'board-bits' }, [0, 1, 2, 3, 4, 5, 6, 7].map(() => h('i')));
+      else indicator = h('span', { class: 'board-led' });
+      const value = h('span', { class: 'board-value' });
+      const row = h('div', { class: 'board-row' },
+        h('span', { class: 'board-pin' }, 'Pin ' + Arduino.pinName(pin), h('small', null, KIND[kind] || '')),
+        indicator, value, h('div', { class: 'board-track' }, svg));
+      return { pin, kind, indicator, value, row };
+    });
+
+    const time = h('span', { class: 'board-time' });
+    const slider = h('input', { type: 'range', min: '0', max: String(end), step: '1', value: String(end), 'aria-label': 'Moment of the run' });
+    const play = h('button', { class: 'mini-btn is-run', type: 'button' }, '▶ Replay');
+    const speed = h('select', { class: 'board-speed', 'aria-label': 'Replay speed' },
+      [1, 2, 5, 10].map((n) => h('option', { value: String(n) }, n + '×')));
+    const draw = (ms) => {
+      const state = Arduino.stateAt(parsed.events, ms);
+      rows.forEach((r) => {
+        const st = state.find((x) => x.pin === r.pin) || { value: 0, kind: r.kind };
+        const v = st.changes ? st.value : 0;
+        if (r.kind === 'D') { r.indicator.classList.toggle('is-on', v === 1); r.value.textContent = v ? 'HIGH' : 'LOW'; }
+        else if (r.kind === 'P') { r.indicator.classList.toggle('is-on', v > 0); r.indicator.style.setProperty('--level', String(v / 255)); r.value.textContent = String(v); }
+        else if (r.kind === 'V') { r.indicator.style.setProperty('--angle', (v - 90) + 'deg'); r.value.textContent = v + '°'; }
+        else if (r.kind === 'T') { r.indicator.classList.toggle('is-on', v > 0); r.value.textContent = v > 0 ? v + ' Hz' : 'off'; }
+        else if (r.kind === 'S') {
+          Array.from(r.indicator.children).forEach((led, i) => led.classList.toggle('is-on', Boolean((v >> (7 - i)) & 1)));
+          r.value.textContent = ('00000000' + v.toString(2)).slice(-8);
+        }
+      });
+      time.textContent = (ms / 1000).toFixed(2) + ' s / ' + (end / 1000).toFixed(2) + ' s';
+      box.style.setProperty('--at', (ms / end * 100) + '%');
+      slider.value = String(Math.round(ms));
+    };
+    let raf = 0;
+    const stop = () => { cancelAnimationFrame(raf); raf = 0; play.textContent = '▶ Replay'; };
+    play.addEventListener('click', () => {
+      if (raf) { stop(); return; }
+      let t = Number(slider.value) >= end ? 0 : Number(slider.value);
+      let last = performance.now();
+      play.textContent = '❚❚ Pause';
+      const tick = (now) => {
+        t += (now - last) * Number(speed.value);
+        last = now;
+        if (t >= end) { draw(end); stop(); return; }
+        draw(t);
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    });
+    slider.addEventListener('input', () => { stop(); draw(Number(slider.value)); });
+    view.cleanup.push(stop);
+    const box = h('div', { class: 'board' },
+      h('div', { class: 'board-head' }, h('b', null, '🔌 The board'), time, h('span', { class: 'spacer' }), speed, play),
+      h('div', { class: 'board-rows' }, rows.map((r) => r.row)),
+      h('div', { class: 'board-scrub' }, slider));
+    draw(end);
+    return box;
   }
 
   function showRunError(box, err) {
@@ -813,15 +924,16 @@
       bar.append(h('button', {
         class: 'mini-btn',
         title: 'Open a copy in the Playground',
-        onclick: () => openInPlayground({ lang: 'cpp', src: editor ? editor.ed.getValue() : code, stdin: stdinBox ? stdinBox.value : (extras.stdin || '') })
+        onclick: () => openInPlayground({ lang: onArduino() && Arduino.isSketch(code) ? 'arduino' : 'cpp', src: editor ? editor.ed.getValue() : code, stdin: stdinBox ? stdinBox.value : (extras.stdin || '') })
       }, 'Playground'));
     }
     fig.append(bar, codeSlot);
 
-    const needsInput = extras.stdin !== undefined || (!isStatic && Engine.readsInput(code));
+    const readsBoard = onArduino() && /\b(digitalRead|analogRead|Serial\.(read|parseInt|available|readString))/.test(code);
+    const needsInput = extras.stdin !== undefined || (!isStatic && (Engine.readsInput(code) || readsBoard));
     let stdinView = null;
     if (needsInput) {
-      stdinView = h('div', { class: 'ex-io ex-stdin' }, h('div', { class: 'ex-io-label' }, 'Input (what you type)'));
+      stdinView = h('div', { class: 'ex-io ex-stdin' }, h('div', { class: 'ex-io-label' }, onArduino() ? 'Inputs on the board (buttons, sensors, serial)' : 'Input (what you type)'));
       if (extras.stdin !== undefined) stdinView.append(h('pre', null, extras.stdin));
       else {
         stdinBox = h('textarea', { spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off', placeholder: 'This program reads input — type it here, one value per line or separated by spaces.' });
@@ -1268,7 +1380,7 @@
 
   function buildOutput(q, box, changed) {
     box.append(h('pre', { class: 'q-code', html: highlight(q.code, q.lang) }));
-    if (q.stdin) box.append(h('div', { class: 'ex-io-label', style: { padding: '0 0 4px' } }, 'Input typed by the user'), h('pre', { class: 'q-expected' }, q.stdin));
+    if (q.stdin) box.append(h('div', { class: 'ex-io-label', style: { padding: '0 0 4px' } }, onArduino() ? 'Inputs on the board' : 'Input typed by the user'), h('pre', { class: 'q-expected' }, q.stdin));
     const area = h('textarea', {
       class: 'q-answer-box',
       spellcheck: 'false',
@@ -1610,7 +1722,9 @@
           }
           const why = Explain.runtime(t.run);
           if (why) detail.append(h('div', { class: 'out-note', style: { margin: 0 }, html: MD.inline(why) }));
-          if (t.run.stderr) detail.append(ioBox('Error output', t.run.stderr, true));
+          const board = Arduino.parseEvents(t.run.stderr);
+          if (board.rest) detail.append(ioBox('Error output', board.rest, true));
+          if (board.events.length) detail.append(boardView(board));
           li.append(detail);
           openedOne = true;
         }
@@ -1731,11 +1845,15 @@
 
     let stdin = null;
     if (isCpp && !task.harness) {
-      stdin = h('textarea', { class: 'io-input', spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off', placeholder: 'Input for ▶ Run — type what a user would type' });
+      const board = onArduino();
+      stdin = h('textarea', {
+        class: 'io-input', spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off',
+        placeholder: board ? 'Inputs for ▶ Run: "2 LOW @1500" (pin 2 from 1.5 s), "A0 612", "serial 9", "run 3000", "trace"' : 'Input for ▶ Run — type what a user would type'
+      });
       const first = task.tests.find((t) => !t.hidden && t.input);
       if (first) stdin.value = first.input;
-      el.append(h('details', { class: 'task-io', open: Engine.readsInput(task.starter + (task.solution || '')) ? true : null },
-        h('summary', null, 'Input for ▶ Run'), stdin));
+      el.append(h('details', { class: 'task-io', open: board || Engine.readsInput(task.starter + (task.solution || '')) ? true : null },
+        h('summary', null, board ? 'Inputs on the board for ▶ Run' : 'Input for ▶ Run'), stdin));
     }
 
     const runLabel = isPage ? '▶ Preview' : '▶ Run';
@@ -3547,6 +3665,12 @@
       { name: 'Vector and loop', src: '#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> numbers{4, 8, 15, 16, 23, 42};\n    int sum{0};\n    for (int n : numbers) {\n        sum += n;\n    }\n    std::cout << "Sum: " << sum << \'\\n\';\n    return 0;\n}\n' },
       { name: 'A class', src: '#include <iostream>\n#include <string>\n\nclass Counter {\npublic:\n    void increment() { ++count_; }\n    int value() const { return count_; }\nprivate:\n    int count_{0};\n};\n\nint main() {\n    Counter c;\n    c.increment();\n    c.increment();\n    std::cout << c.value() << \'\\n\';\n    return 0;\n}\n' }
     ],
+    arduino: [
+      { name: 'Blink', src: 'const int LED = 13;\n\nvoid setup() {\n  pinMode(LED, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(LED, HIGH);\n  delay(500);\n  digitalWrite(LED, LOW);\n  delay(500);\n}\n', stdin: 'run 4000' },
+      { name: 'Button and LED', src: 'const int BUTTON = 2;\nconst int LED = 13;\n\nvoid setup() {\n  pinMode(BUTTON, INPUT_PULLUP);\n  pinMode(LED, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  bool pressed = digitalRead(BUTTON) == LOW;\n  digitalWrite(LED, pressed ? HIGH : LOW);\n  delay(50);\n}\n', stdin: '2 LOW @1000\n2 HIGH @2500\nrun 4000' },
+      { name: 'Fade with PWM', src: 'const int LED = 9;\n\nvoid setup() {\n  pinMode(LED, OUTPUT);\n}\n\nvoid loop() {\n  for (int level = 0; level <= 255; level += 5) {\n    analogWrite(LED, level);\n    delay(20);\n  }\n  for (int level = 255; level >= 0; level -= 5) {\n    analogWrite(LED, level);\n    delay(20);\n  }\n}\n', stdin: 'run 3000' },
+      { name: 'Read a sensor', src: 'void setup() {\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  int reading = analogRead(A0);\n  float volts = reading * 5.0 / 1023.0;\n  Serial.print("A0 = ");\n  Serial.print(reading);\n  Serial.print("  (");\n  Serial.print(volts);\n  Serial.println(" V)");\n  delay(1000);\n}\n', stdin: 'A0 300\nA0 700 @2000\nrun 4000' }
+    ],
     js: [
       { name: 'Hello, console', src: 'console.log("Hello, World!");\n\nconst name = "Ada";\nconsole.log(`Hello, ${name}!`);\n' },
       { name: 'Loop and array', src: 'const numbers = [4, 8, 15, 16, 23, 42];\nlet sum = 0;\nfor (const n of numbers) {\n  sum += n;\n}\nconsole.log("Sum:", sum);\nconsole.log(numbers.map((n) => n * 2));\n' },
@@ -3568,7 +3692,7 @@
         { name: 'script.js', content: '' }] }
     ]
   };
-  const LANG_NAMES = { cpp: 'C++', js: 'JavaScript', web: 'Web page' };
+  const LANG_NAMES = { cpp: 'C++', js: 'JavaScript', web: 'Web page', arduino: 'Arduino' };
 
   function newSnippet(lang, template) {
     const t = template || TEMPLATES[lang][0];
@@ -3591,8 +3715,8 @@
       .sort((a, b) => String(P.snippets[b].at).localeCompare(String(P.snippets[a].at)));
     if (!ids.length) {
       const first = 's' + Date.now().toString(36);
-      const lang = course && course.lang === 'web' ? (course.codeLang === 'js' ? 'js' : 'web') : 'cpp';
-      P.snippets[first] = Object.assign(newSnippet(lang), { name: 'My first ' + (lang === 'cpp' ? 'program' : lang === 'js' ? 'script' : 'page') });
+      const lang = course && course.lang === 'web' ? (course.codeLang === 'js' ? 'js' : 'web') : onArduino() ? 'arduino' : 'cpp';
+      P.snippets[first] = Object.assign(newSnippet(lang), { name: 'My first ' + (lang === 'cpp' ? 'program' : lang === 'js' ? 'script' : lang === 'arduino' ? 'sketch' : 'page') });
       save({ quiet: true });
       ids.push(first);
     }
@@ -3609,24 +3733,28 @@
     const list = h('ul', { class: 'pg-list' });
     list.append(h('li', { class: 'pg-new' },
       h('span', null, '＋ New'),
-      ['cpp', 'js', 'web'].map((l) => h('button', { type: 'button', onclick: () => create(l) }, LANG_NAMES[l]))));
+      ['cpp', 'js', 'web', 'arduino'].map((l) => h('button', { type: 'button', onclick: () => create(l) }, LANG_NAMES[l]))));
     ids.forEach((k) => list.append(h('li', null, h('button', {
       class: k === currentId ? 'is-active' : '',
       onclick: () => { location.hash = '#/playground/' + k; }
-    }, h('span', { class: 'pg-lang' }, { cpp: 'C++', js: 'JS', web: 'Web' }[P.snippets[k].lang || 'cpp']), P.snippets[k].name || 'Untitled'))));
+    }, h('span', { class: 'pg-lang' }, { cpp: 'C++', js: 'JS', web: 'Web', arduino: 'Ino' }[P.snippets[k].lang || 'cpp']), P.snippets[k].name || 'Untitled'))));
 
     let editor = null;
     let tabs = null;
     let preview = null;
     let previewTimer = null;
-    const stdin = h('textarea', { class: 'io-input', placeholder: 'Input for the program (what a user would type)', spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' });
+    const stdin = h('textarea', {
+      class: 'io-input',
+      placeholder: lang === 'arduino' ? 'Buttons and sensors, one per line: "2 LOW @1500" (pin 2 pressed from 1.5 s), "A0 612", "run 5000", "trace"' : 'Input for the program (what a user would type)',
+      spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off'
+    });
     stdin.value = snip.stdin || '';
 
     const persist = () => {
       const patch = { name: name.value, at: iso() };
       if (lang === 'web') patch.files = tabs.files();
       else patch.src = editor.ed.getValue();
-      if (lang === 'cpp') patch.stdin = stdin.value;
+      if (lang === 'cpp' || lang === 'arduino') patch.stdin = stdin.value;
       P.snippets[currentId] = Object.assign({}, P.snippets[currentId], patch);
       save({ quiet: true });
     };
@@ -3651,11 +3779,11 @@
       preview = livePreview(files, { jump: tabs.jump, maxHeight: 520, minHeight: 160 });
       workArea = h('div', null, h('div', { class: 'task-editor' }, tabs.el), preview.el);
     } else {
-      editor = codeEditor(lang === 'js' ? snip.src : snip.src, { mode: lang, minLines: 16, maxLines: 40, onChange: later, onRun: () => run() });
+      editor = codeEditor(snip.src, { mode: lang === 'arduino' ? 'cpp' : lang, minLines: 16, maxLines: 40, onChange: later, onRun: () => run() });
       stdin.addEventListener('input', later);
       workArea = h('div', null,
         h('div', { class: 'task-editor' }, editor.host),
-        lang === 'cpp' ? h('details', { class: 'task-io', open: true }, h('summary', null, 'Input (stdin)'), stdin) : null,
+        lang === 'cpp' || lang === 'arduino' ? h('details', { class: 'task-io', open: true }, h('summary', null, lang === 'arduino' ? 'Inputs: buttons, sensors, serial' : 'Input (stdin)'), stdin) : null,
         out);
     }
 
@@ -3680,13 +3808,13 @@
       out.replaceChildren(spinner(lang === 'js' ? 'Running…' : undefined));
       try {
         if (lang === 'js') showWebRun(out, await runJs(editor.ed.getValue()), { jump: (f, l) => { editor.ed.gotoLine(l); editor.ed.focus(); } });
-        else showRun(out, await runCpp({ source: editor.ed.getValue(), stdin: stdin.value }), { editor: editor.ed });
+        else showRun(out, await runCpp({ source: editor.ed.getValue(), stdin: stdin.value, arduino: lang === 'arduino' }), { editor: editor.ed });
       } catch (e) { showRunError(out, e); }
       runBtn.disabled = false;
     }
     runBtn.addEventListener('click', run);
 
-    const banner = lang === 'cpp' ? compilerBanner(courses.find((c) => c.lang === 'cpp') || course) : null;
+    const banner = lang === 'cpp' || lang === 'arduino' ? compilerBanner(courses.find((c) => c.lang === 'cpp') || course) : null;
     const panel = h('div', { class: 'task', style: { margin: 0 } },
       h('div', { class: 'task-bar' }, h('span', { class: 'tag' }, LANG_NAMES[lang]), name, runBtn, templateSel,
         h('button', { class: 'mini-btn', onclick: () => copyText(lang === 'web' ? tabs.files().map((f) => '/* ' + f.name + ' */\n' + f.content).join('\n\n') : editor.ed.getValue()) }, 'Copy'),
@@ -3942,45 +4070,271 @@
   // ================================================================ views: catalog
 
   /** Every course, to pick from — the home page when there is more than one. */
+  // ================================================================ views: home (all courses)
+
+  // Suggested orders through the courses.
+  const PATHS = [
+    { icon: '🌐', title: 'Web developer', blurb: 'Build websites from scratch, style them, then make them interactive.', steps: ['html', 'css', 'js'] },
+    { icon: '🔌', title: 'Maker', blurb: 'Make things that blink, sense and move — then go deeper into the language behind them.', steps: ['ard', 'cpp'] },
+    { icon: '💻', title: 'Programmer', blurb: 'Learn to think in code, with a friendly language and then a powerful one.', steps: ['js', 'cpp'] }
+  ];
+
+  function isStarred(id) { return Boolean(P.starred && P.starred[id] && P.starred[id].on); }
+  function toggleStar(id) {
+    P.starred = Object.assign({}, P.starred, { [id]: { on: !isStarred(id), at: iso() } });
+    save({ quiet: true });
+  }
+  function isSaved(id) { return Boolean(P.saved && P.saved[id] && P.saved[id].on); }
+  function toggleSaved(id) {
+    P.saved = Object.assign({}, P.saved, { [id]: { on: !isSaved(id), at: iso() } });
+    save({ quiet: true });
+  }
+
+  /** A "Save for later" toggle for any item page. */
+  function saveButton(item) {
+    const b = h('button', { class: 'tag save-toggle', type: 'button' });
+    const draw = () => {
+      b.textContent = isSaved(item.id) ? '🔖 Saved' : '🔖 Save for later';
+      b.classList.toggle('is-on', isSaved(item.id));
+      b.title = isSaved(item.id) ? 'Remove it from your saved list on the home page' : 'Keep it in the saved list on the home page';
+    };
+    b.addEventListener('click', () => { toggleSaved(item.id); draw(); toast(isSaved(item.id) ? '🔖 Saved — it\'s on your home page' : 'Removed from saved', 'ok'); });
+    draw();
+    return b;
+  }
+
+  function ago(isoTime) {
+    const t = Date.parse(isoTime);
+    if (!t) return '';
+    const days = Math.floor((Date.now() - t) / 86400000);
+    if (days <= 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 30) return days + ' days ago';
+    return Math.floor(days / 30) + (days < 60 ? ' month ago' : ' months ago');
+  }
+
+  function courseSummary(c) {
+    const lessons = c.items.filter((i) => i.type === 'lesson');
+    const done = lessons.filter((i) => isDone(i.id)).length;
+    const mastery = c.chapters.length ? c.chapters.reduce((sum, ch) => sum + chapterStats(ch).mastery, 0) / c.chapters.length : 0;
+    const last = c.items.map((i) => (P.items[i.id] && P.items[i.id].at) || '').sort().pop() || '';
+    return { lessons, done, mastery, last, up: nextUp(c), share: lessons.length ? done / lessons.length : 0 };
+  }
+
+  function courseCard(c) {
+    const sum = courseSummary(c);
+    const star = h('button', {
+      class: 'cc-star' + (isStarred(c.id) ? ' is-on' : ''),
+      type: 'button',
+      title: isStarred(c.id) ? 'Unstar: stop pinning it to the top' : 'Star: pin it to the top of this page',
+      'aria-pressed': String(isStarred(c.id)),
+      onclick: (e) => { e.preventDefault(); e.stopPropagation(); toggleStar(c.id); route(); }
+    }, isStarred(c.id) ? '★' : '☆');
+    return h('div', { class: 'course-card' + (isStarred(c.id) ? ' is-starred' : '') },
+      h('a', { class: 'cc-link', href: '#/course/' + c.id, 'aria-label': c.title }),
+      h('div', { class: 'cc-top' },
+        h('span', { class: 'cc-icon' }, c.icon || '📘'),
+        h('div', { class: 'cc-top-right' },
+          h('div', { class: 'ring small', style: { '--p': Math.round(sum.mastery * 100), '--c': 'var(--accent)' } }, h('span', null, Math.round(sum.mastery * 100) + '%')),
+          star)),
+      h('h2', null, c.title),
+      h('p', null, c.subtitle),
+      h('div', { class: 'cc-meta' }, plural(c.chapters.length, 'chapter') + ' · ' + plural(sum.lessons.length, 'lesson') +
+        (c.category ? ' · ' + c.category : '')),
+      h('div', { class: 'bar ok', style: { margin: '10px 0 6px' } }, h('i', { style: { width: pct(sum.share) } })),
+      h('div', { class: 'cc-next' }, sum.done ? (sum.up ? 'Next: ' + sum.up.title : 'Course complete!') : 'Start from zero →'),
+      sum.last ? h('div', { class: 'cc-last' }, 'Studied ' + ago(sum.last)) : null);
+  }
+
+  /** The last 17 weeks of XP, one square a day, like a contributions calendar. */
+  function activityCalendar() {
+    const weeks = 17;
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(end.getDate() - end.getDay() - (weeks - 1) * 7);
+    const grid = h('div', { class: 'cal-grid', role: 'img' });
+    let total = 0;
+    let active = 0;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const key = Engine.dayKey(d);
+      const xp = Number(P.days[key]) || 0;
+      const frozen = P.frozen && P.frozen[key];
+      if (xp) { total += xp; active += 1; }
+      const lvl = xp === 0 ? 0 : xp < 30 ? 1 : xp < 80 ? 2 : xp < 200 ? 3 : 4;
+      grid.append(h('i', { class: 'cal-day l' + lvl + (frozen ? ' is-frozen' : '') + (key === today() ? ' is-today' : ''), title: key + ': ' + (frozen ? 'streak freeze' : xp + ' XP') }));
+    }
+    grid.setAttribute('aria-label', active + ' active days in the last ' + weeks + ' weeks');
+    return h('div', { class: 'stat-card cal-card' },
+      h('h3', null, 'Your activity'),
+      grid,
+      h('p', null, plural(active, 'day') + ' of learning and ' + total + ' XP in the last ' + weeks + ' weeks.',
+        h('span', { class: 'cal-legend' }, 'less ', [0, 1, 2, 3, 4].map((l) => h('i', { class: 'cal-day l' + l })), ' more')));
+  }
+
+  // Everything searchable, built once: lessons (and what they say), other items, chapters and glossary terms.
+  let searchEntries = null;
+  function searchIndex() {
+    if (searchEntries) return searchEntries;
+    const plain = (t) => MD.plain(String(t || '').replace(/```[\s\S]*?```/g, ' ').replace(/\{\{[^}]*\}\}/g, ' ').replace(/^[#>|-]+/gm, ' ')).replace(/\s+/g, ' ');
+    searchEntries = [];
+    courses.forEach((c) => {
+      c.chapters.forEach((ch) => searchEntries.push({ kind: 'chapter', icon: '📚', title: 'Chapter ' + ch.number + ': ' + ch.title, text: ch.blurb + ' ' + ch.goals.join(' '), href: '#/c/' + ch.id, course: c }));
+      c.items.forEach((it) => {
+        const text = it.type === 'lesson' ? it.objectives.join(' ') + ' ' + plain(it.body) : plain(it.body);
+        searchEntries.push({ kind: it.type, icon: typeIcon(it.type), title: it.title, text, href: '#/i/' + it.id, course: c, item: it });
+      });
+      c.glossary.forEach((g) => searchEntries.push({ kind: 'term', icon: '🔤', title: g.term, text: MD.plain(g.def), href: '#/glossary/' + c.id, course: c }));
+    });
+    searchEntries.forEach((e) => { e.lowTitle = e.title.toLowerCase(); e.lowText = e.text.toLowerCase(); });
+    return searchEntries;
+  }
+
+  function searchAll(query) {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    const found = [];
+    searchIndex().forEach((e) => {
+      let score = 0;
+      for (const w of words) {
+        const inTitle = e.lowTitle.indexOf(w) !== -1;
+        const inText = e.lowText.indexOf(w) !== -1;
+        if (!inTitle && !inText) return;
+        score += inTitle ? (e.lowTitle.startsWith(w) ? 12 : 8) : 1;
+      }
+      if (e.kind === 'term' && e.lowTitle === words.join(' ')) score += 20;
+      if (e.kind === 'lesson' || e.kind === 'video') score += 2;
+      found.push({ e, score });
+    });
+    return found.sort((a, b) => b.score - a.score).slice(0, 30).map((f) => f.e);
+  }
+
+  function snippet(text, query) {
+    const low = text.toLowerCase();
+    const w = query.toLowerCase().split(/\s+/).filter(Boolean)[0] || '';
+    const at = w ? low.indexOf(w) : -1;
+    if (at === -1) return text.slice(0, 140);
+    const from = Math.max(0, at - 60);
+    return (from ? '…' : '') + text.slice(from, at + 90).trim() + '…';
+  }
+
+  function searchBox() {
+    const input = h('input', { type: 'search', class: 'home-search-input', placeholder: 'Search every course — lessons, videos, exercises, glossary… (press / anywhere)', 'aria-label': 'Search every course', autocomplete: 'off' });
+    const results = h('div', { class: 'search-results', hidden: true });
+    const draw = () => {
+      const q = input.value.trim();
+      results.hidden = !q;
+      if (!q) return;
+      const hits = searchAll(q);
+      results.replaceChildren(hits.length ? h('ul', null, hits.map((e) => h('li', null, h('a', { href: e.href },
+        h('span', { class: 'sr-icon' }, e.icon),
+        h('span', { class: 'sr-main' },
+          h('b', null, e.title),
+          h('span', { class: 'sr-snip' }, snippet(e.text, q))),
+        h('span', { class: 'sr-course' }, (e.course.icon || '') + ' ' + e.course.short))))) : h('p', { class: 'sr-none' }, 'Nothing matches “' + q + '”. Try another word.'));
+    };
+    let timer = null;
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(draw, 120); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { const first = results.querySelector('a'); if (first) location.hash = first.getAttribute('href'); }
+      if (e.key === 'Escape') { input.value = ''; draw(); }
+    });
+    return h('div', { class: 'home-search' }, h('span', { class: 'home-search-icon', 'aria-hidden': 'true' }, '🔍'), input, results);
+  }
+
   function catalogView() {
-    const p = page('page-wide');
+    const p = page('page-wide home');
     const level = Engine.levelFor(totalXp());
     const started = Object.keys(P.items).length > 0;
+    const hour = new Date().getHours();
+    const greet = hour < 5 ? 'Up late' : hour < 12 ? 'Good morning' : hour < 19 ? 'Good afternoon' : 'Good evening';
+    const last = P.settings && P.settings.last && ALL.byId[P.settings.last] ? ALL.byId[P.settings.last] : null;
+    const lastCourse = last ? last.chapter.course : null;
+    const next = lastCourse ? nextUp(lastCourse) : null;
+
     p.append(h('section', { class: 'hero' },
       h('div', null,
-        h('h1', null, started ? 'Welcome back!' : 'What do you want to learn?'),
-        h('p', null, 'Each course starts from zero and ends with you building real things on your own: lessons you can run and change, quick checks, exercises checked automatically, challenges, projects and an exam per chapter. Progress, flashcards and badges are shared across all of them.'),
+        h('h1', null, started ? greet + '!' : 'What do you want to learn?'),
+        h('p', null, started
+          ? 'Pick up where you left off, or start something new. Star the courses you care about and they stay at the top.'
+          : 'Every course starts from zero and ends with you building real things on your own — lessons you can run and change, videos, exercises checked automatically, projects and an exam per chapter.'),
+        last ? h('div', { class: 'up-next' }, 'Last time: ', h('b', null, (lastCourse.icon || '') + ' ' + last.title)) : null,
         h('div', { class: 'row-actions' },
-          h('a', { class: 'btn btn-big', href: '#/method' }, 'How the courses work'),
-          dueCards().length ? h('a', { class: 'btn btn-primary btn-big', href: '#/review' }, 'Review ' + plural(dueCards().length, 'card')) : null)),
+          last ? h('a', { class: 'btn btn-primary btn-big', href: '#/i/' + (next && isUnlocked(next.chapter) ? next.id : last.id) }, 'Continue ' + lastCourse.short + ' →') : null,
+          dueCards().length ? h('a', { class: 'btn btn-big' + (last ? '' : ' btn-primary'), href: '#/review' }, 'Review ' + plural(dueCards().length, 'card')) : null,
+          h('a', { class: 'btn btn-big', href: '#/method' }, 'How the courses work'))),
       h('div', { class: 'level-card' },
         h('div', { class: 'lv' }, 'Level ' + level.level),
         h('div', { class: 'lv-title' }, level.title),
         h('div', { class: 'bar' }, h('i', { style: { width: pct(level.progress) } })),
-        h('div', { class: 'bar-label' }, h('span', null, level.xp + ' XP'), h('span', null, level.next ? level.next + ' XP' : 'max')))));
+        h('div', { class: 'bar-label' }, h('span', null, level.xp + ' XP'), h('span', null, level.next ? level.next + ' XP' : 'max')),
+        h('div', { class: 'lv-streak' }, '🔥 ' + plural(Engine.streak(P.days, undefined, P.frozen), 'day') + ' streak'))));
 
-    const grid = h('div', { class: 'course-grid' });
-    courses.forEach((c) => {
-      const lessons = c.items.filter((i) => i.type === 'lesson');
-      const done = lessons.filter((i) => isDone(i.id)).length;
-      const up = nextUp(c);
-      const mastery = c.chapters.length ? c.chapters.reduce((sum, ch) => sum + chapterStats(ch).mastery, 0) / c.chapters.length : 0;
-      grid.append(h('a', { class: 'course-card', href: '#/course/' + c.id },
-        h('div', { class: 'cc-top' },
-          h('span', { class: 'cc-icon' }, c.icon || '📘'),
-          h('div', { class: 'ring small', style: { '--p': Math.round(mastery * 100), '--c': 'var(--accent)' } }, h('span', null, Math.round(mastery * 100) + '%'))),
-        h('h2', null, c.title),
-        h('p', null, c.subtitle),
-        h('div', { class: 'cc-meta' }, plural(c.chapters.length, 'chapter') + ' · ' + plural(lessons.length, 'lesson') + ' · ' + plural(c.items.filter((i) => i.type === 'challenge').length, 'challenge')),
-        h('div', { class: 'bar ok', style: { margin: '10px 0 6px' } }, h('i', { style: { width: pct(lessons.length ? done / lessons.length : 0) } })),
-        h('div', { class: 'cc-next' }, done ? (up ? 'Next: ' + up.title : 'Course complete!') : 'Start from zero →')));
-    });
-    p.append(h('div', { class: 'section-title' }, 'Courses'));
-    p.append(grid);
+    p.append(searchBox());
+
+    p.append(h('div', { class: 'cards-row home-row' }, goalCard(P.days[today()] || 0), activityCalendar()));
+
+    const starred = courses.filter((c) => isStarred(c.id));
+    if (starred.length) {
+      p.append(h('div', { class: 'section-title' }, '★ Starred'));
+      p.append(h('div', { class: 'course-grid' }, starred.map(courseCard)));
+    }
+
+    // Recently visited and saved for later.
+    const recent = Object.keys(P.items)
+      .filter((id) => ALL.byId[id] && P.items[id].at)
+      .sort((a, b) => String(P.items[b].at).localeCompare(String(P.items[a].at)))
+      .slice(0, 6)
+      .map((id) => ALL.byId[id]);
+    const saved = Object.keys(P.saved || {}).filter((id) => isSaved(id) && ALL.byId[id])
+      .sort((a, b) => String(P.saved[b].at).localeCompare(String(P.saved[a].at)))
+      .map((id) => ALL.byId[id]);
+    if (recent.length || saved.length) {
+      const itemLink = (it, removable) => h('li', null,
+        h('a', { href: '#/i/' + it.id },
+          h('span', { class: 'il-icon' }, isDone(it.id) ? '✓' : typeIcon(it.type)),
+          h('span', { class: 'il-main' }, h('b', null, it.title), h('small', null, (it.chapter.course.icon || '') + ' ' + it.chapter.course.short + ' · ' + typeName(it.type)))),
+        removable ? h('button', { class: 'il-remove', type: 'button', title: 'Remove from saved', onclick: () => { toggleSaved(it.id); route(); } }, '✕') : null);
+      p.append(h('div', { class: 'home-lists' },
+        h('section', { class: 'home-list' }, h('div', { class: 'section-title' }, '🕘 Recently visited'),
+          recent.length ? h('ul', { class: 'item-links' }, recent.map((it) => itemLink(it, false))) : h('p', { class: 'page-sub' }, 'Nothing yet.')),
+        h('section', { class: 'home-list' }, h('div', { class: 'section-title' }, '🔖 Saved for later'),
+          saved.length ? h('ul', { class: 'item-links' }, saved.map((it) => itemLink(it, true)))
+            : h('p', { class: 'page-sub' }, 'Press “🔖 Save for later” on any lesson, video or exercise and it appears here.'))));
+    }
+
+    // Learning paths.
+    p.append(h('div', { class: 'section-title' }, 'Learning paths'));
+    p.append(h('div', { class: 'path-grid' }, PATHS.filter((path) => path.steps.every((id) => courses.some((c) => c.id === id))).map((path) => {
+      const steps = path.steps.map((id) => courses.find((c) => c.id === id));
+      const firstOpen = steps.find((c) => courseSummary(c).share < 1) || steps[steps.length - 1];
+      return h('div', { class: 'path-card' },
+        h('div', { class: 'path-head' }, h('span', { class: 'path-icon' }, path.icon), h('div', null, h('h3', null, path.title), h('p', null, path.blurb))),
+        h('ol', { class: 'path-steps' }, steps.map((c) => {
+          const share = courseSummary(c).share;
+          return h('li', { class: share >= 1 ? 'is-done' : c === firstOpen ? 'is-current' : '' },
+            h('a', { href: '#/course/' + c.id }, (c.icon || '') + ' ' + c.short),
+            h('span', { class: 'bar ok path-bar' }, h('i', { style: { width: pct(share) } })));
+        })),
+        h('a', { class: 'btn', href: '#/course/' + firstOpen.id }, (courseSummary(firstOpen).done ? 'Continue with ' : 'Start with ') + firstOpen.short + ' →'));
+    })));
+
+    // Every course, grouped, starred first.
+    const filter = (P.settings && P.settings.homeFilter) || 'All';
+    const cats = ['All'].concat(Array.from(new Set(courses.map((c) => c.category || 'Programming'))));
+    const chips = h('div', { class: 'chip-row' }, cats.map((cat) => h('button', {
+      class: 'chip' + (cat === filter ? ' is-active' : ''),
+      type: 'button',
+      onclick: () => { setting('homeFilter', cat); save({ quiet: true }); route(); }
+    }, cat)));
+    const shown = courses.filter((c) => filter === 'All' || (c.category || 'Programming') === filter)
+      .slice().sort((a, b) => Number(isStarred(b.id)) - Number(isStarred(a.id)));
+    p.append(h('div', { class: 'section-title section-with-chips' }, h('span', null, 'All courses'), chips));
+    p.append(h('div', { class: 'course-grid' }, shown.map(courseCard)));
     p.append(h('p', { class: 'page-sub', style: { marginTop: '18px' } },
-      'New to programming? A good path for the web is HTML → CSS → JavaScript: each builds on the one before. C++ stands on its own and starts from zero too.'));
+      'Tip: ☆ a course to pin it to the top. Progress, flashcards, XP and badges are shared across all courses.'));
     return p;
   }
+
 
   // ================================================================ outline
 
@@ -4102,6 +4456,11 @@
       console.error(err);
       node = h('div', { class: 'page' }, h('h1', null, 'Something went wrong'), h('pre', { class: 'plain' }, String(err && err.stack || err)));
     }
+    // Every lesson, video and exercise can be saved for later.
+    if (parts[0] === 'i' && ALL.byId[parts[1]] && node.querySelector) {
+      const row = node.querySelector('.meta-row');
+      if (row) row.append(saveButton(ALL.byId[parts[1]]));
+    }
     main.replaceChildren(node);
     main.scrollTop = 0;
     document.querySelectorAll('.lt-nav a').forEach((a) => {
@@ -4134,6 +4493,17 @@
       return;
     }
     route();
+  });
+
+  // "/" searches every course, from anywhere.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.closest && t.closest('input, textarea, select, [contenteditable], .ed, .vp'))) return;
+    e.preventDefault();
+    const focus = () => { const box = document.querySelector('.home-search-input'); if (box) box.focus(); };
+    if (document.querySelector('.home-search-input')) focus();
+    else { location.hash = '#/'; setTimeout(focus, 50); }
   });
 
   window.addEventListener('beforeunload', (e) => {

@@ -1,0 +1,648 @@
+id: ard06
+number: 6
+part: ard-p2
+title: PWM, Brightness and Motors
+blurb: Dim LEDs and mix colours with PWM, move servos to an angle, play tones on a buzzer, and drive motors safely with a transistor and a diode.
+hours: 3
+goals:
+  - Explain PWM and duty cycle
+  - Set brightness with analogWrite on the ~ pins
+  - Mix colours with an RGB LED
+  - Move a servo with the Servo library
+  - Play notes with tone and noTone
+  - Drive a motor through a transistor, with a flyback diode
+
+items:
+  - type: lesson
+    id: ard6-pwm
+    title: PWM and analogWrite
+    minutes: 20
+    objectives:
+      - Explain how PWM fakes an in-between voltage
+      - Use analogWrite with values 0–255 on PWM pins
+      - Control brightness from a knob
+      - Mix colours with an RGB LED
+    body: |
+      A digital pin is either 5 V or 0 V — so how do you **dim** an LED?
+      Switch it on and off **very fast**, about 500 times a second. Your
+      eye can't see the flicker; it sees the average. This is **PWM**
+      (pulse-width modulation).
+
+      The **duty cycle** is how much of the time the pin is on:
+
+      | Duty cycle | Looks like | `analogWrite` value |
+      |---|---|---|
+      | 0% | off | 0 |
+      | 25% | dim | 64 |
+      | 50% | half | 128 |
+      | 100% | full | 255 |
+
+      `analogWrite(pin, value)` takes **0 to 255**. It only works on the
+      PWM pins, marked with a **~** on the board: **3, 5, 6, 9, 10 and 11**
+      on an Uno. You don't need `pinMode` for it.
+
+      ```cpp
+      void setup() {}
+
+      void loop() {
+        for (int level = 0; level <= 255; level += 85) {
+          analogWrite(9, level);
+          delay(100);
+        }
+      }
+      ```
+
+      ```stdin
+      trace
+      run 350
+      ```
+
+      ```output
+      [0 ms] pin 9 PWM 0
+      [100 ms] pin 9 PWM 85
+      [200 ms] pin 9 PWM 170
+      [300 ms] pin 9 PWM 255
+      ```
+
+      Run it and watch the LED on the board get brighter in steps. With
+      `level += 5` and `delay(10)` the steps become a smooth fade.
+
+      ## A dimmer knob
+
+      `analogRead` gives 0–1023 but `analogWrite` wants 0–255. Divide by 4
+      (or use `map`):
+
+      ```cpp static
+      analogWrite(9, analogRead(A0) / 4);
+      ```
+
+      ## RGB LEDs: mixing colour
+
+      An RGB LED is three LEDs — red, green and blue — in one. Give each its
+      own PWM pin (and resistor) and mix:
+
+      | Red | Green | Blue | Colour |
+      |---|---|---|---|
+      | 255 | 0 | 0 | red |
+      | 255 | 255 | 0 | yellow |
+      | 0 | 255 | 255 | cyan |
+      | 255 | 128 | 0 | orange |
+      | 255 | 255 | 255 | white |
+
+      {{check duty}}
+
+      {{check pins}}
+
+      {{task dimmer}}
+    checks:
+      - id: duty
+        type: mcq
+        prompt: What does `analogWrite(9, 64)` do?
+        options:
+          - Puts exactly 64 volts on pin 9
+          - Switches pin 9 on about a quarter of the time, very fast
+          - Reads pin 9 64 times
+          - Waits 64 ms
+        answer: 1
+        why: "64 out of 255 is a duty cycle of about 25%: the pin is on a quarter of the time."
+      - id: pins
+        type: mcq
+        prompt: Which of these Uno pins can do PWM?
+        options:
+          - "2"
+          - "7"
+          - "9"
+          - "13"
+        answer: 2
+        why: "The PWM pins are 3, 5, 6, 9, 10 and 11 — marked with ~."
+    tasks:
+      - id: dimmer
+        title: A dimmer knob
+        prompt: |
+          Every **50 ms**, read the knob on **A0** and set the brightness of
+          the LED on pin **10** from it: 0 → off, 1023 → full brightness.
+        starter: |
+          void setup() {}
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              A0 0
+              A0 1023 @100
+              A0 512 @200
+              trace
+              run 300
+            out: |
+              [0 ms] pin 10 PWM 0
+              [100 ms] pin 10 PWM 255
+              [200 ms] pin 10 PWM 128
+        hints:
+          - "`analogWrite(10, analogRead(A0) / 4);`"
+          - "Then `delay(50);`."
+        solution: |
+          void setup() {}
+
+          void loop() {
+            analogWrite(10, analogRead(A0) / 4);
+            delay(50);
+          }
+    cards:
+      - front: What is PWM?
+        back: Switching a pin on and off very fast; the share of time it's on (duty cycle) sets the average power.
+      - front: What range does analogWrite take?
+        back: 0 (always off) to 255 (always on).
+      - front: Which Uno pins can do PWM?
+        back: 3, 5, 6, 9, 10 and 11 — marked with ~.
+
+  - type: video
+    id: ard6-video-pwm
+    title: "Watch: how PWM dims an LED"
+    body: |
+      **What you just saw**
+
+      - The pin is still only ever **on** (5 V) or **off** (0 V).
+      - `analogWrite` sets the **duty cycle**: how much of each short cycle it stays on.
+      - 64 → about 25% on, 128 → 50%, 255 → always on. Your eye sees the average as brightness.
+    video:
+      steps:
+        - scene: PWM
+          sub: On, off, very fast
+        - type: "void loop() {\n  analogWrite(9, 64);\n  delay(1000);\n  analogWrite(9, 128);\n  delay(1000);\n  analogWrite(9, 255);\n  delay(1000);\n}\n"
+          speed: 1.6
+          say: "Three brightness levels, one second each."
+        - say: "A pin can only be **on** or **off**. So how is 64 dimmer?"
+          mark:
+            text: "64"
+            color: blue
+        - run: true
+          line: 2
+          vars:
+            pin9: "▮▯▯▯ ▮▯▯▯ ▮▯▯▯"
+            duty: "25%"
+            LED: "🔅 dim"
+          say: "It switches on for a **quarter** of each tiny cycle — 500 cycles a second."
+        - line: 4
+          vars:
+            pin9: "▮▮▯▯ ▮▮▯▯ ▮▮▯▯"
+            duty: "50%"
+            LED: "🔆 half"
+          say: "128 is **half** of 255: on half the time."
+          mark:
+            text: "128"
+            color: green
+        - line: 6
+          vars:
+            pin9: "▮▮▮▮ ▮▮▮▮ ▮▮▮▮"
+            duty: "100%"
+            LED: "💡 full"
+          say: "255 means **always on**: full brightness."
+          mark:
+            text: "255"
+            color: pink
+        - scene: Why it works
+          sub: Your eye averages
+        - line: 2
+          vars:
+            pin9: "▮▯▯▯ ▮▯▯▯ ▮▯▯▯"
+            duty: "25%"
+            LED: "🔅 dim"
+          say: "Too fast to see flicker — your eye sees the **average** power."
+        - line: 0
+          say: "The same trick sets a motor's **speed**. Only pins with a **~** can do it."
+          hold: 1.4
+
+  - type: lesson
+    id: ard6-motors
+    title: Servos, buzzers and motors
+    minutes: 24
+    objectives:
+      - Move a servo to an angle with the Servo library
+      - Play notes with tone and noTone
+      - Explain why a motor needs a transistor and a diode
+    body: |
+      ## Servos: move to an angle
+
+      A hobby **servo** turns to an angle from **0° to 180°** and holds it —
+      perfect for pointers, locks and robot arms. It has three wires: power
+      (5 V), ground, and a signal wire to any pin. The **Servo** library
+      does the work:
+
+      ```cpp
+      #include <Servo.h>
+
+      Servo arm;
+
+      void setup() {
+        arm.attach(9);
+      }
+
+      void loop() {
+        arm.write(0);
+        delay(1000);
+        arm.write(90);
+        delay(1000);
+        arm.write(180);
+        delay(1000);
+      }
+      ```
+
+      ```stdin
+      trace
+      run 2500
+      ```
+
+      ```output
+      [0 ms] servo on pin 9 at 0 degrees
+      [1000 ms] servo on pin 9 at 90 degrees
+      [2000 ms] servo on pin 9 at 180 degrees
+      ```
+
+      `Servo arm;` creates a servo object, `attach(9)` connects it to pin 9,
+      and `write(angle)` moves it. The board view draws the arm turning.
+
+      ## Buzzers: tone
+
+      A **piezo buzzer** plays a note when switched on and off at a
+      frequency. `tone(pin, hertz)` starts a note; `noTone(pin)` stops it.
+
+      | Note | Frequency |
+      |---|---|
+      | C4 (middle C) | 262 Hz |
+      | E4 | 330 Hz |
+      | G4 | 392 Hz |
+      | A4 | 440 Hz |
+
+      ```cpp
+      void setup() {
+        tone(8, 262);
+        delay(200);
+        tone(8, 330);
+        delay(200);
+        tone(8, 392);
+        delay(400);
+        noTone(8);
+      }
+
+      void loop() {}
+      ```
+
+      ```stdin
+      trace
+      ```
+
+      ```output
+      [0 ms] tone on pin 8: 262 Hz
+      [200 ms] tone on pin 8: 330 Hz
+      [400 ms] tone on pin 8: 392 Hz
+      [800 ms] tone on pin 8: 0 Hz
+      ```
+
+      ## Motors need a helper
+
+      An Uno pin can give about **20 mA** (40 mA absolute maximum). A small
+      DC motor wants **200 mA or more**. Connect it straight to a pin and
+      you can kill the pin. Instead:
+
+      1. A **transistor** is an electronic switch: a small current from the
+         pin (through a ~1 kΩ resistor) switches a big current through the
+         motor. A logic-level **MOSFET** or a **TIP120** are common choices.
+      2. A **flyback diode** across the motor. When a motor stops, its coil
+         pushes back a voltage spike that can destroy the transistor; the
+         diode gives that spike a safe path.
+      3. Power the motor from its own supply, and **connect the grounds**
+         of the supply and the Arduino together.
+
+      PWM on the transistor's pin then sets the motor's **speed**. To run a
+      motor in both directions, use an **H-bridge** module such as the
+      L298N or TB6612.
+
+      > [!warning]
+      > Servos and motors can draw big current spikes. Powering several from
+      > the Uno's 5 V pin makes the board reset at random — give them their
+      > own supply.
+
+      {{check servo}}
+
+      {{check motor}}
+
+      {{task siren}}
+    checks:
+      - id: servo
+        type: mcq
+        prompt: What does `arm.write(45)` do?
+        options:
+          - Moves the servo to 45°
+          - Spins the servo 45 times
+          - Sets the speed to 45%
+          - Waits 45 ms
+        answer: 0
+        why: "A hobby servo's write takes an angle from 0 to 180 and moves there."
+      - id: motor
+        type: mcq
+        prompt: Why put a diode across a DC motor driven by a transistor?
+        options:
+          - To make it spin faster
+          - To give the voltage spike from the motor's coil a safe path when it switches off
+          - So it can run backwards
+          - To light up when it runs
+        answer: 1
+        why: "That's a flyback diode. Without it the spike can destroy the transistor."
+    tasks:
+      - id: siren
+        title: A siren
+        prompt: |
+          Make a two-tone siren on a buzzer on pin **7**: **600 Hz** for
+          **300 ms**, then **900 Hz** for **300 ms**, over and over.
+        starter: |
+          void setup() {}
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              trace
+              run 1000
+            out: |
+              [0 ms] tone on pin 7: 600 Hz
+              [300 ms] tone on pin 7: 900 Hz
+              [600 ms] tone on pin 7: 600 Hz
+              [900 ms] tone on pin 7: 900 Hz
+        hints:
+          - "`tone(7, 600); delay(300); tone(7, 900); delay(300);`"
+        solution: |
+          void setup() {}
+
+          void loop() {
+            tone(7, 600);
+            delay(300);
+            tone(7, 900);
+            delay(300);
+          }
+    cards:
+      - front: How do you move a servo to 90°?
+        back: "`#include <Servo.h>`, `Servo s;`, `s.attach(pin);` in setup, then `s.write(90);`."
+      - front: What do `tone(8, 440)` and `noTone(8)` do?
+        back: Start a 440 Hz note (A4) on pin 8; stop the note.
+      - front: Why can't you connect a motor straight to an Arduino pin?
+        back: A pin gives ~20 mA; a motor needs hundreds. Use a transistor (plus a flyback diode and its own supply).
+
+  - type: quiz
+    id: ard6-quiz
+    title: "Quiz: PWM and motors"
+    questions:
+      - type: mcq
+        prompt: What value makes `analogWrite` keep a pin fully on?
+        options:
+          - "100"
+          - "255"
+          - "1023"
+          - "5"
+        answer: 1
+        why: "analogWrite goes from 0 to 255; 255 is always on."
+      - type: tf
+        prompt: PWM works on every digital pin of an Uno.
+        answer: false
+        why: "Only 3, 5, 6, 9, 10 and 11 — the pins marked ~."
+      - type: mcq
+        prompt: An RGB LED gets red 255, green 255, blue 0. What colour is it?
+        options:
+          - White
+          - Purple
+          - Yellow
+          - Cyan
+        answer: 2
+        why: "Red and green light together make yellow."
+      - type: output
+        code: |
+          #include <Servo.h>
+
+          Servo s;
+
+          void setup() {
+            s.attach(5);
+            s.write(30);
+            delay(500);
+            s.write(200);
+          }
+
+          void loop() {}
+        stdin: |
+          trace
+        answer: |
+          [0 ms] servo on pin 5 at 30 degrees
+          [500 ms] servo on pin 5 at 180 degrees
+        why: "A servo only goes from 0 to 180, so 200 is limited to 180."
+      - type: mcq
+        prompt: About how much current can an Uno pin safely give?
+        options:
+          - 20 mA
+          - 2 A
+          - 500 mA
+          - 10 A
+        answer: 0
+        why: "About 20 mA (40 mA absolute max) — enough for an LED, not for a motor."
+
+  - type: challenge
+    id: ard6-ch-servo
+    title: Knob-controlled servo
+    difficulty: 2
+    tags: [Servo, map]
+    prompt: |
+      Point a servo on pin **9** with a knob on **A0**: 0 → 0°, 1023 →
+      180°. Update it every **20 ms**.
+    starter: |
+      #include <Servo.h>
+
+      Servo pointer;
+
+      void setup() {
+
+      }
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          A0 0
+          A0 1023 @100
+          A0 512 @200
+          trace
+          run 300
+        out: |
+          [0 ms] servo on pin 9 at 0 degrees
+          [100 ms] servo on pin 9 at 180 degrees
+          [201 ms] servo on pin 9 at 90 degrees
+    hints:
+      - "In setup(): `pointer.attach(9);`"
+      - "In loop(): `pointer.write(map(analogRead(A0), 0, 1023, 0, 180));` then `delay(20);`"
+    solution: |
+      #include <Servo.h>
+
+      Servo pointer;
+
+      void setup() {
+        pointer.attach(9);
+      }
+
+      void loop() {
+        int angle = map(analogRead(A0), 0, 1023, 0, 180);
+        pointer.write(angle);
+        delay(20);
+      }
+
+  - type: challenge
+    id: ard6-ch-breathe
+    title: A breathing LED
+    difficulty: 3
+    tags: [PWM, for]
+    prompt: |
+      Make the LED on pin **11** "breathe": brightness goes **up** from 0
+      to 255 in steps of **51**, then back **down** to 0, one step every
+      **100 ms**, and repeats. Every level is shown once per breath —
+      255 and 0 don't repeat at the turns.
+
+      So the levels are 0, 51, 102, 153, 204, 255, 204, 153, 102, 51, then
+      0 again…
+    starter: |
+      void setup() {}
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          trace
+          run 1150
+        out: |
+          [0 ms] pin 11 PWM 0
+          [100 ms] pin 11 PWM 51
+          [200 ms] pin 11 PWM 102
+          [300 ms] pin 11 PWM 153
+          [400 ms] pin 11 PWM 204
+          [500 ms] pin 11 PWM 255
+          [600 ms] pin 11 PWM 204
+          [700 ms] pin 11 PWM 153
+          [800 ms] pin 11 PWM 102
+          [900 ms] pin 11 PWM 51
+          [1000 ms] pin 11 PWM 0
+          [1100 ms] pin 11 PWM 51
+    hints:
+      - "Going up: `for (int b = 0; b < 255; b += 51)`. Going down: `for (int b = 255; b > 0; b -= 51)`."
+      - "Each step: analogWrite, then delay(100)."
+    solution: |
+      void setup() {}
+
+      void loop() {
+        for (int b = 0; b < 255; b += 51) {
+          analogWrite(11, b);
+          delay(100);
+        }
+        for (int b = 255; b > 0; b -= 51) {
+          analogWrite(11, b);
+          delay(100);
+        }
+      }
+
+  - type: exam
+    id: ard6-exam
+    title: "Chapter 6 exam"
+    minutes: 25
+    questions:
+      - type: mcq
+        prompt: What is the **duty cycle** of a PWM signal?
+        options:
+          - How many volts it has
+          - The share of each cycle that the pin is on
+          - How many cycles it has lasted
+          - The pin number
+        answer: 1
+        why: "Duty cycle is the percentage of time on. 50% is on half the time."
+      - type: mcq
+        prompt: About what duty cycle is `analogWrite(6, 191)`?
+        options:
+          - 19%
+          - 50%
+          - 75%
+          - 100%
+        answer: 2
+        why: "191 ÷ 255 ≈ 0.75, so 75%."
+      - type: fill
+        prompt: Connect a servo object to pin 3.
+        code: |
+          Servo s;
+          void setup() {
+            s.___(3);
+          }
+        blanks:
+          - [attach]
+        why: "attach(pin) connects the servo; write(angle) moves it."
+      - type: output
+        code: |
+          void setup() {
+            analogWrite(3, 300);
+            delay(100);
+            analogWrite(3, -5);
+          }
+
+          void loop() {}
+        stdin: |
+          trace
+        answer: |
+          [0 ms] pin 3 PWM 255
+          [100 ms] pin 3 PWM 0
+        why: "analogWrite values outside 0–255 end up at the limits (on a real board they wrap around, so keep them in range with constrain)."
+      - type: tf
+        prompt: A flyback diode protects the transistor from the motor's voltage spike when it switches off.
+        answer: true
+        why: "The coil's spike flows round through the diode instead of into the transistor."
+      - type: mcq
+        prompt: You want a motor to run forwards **and** backwards. What do you need?
+        options:
+          - A bigger resistor
+          - An H-bridge
+          - A second Arduino
+          - A potentiometer
+        answer: 1
+        why: "An H-bridge (like the L298N or TB6612) can reverse the current through the motor."
+      - type: mcq
+        prompt: Why connect the ground of a motor's battery to the Arduino's GND?
+        options:
+          - It doesn't matter
+          - So the transistor's control signal has the same reference voltage as the motor circuit
+          - To charge the battery
+          - To make the motor quieter
+        answer: 1
+        why: "Voltages are measured against ground; without a common ground the control signal means nothing to the motor side."
+      - type: code
+        prompt: |
+          A beeper on pin **4**: play **1000 Hz** for **100 ms**, then
+          silence for **400 ms**, over and over.
+        starter: |
+          void setup() {}
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              trace
+              run 1100
+            out: |
+              [0 ms] tone on pin 4: 1000 Hz
+              [100 ms] tone on pin 4: 0 Hz
+              [500 ms] tone on pin 4: 1000 Hz
+              [600 ms] tone on pin 4: 0 Hz
+              [1000 ms] tone on pin 4: 1000 Hz
+        solution: |
+          void setup() {}
+
+          void loop() {
+            tone(4, 1000);
+            delay(100);
+            noTone(4);
+            delay(400);
+          }

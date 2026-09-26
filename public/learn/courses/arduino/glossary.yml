@@ -1,0 +1,208 @@
+terms:
+  - term: ADC
+    def: Analog-to-digital converter — measures a voltage and gives a number. On an Uno, 0–5 V becomes 0–1023.
+    chapter: ard05
+  - term: Ampere
+    def: "The unit of current, A. 1 mA (milliamp) is a thousandth of an amp; an LED wants about 20 mA."
+    chapter: ard01
+  - term: analogRead
+    def: "Reads the voltage on an analog pin as 0–1023: `analogRead(A0)`."
+    chapter: ard05
+  - term: analogWrite
+    def: "Sets a PWM pin's duty cycle from 0 (off) to 255 (always on): `analogWrite(9, 128)`."
+    chapter: ard06
+  - term: Anode
+    def: The positive leg of an LED — the longer one. It goes towards + (through the resistor).
+    chapter: ard01
+  - term: Baud rate
+    def: The speed of a serial connection in bits per second, such as 9600. Both sides must use the same one.
+    chapter: ard03
+  - term: Binary
+    def: "Base 2: numbers written with only 0 and 1. `0b1010` is 10."
+    chapter: ard07
+  - term: Bit
+    def: One binary digit, 0 or 1 — the smallest piece of information.
+    chapter: ard07
+  - term: Bitwise operator
+    def: "An operator that works on each bit: `&` AND, `|` OR, `^` XOR, `~` NOT, `<<` and `>>` shifts."
+    chapter: ard07
+  - term: Bounce
+    def: A button's contacts opening and closing several times in the first milliseconds of a press.
+    chapter: ard04
+  - term: Breadboard
+    def: A board with rows of connected holes for building circuits without soldering.
+    chapter: ard01
+  - term: Byte
+    def: "Eight bits; holds 0–255. Arduino also has a `byte` type."
+    chapter: ard07
+  - term: Cathode
+    def: The negative leg of an LED — the shorter one, on the flat side. It goes towards GND.
+    chapter: ard01
+  - term: constrain
+    def: "Keeps a value between limits: `constrain(x, 0, 255)`."
+    chapter: ard05
+  - term: Current
+    def: How much electric charge flows through a circuit, in amps (A). The same all the way round a series loop.
+    chapter: ard01
+  - term: Debounce
+    def: Ignoring a button's bounces by only believing a reading that has stayed the same for a short time (~20 ms).
+    chapter: ard04
+  - term: delay
+    def: "Waits a number of milliseconds, doing nothing else: `delay(1000)` is one second."
+    chapter: ard02
+  - term: digitalRead
+    def: "Reads a pin as HIGH or LOW: `digitalRead(2)`."
+    chapter: ard04
+  - term: digitalWrite
+    def: "Sets an output pin HIGH (5 V) or LOW (0 V): `digitalWrite(13, HIGH)`."
+    chapter: ard02
+  - term: Duty cycle
+    def: The share of time a PWM signal is on; 50% is on half the time.
+    chapter: ard06
+  - term: Edge
+    def: The moment a signal changes — HIGH to LOW (falling) or LOW to HIGH (rising). Counting edges counts presses.
+    chapter: ard04
+  - term: Flyback diode
+    def: A diode across a motor or relay coil that safely absorbs the voltage spike when it switches off.
+    chapter: ard06
+  - term: Floating input
+    def: An input pin connected to nothing definite, which reads random HIGHs and LOWs.
+    chapter: ard04
+  - term: GND
+    def: Ground — the 0 V reference that every voltage is measured from. Connected devices need a common ground.
+    chapter: ard01
+  - term: H-bridge
+    def: A circuit (such as the L298N or TB6612 module) that can run a motor in both directions.
+    chapter: ard06
+  - term: Hexadecimal
+    def: "Base 16, with digits 0–9 and A–F. One hex digit is four bits: `0xFF` is 255."
+    chapter: ard07
+  - term: HIGH
+    def: A digital level of about 5 V on an Uno (3.3 V on 3.3 V boards); true, 1.
+    chapter: ard02
+  - term: Hysteresis
+    def: Using two thresholds (on above one, off below a lower one) so an output doesn't flicker when a value hovers near a limit.
+    chapter: ard05
+  - term: I²C
+    def: A protocol where many devices share two wires (SDA and SCL), each with its own address like 0x27.
+    chapter: ard08
+  - term: INPUT_PULLUP
+    def: A pin mode that turns on the built-in pull-up resistor. A button to GND then reads LOW when pressed.
+    chapter: ard04
+  - term: Latch
+    def: The 74HC595 pin that copies the shifted-in bits to all eight outputs at once.
+    chapter: ard07
+  - term: LDR
+    def: Light-dependent resistor — its resistance falls as light increases. Used in a voltage divider.
+    chapter: ard05
+  - term: LED
+    def: Light-emitting diode. Lights when current flows from anode to cathode; always needs a resistor.
+    chapter: ard01
+  - term: Level shifter
+    def: A small circuit that converts signals between 5 V and 3.3 V devices safely.
+    chapter: ard08
+  - term: loop
+    def: The function of a sketch that runs over and over, forever, after setup().
+    chapter: ard02
+  - term: LOW
+    def: A digital level of 0 V; false, 0.
+    chapter: ard02
+  - term: map
+    def: "Rescales a number from one range to another: `map(x, 0, 1023, 0, 100)`."
+    chapter: ard05
+  - term: Mask
+    def: "A number with only certain bits on, such as `1 << 3`, used to set, clear, flip or test those bits."
+    chapter: ard07
+  - term: Microcontroller
+    def: A tiny computer on one chip — processor, memory and pins — that runs one program to control hardware.
+    chapter: ard02
+  - term: millis
+    def: "Gives the milliseconds since the board started, as an unsigned long. The basis of non-blocking timing."
+    chapter: ard03
+  - term: Ohm
+    def: The unit of resistance, Ω. 1 kΩ is 1000 Ω.
+    chapter: ard01
+  - term: Ohm's law
+    def: "V = I × R — voltage equals current times resistance."
+    chapter: ard01
+  - term: Overflow
+    def: When a number gets too big for its type and wraps around — an Uno int goes from 32,767 to −32,768.
+    chapter: ard03
+  - term: Parallel
+    def: Components side by side, each with its own path; the total resistance is less than the smallest.
+    chapter: ard01
+  - term: pinMode
+    def: "Sets a pin to OUTPUT, INPUT or INPUT_PULLUP: `pinMode(13, OUTPUT)`."
+    chapter: ard02
+  - term: Potentiometer
+    def: A knob — a resistor with a sliding wiper that gives any voltage between its two ends.
+    chapter: ard05
+  - term: Power
+    def: "Energy per second, in watts: P = V × I."
+    chapter: ard01
+  - term: Pull-down resistor
+    def: A resistor from an input to GND that keeps it LOW while a button to 5 V is open.
+    chapter: ard04
+  - term: Pull-up resistor
+    def: A resistor from an input to 5 V that keeps it HIGH while a button to GND is open.
+    chapter: ard04
+  - term: PWM
+    def: Pulse-width modulation — switching a pin on and off very fast so the average power sets brightness or speed.
+    chapter: ard06
+  - term: Register
+    def: A byte inside the microcontroller whose bits control or report hardware, such as PORTB for pins 8–13.
+    chapter: ard07
+  - term: Resistor
+    def: A part that limits current. Its colour bands give its value in ohms.
+    chapter: ard01
+  - term: RGB LED
+    def: Red, green and blue LEDs in one package; mixing their brightness with PWM makes any colour.
+    chapter: ard06
+  - term: Series
+    def: Components one after another in a single path; resistances add up and the same current flows through all.
+    chapter: ard01
+  - term: Serial Monitor
+    def: The window on your computer that shows what the board prints with Serial and sends what you type.
+    chapter: ard03
+  - term: Servo
+    def: A motor that turns to an angle from 0° to 180° and holds it. Controlled with the Servo library.
+    chapter: ard06
+  - term: setup
+    def: The function of a sketch that runs once when the board starts.
+    chapter: ard02
+  - term: Shift register
+    def: A chip like the 74HC595 that turns three pins (data, clock, latch) into eight outputs.
+    chapter: ard07
+  - term: shiftOut
+    def: "Sends the 8 bits of a byte one at a time: `shiftOut(dataPin, clockPin, MSBFIRST, value)`."
+    chapter: ard07
+  - term: Short circuit
+    def: A path with (almost) no resistance between + and −; a huge current flows and parts or batteries get damaged.
+    chapter: ard01
+  - term: Sketch
+    def: An Arduino program, with setup() and loop().
+    chapter: ard02
+  - term: SPI
+    def: A fast protocol with four wires (MOSI, MISO, SCK and a chip select per device); used by SD cards and displays.
+    chapter: ard08
+  - term: State machine
+    def: A design where a sketch is always in one named state, and events move it to the next.
+    chapter: ard08
+  - term: TMP36
+    def: "A temperature sensor giving 0.5 V at 0 °C plus 10 mV per degree: °C = (V − 0.5) × 100."
+    chapter: ard05
+  - term: tone
+    def: "Plays a square wave of a frequency on a pin, for a buzzer: `tone(8, 440)`. `noTone(8)` stops it."
+    chapter: ard06
+  - term: Transistor
+    def: An electronic switch — a small current from a pin controls a big current, such as a motor's.
+    chapter: ard06
+  - term: UART
+    def: The serial protocol behind Serial — TX and RX wires, crossed between devices, with an agreed baud rate.
+    chapter: ard08
+  - term: Voltage
+    def: The electrical "push" between two points, in volts (V). An Uno works at 5 V.
+    chapter: ard01
+  - term: Voltage divider
+    def: "Two resistors in series that give a fraction of a voltage: Vout = Vin × R2 ÷ (R1 + R2)."
+    chapter: ard05

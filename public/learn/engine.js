@@ -498,6 +498,8 @@
       unlocked: {},   // chapter id -> at
       frozen: {},     // YYYY-MM-DD -> at: days a streak freeze covered
       badges: {},     // badge id -> at
+      starred: {},    // course id -> {on, at}: courses pinned to the top of the home page
+      saved: {},      // item id -> {on, at}: lessons saved for later
       stats: {},      // counter -> number
       settings: {},
       snippets: {}    // playground snippets: id -> {name, src, at}
@@ -580,6 +582,9 @@
       }).sort(function (p, q) { return stamp(p).localeCompare(stamp(q)); }).slice(-50);
     });
     out.unlocked = mergeMaps(keep(a.unlocked), keep(b.unlocked), earliest);
+    // Stars and saved lessons: the latest click wins (unstarring is kept too).
+    out.starred = mergeMaps(keep(a.starred), keep(b.starred), newer);
+    out.saved = mergeMaps(keep(a.saved), keep(b.saved), newer);
     out.frozen = mergeMaps(keep(a.frozen), keep(b.frozen), earliest);
     out.badges = mergeMaps(keep(a.badges), keep(b.badges), earliest);
 
@@ -615,6 +620,7 @@
     if (/^html/.test(s)) return 'html';
     if (/^css/.test(s)) return 'css';
     if (/^js/.test(s)) return 'js';
+    if (/^ard/.test(s)) return 'ard';
     if (/^(c\d+-|cpp-|ch\d|p\d+$|final-exam|graduate$)/.test(s)) return 'cpp';
     return '';
   }
@@ -629,7 +635,7 @@
       var when = course ? resets[course] : key === 'badges' ? resets.counters : '';
       return Boolean(when) && String(at || '') <= String(when);
     };
-    ['items', 'code', 'cards', 'notes', 'mistakes', 'unlocked', 'badges'].forEach(function (key) {
+    ['items', 'code', 'cards', 'notes', 'mistakes', 'unlocked', 'badges', 'saved'].forEach(function (key) {
       var map = progress[key] || {};
       Object.keys(map).forEach(function (id) {
         var entry = map[id];

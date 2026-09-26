@@ -7,10 +7,10 @@
  */
 'use strict';
 
-const CACHE = 'au-learn-v2';
+const CACHE = 'au-learn-v3';
 const CORE = [
   './', 'index.html', 'app.js', 'learn.css', 'engine.js', 'course.js', 'markdown.js', 'lookup.js', 'explain.js',
-  'web.js', 'build.js', 'video.js', 'player.js', 'courses.yml', '../editor.js', '../compose.js', '../backup.js', '../styles.css'
+  'web.js', 'build.js', 'arduino.js', 'video.js', 'player.js', 'courses.yml', '../editor.js', '../compose.js', '../backup.js', '../styles.css'
 ];
 
 self.addEventListener('install', (event) => {

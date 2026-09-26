@@ -1,0 +1,714 @@
+id: ard02
+number: 2
+part: ard-p1
+title: Your First Sketch
+blurb: Meet the Arduino board, the setup and loop of every sketch, and make LEDs blink, take turns and run a traffic light.
+hours: 2
+goals:
+  - Name the main parts and pins of an Arduino Uno
+  - Explain what setup() and loop() do
+  - Switch pins on and off with pinMode, digitalWrite and delay
+  - Use named constants for pins, and loops for several LEDs
+  - Read what a sketch did from the board and a trace
+
+items:
+  - type: lesson
+    id: ard2-sketch
+    title: setup, loop and a blinking LED
+    minutes: 18
+    objectives:
+      - Describe the Arduino Uno and its pins
+      - Explain when setup() and loop() run
+      - Blink an LED with pinMode, digitalWrite and delay
+    body: |
+      An **Arduino Uno** is a small board built around a **microcontroller**
+      — a tiny computer on one chip that runs one program, over and over,
+      and controls things through its **pins**:
+
+      | Pins | What they do |
+      |---|---|
+      | **Digital 0–13** | outputs (on/off) or inputs (buttons). Pin 13 also has a small LED on the board. |
+      | **Analog A0–A5** | read voltages from sensors (Chapter 5) |
+      | **5V, 3.3V, GND** | power for your circuits; GND is "ground", 0 V |
+      | **USB** | power, uploading sketches, and the Serial Monitor |
+
+      ## Every sketch has two parts
+
+      ```cpp static
+      void setup() {
+        // runs ONCE, when the board starts
+      }
+
+      void loop() {
+        // runs AGAIN AND AGAIN, forever
+      }
+      ```
+
+      There's no "end": an Arduino keeps running `loop()` until you unplug it.
+
+      ## Blink
+
+      The "Hello, World" of electronics: blink the LED on pin 13.
+
+      ```cpp
+      void setup() {
+        pinMode(13, OUTPUT);
+      }
+
+      void loop() {
+        digitalWrite(13, HIGH);
+        delay(1000);
+        digitalWrite(13, LOW);
+        delay(1000);
+      }
+      ```
+
+      ```stdin
+      trace
+      run 2500
+      ```
+
+      ```output
+      [0 ms] pin 13 HIGH
+      [1000 ms] pin 13 LOW
+      [2000 ms] pin 13 HIGH
+      ```
+
+      - `pinMode(13, OUTPUT)` makes pin 13 an **output**, able to give power.
+      - `digitalWrite(13, HIGH)` puts **5 V** on it: the LED lights. `LOW` puts 0 V.
+      - `delay(1000)` waits 1000 **milliseconds** — one second.
+
+      Press **▶ Run** and look under the output: **the board** shows every
+      pin the sketch used. Press **▶ Replay** to watch the LED blink in real
+      time, or drag the slider through the run.
+
+      > [!note]
+      > **How the simulator works.** Time is simulated, so ten seconds of
+      > blinking take no time at all. The box above the output holds the
+      > board's inputs: `trace` prints every pin change (that's what you see
+      > in the output here), and `run 2500` simulates 2.5 seconds instead of
+      > the usual 10. Later you'll use it for buttons and sensors too.
+
+      {{check loop}}
+
+      {{check setup-once}}
+
+      {{task fast}}
+    checks:
+      - id: loop
+        type: mcq
+        prompt: How often does `loop()` run?
+        options:
+          - Once, after setup()
+          - Once every second
+          - Again and again, for as long as the board has power
+          - Only when a button is pressed
+        answer: 2
+        why: "loop() starts again as soon as it ends, forever. That's what keeps a gadget working."
+      - id: setup-once
+        type: tf
+        prompt: "`setup()` runs once, when the board starts."
+        answer: true
+        why: "setup() is for things done once: setting pin modes, starting Serial. Then loop() takes over."
+    tasks:
+      - id: fast
+        title: A faster blink
+        prompt: |
+          Make the LED on pin **13** blink fast: **on for 200 ms, off for
+          200 ms**, over and over.
+
+          The check runs your sketch for 0.9 seconds with `trace` on, so it
+          sees every change of the pin.
+        starter: |
+          void setup() {
+            pinMode(13, OUTPUT);
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              trace
+              run 900
+            out: |
+              [0 ms] pin 13 HIGH
+              [200 ms] pin 13 LOW
+              [400 ms] pin 13 HIGH
+              [600 ms] pin 13 LOW
+              [800 ms] pin 13 HIGH
+        hints:
+          - "Four lines in loop(): HIGH, wait, LOW, wait."
+          - "`delay(200);` waits 200 milliseconds."
+        solution: |
+          void setup() {
+            pinMode(13, OUTPUT);
+          }
+
+          void loop() {
+            digitalWrite(13, HIGH);
+            delay(200);
+            digitalWrite(13, LOW);
+            delay(200);
+          }
+    cards:
+      - front: What does `setup()` do, and what does `loop()` do?
+        back: setup() runs once when the board starts; loop() runs over and over forever after that.
+      - front: What do `pinMode(13, OUTPUT)` and `digitalWrite(13, HIGH)` do?
+        back: The first makes pin 13 an output; the second puts 5 V on it (LOW puts 0 V).
+      - front: What does `delay(500)` do?
+        back: Waits 500 milliseconds — half a second — doing nothing else.
+
+  - type: video
+    id: ard2-video-blink
+    title: "Watch: Blink, one line at a time"
+    body: |
+      **What you just saw**
+
+      - `setup()` runs once: `pinMode` makes pin 13 an output.
+      - `loop()` runs forever: HIGH (5 V, LED on), wait, LOW (0 V, LED off), wait — and back to the top.
+      - `delay(1000)` is one second. Change the numbers to change the rhythm.
+    video:
+      steps:
+        - scene: Blink
+          sub: The Hello World of electronics
+        - type: "void setup() {\n}\n\nvoid loop() {\n}\n"
+          say: "Every sketch has these two parts."
+        - say: "`setup()` runs **once**, when the board powers on."
+          mark: "void setup()"
+        - say: "`loop()` runs **again and again**, forever."
+          mark:
+            text: "void loop()"
+            color: pink
+        - type: "  pinMode(13, OUTPUT);\n"
+          at: "void setup() {\n"
+          say: "Make pin 13 an **output** — it can now give power to an LED."
+          mark: "pinMode(13, OUTPUT);"
+        - type: "  digitalWrite(13, HIGH);\n  delay(1000);\n  digitalWrite(13, LOW);\n  delay(1000);\n"
+          at: "void loop() {\n"
+          speed: 1.5
+          say: "On, wait a second, off, wait a second."
+        - scene: Watch it run
+          sub: One line at a time
+        - run: true
+          line: 2
+          vars:
+            pin13: "OUTPUT"
+          say: "setup(): pin 13 becomes an output."
+        - line: 6
+          vars:
+            pin13: "HIGH 💡"
+          say: "`HIGH` puts **5 volts** on the pin — the LED lights up."
+          mark:
+            text: "digitalWrite(13, HIGH);"
+            color: green
+        - line: 7
+          vars:
+            millis: "1000 ms"
+          say: "`delay(1000)` waits one second (1000 milliseconds)."
+        - line: 8
+          vars:
+            pin13: "LOW ⚫"
+          say: "`LOW` puts **0 volts** on it — the LED goes out."
+          mark:
+            text: "digitalWrite(13, LOW);"
+            color: pink
+        - line: 9
+          vars:
+            millis: "2000 ms"
+          hold: 1.6
+        - line: 6
+          vars:
+            pin13: "HIGH 💡"
+            millis: "2000 ms"
+          say: "…and `loop()` starts again from the top. Forever."
+        - line: 0
+          say: "Change `1000` to `200` and it blinks five times faster."
+          mark:
+            text: "1000"
+            all: true
+            color: blue
+
+  - type: lesson
+    id: ard2-patterns
+    title: More LEDs, named pins and patterns
+    minutes: 20
+    objectives:
+      - Give pins names with const int
+      - Control several LEDs, each with its own resistor
+      - Build a sequence like a traffic light
+      - Use a for loop to drive a row of LEDs
+    body: |
+      Real projects use several LEDs. Each goes from its own pin, through
+      its own resistor, to GND. Numbers like `12` say little, so give pins
+      **names**:
+
+      ```cpp static
+      const int RED = 12;
+      ```
+
+      `const int` is a whole number that never changes. Now `RED` means pin
+      12 everywhere — and if you rewire, you change one line.
+
+      ## A traffic light
+
+      ```cpp
+      const int RED = 12;
+      const int YELLOW = 11;
+      const int GREEN = 10;
+
+      void setup() {
+        pinMode(RED, OUTPUT);
+        pinMode(YELLOW, OUTPUT);
+        pinMode(GREEN, OUTPUT);
+      }
+
+      void loop() {
+        digitalWrite(GREEN, HIGH);
+        delay(3000);
+        digitalWrite(GREEN, LOW);
+        digitalWrite(YELLOW, HIGH);
+        delay(1000);
+        digitalWrite(YELLOW, LOW);
+        digitalWrite(RED, HIGH);
+        delay(3000);
+        digitalWrite(RED, LOW);
+      }
+      ```
+
+      ```stdin
+      trace
+      run 7500
+      ```
+
+      ```output
+      [0 ms] pin 10 HIGH
+      [3000 ms] pin 10 LOW
+      [3000 ms] pin 11 HIGH
+      [4000 ms] pin 11 LOW
+      [4000 ms] pin 12 HIGH
+      [7000 ms] pin 12 LOW
+      [7000 ms] pin 10 HIGH
+      ```
+
+      Run it and replay the board: three lights taking turns. Notice two
+      changes can happen at the same moment — switching one light off and
+      the next one on takes no time at all.
+
+      ## A row of LEDs with a loop
+
+      LEDs on pins 2, 3, 4 and 5 can be handled with a `for` loop, which
+      counts `pin` from 2 to 5:
+
+      ```cpp
+      void setup() {
+        for (int pin = 2; pin <= 5; pin++) {
+          pinMode(pin, OUTPUT);
+        }
+      }
+
+      void loop() {
+        for (int pin = 2; pin <= 5; pin++) {
+          digitalWrite(pin, HIGH);
+          delay(100);
+          digitalWrite(pin, LOW);
+        }
+      }
+      ```
+
+      ```stdin
+      trace
+      run 450
+      ```
+
+      ```output
+      [0 ms] pin 2 HIGH
+      [100 ms] pin 2 LOW
+      [100 ms] pin 3 HIGH
+      [200 ms] pin 3 LOW
+      [200 ms] pin 4 HIGH
+      [300 ms] pin 4 LOW
+      [300 ms] pin 5 HIGH
+      [400 ms] pin 5 LOW
+      [400 ms] pin 2 HIGH
+      ```
+
+      `for (start; keep going while…; step)`: `int pin = 2` starts at 2,
+      the loop repeats while `pin <= 5`, and `pin++` adds one each time. A
+      light runs along the row — a **chaser**.
+
+      > [!mistake]
+      > Forgetting `pinMode(pin, OUTPUT)`. On a real board the LED then only
+      > glows faintly. The simulator warns you when it happens.
+
+      {{check trace}}
+
+      {{check const}}
+
+      {{task crossing}}
+    checks:
+      - id: trace
+        type: output
+        code: |
+          void setup() {
+            pinMode(7, OUTPUT);
+            digitalWrite(7, HIGH);
+            delay(300);
+            digitalWrite(7, LOW);
+          }
+
+          void loop() {}
+        stdin: |
+          trace
+        answer: |
+          [0 ms] pin 7 HIGH
+          [300 ms] pin 7 LOW
+        why: "Pin 7 goes HIGH at the start, stays on for 300 ms, then goes LOW. loop() is empty, so nothing else happens."
+      - id: const
+        type: mcq
+        prompt: Why write `const int RED = 12;` instead of using `12` everywhere?
+        options:
+          - It makes the LED brighter
+          - The name says what the pin is for, and rewiring means changing one line
+          - Arduino doesn't accept plain numbers for pins
+          - It saves battery
+        answer: 1
+        why: "Names make the sketch readable, and if the LED moves to another pin, you change only the constant."
+    tasks:
+      - id: crossing
+        title: A pedestrian crossing light
+        prompt: |
+          A pedestrian light has a **red** LED on pin **8** and a **green**
+          LED on pin **9**. Make it show red for 2 seconds, then green for 2
+          seconds, over and over. Only one light may be on at a time.
+        starter: |
+          const int RED = 8;
+          const int GREEN = 9;
+
+          void setup() {
+
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              trace
+              run 4500
+            out: |
+              [0 ms] pin 8 HIGH
+              [2000 ms] pin 8 LOW
+              [2000 ms] pin 9 HIGH
+              [4000 ms] pin 9 LOW
+              [4000 ms] pin 8 HIGH
+        hints:
+          - "In setup(), make both pins outputs."
+          - "In loop(): red on, wait 2000, red off, green on, wait 2000, green off."
+        solution: |
+          const int RED = 8;
+          const int GREEN = 9;
+
+          void setup() {
+            pinMode(RED, OUTPUT);
+            pinMode(GREEN, OUTPUT);
+          }
+
+          void loop() {
+            digitalWrite(RED, HIGH);
+            delay(2000);
+            digitalWrite(RED, LOW);
+            digitalWrite(GREEN, HIGH);
+            delay(2000);
+            digitalWrite(GREEN, LOW);
+          }
+    cards:
+      - front: How do you give a pin a name?
+        back: "`const int RED = 12;` — then use `RED` instead of 12."
+      - front: How many resistors do three LEDs need?
+        back: Three — each LED gets its own resistor.
+      - front: What does `for (int pin = 2; pin <= 5; pin++)` do?
+        back: Runs the loop body with pin = 2, 3, 4 and 5.
+
+  - type: quiz
+    id: ard2-quiz
+    title: "Quiz: your first sketches"
+    questions:
+      - type: mcq
+        prompt: Which function makes a pin able to power an LED?
+        options:
+          - "`digitalRead(pin)`"
+          - "`pinMode(pin, OUTPUT)`"
+          - "`delay(pin)`"
+          - "`Serial.begin(pin)`"
+        answer: 1
+        why: "pinMode(pin, OUTPUT) sets the pin up as an output. digitalWrite then switches it."
+      - type: tf
+        prompt: "`delay(2000)` waits two seconds."
+        answer: true
+        why: "delay takes milliseconds: 2000 ms is 2 seconds."
+      - type: mcq
+        prompt: What voltage does `digitalWrite(pin, HIGH)` put on an Uno pin?
+        options:
+          - 0 V
+          - 3.3 V
+          - 5 V
+          - 12 V
+        answer: 2
+        why: "On a 5 V board like the Uno, HIGH is 5 V and LOW is 0 V."
+      - type: output
+        code: |
+          void setup() {
+            pinMode(4, OUTPUT);
+          }
+
+          void loop() {
+            digitalWrite(4, HIGH);
+            delay(500);
+            digitalWrite(4, LOW);
+            delay(250);
+          }
+        stdin: |
+          trace
+          run 1000
+        answer: |
+          [0 ms] pin 4 HIGH
+          [500 ms] pin 4 LOW
+          [750 ms] pin 4 HIGH
+        why: "On at 0, off at 500 (after 500 ms), on again at 750 (after 250 more). The next change would be at 1250 — after the run ends."
+      - type: spot
+        prompt: This sketch should blink pin 13, but the LED only glows faintly. Which line is missing something?
+        code: |
+          void setup() {
+          }
+
+          void loop() {
+            digitalWrite(13, HIGH);
+            delay(500);
+            digitalWrite(13, LOW);
+            delay(500);
+          }
+        answer: 1
+        why: "setup() never calls pinMode(13, OUTPUT). Without it the pin isn't an output, and the LED only glows faintly."
+
+  - type: challenge
+    id: ard2-ch-heartbeat
+    title: Heartbeat
+    difficulty: 1
+    tags: [digitalWrite, delay]
+    prompt: |
+      Make the LED on pin **13** beat like a heart: **on 100 ms, off 100 ms,
+      on 100 ms, off 700 ms** — a double flash every second.
+    starter: |
+      void setup() {
+        pinMode(13, OUTPUT);
+      }
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          trace
+          run 1250
+        out: |
+          [0 ms] pin 13 HIGH
+          [100 ms] pin 13 LOW
+          [200 ms] pin 13 HIGH
+          [300 ms] pin 13 LOW
+          [1000 ms] pin 13 HIGH
+          [1100 ms] pin 13 LOW
+          [1200 ms] pin 13 HIGH
+    hints:
+      - "It's two blinks in one loop(): HIGH, 100, LOW, 100, HIGH, 100, LOW, 700."
+    solution: |
+      void setup() {
+        pinMode(13, OUTPUT);
+      }
+
+      void loop() {
+        digitalWrite(13, HIGH);
+        delay(100);
+        digitalWrite(13, LOW);
+        delay(100);
+        digitalWrite(13, HIGH);
+        delay(100);
+        digitalWrite(13, LOW);
+        delay(700);
+      }
+
+  - type: challenge
+    id: ard2-ch-scanner
+    title: Back-and-forth scanner
+    difficulty: 2
+    tags: [for, digitalWrite]
+    prompt: |
+      Four LEDs on pins **2, 3, 4 and 5**. Light them one at a time for
+      **100 ms** each, going **up** (2, 3, 4, 5) and then **back down**
+      (4, 3) — and repeat, so the light bounces from end to end.
+    starter: |
+      void setup() {
+        for (int pin = 2; pin <= 5; pin++) {
+          pinMode(pin, OUTPUT);
+        }
+      }
+
+      void loop() {
+
+      }
+    tests:
+      - in: |
+          trace
+          run 650
+        out: |
+          [0 ms] pin 2 HIGH
+          [100 ms] pin 2 LOW
+          [100 ms] pin 3 HIGH
+          [200 ms] pin 3 LOW
+          [200 ms] pin 4 HIGH
+          [300 ms] pin 4 LOW
+          [300 ms] pin 5 HIGH
+          [400 ms] pin 5 LOW
+          [400 ms] pin 4 HIGH
+          [500 ms] pin 4 LOW
+          [500 ms] pin 3 HIGH
+          [600 ms] pin 3 LOW
+          [600 ms] pin 2 HIGH
+    hints:
+      - "Use two for loops: one counting up from 2 to 5, one counting down from 4 to 3."
+      - "The second loop: `for (int pin = 4; pin >= 3; pin--)`."
+    solution: |
+      void setup() {
+        for (int pin = 2; pin <= 5; pin++) {
+          pinMode(pin, OUTPUT);
+        }
+      }
+
+      void loop() {
+        for (int pin = 2; pin <= 5; pin++) {
+          digitalWrite(pin, HIGH);
+          delay(100);
+          digitalWrite(pin, LOW);
+        }
+        for (int pin = 4; pin >= 3; pin--) {
+          digitalWrite(pin, HIGH);
+          delay(100);
+          digitalWrite(pin, LOW);
+        }
+      }
+
+  - type: exam
+    id: ard2-exam
+    title: "Chapter 2 exam"
+    minutes: 20
+    questions:
+      - type: mcq
+        prompt: What is a **microcontroller**?
+        options:
+          - A tiny computer on one chip that runs one program and controls pins
+          - A kind of battery
+          - The cable that connects the Arduino to a computer
+          - A program that runs on a laptop
+        answer: 0
+        why: "The chip on an Arduino is a microcontroller: processor, memory and pins on one chip."
+      - type: tf
+        prompt: After `loop()` finishes, the board stops.
+        answer: false
+        why: "loop() starts again straight away, forever."
+      - type: mcq
+        prompt: Which pins read sensor voltages?
+        options:
+          - Digital 0–13
+          - Analog A0–A5
+          - GND
+          - 5V
+        answer: 1
+        why: "The analog pins A0–A5 measure voltages (Chapter 5)."
+      - type: fill
+        prompt: Make pin 6 an output.
+        code: |
+          pinMode(6, ___);
+        blanks:
+          - [OUTPUT]
+        why: "`pinMode(pin, OUTPUT)`."
+      - type: output
+        code: |
+          void setup() {
+            pinMode(9, OUTPUT);
+            pinMode(10, OUTPUT);
+            digitalWrite(9, HIGH);
+            delay(100);
+            digitalWrite(10, HIGH);
+            delay(100);
+            digitalWrite(9, LOW);
+          }
+
+          void loop() {}
+        stdin: |
+          trace
+        answer: |
+          [0 ms] pin 9 HIGH
+          [100 ms] pin 10 HIGH
+          [200 ms] pin 9 LOW
+        why: "Pin 9 on at 0, pin 10 on at 100, pin 9 off at 200. Pin 10 stays on."
+      - type: mcq
+        prompt: How many milliseconds are in 1.5 seconds?
+        options:
+          - "15"
+          - "150"
+          - "1500"
+          - "15000"
+        answer: 2
+        why: "1 second = 1000 ms, so 1.5 s = 1500 ms."
+      - type: order
+        prompt: Put the blink sketch's loop in order.
+        lines:
+          - "void loop() {"
+          - "  digitalWrite(13, HIGH);"
+          - "  delay(500);"
+          - "  digitalWrite(13, LOW);"
+          - "  delay(500);"
+          - "}"
+        why: "Switch on, wait, switch off, wait — inside loop()."
+      - type: mcq
+        prompt: "`for (int pin = 3; pin <= 6; pin++)` runs its body for which pins?"
+        options:
+          - 3, 4, 5
+          - 3, 4, 5, 6
+          - 4, 5, 6
+          - 3 and 6
+        answer: 1
+        why: "It starts at 3 and keeps going while pin <= 6: 3, 4, 5 and 6."
+      - type: code
+        prompt: |
+          Make the LED on pin **12** stay **on for 1 second** and **off for
+          half a second**, over and over.
+        starter: |
+          void setup() {
+
+          }
+
+          void loop() {
+
+          }
+        tests:
+          - in: |
+              trace
+              run 3200
+            out: |
+              [0 ms] pin 12 HIGH
+              [1000 ms] pin 12 LOW
+              [1500 ms] pin 12 HIGH
+              [2500 ms] pin 12 LOW
+              [3000 ms] pin 12 HIGH
+        solution: |
+          void setup() {
+            pinMode(12, OUTPUT);
+          }
+
+          void loop() {
+            digitalWrite(12, HIGH);
+            delay(1000);
+            digitalWrite(12, LOW);
+            delay(500);
+          }

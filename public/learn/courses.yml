@@ -6,3 +6,4 @@ courses:
   - dir: courses/html
   - dir: courses/css
   - dir: courses/js
+  - dir: courses/arduino

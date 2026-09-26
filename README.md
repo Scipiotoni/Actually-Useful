@@ -244,7 +244,7 @@ you are still drafting, not only once deployed.
 
 ## Learn
 
-The **Learn** button (or `/learn/`) opens four complete courses, each
+The **Learn** button (or `/learn/`) opens five complete courses, each
 starting from zero:
 
 | Course | Chapters | Lessons | Exercises and challenges | Ends with |
@@ -253,14 +253,22 @@ starting from zero:
 | **HTML Basics** | 8 | 26 | 20 + 18 | a hand-written personal website and a final exam |
 | **CSS Styling** | 12 | 39 | 35 + 22 | styling that website, responsive and accessible, and a final exam |
 | **JavaScript** | 14 | 46 | 42 + 26 | a to-do app built in five milestones, and a final exam |
+| **Arduino & Electronics** | 8 | 20 | 19 + 16 | two gadgets of your own, and a final exam |
+
+The Arduino course teaches electricity (Ohm's law, LEDs and their resistors,
+dividers, transistors) together with the code that controls it — digital and
+analog pins, the Serial Monitor, `millis()` timing, buttons and debouncing,
+sensors, PWM, servos and buzzers, bits and shift registers, state machines and
+how chips talk (UART, I²C, SPI). No hardware is needed: every sketch runs on a
+**simulated Arduino** (below), and the same code works on a real board.
 
 Every course works the same way:
 
 - **Lessons** with stated objectives, examples you can edit and run (HTML and
   CSS examples show their result live as you type), and quick checks as you
   read.
-- **Video lessons** (29: one or more for every HTML chapter, and the key ideas
-  of CSS, JavaScript and C++): silent, animated explanations where code is
+- **Video lessons** (33: one or more for every HTML chapter, and the key ideas
+  of CSS, JavaScript, C++ and Arduino): silent, animated explanations where code is
   typed, its parts light up, arrows point from each tag to what it makes in a
   little browser, variables change in front of you, and captions say what's
   happening. Hover over a video to slow it down, click to pause, jump to a
@@ -269,7 +277,7 @@ Every course works the same way:
 - **Practice at every level**: exercises inside lessons, challenges
   (★ to ★★★), projects built in milestones, quizzes, a review page and an exam
   per chapter — multiple choice, predict the output, fill in the blank, order
-  the lines, spot the bug, and code (1,623 questions across the courses).
+  the lines, spot the bug, and code (1,786 questions across the courses).
 - **Mastery learning**: a chapter's exam (80% to pass) unlocks the next one —
   or unlock it anyway if you already know the material. Retakes wait a little,
   so they come after reviewing rather than guessing: 30 minutes after an exam
@@ -278,13 +286,14 @@ Every course works the same way:
   lesson that explains it, highlighted, with the key sentence marked — then
   back to the question to answer it (it won't count toward the score, and it
   goes to your mistake bank).
-- **Remembering it**: spaced-repetition flashcards (755 in all), a mistake bank
+- **Remembering it**: spaced-repetition flashcards (813 in all), a mistake bank
   that brings back what you got wrong, and mixed practice across chapters.
 - **Help when stuck**: progressive hints, errors explained in plain words
   (compiler messages, crashes, JavaScript errors, endless loops), and
   solutions after a real attempt.
 - XP, levels, streaks, badges (including a Graduate badge per course), notes
-  per lesson, a searchable glossary per course (485 terms) and a Playground.
+  per lesson, a searchable glossary per course (554 terms) and a Playground (C++,
+  Arduino, JavaScript and pages).
 
 Each course ends with two **build-anything final projects**: no steps to
 follow, just a brief and a list of ingredients to use ("a function, an array,
@@ -311,6 +320,22 @@ program, and ticks each one off live as you type. Finished projects go to your
   style is accepted where the language allows it, and case is ignored in HTML
   and CSS.
 
+**The home page** puts every course on one screen, built for coming back:
+
+- **Continue** where you left off, with your daily goal, streak and a 17-week
+  **activity calendar**.
+- **★ Star** courses to pin them to the top; **Recently visited** lessons;
+  **Saved for later** (a 🔖 button on every lesson, exercise and exam).
+- **Search everything** — lessons, exercises, chapters and glossary terms in
+  all courses, with the matching words shown. Press `/` from anywhere on the
+  home page to start typing.
+- **Learning paths** that chain courses in a sensible order (web developer:
+  HTML → CSS → JavaScript; maker: Arduino → C++; programmer: JavaScript → C++),
+  showing how far along each one you are.
+- **Filter** the course list by topic (Web, Programming, Electronics).
+
+Stars and saved lessons sync with the rest of your progress.
+
 Progress for all courses is one record, kept in the browser and synced to the
 server, merged so two devices never overwrite each other. With GitHub storage
 on, it is committed to its own branch (`au-learn`), so saving progress never
@@ -334,6 +359,29 @@ Code is compiled and run on the server, in this order of preference:
 `AU_CPP_BACKEND=local|godbolt|wandbox|off` forces one. The limits are there to
 stop honest mistakes — an endless loop, a runaway print — not to contain
 hostile code: with `AU_PASSWORD` set, only signed-in users can run anything.
+
+### How the Arduino runs
+
+There's no board to plug into a web page, so the Arduino course runs sketches
+on a **simulated Arduino Uno** (`public/learn/arduino.js`): a small
+"Arduino.h" — `pinMode`, `digitalWrite`/`digitalRead`, `analogRead`/
+`analogWrite`, `delay`, `millis`, `Serial`, `String`, `map`, `constrain`,
+`tone`, `shiftOut`, `Servo`, bit macros… — compiled together with the sketch by
+the same C++ runner.
+
+- **Time is simulated**: `delay(1000)` takes no real time, so ten seconds of
+  blinking run instantly. A run lasts 10 simulated seconds.
+- **Serial** output is the **Serial Monitor**. Every pin change is recorded,
+  and under the output **the board** shows each pin used (an LED, a PWM level,
+  a servo angle, a buzzer note, a shift register's eight bits) with its
+  waveform over time. **▶ Replay** plays it back in real time (1×–10×), or
+  drag the slider through it.
+- **Inputs** go in the input box, one per line: `2 LOW @1500` (the button on
+  pin 2 is pressed from 1.5 s), `A0 612` (a sensor or knob), `serial hello @0`
+  (typed into the Serial Monitor), `run 3000` (simulate 3 s) and `trace`
+  (print every pin change, which is how exercises check timing).
+- Mistakes a real board wouldn't report are warned about — writing to a pin
+  that was never set as an output, or thousands of changes with no delay.
 
 ### How HTML, CSS and JavaScript run
 
@@ -362,6 +410,11 @@ questions and exercises.
 - **C++**: ` ```cpp ` blocks, followed by optional ` ```stdin ` and ` ```output `
   blocks. Exercises are whole programs checked against input/output tests, or
   functions checked by a `harness` of `CHECK(expression, expected);` lines.
+- **Arduino**: `sim: arduino` in `course.yml` runs every C++ block and
+  exercise on the simulator. A sketch (with `setup()`/`loop()`) is a program:
+  its ` ```stdin ` block (or a test's `in`) holds the board's inputs, and
+  tests compare the Serial Monitor — plus pin changes, with `trace`. Functions
+  can still be checked by a `harness`; `OUTPUT(f())` captures what they print.
 - **JavaScript**: ` ```js ` blocks with an optional ` ```output `. Exercises have a
   `starter`, a `solution` and a `harness` of `check(expression, expected);`
   lines (`checkThrows(expression)` for errors); `printed()` and `capture(fn)`
@@ -394,8 +447,8 @@ questions and exercises.
   `submit('form')`, `press('#new', 'Enter')` and `await viewport(400)` (to try
   another screen width).
 
-`node test/course-lib.js [ch05 ...]` compiles and runs everything in the C++
-course, and `node test/web-course-lib.js [html css03 ...]` does the same for
+`node test/course-lib.js [ch05 ard ...]` compiles and runs everything in the
+C++ and Arduino courses, and `node test/web-course-lib.js [html css03 ...]` does the same for
 the web courses in Chromium (with Playwright installed): examples must run
 cleanly and print what they claim, solutions must pass, and starters — and each
 milestone's previous solution — must not already pass. Videos are checked too:
@@ -624,9 +677,11 @@ repetition, merging progress from two devices), the course format and
 Markdown renderer (including link and HTML escaping), every course's
 structure (ids unique across courses), the error explainers, the C++ and
 progress APIs, the compiler runner itself (skipped when no `g++` is
-installed), the browser runner's pure parts (console formatting, check
-translation, loop guards), video timelines, retake cooldowns, and tracing
-every quiz question back to the lesson that teaches it. Every course — over a thousand C++ checks and
+installed), the Arduino simulator (simulated time, inputs, pin events,
+warnings), the browser runner's pure parts (console formatting, check
+translation, loop guards), video timelines, retake cooldowns, stars and saved
+lessons across devices, and tracing every quiz question back to the lesson
+that teaches it. Every course — over a thousand C++ and Arduino checks and
 almost 800 browser runs for HTML, CSS and JavaScript — is checked with:
 
 ```bash
@@ -672,7 +727,8 @@ server/cpp.js      Compiles and runs C++ for Learn mode (local g++ or a remote s
 server/learn-store.js  Learning progress on disk or on its own GitHub branch
 public/backup.js   Backup files: the editor project and Learn progress in one JSON file
 public/learn/      Learn: the app, its engine, the C++ course in course/ and the
-                   HTML, CSS and JavaScript courses in courses/
+                   HTML, CSS, JavaScript and Arduino courses in courses/
+public/learn/arduino.js  The simulated Arduino: its Arduino.h, and reading back what the pins did
 public/learn/web.js  Runs HTML, CSS and JavaScript for Learn, in a worker or a sandboxed frame
 public/learn/video.js, player.js  Video lessons: the timeline of a script, and the player that draws it
 public/learn/lookup.js  Finds the part of a lesson that teaches a quiz question

@@ -327,6 +327,29 @@ test('resetting one course drops only that course, everywhere, and stale copies 
   assert.deepStrictEqual(Engine.mergeProgress(fresh, old).stats, {});
 });
 
+test('stars and saved lessons sync between devices: the latest click wins', () => {
+  const t1 = '2026-02-01T10:00:00.000Z';
+  const t2 = '2026-02-02T10:00:00.000Z';
+  const reset = '2026-02-03T10:00:00.000Z';
+  const phone = Object.assign(Engine.emptyProgress(), {
+    starred: { ard: { on: true, at: t1 }, js: { on: true, at: t2 } },
+    saved: { 'ard3-millis': { on: true, at: t1 }, 'c3-intdiv': { on: true, at: t1 } }
+  });
+  const laptop = Object.assign(Engine.emptyProgress(), {
+    starred: { ard: { on: false, at: t2 }, css: { on: true, at: t1 } },
+    saved: { 'html1-web': { on: true, at: t2 } }
+  });
+  const both = Engine.mergeProgress(phone, laptop);
+  assert.deepStrictEqual(Object.keys(both.starred).filter((k) => both.starred[k].on).sort(), ['css', 'js'], 'unstarring later wins over an older star');
+  assert.deepStrictEqual(Object.keys(both.saved).sort(), ['ard3-millis', 'c3-intdiv', 'html1-web']);
+  assert.deepStrictEqual(Engine.mergeProgress(laptop, phone).starred, both.starred, 'the order of merging does not matter');
+
+  // Resetting a course drops the lessons saved from it; its star stays.
+  const cleared = Engine.mergeProgress(both, { resets: { ard: reset } });
+  assert.deepStrictEqual(Object.keys(cleared.saved).sort(), ['c3-intdiv', 'html1-web']);
+  assert.ok(cleared.starred.js.on);
+});
+
 test('every id in every course belongs to its own course', () => {
   const { loadCourseAt, courseDirs } = require('./web-course-lib.js');
   courseDirs().map((dir) => loadCourseAt(dir).course).forEach((course) => {

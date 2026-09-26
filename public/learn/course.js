@@ -439,6 +439,10 @@
       short: text(index.short) || text(index.title),
       icon: text(index.icon),
       final: text(index.final),
+      // "arduino": C++ runs on the simulated board (arduino.js).
+      sim: text(index.sim),
+      // How the home page groups it: Web, Programming, Electronics…
+      category: text(index.category),
       graduate: text(index.graduate),
       title: text(index.title),
       subtitle: text(index.subtitle),
