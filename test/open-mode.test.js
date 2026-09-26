@@ -62,7 +62,7 @@ test('the open version needs no password and says it is open', async () => {
   const page = await fetch(base + '/', { redirect: 'manual' });
   assert.strictEqual(page.status, 200, 'no login redirect');
   const config = await (await fetch(`${base}/api/config`)).json();
-  assert.deepStrictEqual(config, { auth: false, open: true, storage: 'none' });
+  assert.deepStrictEqual(config, { auth: false, open: true, storage: 'none', account: 'main', pages: '/p/' });
   assert.strictEqual((await fetch(`${base}/learn/`)).status, 200);
 });
 

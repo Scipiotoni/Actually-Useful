@@ -20,7 +20,8 @@
   const Video = window.LearnVideo;
   const MiniEditor = window.MiniEditor;
 
-  const STORE_KEY = 'au-learn-progress-v1';
+  // Each account keeps its own progress in the browser (see backup.js).
+  const STORE_KEY = window.Backup ? window.Backup.KEYS.learn : 'au-learn-progress-v1';
   const LINE_PX = 21.6;
   // Daily goals to choose from (XP a day), as in paid learning apps — free here.
   const GOALS = [[30, 'Casual'], [60, 'Regular'], [120, 'Serious'], [200, 'Intense']];
@@ -2465,7 +2466,7 @@
   // ================================================================ views: quiz
 
   // A quiz in progress lives on while you look something up (and across a reload).
-  const QUIZ_KEY = 'au-learn-quizzes-v1';
+  const QUIZ_KEY = 'au-learn-quizzes-v1' + (window.Backup && window.Backup.ACCOUNT ? ':' + window.Backup.ACCOUNT : '');
   let quizRuns = {};
   try { quizRuns = JSON.parse(sessionStorage.getItem(QUIZ_KEY) || '{}') || {}; } catch (e) { quizRuns = {}; }
   function keepQuizRuns() {

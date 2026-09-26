@@ -466,6 +466,26 @@ With no `AU_PASSWORD` set the app runs open, which is the sensible default on
 **refuses to start** if `HOST` is non-loopback and no password is set. Override
 with `AU_ALLOW_PUBLIC_WRITES=1` if you really mean it.
 
+### A second account
+
+Set `AU_ALT_PASSWORD` as well (on Render: Environment → Add variable) and the
+same sign-in page opens a **second, completely separate account** for whoever
+types that code instead:
+
+| | Main account (`AU_PASSWORD`) | Second account (`AU_ALT_PASSWORD`) |
+|---|---|---|
+| Published pages | `/p/<slug>/`, and `published/<slug>/` on GitHub Pages | `/a/<slug>/`, and `alt/<slug>/` on GitHub Pages |
+| Images | `/assets/…` (`published/assets/`) | `/a/assets/…` (`alt/assets/`) |
+| Learning progress | `learn/progress.json` on the `au-learn` branch | `learn/alt/progress.json` on the same branch |
+| Draft in the browser | its own | its own, even on the same device |
+
+Both can publish, and neither can see, change or delete the other's pages —
+two pages may even share a name. Which account you are in depends only on
+the password you sign in with; the second one's **Sign out** button says
+"account 2". Nothing about the main account changes when you add it: its pages,
+drafts and progress stay exactly where they were. The second password must
+differ from the first, and only works when `AU_PASSWORD` is set.
+
 ## The open version
 
 Set `AU_OPEN=1` and the same code runs as a public version anyone can use
@@ -495,6 +515,7 @@ button is there too, as an extra safety net.
 | `PORT` | `3000` | Port to listen on |
 | `HOST` | `127.0.0.1` | Bind address — set to `0.0.0.0` to expose it |
 | `AU_PASSWORD` | *(unset)* | Password for the editor. Unset means no login |
+| `AU_ALT_PASSWORD` | *(unset)* | Password for a second, independent account (see [A second account](#a-second-account)) |
 | `AU_DATA_DIR` | `./data/sites` | Where deployed pages are stored on disk |
 | `AU_GITHUB_TOKEN` | *(unset)* | Fine-grained token; enables GitHub storage |
 | `AU_GITHUB_REPO` | *(unset)* | `owner/repo` to store published pages in |

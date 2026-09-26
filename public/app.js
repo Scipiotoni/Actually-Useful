@@ -2,7 +2,9 @@
 (function () {
   'use strict';
 
-  var STORAGE_KEY = 'actually-useful:draft:v1';
+  // Each account has its own draft (see backup.js); the main one keeps the original key.
+  var STORAGE_KEY = Backup.KEYS.editor;
+  var PAGES = Backup.PAGES;
   var LAYOUT_KEY = 'actually-useful:layout:v1';
 
 
@@ -476,7 +478,7 @@
   };
 
   // ---------------------------------------------------------------- preview
-  var PREVIEW_BASE = '<base href="' + location.origin + '/p/x/">';
+  var PREVIEW_BASE = '<base href="' + location.origin + PAGES + 'x/">';
 
   // A service worker cannot register inside the preview iframe, so say so once
   // rather than letting the call throw.
@@ -688,7 +690,7 @@
   function previewLabel(parts, page) {
     var shown = page && page !== Compose.entryOf(parts.files) ? page : '';
     if (!state.slug) return 'preview' + (shown ? ' · ' + shown : ' — not deployed yet');
-    return '/p/' + state.slug + '/' + shown + (sameAsDeployed(parts) ? ' · live' : ' · unpublished changes');
+    return PAGES + state.slug + '/' + shown + (sameAsDeployed(parts) ? ' · live' : ' · unpublished changes');
   }
 
   /** Whether what is on screen matches what is published at this slug. */
@@ -949,13 +951,13 @@
     }
 
     if (button.dataset.action === 'delete') {
-      if (!window.confirm('Delete the deployed page at /p/' + slug + '? This cannot be undone.')) return;
+      if (!window.confirm('Delete the deployed page at ' + PAGES + slug + '? This cannot be undone.')) return;
       return void api('/api/deploys/' + slug, { method: 'DELETE' }).then(function () {
         if (state.slug === slug) {
           state.slug = null;
           saveLocal();
         }
-        toast('Deleted /p/' + slug, 'ok');
+        toast('Deleted ' + PAGES + slug, 'ok');
         return loadSites();
       }).catch(function (err) { toast(err.message, 'err'); });
     }
@@ -1318,7 +1320,7 @@
       return;
     }
     els.imageList.innerHTML = assets.map(function (asset) {
-      var src = '/assets/' + encodeURIComponent(asset.name);
+      var src = PAGES + 'assets/' + encodeURIComponent(asset.name);
       return '<li class="image" data-name="' + Compose.escapeHtml(asset.name) + '" ' +
         'data-path="' + Compose.escapeHtml(asset.path) + '">' +
         '<span class="image-thumb" style="background-image:url(' + src + ')"></span>' +
@@ -1727,6 +1729,11 @@
   if (!OFFLINE) {
     api('/api/config').then(function (config) {
       document.getElementById('logout').hidden = !config.auth;
+      if (config.account && config.account !== 'main') {
+        // Say which account this is, so the two are never confused.
+        document.getElementById('logout').textContent = 'Sign out (account 2)';
+        document.body.classList.add('is-second-account');
+      }
       state.storage = config.storage || 'disk';
       if (config.open) enterOpenMode();
       if (state.storage === 'github') {

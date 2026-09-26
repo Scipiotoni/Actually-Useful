@@ -21,6 +21,10 @@ services:
       # The server refuses to start on a public bind without a password.
       - key: AU_PASSWORD
         sync: false
+      # Optional: a second, independent account with its own pages, images
+      # and progress, for whoever signs in with this code. Leave blank for none.
+      - key: AU_ALT_PASSWORD
+        sync: false
       # A fine-grained GitHub token with Contents: read and write on the repo
       # below. Leave blank to fall back to the (erasable) container disk.
       - key: AU_GITHUB_TOKEN

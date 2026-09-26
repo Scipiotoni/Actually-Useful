@@ -65,9 +65,11 @@ class DiskProgress {
 
 class GitHubProgress {
   /** @param {import('./github-store.js').GitHubStore} store */
-  constructor(store, branch) {
+  constructor(store, branch, file) {
     this.store = store;
     this.branch = branch || 'au-learn';
+    // Each account keeps its progress in a file of its own on the branch.
+    this.file = file || FILE;
     this.kind = 'github';
     this.cache = null;
     this.loading = null;
@@ -95,7 +97,7 @@ class GitHubProgress {
       this.loading = (async () => {
         let stored = null;
         try {
-          const file = await this.store.request('GET', `/contents/${FILE}?ref=${encodeURIComponent(this.branch)}`);
+          const file = await this.store.request('GET', `/contents/${this.file}?ref=${encodeURIComponent(this.branch)}`);
           if (file && file.content) stored = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
         } catch (err) {
           console.error('Could not load learning progress from GitHub:', err.message);
@@ -129,7 +131,7 @@ class GitHubProgress {
     this.flushing = (async () => {
       await this.ensureBranch();
       await this.store.commit('Save learning progress', [
-        { path: FILE, content: JSON.stringify(data) }
+        { path: this.file, content: JSON.stringify(data) }
       ], { branch: this.branch });
     })();
     try {
@@ -147,7 +149,7 @@ class GitHubProgress {
 
 function createProgressStore(store, options = {}) {
   if (store && typeof store.commit === 'function' && typeof store.request === 'function') {
-    return new GitHubProgress(store, options.branch || process.env.AU_LEARN_BRANCH);
+    return new GitHubProgress(store, options.branch || process.env.AU_LEARN_BRANCH, options.githubFile);
   }
   const file = options.file || path.join(options.dataDir || path.join(__dirname, '..', 'data'), 'learn', 'progress.json');
   return new DiskProgress(file);

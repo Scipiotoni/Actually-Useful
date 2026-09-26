@@ -34,7 +34,7 @@ class GitHubError extends Error {
  * no API calls.
  */
 class GitHubStore {
-  constructor({ token, repo, branch, api = DEFAULT_API, fetchImpl }) {
+  constructor({ token, repo, branch, api = DEFAULT_API, fetchImpl, root = ROOT }) {
     const [owner, name] = String(repo || '').split('/');
     if (!owner || !name) {
       throw new Error(`AU_GITHUB_REPO must look like "owner/repo", got "${repo}"`);
@@ -47,6 +47,10 @@ class GitHubStore {
     this.branch = branch || null;
     this.api = api.replace(/\/+$/, '');
     this.fetch = fetchImpl || globalThis.fetch;
+    // The folder this store's pages live in: "published" for the main
+    // account, another folder for a second account, so they never meet.
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(root)) throw new Error(`Invalid storage folder "${root}"`);
+    this.root = root;
 
     this.pages = new Map();     // slug -> {meta, source}
     this.index = null;          // slug -> metadata, from the manifest
@@ -62,13 +66,20 @@ class GitHubStore {
     return this;
   }
 
+  /** How commit messages name a page: "alt/portfolio" for a second account. */
+  get label() { return this.root === ROOT ? '' : `${this.root}/`; }
+
+  get manifest() { return `${this.root}/index.json`; }
+  get directory() { return `${this.root}/index.html`; }
+  get assetsDir() { return `${this.root}/assets`; }
+
   get base() {
     return `${this.api}/repos/${this.owner}/${this.repo}`;
   }
 
   /** The permanent GitHub Pages address for a slug. */
   pagesUrl(slug) {
-    return `https://${this.owner.toLowerCase()}.github.io/${this.repo}/${ROOT}/${slug}/`;
+    return `https://${this.owner.toLowerCase()}.github.io/${this.repo}/${this.root}/${slug}/`;
   }
 
   async request(method, path, body) {
@@ -125,13 +136,13 @@ class GitHubStore {
 
   async load() {
     await this.resolveBranch();
-    const manifest = await this.readJson(MANIFEST);
+    const manifest = await this.readJson(this.manifest);
     const entries = (manifest && Array.isArray(manifest.pages)) ? manifest.pages : [];
 
     this.index = new Map(entries.map((meta) => [meta.slug, meta]));
     await Promise.all(entries.map(async (meta) => {
       if (this.pages.has(meta.slug)) return;
-      const page = await this.readJson(`${ROOT}/${meta.slug}/page.json`);
+      const page = await this.readJson(`${this.root}/${meta.slug}/page.json`);
       if (page) this.pages.set(meta.slug, page);
     }));
 
@@ -141,7 +152,7 @@ class GitHubStore {
   /** Lists the uploaded images. Their bytes are fetched only when asked for. */
   async loadAssets() {
     const branch = await this.resolveBranch();
-    const listing = await this.request('GET', `/contents/${ASSETS}?ref=${encodeURIComponent(branch)}`);
+    const listing = await this.request('GET', `/contents/${this.assetsDir}?ref=${encodeURIComponent(branch)}`);
     if (!Array.isArray(listing)) return;
     listing.forEach((entry) => {
       if (entry.type !== 'file' || !ASSET_NAME_RE.test(entry.name)) return;
@@ -168,7 +179,7 @@ class GitHubStore {
     if (asset.bytes) return asset.bytes;
 
     const branch = await this.resolveBranch();
-    const file = await this.request('GET', `/contents/${ASSETS}/${name}?ref=${encodeURIComponent(branch)}`);
+    const file = await this.request('GET', `/contents/${this.assetsDir}/${name}?ref=${encodeURIComponent(branch)}`);
     if (!file || !file.content) return null;
     asset.bytes = Buffer.from(file.content, 'base64');
     return asset.bytes;
@@ -183,7 +194,7 @@ class GitHubStore {
 
     try {
       await this.commit(`Add image ${target}`, [
-        { path: `${ASSETS}/${target}`, bytes: decoded.buffer }
+        { path: `${this.assetsDir}/${target}`, bytes: decoded.buffer }
       ]);
     } catch (err) {
       return { ok: false, status: err.status === 403 ? 403 : 502, error: githubHint(err) };
@@ -199,7 +210,7 @@ class GitHubStore {
     await this.ready();
     if (!this.assets.has(name)) return false;
 
-    await this.commit(`Remove image ${name}`, [{ path: `${ASSETS}/${name}`, remove: true }]);
+    await this.commit(`Remove image ${name}`, [{ path: `${this.assetsDir}/${name}`, remove: true }]);
     this.assets.delete(name);
     return true;
   }
@@ -337,9 +348,9 @@ class GitHubStore {
     nextIndex.set(target, meta);
 
     const changes = [
-      { path: MANIFEST, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
-      { path: DIRECTORY, content: renderDirectory(Array.from(nextIndex.values())) },
-      { path: `${ROOT}/${target}/page.json`, content: JSON.stringify({ meta, source: files }, null, 2) }
+      { path: this.manifest, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
+      { path: this.directory, content: renderDirectory(Array.from(nextIndex.values())) },
+      { path: `${this.root}/${target}/page.json`, content: JSON.stringify({ meta, source: files }, null, 2) }
     ];
 
     // A static host serves a directory by looking for index.html; publish the
@@ -347,13 +358,13 @@ class GitHubStore {
     const standIn = Compose.find(files, Compose.ENTRY) ? null : Compose.ENTRY;
     if (standIn) {
       changes.push({
-        path: `${ROOT}/${target}/${standIn}`,
+        path: `${this.root}/${target}/${standIn}`,
         content: Compose.serveFile(files, meta.entry, { title })
       });
     }
 
     files.forEach((file) => {
-      var at = `${ROOT}/${target}/${file.name}`;
+      var at = `${this.root}/${target}/${file.name}`;
       // Binaries go up as a blob; a tree entry's inline content is UTF-8 only.
       if (Compose.isBinary(file.name)) changes.push({ path: at, bytes: binaryBytes(file) });
       else changes.push({ path: at, content: Compose.serveFile(files, file.name, { title }) });
@@ -366,12 +377,12 @@ class GitHubStore {
       const keep = new Set(files.map((file) => file.name));
       if (standIn) keep.add(standIn);
       Compose.toFiles(previous.source).forEach((file) => {
-        if (!keep.has(file.name)) changes.push({ path: `${ROOT}/${target}/${file.name}`, remove: true });
+        if (!keep.has(file.name)) changes.push({ path: `${this.root}/${target}/${file.name}`, remove: true });
       });
     }
 
     try {
-      await this.commit(`Publish ${target} (v${meta.version})`, changes);
+      await this.commit(`Publish ${this.label}${target} (v${meta.version})`, changes);
     } catch (err) {
       return { ok: false, status: err.status === 403 ? 403 : 502, error: githubHint(err) };
     }
@@ -390,20 +401,20 @@ class GitHubStore {
     nextIndex.delete(slug);
 
     const changes = [
-      { path: MANIFEST, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
-      { path: DIRECTORY, content: renderDirectory(Array.from(nextIndex.values())) },
-      { path: `${ROOT}/${slug}/page.json`, remove: true }
+      { path: this.manifest, content: JSON.stringify({ pages: Array.from(nextIndex.values()) }, null, 2) },
+      { path: this.directory, content: renderDirectory(Array.from(nextIndex.values())) },
+      { path: `${this.root}/${slug}/page.json`, remove: true }
     ];
     const page = this.pages.get(slug);
     const gone = Compose.toFiles(page ? page.source : {});
     gone.forEach((file) => {
-      changes.push({ path: `${ROOT}/${slug}/${file.name}`, remove: true });
+      changes.push({ path: `${this.root}/${slug}/${file.name}`, remove: true });
     });
     if (!Compose.find(gone, Compose.ENTRY)) {
-      changes.push({ path: `${ROOT}/${slug}/${Compose.ENTRY}`, remove: true });
+      changes.push({ path: `${this.root}/${slug}/${Compose.ENTRY}`, remove: true });
     }
 
-    await this.commit(`Unpublish ${slug}`, changes);
+    await this.commit(`Unpublish ${this.label}${slug}`, changes);
 
     this.index = nextIndex;
     this.pages.delete(slug);

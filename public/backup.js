@@ -11,8 +11,27 @@
 
   var FORMAT = 'actually-useful-backup';
   var VERSION = 1;
+  /**
+   * The account signed in, when it is not the main one (the server says so in
+   * a cookie). A second account keeps its own project and progress in the
+   * browser, so two accounts used on one device never see each other's work.
+   */
+  function currentAccount() {
+    if (typeof document === 'undefined') return '';
+    var match = /(?:^|;\s*)au_account=([^;]*)/.exec(document.cookie || '');
+    var id = match ? decodeURIComponent(match[1]) : '';
+    return /^[a-z0-9-]{1,30}$/.test(id) && id !== 'main' ? id : '';
+  }
+  var ACCOUNT = currentAccount();
+
   // Where each part lives in the browser (the editor and Learn share an origin).
-  var KEYS = { editor: 'actually-useful:draft:v1', learn: 'au-learn-progress-v1' };
+  // The main account's keys never change, so nothing saved before moves.
+  var KEYS = ACCOUNT
+    ? { editor: 'actually-useful:' + ACCOUNT + ':draft:v1', learn: 'au-learn-progress-v1:' + ACCOUNT }
+    : { editor: 'actually-useful:draft:v1', learn: 'au-learn-progress-v1' };
+
+  // Where each account's pages are published.
+  var PAGES = ACCOUNT ? '/a/' : '/p/';
 
   function isObject(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -34,7 +53,7 @@
 
   function fileName(now) {
     var d = now instanceof Date ? now : new Date(now === undefined ? Date.now() : now);
-    return 'actually-useful-backup-' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '.json';
+    return 'actually-useful-backup-' + (ACCOUNT ? ACCOUNT + '-' : '') + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '.json';
   }
 
   /**
@@ -114,6 +133,8 @@
     FORMAT: FORMAT,
     VERSION: VERSION,
     KEYS: KEYS,
+    ACCOUNT: ACCOUNT,
+    PAGES: PAGES,
     create: create,
     parse: parse,
     collect: collect,

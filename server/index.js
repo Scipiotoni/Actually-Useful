@@ -165,6 +165,13 @@ function serveStatic(res, urlPath) {
   });
 }
 
+/**
+ * The second account (AU_ALT_PASSWORD): everything it makes is kept apart
+ * from the main account's — pages in their own folder on disk and on GitHub,
+ * served at their own address, with their own images and learning progress.
+ */
+const ALT = { id: 'alt', prefix: 'a', folder: 'alt', dataDir: '_alt', learnFile: 'learn/alt/progress.json' };
+
 /** GitHub storage when a token is configured, local disk otherwise. */
 function createStore(options) {
   // The open version never publishes, so it never touches the repository.
@@ -177,7 +184,8 @@ function createStore(options) {
       repo,
       branch: options.githubBranch || process.env.AU_GITHUB_BRANCH,
       api: options.githubApi || process.env.AU_GITHUB_API,
-      fetchImpl: options.fetchImpl
+      fetchImpl: options.fetchImpl,
+      ...(options.root ? { root: options.root } : {})
     }).init();
   }
   return new DeployStore(options.dataDir || DATA_DIR).init();
@@ -204,20 +212,50 @@ function createApp(options = {}) {
   const authOn = !open && Boolean(password);
   const throttle = new auth.Throttle();
 
+  // Accounts: the main one, and a second, independent one when it has a
+  // password of its own. Which one you are is decided by the password you
+  // sign in with.
+  const accounts = [{ id: 'main', prefix: 'p', password, store, progress }];
+  const altPassword = options.altPassword !== undefined ? options.altPassword : process.env.AU_ALT_PASSWORD;
+  if (altPassword && !authOn) {
+    console.warn('AU_ALT_PASSWORD is ignored: a second account needs AU_PASSWORD set for the first one.');
+  } else if (altPassword && altPassword === password) {
+    console.warn('AU_ALT_PASSWORD is ignored: it must differ from AU_PASSWORD.');
+  } else if (altPassword) {
+    const altDir = path.join(options.dataDir || DATA_DIR, ALT.dataDir);
+    const altStore = createStore({ ...options, open, root: ALT.folder, dataDir: altDir });
+    accounts.push({
+      id: ALT.id,
+      prefix: ALT.prefix,
+      password: altPassword,
+      store: altStore,
+      progress: createProgressStore(altStore, {
+        file: path.join(altDir, '.learn', 'progress.json'),
+        branch: options.learnBranch,
+        githubFile: ALT.learnFile
+      })
+    });
+  }
+  const accountAt = (prefix) => accounts.find((a) => a.prefix === (prefix || 'p')) || null;
+
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = decodeURIComponent(url.pathname);
     const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host || 'localhost'}`;
+    // The signed-in account (the only one when there is no password).
+    let acct = accounts[0];
 
     try {
       // --- Uploaded images -------------------------------------------------
       // Public like the pages that embed them, so this sits above the gate.
       // Mirrors the layout on GitHub Pages, where a page at
       // /published/<slug>/ reaches images as ../assets/<name>.
-      const assetMatch = pathname.match(/^\/(?:p\/)?assets\/([^/]+)$/);
+      // A second account's images are under /a/assets/.
+      const assetMatch = pathname.match(/^\/(?:([pa])\/)?assets\/([^/]+)$/);
       if (assetMatch && (req.method === 'GET' || req.method === 'HEAD')) {
-        const name = assetMatch[1];
-        const bytes = ASSET_NAME_RE.test(name) ? await store.readAsset(name) : null;
+        const owner = accountAt(assetMatch[1]);
+        const name = assetMatch[2];
+        const bytes = owner && ASSET_NAME_RE.test(name) ? await owner.store.readAsset(name) : null;
         if (!bytes) return sendText(res, 404, 'Not found');
 
         const type = contentType(name);
@@ -236,17 +274,18 @@ function createApp(options = {}) {
       // A deploy is a directory of files. The trailing slash matters: it is
       // what makes "styles.css" in a page resolve to a sibling file, here and
       // on GitHub Pages alike.
-      const bareMatch = pathname.match(/^\/p\/([^/]+)$/);
-      if (bareMatch && (req.method === 'GET' || req.method === 'HEAD')) {
-        res.writeHead(302, { location: `/p/${encodeURIComponent(bareMatch[1])}/${url.search}` });
+      // /p/<slug>/ is the main account's; /a/<slug>/ the second account's.
+      const bareMatch = pathname.match(/^\/([pa])\/([^/]+)$/);
+      if (bareMatch && accountAt(bareMatch[1]) && (req.method === 'GET' || req.method === 'HEAD')) {
+        res.writeHead(302, { location: `/${bareMatch[1]}/${encodeURIComponent(bareMatch[2])}/${url.search}` });
         return res.end();
       }
 
-      const pageMatch = pathname.match(/^\/p\/([^/]+)\/(.*)$/);
-      if (pageMatch) {
-        const served = await store.file(pageMatch[1], pageMatch[2] || undefined);
+      const pageMatch = pathname.match(/^\/([pa])\/([^/]+)\/(.*)$/);
+      if (pageMatch && accountAt(pageMatch[1])) {
+        const served = await accountAt(pageMatch[1]).store.file(pageMatch[2], pageMatch[3] || undefined);
         if (!served) {
-          return sendText(res, 404, notFoundPage(pageMatch[1], pageMatch[2]), 'text/html; charset=utf-8');
+          return sendText(res, 404, notFoundPage(pageMatch[1], pageMatch[2], pageMatch[3]), 'text/html; charset=utf-8');
         }
         const type = Compose.contentType(served.name);
         res.writeHead(200, {
@@ -281,18 +320,23 @@ function createApp(options = {}) {
                 'text/html; charset=utf-8');
             }
             const form = await readForm(req);
-            if (!auth.safeEqual(form.password || '', password)) {
+            // Compare with every account, so the time taken says nothing about which exists.
+            const matches = accounts.filter((a) => auth.safeEqual(form.password || '', a.password));
+            const account = matches[0];
+            if (!account) {
               throttle.fail(ip);
               return sendText(res, 401, auth.loginPage({ error: 'Wrong password.', next: form.next }),
                 'text/html; charset=utf-8');
             }
             throttle.clear(ip);
             const target = /^\/[^\s"'<>]*$/.test(form.next || '') ? form.next : '/';
+            const maxAge = Math.floor(auth.TTL_MS / 1000);
             res.writeHead(303, {
-              'set-cookie': auth.cookieHeader(auth.issueToken(password), {
-                secure,
-                maxAge: Math.floor(auth.TTL_MS / 1000)
-              }),
+              'set-cookie': [
+                auth.cookieHeader(auth.issueToken(account.password), { secure, maxAge }),
+                // Tells the pages which account's drafts to keep in the browser.
+                auth.accountHeader(account.id === 'main' ? '' : account.id, { secure, maxAge: account.id === 'main' ? 0 : maxAge })
+              ],
               location: target
             });
             return res.end();
@@ -301,17 +345,20 @@ function createApp(options = {}) {
         }
 
         const token = auth.parseCookies(req.headers.cookie)[auth.COOKIE];
-        const signedIn = auth.verifyToken(password, token);
+        acct = accounts.find((a) => auth.verifyToken(a.password, token)) || null;
 
         if (pathname === '/logout') {
           res.writeHead(303, {
-            'set-cookie': auth.cookieHeader('', { secure, maxAge: 0 }),
+            'set-cookie': [
+              auth.cookieHeader('', { secure, maxAge: 0 }),
+              auth.accountHeader('', { secure, maxAge: 0 })
+            ],
             location: '/login'
           });
           return res.end();
         }
 
-        if (!signedIn) {
+        if (!acct) {
           if (pathname.startsWith('/api/')) {
             return sendJson(res, 401, { error: 'Not signed in' });
           }
@@ -328,7 +375,9 @@ function createApp(options = {}) {
         return sendJson(res, 200, {
           auth: authOn,
           open,
-          storage: open ? 'none' : typeof store.pagesUrl === 'function' ? 'github' : 'disk'
+          storage: open ? 'none' : typeof store.pagesUrl === 'function' ? 'github' : 'disk',
+          account: acct.id,
+          pages: `/${acct.prefix}/`
         });
       }
 
@@ -340,21 +389,21 @@ function createApp(options = {}) {
       }
 
       if (pathname === '/api/deploys' && req.method === 'GET') {
-        const deploys = await store.list();
+        const deploys = await acct.store.list();
         return sendJson(res, 200, {
-          deploys: deploys.map((site) => decorate(site, origin, store))
+          deploys: deploys.map((site) => decorate(site, origin, acct))
         });
       }
 
       if (pathname === '/api/deploys' && req.method === 'POST') {
         const body = await readBody(req);
-        const result = await store.save(body);
+        const result = await acct.store.save(body);
         if (!result.ok) return sendJson(res, result.status, { error: result.error });
-        return sendJson(res, result.created ? 201 : 200, decorate(result.site, origin, store));
+        return sendJson(res, result.created ? 201 : 200, decorate(result.site, origin, acct));
       }
 
       if (pathname === '/api/assets' && req.method === 'GET') {
-        const assets = await store.listAssets();
+        const assets = await acct.store.listAssets();
         return sendJson(res, 200, {
           assets: assets.map((asset) => ({ ...asset, path: `../assets/${asset.name}` }))
         });
@@ -362,14 +411,14 @@ function createApp(options = {}) {
 
       if (pathname === '/api/assets' && req.method === 'POST') {
         const body = await readBody(req);
-        const result = await store.saveAsset(body);
+        const result = await acct.store.saveAsset(body);
         if (!result.ok) return sendJson(res, result.status, { error: result.error });
         return sendJson(res, 201, { ...result.asset, path: `../assets/${result.asset.name}` });
       }
 
       const assetOne = pathname.match(/^\/api\/assets\/([^/]+)$/);
       if (assetOne && req.method === 'DELETE') {
-        if (!(await store.removeAsset(assetOne[1]))) return sendJson(res, 404, { error: 'Not found' });
+        if (!(await acct.store.removeAsset(assetOne[1]))) return sendJson(res, 404, { error: 'Not found' });
         return sendJson(res, 200, { deleted: assetOne[1] });
       }
 
@@ -377,12 +426,12 @@ function createApp(options = {}) {
       if (oneMatch) {
         const slug = oneMatch[1];
         if (req.method === 'GET') {
-          const site = await store.get(slug);
+          const site = await acct.store.get(slug);
           if (!site) return sendJson(res, 404, { error: 'Not found' });
-          return sendJson(res, 200, decorate(site, origin, store));
+          return sendJson(res, 200, decorate(site, origin, acct));
         }
         if (req.method === 'DELETE') {
-          if (!(await store.remove(slug))) return sendJson(res, 404, { error: 'Not found' });
+          if (!(await acct.store.remove(slug))) return sendJson(res, 404, { error: 'Not found' });
           return sendJson(res, 200, { deleted: slug });
         }
         return sendJson(res, 405, { error: 'Method not allowed' });
@@ -408,14 +457,14 @@ function createApp(options = {}) {
       }
 
       if (pathname === '/api/learn/progress' && req.method === 'GET') {
-        return sendJson(res, 200, { progress: await progress.read(), storage: progress.kind });
+        return sendJson(res, 200, { progress: await acct.progress.read(), storage: acct.progress.kind });
       }
 
       if (pathname === '/api/learn/progress' && (req.method === 'PUT' || req.method === 'POST')) {
         const body = await readBody(req);
         const problem = validateProgress(body.progress);
         if (problem) return sendJson(res, 400, { error: problem });
-        return sendJson(res, 200, { progress: await progress.save(body.progress), storage: progress.kind });
+        return sendJson(res, 200, { progress: await acct.progress.save(body.progress), storage: acct.progress.kind });
       }
 
       if (pathname.startsWith('/api/')) {
@@ -444,6 +493,7 @@ function createApp(options = {}) {
   server.store = store;
   server.runner = runner;
   server.progress = progress;
+  server.accounts = accounts;
   return server;
 }
 
@@ -451,19 +501,19 @@ function createApp(options = {}) {
  * Adds the addresses a page is reachable at: `url` is served by this app,
  * `permanentUrl` is the GitHub Pages copy that outlives a restart.
  */
-function decorate(site, origin, store) {
-  const out = { ...site, url: `${origin}/p/${site.slug}/` };
-  if (typeof store.pagesUrl === 'function') out.permanentUrl = store.pagesUrl(site.slug);
+function decorate(site, origin, account) {
+  const out = { ...site, url: `${origin}/${account.prefix}/${site.slug}/` };
+  if (typeof account.store.pagesUrl === 'function') out.permanentUrl = account.store.pagesUrl(site.slug);
   return out;
 }
 
-function notFoundPage(slug, file) {
+function notFoundPage(prefix, slug, file) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Page not found</title>
 <style>body{font:16px/1.6 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f1115;color:#e6e8ee}
 main{text-align:center;padding:24px}code{background:#1b1f27;padding:2px 6px;border-radius:4px}
 a{color:#7aa2f7}</style></head><body><main>
-<h1>404</h1><p>Nothing is published at <code>/p/${String(slug).replace(/[<&>]/g, '')}/${String(file || '').replace(/[<&>]/g, '')}</code>.</p>
+<h1>404</h1><p>Nothing is published at <code>/${prefix}/${String(slug).replace(/[<&>]/g, '')}/${String(file || '').replace(/[<&>]/g, '')}</code>.</p>
 <p><a href="/">Back to the editor</a></p></main></body></html>`;
 }
 
@@ -531,6 +581,9 @@ if (require.main === module) {
       console.log(process.env.AU_PASSWORD
         ? 'Password protection is ON (published pages stay public).'
         : 'No AU_PASSWORD set — anyone who can reach this port can edit and deploy.');
+      if (process.env.AU_PASSWORD && process.env.AU_ALT_PASSWORD && process.env.AU_ALT_PASSWORD !== process.env.AU_PASSWORD) {
+        console.log('Second account is ON: sign in with AU_ALT_PASSWORD. Its pages are at /a/<slug>, apart from everything else.');
+      }
     }
   });
 }

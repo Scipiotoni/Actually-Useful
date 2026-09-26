@@ -567,3 +567,25 @@ test('unpublishing removes the stand-in as well', async () => {
     assert.deepStrictEqual(left, [], 'nothing of the deploy should remain');
   });
 });
+
+test('a second account publishes into its own folder, and never sees the main one', async () => {
+  await withFake({}, async ({ make, files, commits }) => {
+    const main = make();
+    const alt = make({ root: 'alt' });
+    assert.ok((await main.save({ name: 'Home', html: '<h1>main</h1>' })).ok);
+    const result = await alt.save({ name: 'Home', html: '<h1>alt</h1>' });
+    assert.ok(result.ok);
+    assert.strictEqual(result.site.slug, 'home', 'the same name is free in each account');
+    assert.deepStrictEqual(commits, ['Publish home (v1)', 'Publish alt/home (v1)']);
+    assert.match(files.get('published/home/index.html'), /main/);
+    assert.match(files.get('alt/home/index.html'), /alt/);
+    assert.ok(files.has('alt/index.json') && files.has('alt/index.html'));
+    assert.strictEqual(alt.pagesUrl('home'), 'https://scipiotoni.github.io/Actually-Useful/alt/home/');
+
+    // A fresh store (after a restart) reads only its own folder.
+    assert.deepStrictEqual((await make({ root: 'alt' }).list()).map((p) => p.slug), ['home']);
+    assert.match((await make().file('home')).body, /main/);
+    assert.match((await make({ root: 'alt' }).file('home')).body, /alt/);
+    assert.throws(() => make({ root: '../x' }), /Invalid storage folder/);
+  });
+});

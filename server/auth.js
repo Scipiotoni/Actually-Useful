@@ -3,6 +3,9 @@
 const crypto = require('crypto');
 
 const COOKIE = 'au_session';
+// Which account is signed in, readable by the pages so each account keeps its
+// own drafts in the browser. Only a hint: the signed session decides access.
+const ACCOUNT_COOKIE = 'au_account';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_FAILS = 5;
 const LOCKOUT_MS = 30 * 1000;
@@ -51,6 +54,16 @@ function cookieHeader(token, { secure, maxAge }) {
     `${COOKIE}=${token}`,
     'Path=/',
     'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAge}`,
+    secure ? 'Secure' : ''
+  ].filter(Boolean).join('; ');
+}
+
+function accountHeader(id, { secure, maxAge }) {
+  return [
+    `${ACCOUNT_COOKIE}=${encodeURIComponent(id || '')}`,
+    'Path=/',
     'SameSite=Lax',
     `Max-Age=${maxAge}`,
     secure ? 'Secure' : ''
@@ -119,6 +132,8 @@ ${error ? `<p class="error">${error}</p>` : ''}
 
 module.exports = {
   COOKIE,
+  ACCOUNT_COOKIE,
+  accountHeader,
   TTL_MS,
   Throttle,
   safeEqual,
