@@ -268,3 +268,20 @@ test('streak freezes cover one or two missed days, and count towards the streak'
   const merged = Engine.mergeProgress({ frozen: { a: '2026-01-02' } }, { frozen: { a: '2026-01-01', b: '2026-01-03' } });
   assert.deepStrictEqual(merged.frozen, { a: '2026-01-01', b: '2026-01-03' });
 });
+
+test('retake cooldowns count from the latest attempt, and never lock for longer than the cooldown', () => {
+  const now = Date.parse('2026-03-10T12:00:00Z');
+  const minute = 60000;
+  assert.strictEqual(Engine.cooldownLeft([], 30, now), 0, 'never taken: open');
+  assert.strictEqual(Engine.cooldownLeft(['2026-03-10T11:50:00Z'], 30, now), 20 * minute);
+  assert.strictEqual(Engine.cooldownLeft(['2026-03-10T11:00:00Z', '2026-03-10T11:58:00Z', undefined], 5, now), 3 * minute, 'the latest counts');
+  assert.strictEqual(Engine.cooldownLeft(['2026-03-10T11:00:00Z'], 30, now), 0, 'long enough ago');
+  assert.strictEqual(Engine.cooldownLeft(['2026-03-11T12:00:00Z'], 30, now), 30 * minute, 'a clock that jumped back locks for the cooldown at most');
+  assert.strictEqual(Engine.cooldownLeft(['2026-03-10T11:59:00Z'], 0, now), 0, 'no cooldown');
+  assert.strictEqual(Engine.cooldownLeft(['not a date'], 30, now), 0);
+  assert.ok(Engine.COOLDOWN.exam > Engine.COOLDOWN.quiz, 'quizzes wait less than exams');
+  assert.strictEqual(Engine.formatWait(4 * minute + 5000), '4:05');
+  assert.strictEqual(Engine.formatWait(62 * minute + 9000), '1:02:09');
+  assert.strictEqual(Engine.formatWait(400), '0:01', 'rounds up, so 0:00 means open');
+  assert.strictEqual(Engine.XP.video, 10);
+});

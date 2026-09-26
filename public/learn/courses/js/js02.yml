@@ -11,6 +11,65 @@ goals:
   - Check and convert types with `typeof`, `Number()` and `String()`
 
 items:
+  - type: video
+    id: js2-video-variables
+    title: "Watch: variables are labelled boxes"
+    body: |
+      **What you just saw**
+
+      - `let score = 0;` makes a box called `score` holding `0`.
+      - `score = score + 10;` reads the box, adds 10, and puts the result back — the old value is gone.
+      - `const` makes a box that can never be given a new value; trying stops the program with a `TypeError`.
+      - Use `const` by default, and `let` for values that change.
+    video:
+      steps:
+        - scene: Variables
+          sub: Names for values
+        - type: "let score = 0;\n"
+          say: "`let` makes a **variable**: a box with a name, holding a value."
+          mark: "let score = 0;"
+        - run: true
+          line: 1
+          vars:
+            score: "0"
+          say: "Run it: a box called `score` appears, holding `0`."
+        - type: "score = score + 10;\n"
+          say: "This line **reads** the box, adds 10, and **puts the result back**."
+          mark:
+            text: "score + 10"
+            color: pink
+        - line: 2
+          vars:
+            score: "10"
+          say: "Now `score` is **10**. The old 0 is gone."
+        - type: "const name = \"Ada\";\n"
+          say: "`const` makes a box too — but one that can **never** change."
+          mark:
+            text: "const"
+            color: green
+        - line: 3
+          vars:
+            name: "\"Ada\""
+          say: "A second box: `name`, holding the text \"Ada\"."
+        - type: "console.log(name + \" has \" + score);\n"
+          say: "`console.log` prints. `+` joins text and values together."
+          mark: "name + \" has \" + score"
+        - line: 4
+          print: "Ada has 10"
+          say: "The boxes' values go into the sentence: **Ada has 10**."
+        - scene: Constant means constant
+          sub: const can't be changed
+        - type: "name = \"Bob\";\n"
+          say: "What if we try to change `name`?"
+          mark:
+            text: "name = \"Bob\";"
+            color: pink
+        - line: 5
+          print: "✖ TypeError: Assignment to constant variable."
+          say: "JavaScript **stops** with an error. A `const` keeps its first value forever."
+        - line: 0
+          say: "Use `const` by default, and `let` only for values that change — like a score."
+
   - type: lesson
     id: js2-variables
     title: Variables

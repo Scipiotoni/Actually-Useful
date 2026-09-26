@@ -12,6 +12,86 @@ goals:
   - Choose between Flexbox and Grid
 
 items:
+  - type: video
+    id: css8-video-grid
+    title: "Watch: Grid makes layouts"
+    body: |
+      **What you just saw**
+
+      - `display: grid` with `grid-template-columns` makes columns: `1fr 1fr 1fr` is three equal ones.
+      - `fr` means a *fraction of the free space*; `gap` spaces rows and columns.
+      - `grid-column: span 2` makes an item two columns wide.
+      - `repeat(auto-fit, minmax(120px, 1fr))` fits as many columns as there's room for.
+    video:
+      css: ".card { background: #e0e7ff; border: 2px solid #6366f1; border-radius: 8px; padding: 14px; font: 600 16px sans-serif; color: #3730a3; }"
+      start:
+        index.html: |
+          <link rel="stylesheet" href="style.css">
+          <div class="gallery">
+            <div class="card">1</div>
+            <div class="card">2</div>
+            <div class="card">3</div>
+            <div class="card">4</div>
+            <div class="card">5</div>
+          </div>
+        style.css: |
+          .gallery {
+          }
+      steps:
+        - scene: Grid
+          sub: Rows and columns for the whole page
+        - file: style.css
+          type: "  display: grid;\n"
+          at: ".gallery {\n"
+          say: "`display: grid` turns `.gallery` into a grid. One column, for now."
+          mark: "display: grid;"
+        - type: "  grid-template-columns: 1fr 1fr 1fr;\n"
+          at: "display: grid;\n"
+          say: "`grid-template-columns` sets the columns: **three**, each `1fr` — one equal share."
+          mark:
+            text: "1fr 1fr 1fr"
+            color: pink
+          point:
+            sel: ".card"
+            label: "3 columns"
+            color: pink
+        - type: "  gap: 10px;\n"
+          at: "1fr 1fr 1fr;\n"
+          say: "`gap` spaces the rows and columns."
+          mark: "gap: 10px;"
+        - replace: "1fr 1fr 1fr"
+          with: "2fr 1fr 1fr"
+          say: "`2fr` takes **twice** the share: the first column grows."
+          point:
+            sel: ".card:nth-child(3n+1)"
+            label: "2fr"
+            color: green
+        - scene: Big items
+          sub: Spanning columns
+        - type: ".card:first-child {\n  grid-column: span 2;\n}\n"
+          say: "`grid-column: span 2` makes the first card **two columns** wide. The rest flow around it."
+          mark:
+            text: "grid-column: span 2;"
+            color: blue
+          point:
+            sel: ".card:first-child"
+            label: "span 2"
+            color: blue
+        - scene: Responsive, in one line
+          sub: auto-fit and minmax
+        - replace: "2fr 1fr 1fr"
+          with: "\n    repeat(auto-fit, minmax(90px, 1fr))"
+          say: "This one line fits as many columns as there's **room** for, each at least 90px."
+          mark:
+            text: "repeat(auto-fit, minmax(90px, 1fr))"
+            color: green
+          point:
+            sel: ".card"
+            label: "as many as fit"
+            color: green
+        - say: "On a phone: fewer columns. On a big screen: more. No media queries needed."
+          zoom: page
+
   - type: lesson
     id: css8-basics
     title: Grid basics

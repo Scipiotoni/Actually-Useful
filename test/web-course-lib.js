@@ -17,6 +17,7 @@ const os = require('os');
 const Course = require('../public/learn/course.js');
 const Engine = require('../public/learn/engine.js');
 const Build = require('../public/learn/build.js');
+const Video = require('../public/learn/video.js');
 
 const LEARN = path.join(__dirname, '..', 'public', 'learn');
 
@@ -124,6 +125,17 @@ function webJobs(course) {
         });
       });
     }
+    if (item.video && item.video.view === 'page') {
+      // Every selector a video points at, clicks or changes must find something.
+      Video.targets(item.video).forEach((t) => {
+        list.push({ where: item.id + ' step ' + t.step, kind: 'targets', html: t.html, sels: t.sels });
+      });
+    }
+    if (item.video && item.video.view === 'console' && item.video.lang === 'js') {
+      // The program a console video writes prints what the video shows.
+      const prog = Video.program(item.video);
+      list.push({ where: item.id + ' (program)', kind: 'js', code: prog.files[0].content, output: prog.output, expect: 'run', allowErrors: prog.errors });
+    }
     (item.milestones || []).forEach((m, i) => {
       taskJobs(m, m.id, i > 0 ? item.milestones[0] : null);
       // Each milestone must ask for something new: the previous one's
@@ -184,6 +196,15 @@ function cut(s, n = 300) {
 
 /** Runs one job in the browser; returns a problem string or null. */
 async function runWebJob(page, job) {
+  if (job.kind === 'targets') {
+    const missing = await page.evaluate((j) => {
+      const doc = new DOMParser().parseFromString(j.html, 'text/html');
+      return j.sels.filter((sel) => {
+        try { return !doc.querySelector(sel); } catch (e) { return true; }
+      });
+    }, job);
+    return missing.length ? `${job.where}: nothing on the page matches ${missing.map((m) => JSON.stringify(m)).join(', ')}` : null;
+  }
   const r = await page.evaluate(async (j) => {
     const W = window.LearnWeb;
     const res = j.kind === 'js'
@@ -214,7 +235,8 @@ async function runWebJob(page, job) {
   if (job.expect === 'error') {
     return r.errors.length ? null : `${job.where}: marked as an error example but it runs cleanly`;
   }
-  if (r.errors.length) return `${job.where}: errors: ${cut(errs)}`;
+  if (r.errors.length && !job.allowErrors) return `${job.where}: errors: ${cut(errs)}`;
+  if (job.allowErrors && !r.errors.length) return `${job.where}: the video shows an error, but the code runs cleanly`;
   if (job.output !== undefined) {
     const cmp = Engine.compareOutput(r.output, job.output);
     if (!cmp.ok) return `${job.where}: console differs at line ${cmp.line}: got ${JSON.stringify(cmp.got)}, want ${JSON.stringify(cmp.want)}`;

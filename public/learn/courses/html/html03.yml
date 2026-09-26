@@ -11,6 +11,83 @@ goals:
   - Group an image with its caption using `<figure>`
 
 items:
+  - type: video
+    id: html3-video-links
+    title: "Watch: links connect pages"
+    body: |
+      **What you just saw**
+
+      - `<a href="…">` makes a link; `href` is where it goes, and the text between the tags is what people click.
+      - A file name like `about.html` links to another page of your site; a full address (`https://…`) to another website.
+      - `target="_blank"` opens the link in a new tab, and `mailto:` opens an email.
+    video:
+      start:
+        index.html: |
+          <h1>Luna's Bakery</h1>
+          <p>Fresh bread every morning.</p>
+        about.html: |
+          <h1>About us</h1>
+          <p>Baking since 1998.</p>
+          <a href="index.html">Back home</a>
+      steps:
+        - scene: Links
+          sub: "The “hyper” in HyperText"
+        - say: "A site with two pages: `index.html` and `about.html`. Let's connect them."
+        - type: "<a href=\"about.html\">About us</a>\n"
+          say: "`<a>` makes a **link**. Its `href` attribute says where the link goes."
+          mark: "href=\"about.html\""
+          point:
+            sel: a
+            label: "<a> link"
+        - say: "The text between the tags is what people see — and click."
+          mark:
+            text: "About us"
+            color: pink
+          point:
+            sel: a
+            label: "click me"
+            color: pink
+        - click: a
+          show: about.html
+          file: about.html
+          say: "Click it… and the browser opens **about.html**. Look at the address bar!"
+          point:
+            sel: "@url"
+            label: "about.html"
+        - say: "This page links back home the same way."
+          mark: "<a href=\"index.html\">Back home</a>"
+          point:
+            sel: a
+            label: "<a href=\"index.html\">"
+        - click: a
+          show: index.html
+          file: index.html
+          say: "…and we're home again."
+        - scene: Other websites
+          sub: Full addresses, new tabs, emails
+        - type: "<a href=\"https://wikipedia.org\">Wiki</a>\n"
+          say: "To link to another website, write its **full address**, starting with `https://`."
+          mark: "https://wikipedia.org"
+        - type: " target=\"_blank\""
+          at: "wikipedia.org\""
+          say: "`target=\"_blank\"` opens it in a **new tab**, so your page stays open."
+          mark:
+            text: "target=\"_blank\""
+            color: pink
+        - type: "<a href=\"mailto:hi@luna.example\">Email us</a>\n"
+          say: "`mailto:` links open the visitor's email app, ready to write to you."
+          mark:
+            text: "mailto:hi@luna.example"
+            color: green
+          point:
+            sel: "a[href^=mailto]"
+            label: "opens email"
+            color: green
+        - say: "Links are just text in the browser's default blue, underlined — people know to click them."
+          point:
+            sel: a
+            label: "links"
+
   - type: lesson
     id: html3-links
     title: Links
@@ -302,6 +379,87 @@ items:
           - Nothing
         answer: 0
         why: "`rel=\"noopener\"` stops the new tab from reaching back into your page."
+
+  - type: video
+    id: html3-video-images
+    title: "Watch: pictures with <img>"
+    body: |
+      **What you just saw**
+
+      - `<img src="…" alt="…">` shows a picture: `src` is the image file, `alt` describes it.
+      - When the file is missing (a typo in `src`), the `alt` text is shown instead — and screen readers always read it.
+      - `<img>` is an empty element, with no closing tag. `width` and `height` give its size in pixels.
+      - `<figure>` groups a picture with its `<figcaption>`.
+    video:
+      assets:
+        cake.svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150"><rect width="200" height="150" fill="#fff1e0"/><rect x="45" y="72" width="110" height="52" rx="8" fill="#e59866"/><rect x="45" y="72" width="110" height="15" rx="7" fill="#fff"/><rect x="45" y="100" width="110" height="7" fill="#f9d56e"/><rect x="96" y="44" width="8" height="28" rx="2" fill="#f472b6"/><path d="M100 26c6 8 6 14 0 16-6-2-6-8 0-16z" fill="#f59e0b"/></svg>'
+      start:
+        index.html: |
+          <h1>Our cakes</h1>
+      steps:
+        - scene: Images
+          sub: "<img> puts a picture on the page"
+        - type: "<img src=\"cake.svg\"\n     alt=\"A cake with one candle\">\n"
+          say: "`<img>` shows a picture. Long tags can be split over lines like this."
+          point:
+            sel: img
+            label: "<img>"
+        - say: "`src` is the **source**: the picture's file name."
+          mark: "src=\"cake.svg\""
+          point:
+            sel: img
+            label: "cake.svg"
+        - say: "`alt` is the **alternative text**: what the picture shows, for people who can't see it."
+          mark:
+            text: "alt=\"A cake with one candle\""
+            color: pink
+        - say: "`<img>` has no content, so there's **no closing tag**."
+          mark: "<img"
+        - scene: When the picture is missing
+          sub: Why alt matters
+        - replace: "cake.svg"
+          with: "cak.svg"
+          say: "A typo in `src`…"
+        - say: "…and the picture is gone. But the `alt` text still says what should be there."
+          mark:
+            text: "cak.svg"
+            color: pink
+          point:
+            sel: img
+            label: "the alt text shows"
+            color: pink
+        - replace: "cak.svg"
+          with: "cake.svg"
+          say: "Fix the name, and it's back."
+        - scene: Size and captions
+          sub: "width, height and <figure>"
+        - type: "\n     width=\"160\" height=\"120\""
+          at: "one candle\""
+          say: "`width` and `height` are the size in **pixels**. The browser saves the space before the picture arrives."
+          mark:
+            text: "width=\"160\" height=\"120\""
+            color: green
+          point:
+            sel: img
+            label: "160 × 120"
+            color: green
+        - type: "<figure>\n"
+          before: "<img"
+          say: "`<figure>` groups a picture with its caption…"
+        - type: "\n<figcaption>Lemon cake, our best seller</figcaption>\n</figure>"
+          at: "height=\"120\">"
+          say: "…and `<figcaption>` is the caption, right under it."
+          mark:
+            text: "<figcaption>Lemon cake, our best seller</figcaption>"
+            color: pink
+          point:
+            - sel: figcaption
+              label: "<figcaption>"
+              color: pink
+        - say: "Picture, description and caption: a complete, accessible image."
+          point:
+            sel: figure
+            label: "<figure>"
 
   - type: lesson
     id: html3-images

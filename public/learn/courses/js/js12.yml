@@ -11,6 +11,89 @@ goals:
   - Handle many elements with one listener using event delegation
 
 items:
+  - type: video
+    id: js12-video-events
+    title: "Watch: a button that counts clicks"
+    body: |
+      **What you just saw**
+
+      - `document.querySelector("#like")` finds an element with a CSS selector.
+      - `addEventListener("click", function)` runs the function every time the element is clicked.
+      - Setting `textContent` changes what the page shows — instantly.
+    video:
+      start:
+        index.html: |
+          <h1>Likes: <span id="count">0</span></h1>
+          <button id="like">👍 Like</button>
+          <script src="script.js"></script>
+        script.js: ""
+      steps:
+        - scene: JavaScript meets the page
+          sub: Find it, listen, change it
+        - say: "A heading with a number, and a button. Let's make the button work."
+          point:
+            - sel: "#count"
+              label: "#count"
+            - sel: "#like"
+              label: "#like"
+              color: pink
+        - file: script.js
+          type: "const button = document.querySelector(\"#like\");\n"
+          say: "`querySelector` **finds** an element, using a CSS selector: the button."
+          mark:
+            text: "\"#like\""
+            color: pink
+          point:
+            sel: "#like"
+            label: "found!"
+            color: pink
+        - type: "const count = document.querySelector(\"#count\");\n"
+          say: "…and the number in the heading."
+          mark: "\"#count\""
+          point:
+            sel: "#count"
+            label: "found!"
+        - type: "let likes = 0;\n"
+          say: "A variable to remember how many likes there are."
+        - scene: Listening for clicks
+          sub: addEventListener
+        - type: "button.addEventListener(\"click\", () => {\n});\n"
+          say: "`addEventListener(\"click\", …)`: **when** the button is clicked, run this function."
+          mark:
+            text: "\"click\""
+            color: green
+        - type: "  likes = likes + 1;\n  count.textContent = likes;\n"
+          at: "() => {\n"
+          say: "The function adds one, then puts the new number **on the page** with `textContent`."
+          mark:
+            text: "count.textContent = likes;"
+            color: blue
+        - click: "#like"
+          dom:
+            - sel: "#count"
+              text: "1"
+          say: "Click → `likes` becomes 1 → the page shows **1**."
+          point:
+            sel: "#count"
+            label: "1"
+            color: blue
+        - click: "#like"
+          dom:
+            - sel: "#count"
+              text: "2"
+          hold: 0.8
+        - click: "#like"
+          dom:
+            - sel: "#count"
+              text: "3"
+          say: "Every click runs the function again."
+          point:
+            sel: "#count"
+            label: "3"
+            color: blue
+        - say: "Find an element, listen for an event, change the page: that's most of JavaScript on the web."
+          zoom: page
+
   - type: lesson
     id: js12-listen
     title: Listening for events

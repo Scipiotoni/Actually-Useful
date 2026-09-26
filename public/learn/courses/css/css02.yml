@@ -11,6 +11,83 @@ goals:
   - Add decorative content with `::before` and `::after`
 
 items:
+  - type: video
+    id: css2-video-selectors
+    title: "Watch: selectors pick elements"
+    body: |
+      **What you just saw**
+
+      - A **type** selector (`li`) picks every element of that kind.
+      - A **class** selector (`.sale`) picks elements with that class; an **id** selector (`#top`) the one with that id.
+      - A space means *inside*: `.menu a` picks links inside `.menu`.
+      - `:hover`, `:first-child` and friends pick elements in a certain state or place.
+    video:
+      start:
+        index.html: |
+          <link rel="stylesheet" href="style.css">
+          <h1 id="top">Menu</h1>
+          <ul class="menu">
+            <li><a href="#">Bread</a></li>
+            <li class="sale"><a href="#">Cakes</a></li>
+            <li><a href="#">Coffee</a></li>
+          </ul>
+          <p>Ask about <a href="#">catering</a>.</p>
+        style.css: ""
+      steps:
+        - scene: Selectors
+          sub: The part of a rule that picks elements
+        - file: style.css
+          type: "li {\n  font-size: 20px;\n}\n"
+          say: "A **type** selector: `li` picks **every** `<li>` on the page."
+          mark: "li {"
+          point:
+            sel: li
+            label: "li"
+        - type: ".sale {\n  color: crimson;\n}\n"
+          say: "A **class** selector starts with a dot: `.sale` picks elements with `class=\"sale\"`."
+          mark:
+            text: ".sale {"
+            color: pink
+          point:
+            sel: ".sale"
+            label: ".sale"
+            color: pink
+        - type: "#top {\n  color: teal;\n}\n"
+          say: "An **id** selector starts with `#`: it picks the **one** element with that id."
+          mark:
+            text: "#top {"
+            color: green
+          point:
+            sel: "#top"
+            label: "#top"
+            color: green
+        - scene: Inside something
+          sub: Combining selectors
+        - type: ".menu a {\n  color: darkorange;\n}\n"
+          say: "A space means **inside**: `.menu a` picks links inside the menu…"
+          mark:
+            text: ".menu a {"
+            color: blue
+          point:
+            sel: ".menu a"
+            label: ".menu a"
+            color: blue
+        - say: "…but not the link in the paragraph below. It isn't inside `.menu`."
+          point:
+            sel: "p a"
+            label: "not picked"
+            color: pink
+        - scene: Position and state
+          sub: Pseudo-classes
+        - type: "li:first-child {\n  font-weight: bold;\n}\n"
+          say: "`:first-child` picks by **position**: only the first item."
+          mark: "li:first-child {"
+          point:
+            sel: "li:first-child"
+            label: ":first-child"
+        - say: "Others pick by **state** — `a:hover` is a link while the mouse is over it."
+        - say: "The selector decides *which* elements; the declarations decide *what* happens to them."
+
   - type: lesson
     id: css2-basic
     title: Type, class and id selectors

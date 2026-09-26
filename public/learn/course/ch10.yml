@@ -225,6 +225,61 @@ items:
       - front: What is a **dangling reference**?
         back: A reference to an object that no longer exists (e.g. a local variable returned by reference). Using it is undefined behaviour.
 
+  - type: video
+    id: c10-video-pointers
+    title: "Watch: pointers point"
+    body: |
+      **What you just saw**
+
+      - Every variable lives at an **address** in memory; `&n` is the address of `n`.
+      - `int* p{&n};` makes a pointer: a box that holds an *address*.
+      - `*p` means *the box at that address*: reading or writing `*p` reads or writes `n` itself.
+    video:
+      steps:
+        - scene: Pointers
+          sub: Boxes that hold addresses
+        - type: "#include <iostream>\n\nint main() {\n    int n{5};\n}\n"
+          speed: 2.5
+          say: "A box `n` holding 5. It lives somewhere in memory — at an **address**."
+          mark: "int n{5};"
+        - run: true
+          line: 4
+          vars:
+            n: "5"
+          hold: 1.5
+        - type: "    int* p{&n};\n"
+          at: "int n{5};\n"
+          say: "`&n` is **the address of** `n`. `int* p` is a box that holds an address: a **pointer**."
+          mark:
+            - text: "int*"
+              color: pink
+            - text: "&n"
+              color: green
+        - line: 5
+          vars:
+            p: "→ n"
+          say: "`p` doesn't hold 5. It holds **where** `n` is — it *points at* `n`."
+        - scene: Following the pointer
+          sub: The * operator
+        - type: "    *p = 9;\n"
+          at: "int* p{&n};\n"
+          say: "`*p` means **the box `p` points at**. So this writes 9 into…"
+          mark:
+            text: "*p = 9;"
+            color: pink
+        - line: 6
+          vars:
+            n: "9"
+          say: "…`n`! We changed `n` without writing its name."
+        - type: "    std::cout << n << \"\\n\";\n"
+          at: "*p = 9;\n"
+          say: "Print `n` to be sure."
+        - line: 7
+          print: "9"
+          say: "**9**. `p` and `n` are two ways to reach the same box."
+        - line: 0
+          say: "`&` gets an address; `*` follows one. That's pointers."
+
   - type: lesson
     id: c10-pointers
     title: Pointers

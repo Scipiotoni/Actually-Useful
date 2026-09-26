@@ -259,12 +259,25 @@ Every course works the same way:
 - **Lessons** with stated objectives, examples you can edit and run (HTML and
   CSS examples show their result live as you type), and quick checks as you
   read.
+- **Video lessons** (29: one or more for every HTML chapter, and the key ideas
+  of CSS, JavaScript and C++): silent, animated explanations where code is
+  typed, its parts light up, arrows point from each tag to what it makes in a
+  little browser, variables change in front of you, and captions say what's
+  happening. Hover over a video to slow it down, click to pause, jump to a
+  chapter or read the transcript. They are drawn from a script, not recorded,
+  so they stay sharp at any size and weigh a few kilobytes.
 - **Practice at every level**: exercises inside lessons, challenges
   (★ to ★★★), projects built in milestones, quizzes, a review page and an exam
   per chapter — multiple choice, predict the output, fill in the blank, order
   the lines, spot the bug, and code (1,623 questions across the courses).
 - **Mastery learning**: a chapter's exam (80% to pass) unlocks the next one —
-  or unlock it anyway if you already know the material.
+  or unlock it anyway if you already know the material. Retakes wait a little,
+  so they come after reviewing rather than guessing: 30 minutes after an exam
+  attempt (starting one and leaving counts), 5 minutes after a quiz.
+- **"I don't know this"** on every quiz question takes you to the part of the
+  lesson that explains it, highlighted, with the key sentence marked — then
+  back to the question to answer it (it won't count toward the score, and it
+  goes to your mistake bank).
 - **Remembering it**: spaced-repetition flashcards (755 in all), a mistake bank
   that brings back what you got wrong, and mixed practice across chapters.
 - **Help when stuck**: progressive hints, errors explained in plain words
@@ -277,7 +290,7 @@ Each course ends with two **build-anything final projects**: no steps to
 follow, just a brief and a list of ingredients to use ("a function, an array,
 a loop, events…"). You build whatever you like; the check looks for each
 ingredient in your code (comments don't count) and on the running page or
-program, and ticks them off as you go. Finished projects go to your
+program, and ticks each one off live as you type. Finished projects go to your
 **portfolio**, where pages download as a single HTML file.
 
 **Free extras** that learning apps usually charge for:
@@ -359,6 +372,19 @@ questions and exercises.
   learner's code, `in: html|css|js|cpp`), `check` (an expression that must be
   true on the running page) or `output` (a regular expression over what the
   program prints).
+- **Videos** (`type: video`): a `video:` script of `steps`, played in order —
+  `scene` (a title card), `say` (the caption), `type` (with `at`/`before`),
+  `erase`, `replace`/`with`, `file`, `mark` (text to highlight in the code),
+  `point` (a CSS selector to highlight on the page, or `@tab` for the title),
+  `click`, `fill`, `tick`, `show` (open another page), `dom` (what a script
+  would change), and for programs `run`, `line`, `vars` and `print`. The
+  `start` files, hidden `css` and picture `assets` set the scene; `body` sums
+  up what was shown. Timing comes from the script (typing speed, reading time
+  for captions); `public/learn/video.js` documents every key.
+- **Where a question is taught** is found automatically for "I don't know
+  this"; a question can name it with `see: lesson-id` or
+  `see: lesson-id#heading`. `cooldown: 0` (minutes) on a quiz or exam, or
+  `cooldowns: {exam: 30, quiz: 5}` in `course.yml`, changes the retake wait.
 - **Pages**: an ` ```html ` block, optionally followed by ` ```css ` and ` ```js `,
   runs as a live preview. Page exercises list their `files` (what the learner
   edits), `given` files (shown read-only) and `solution` files, and check the
@@ -372,7 +398,10 @@ questions and exercises.
 course, and `node test/web-course-lib.js [html css03 ...]` does the same for
 the web courses in Chromium (with Playwright installed): examples must run
 cleanly and print what they claim, solutions must pass, and starters — and each
-milestone's previous solution — must not already pass.
+milestone's previous solution — must not already pass. Videos are checked too:
+every script plays without missing text, every selector a video points at
+finds something on its page, and every program a video writes compiles (or
+runs) and prints exactly what the video shows.
 
 ## Progressive web apps
 
@@ -574,8 +603,9 @@ repetition, merging progress from two devices), the course format and
 Markdown renderer (including link and HTML escaping), every course's
 structure (ids unique across courses), the error explainers, the C++ and
 progress APIs, the compiler runner itself (skipped when no `g++` is
-installed), and the browser runner's pure parts (console formatting, check
-translation, loop guards). Every course — over a thousand C++ checks and
+installed), the browser runner's pure parts (console formatting, check
+translation, loop guards), video timelines, retake cooldowns, and tracing
+every quiz question back to the lesson that teaches it. Every course — over a thousand C++ checks and
 almost 800 browser runs for HTML, CSS and JavaScript — is checked with:
 
 ```bash
@@ -623,6 +653,8 @@ public/backup.js   Backup files: the editor project and Learn progress in one JS
 public/learn/      Learn: the app, its engine, the C++ course in course/ and the
                    HTML, CSS and JavaScript courses in courses/
 public/learn/web.js  Runs HTML, CSS and JavaScript for Learn, in a worker or a sandboxed frame
+public/learn/video.js, player.js  Video lessons: the timeline of a script, and the player that draws it
+public/learn/lookup.js  Finds the part of a lesson that teaches a quiz question
 public/learn/build.js  Checks the ingredients of build-anything projects
 public/learn/sw.js   Keeps Learn working offline
 test/learn-*.test.js, test/cpp-runner.test.js, test/course.test.js  Learn mode tests

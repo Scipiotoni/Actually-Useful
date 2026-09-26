@@ -15,6 +15,7 @@ const path = require('path');
 const Course = require('../public/learn/course.js');
 const Engine = require('../public/learn/engine.js');
 const Build = require('../public/learn/build.js');
+const Video = require('../public/learn/video.js');
 const Explain = require('../public/learn/explain.js');
 
 const DIR = path.join(__dirname, '..', 'public', 'learn', 'course');
@@ -87,6 +88,11 @@ function jobs(course) {
       const task = Object.assign({}, m, { starter: m.starter || (i === 0 ? m.starter : '') });
       taskJobs(task, m.id);
     });
+    if (item.video && item.video.view === 'console') {
+      // The program a video writes compiles and prints what the video shows.
+      const prog = Video.program(item.video);
+      list.push({ where: item.id + ' (program)', std: 'c++17', source: prog.files[0].content, expect: 'run', output: prog.output });
+    }
     if (item.build) {
       // A build-anything project: the example meets every ingredient; the starter doesn't.
       list.push({ where: item.id + ' example', std: 'c++20', source: item.build.example, build: item.build, expect: 'pass' });

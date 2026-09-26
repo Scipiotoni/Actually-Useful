@@ -12,6 +12,92 @@ goals:
   - Find and fix the mistakes CSS silently ignores
 
 items:
+  - type: video
+    id: css1-video-rule
+    title: "Watch: how a CSS rule works"
+    body: |
+      **What you just saw**
+
+      - A rule is a **selector** (which elements) and a **declaration block** in `{ }`.
+      - Each declaration is a **property**, a colon, a **value** and a semicolon: `color: tomato;`
+      - Change a value and the page changes at once — that's all styling is.
+    video:
+      start:
+        index.html: |
+          <link rel="stylesheet" href="style.css">
+          <h1>Luna's Bakery</h1>
+          <p>Fresh bread every morning.</p>
+          <p>Open 7 till 6.</p>
+        style.css: ""
+      steps:
+        - scene: A CSS rule
+          sub: Which elements, and what to change
+        - file: index.html
+          say: "Some HTML, linked to an empty stylesheet: `style.css`."
+          mark: "<link rel=\"stylesheet\" href=\"style.css\">"
+        - file: style.css
+          type: "h1 "
+          say: "A rule starts with a **selector**: which elements to style. `h1` picks every `<h1>`."
+          mark: "h1"
+          point:
+            sel: h1
+            label: "h1 picks this"
+        - type: "{\n}\n"
+          say: "Then curly braces `{ }` — the **declaration block**."
+        - type: "  color: tomato;\n"
+          at: "{\n"
+          say: "Inside: a **property**, a colon, a **value**, a semicolon."
+        - say: "`color` is the property — *what* to change…"
+          mark:
+            text: "color"
+            color: pink
+          point:
+            sel: h1
+            label: "color changed"
+            color: pink
+        - say: "…and `tomato` is the value — *how*. There are 140 colour names, and many more ways to write colours."
+          mark:
+            text: "tomato"
+            color: green
+        - scene: More declarations
+          sub: One rule, many changes
+        - type: "  font-family: sans-serif;\n"
+          at: "tomato;\n"
+          say: "A rule can hold many declarations, one per line."
+          mark: "font-family: sans-serif;"
+          point:
+            sel: h1
+            label: "new font"
+        - type: "p {\n  font-size: 20px;\n  color: slategray;\n}\n"
+          say: "A second rule: `p` styles **every** paragraph at once."
+          mark:
+            text: "p {"
+            color: blue
+          point:
+            sel: p
+            label: "every <p>"
+            color: blue
+        - replace: "tomato"
+          with: "royalblue"
+          say: "Change a value — the page follows instantly."
+          point:
+            sel: h1
+            label: "royalblue"
+        - replace: "20px"
+          with: "26px"
+          say: "Bigger text: just a new number."
+          point:
+            sel: p
+            label: "26px"
+            color: blue
+        - say: "Selector, property, value. Every stylesheet in the world is made of these."
+          mark:
+            - text: "h1"
+            - text: "color"
+              color: pink
+            - text: "royalblue"
+              color: green
+
   - type: lesson
     id: css1-what
     title: What CSS is

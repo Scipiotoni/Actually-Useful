@@ -11,6 +11,86 @@ goals:
   - Apply the basics of accessibility — landmarks, headings, labels and language
 
 items:
+  - type: video
+    id: html4-video-containers
+    title: "Watch: div, span, class and id"
+    body: |
+      **What you just saw**
+
+      - `<div>` is a generic **block** box: it takes the full width and starts on a new line.
+      - `<span>` is a generic **inline** box: only as wide as its text, in the middle of a line.
+      - `class` names a *kind* of thing (many elements can share it); `id` names *one* element (unique on the page).
+      - CSS and JavaScript find elements by their class or id.
+    video:
+      start:
+        index.html: |
+          <link rel="stylesheet" href="style.css">
+          <h1>Today's bread</h1>
+        style.css: ""
+      steps:
+        - scene: Boxes with no meaning
+          sub: "<div> and <span>"
+        - type: "<div>\n  <h2>Sourdough</h2>\n  <p>Only <span>£4</span> a loaf</p>\n</div>\n"
+          say: "`<div>` and `<span>` don't mean anything. They're boxes to **group** things."
+        - say: "`<div>` is a **block**: as wide as the page, on its own line."
+          mark: "<div>"
+          point:
+            sel: div
+            label: "<div> — full width"
+        - say: "`<span>` is **inline**: only as wide as its text, inside a line."
+          mark:
+            text: "<span>£4</span>"
+            color: pink
+          point:
+            sel: span
+            label: "<span> — just its text"
+            color: pink
+        - scene: Naming things
+          sub: "class and id"
+        - type: " class=\"card\""
+          at: "<div"
+          say: "A `class` gives the box a name for its **kind**: this is a *card*."
+          mark:
+            text: "class=\"card\""
+            color: green
+        - type: " class=\"price\""
+          at: "<span"
+          say: "And this span is a *price*."
+          mark:
+            text: "class=\"price\""
+            color: pink
+        - file: style.css
+          type: ".card {\n  border: 2px solid #e5b56b;\n  padding: 8px;\n}\n"
+          say: "Now CSS can find everything with that class — and style it."
+          point:
+            sel: ".card"
+            label: ".card"
+            color: green
+        - type: ".price {\n  color: crimson;\n}\n"
+          say: "Every element with `class=\"price\"` turns red."
+          point:
+            sel: ".price"
+            label: ".price"
+            color: pink
+        - file: index.html
+          type: "<div class=\"card\">\n  <h2>Rye</h2>\n  <p>Only <span class=\"price\">£3</span></p>\n</div>\n"
+          say: "Add another card: it gets the same look **automatically**. That's why classes are shared."
+          point:
+            - sel: ".card"
+              label: "class=\"card\" ×2"
+              color: green
+        - type: " id=\"today\""
+          at: "<h1"
+          say: "An `id` names **one** element. No two elements on a page may share an id."
+          mark:
+            text: "id=\"today\""
+            color: blue
+          point:
+            sel: "#today"
+            label: "id=\"today\" — only one"
+            color: blue
+        - say: "class: *a kind of thing*, used many times. id: *one thing*, used once."
+
   - type: lesson
     id: html4-containers
     title: Generic containers, classes and ids
@@ -129,6 +209,88 @@ items:
         back: A class labels a kind of thing and can be shared (and an element can have several); an id names one unique element.
       - front: What's the difference between block and inline elements?
         back: Blocks start on a new line and take the full width; inline elements flow inside a line of text.
+
+  - type: video
+    id: html4-video-landmarks
+    title: "Watch: the parts of a page — header, nav, main, footer"
+    body: |
+      **What you just saw**
+
+      - `<header>` is the top of the page (logo, title); `<nav>` the main links.
+      - `<main>` is the page's own content — one per page. Inside it, an `<article>` is a complete piece, like a blog post.
+      - `<aside>` is related extra content; `<footer>` is the bottom (contact, copyright).
+      - Screen-reader users jump straight to these **landmarks**, and search engines understand your page better.
+    video:
+      css: "header, nav, main, article, aside, footer { display: block; margin: 4px 0; } body { margin: 10px; }"
+      start:
+        index.html: |
+          <!-- The travel blog -->
+      steps:
+        - scene: A page has parts
+          sub: Landmarks give each one a name
+        - say: "Almost every website has the same parts: a top, links, the content, and a bottom."
+        - type: "<header>\n  <h1>Wanderlust</h1>\n</header>\n"
+          say: "`<header>`: the top of the page — the site's name or logo."
+          mark: "<header>"
+          point:
+            sel: header
+            label: "<header>"
+        - type: "  <nav>\n    <a href=\"/\">Home</a> <a href=\"/trips\">Trips</a>\n  </nav>\n"
+          before: "</header>"
+          say: "`<nav>`: the main **navigation** links."
+          mark:
+            text: "<nav>"
+            color: pink
+          point:
+            sel: nav
+            label: "<nav>"
+            color: pink
+        - type: "<main>\n  <article>\n    <h2>Three days in Lisbon</h2>\n    <p>Trams, tiles and pastries.</p>\n  </article>\n</main>\n"
+          say: "`<main>`: the content that's special to this page. There's only one."
+          mark:
+            text: "<main>"
+            color: green
+          point:
+            sel: main
+            label: "<main>"
+            color: green
+        - say: "An `<article>` is a complete piece that makes sense on its own — like a blog post."
+          mark:
+            text: "<article>"
+            color: blue
+          point:
+            sel: article
+            label: "<article>"
+            color: blue
+        - type: "<aside>\n  <p>Next week: Porto!</p>\n</aside>\n"
+          say: "`<aside>`: extra content related to the page — a side note, a sidebar."
+          mark: "<aside>"
+          point:
+            sel: aside
+            label: "<aside>"
+        - type: "<footer>\n  <p>© 2025 Wanderlust</p>\n</footer>\n"
+          say: "`<footer>`: the bottom — copyright, contact details."
+          mark:
+            text: "<footer>"
+            color: pink
+          point:
+            sel: footer
+            label: "<footer>"
+            color: pink
+        - scene: Why bother?
+          sub: They look like plain boxes…
+        - say: "They look like plain boxes, but they **mean** something."
+          point:
+            - sel: header
+              label: "header"
+            - sel: main
+              label: "main"
+              color: green
+            - sel: footer
+              label: "footer"
+              color: pink
+        - say: "Screen-reader users jump straight to **main** or **nav**, and search engines know what your page is about."
+          zoom: page
 
   - type: lesson
     id: html4-semantic

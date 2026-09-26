@@ -12,6 +12,92 @@ goals:
   - Choose between `block`, `inline`, `inline-block` and `none`, and handle overflow
 
 items:
+  - type: video
+    id: css6-video-box
+    title: "Watch: every element is a box"
+    body: |
+      **What you just saw**
+
+      - Every element is a box: **content**, then **padding** (inside the border, with the background), a **border**, and **margin** (outside, transparent).
+      - Padding makes space *inside*; margin pushes other boxes *away*.
+      - `box-sizing: border-box` makes `width` include padding and border.
+    video:
+      start:
+        index.html: |
+          <link rel="stylesheet" href="style.css">
+          <div class="card">Sourdough</div>
+          <div class="card">Rye bread</div>
+        style.css: |
+          .card {
+            background: #fde68a;
+            width: 160px;
+          }
+      steps:
+        - scene: The box model
+          sub: Content, padding, border, margin
+        - file: style.css
+          say: "Two cards. Each is a **box** just big enough for its text — the **content**."
+          point:
+            sel: ".card"
+            label: "content"
+        - type: "  padding: 20px;\n"
+          at: "width: 160px;\n"
+          say: "**Padding** adds space *inside* the box. The background fills it."
+          mark: "padding: 20px;"
+          point:
+            sel: ".card"
+            label: "+ padding"
+        - replace: "20px"
+          with: "36px"
+          say: "More padding: a roomier card."
+          point:
+            sel: ".card"
+            label: "36px padding"
+        - type: "  border: 6px solid #b45309;\n"
+          at: "padding: 36px;\n"
+          say: "A **border** goes around the padding."
+          mark:
+            text: "border: 6px solid #b45309;"
+            color: pink
+          point:
+            sel: ".card"
+            label: "+ border"
+            color: pink
+        - type: "  margin: 30px;\n"
+          at: "solid #b45309;\n"
+          say: "**Margin** is space *outside* the border. It pushes the other card away."
+          mark:
+            text: "margin: 30px;"
+            color: green
+          point:
+            sel: ".card:last-child"
+            label: "pushed away"
+            color: green
+        - scene: How wide is it?
+          sub: box-sizing
+        - say: "Careful: `width: 160px` is only the content. With padding and border, the card is **244px** wide!"
+          mark:
+            text: "width: 160px;"
+            color: blue
+          point:
+            sel: ".card"
+            label: "244px"
+            color: blue
+        - type: "  box-sizing: border-box;\n"
+          at: "width: 160px;\n"
+          say: "`box-sizing: border-box` makes `width` mean the **whole** box. Now it really is 160px."
+          mark: "box-sizing: border-box;"
+          point:
+            sel: ".card"
+            label: "160px"
+        - say: "Content, padding, border, margin — from the inside out."
+          mark:
+            - text: "padding: 36px;"
+            - text: "border: 6px solid #b45309;"
+              color: pink
+            - text: "margin: 30px;"
+              color: green
+
   - type: lesson
     id: css6-box
     title: Every element is a box

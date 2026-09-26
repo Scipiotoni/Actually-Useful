@@ -99,6 +99,92 @@ items:
       - front: What is an `<iframe>`?
         back: A window showing another web page inside yours (embedded videos, maps…). Give it a `title`.
 
+  - type: video
+    id: html7-video-head
+    title: "Watch: the head connects your CSS"
+    body: |
+      **What you just saw**
+
+      - `<link rel="stylesheet" href="style.css">` in the head connects a CSS file — the page's look changes instantly.
+      - One stylesheet can style every page of a site.
+      - `<meta name="viewport" …>` makes pages fit phone screens; `<meta name="description">` is the text search engines show.
+      - `<script src="…" defer>` connects JavaScript, run once the page is ready.
+    video:
+      start:
+        index.html: |
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <title>Luna's Bakery</title>
+            </head>
+            <body>
+              <h1>Luna's Bakery</h1>
+              <p>Fresh bread every morning.</p>
+              <a href="menu.html">See the menu</a>
+            </body>
+          </html>
+        style.css: |
+          body {
+            font-family: sans-serif;
+            background: #fff7ed;
+            color: #7c2d12;
+          }
+          h1 {
+            color: #c2410c;
+          }
+          a {
+            background: #c2410c;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+          }
+      steps:
+        - scene: The head
+          sub: Where a page connects to its other files
+        - say: "A plain page, and a CSS file — `style.css` — full of styles. They aren't connected yet."
+          point:
+            sel: body
+            label: "plain HTML"
+        - file: style.css
+          say: "The stylesheet: colours, a font, a button look for links."
+          mark: "background: #fff7ed;"
+        - file: index.html
+          type: "    <link rel=\"stylesheet\" href=\"style.css\">\n"
+          at: "</title>\n"
+          say: "In the `<head>`, a `<link>` connects the stylesheet…"
+          mark: "<link rel=\"stylesheet\" href=\"style.css\">"
+        - say: "…and the whole page changes **instantly**. Same HTML — a new look."
+          mark: "href=\"style.css\""
+          point:
+            sel: body
+            label: "styled by style.css"
+          zoom: page
+        - say: "Every page of the site links the same file, so they all look alike."
+        - scene: More in the head
+          sub: Information for phones and search engines
+        - type: "    <meta name=\"viewport\"\n      content=\"width=device-width\">\n"
+          at: "utf-8\">\n"
+          say: "The **viewport** meta makes the page fit phone screens instead of shrinking."
+          mark:
+            text: "name=\"viewport\""
+            color: pink
+        - type: "    <meta name=\"description\"\n      content=\"Bread baked daily.\">\n"
+          before: "    <title>"
+          say: "The **description** is the text search engines show under your title."
+          mark:
+            text: "name=\"description\""
+            color: green
+        - type: "    <script src=\"script.js\" defer></script>\n"
+          before: "  </head>"
+          say: "And `<script src>` connects JavaScript. `defer` runs it once the page is ready."
+          mark:
+            text: "<script src=\"script.js\" defer></script>"
+            color: blue
+        - say: "The head: nothing in it is shown on the page, but it controls how the page works."
+          zoom: code
+
   - type: lesson
     id: html7-head
     title: The head, and connecting CSS and JavaScript
@@ -281,6 +367,90 @@ items:
           </body>
         answer: 3
         why: "Without `defer`, the script runs before the body exists. Add `defer`."
+
+  - type: video
+    id: html7-video-extras
+    title: "Watch: handy elements — details, progress, meter"
+    body: |
+      **What you just saw**
+
+      - `<details>` with a `<summary>` opens and closes on click — no JavaScript. Perfect for FAQs.
+      - `<progress value max>` shows how far a task has got; `<meter>` a measurement in a range.
+      - `<time datetime="…">` marks a date or time so computers can read it too.
+    video:
+      start:
+        index.html: |
+          <h1>Help</h1>
+      steps:
+        - scene: Open and close
+          sub: "<details> and <summary>"
+        - type: "<details>\n  <summary>When do you deliver?</summary>\n  <p>Every day before 9.</p>\n</details>\n"
+          say: "A FAQ question. `<summary>` is the part you always see…"
+          mark: "<summary>When do you deliver?</summary>"
+          point:
+            sel: summary
+            label: "<summary>"
+        - click: summary
+          dom:
+            - sel: details
+              attr:
+                open: ""
+          say: "…click it, and `<details>` opens to show the rest. No JavaScript needed!"
+          point:
+            sel: "details p"
+            label: "revealed"
+            color: green
+        - type: " open"
+          at: "<details"
+          say: "The `open` attribute starts it opened."
+          mark:
+            text: "open"
+            color: pink
+        - scene: How far, how much
+          sub: "<progress> and <meter>"
+        - type: "<p>Uploading:\n  <progress value=\"30\" max=\"100\"></progress>\n</p>\n"
+          say: "`<progress>` shows how far a task has got: 30 out of 100."
+          mark: "value=\"30\""
+          point:
+            sel: progress
+            label: "<progress>"
+        - dom:
+            - sel: progress
+              attr:
+                value: "65"
+          say: "Change the `value` and the bar moves…"
+          point:
+            sel: progress
+            label: "65%"
+        - dom:
+            - sel: progress
+              attr:
+                value: "100"
+          say: "…all the way to done."
+          point:
+            sel: progress
+            label: "100%"
+            color: green
+        - type: "<p>Battery:\n  <meter value=\"0.2\" low=\"0.3\"></meter>\n</p>\n"
+          say: "`<meter>` is a measurement in a range. Below `low`, it turns a warning colour."
+          mark:
+            text: "<meter value=\"0.2\" low=\"0.3\"></meter>"
+            color: pink
+          point:
+            sel: meter
+            label: "<meter> — low!"
+            color: pink
+        - scene: Dates
+          sub: "<time>"
+        - type: "<p>Back on <time datetime=\"2025-01-02\">2 Jan</time></p>\n"
+          say: "`<time>` shows a date for people, and `datetime` gives it to computers — calendars, search engines."
+          mark:
+            text: "datetime=\"2025-01-02\""
+            color: blue
+          point:
+            sel: time
+            label: "<time>"
+            color: blue
 
   - type: lesson
     id: html7-extras

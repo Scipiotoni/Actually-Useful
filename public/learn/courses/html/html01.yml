@@ -91,6 +91,92 @@ items:
       - front: What does a browser do with an HTML file?
         back: It reads the tags and draws (renders) the page, fetching any images, styles and scripts it mentions.
 
+  - type: video
+    id: html1-video-tags
+    title: "Watch: how tags turn text into a page"
+    body: |
+      **What you just saw**
+
+      - A browser shows plain text as one run of words — it can't tell a title from a sentence.
+      - **Tags** in angle brackets say what each part is: `<h1>` a main heading, `<p>` a paragraph, `<strong>` important words.
+      - Opening tag + content + closing tag (with a `/`) make one **element**.
+      - Elements go inside elements; close them in the reverse order you opened them.
+    video:
+      steps:
+        - scene: A page is just text
+          sub: Watch a few words become a web page
+        - say: "On the left, an HTML file. On the right, a browser showing it."
+        - type: "Luna's Bakery\nFresh bread every morning.\n"
+          say: "Type two lines of plain text…"
+        - say: "…and the browser squashes them into **one line**. It has no idea which part is the title."
+          point:
+            sel: body
+            label: all on one line
+        - scene: Tags
+          sub: Labels in angle brackets that say what each part is
+        - type: "<h1>"
+          before: "Luna's Bakery"
+          say: "An **opening tag**: a name between `<` and `>`. `h1` means *main heading*."
+          mark: "<h1>"
+        - type: "</h1>"
+          at: "Luna's Bakery"
+          say: "A **closing tag** is the same name with a `/`. Watch the browser…"
+          mark:
+            text: "</h1>"
+            color: pink
+        - say: "Opening tag + content + closing tag make one **element**. The browser draws it big and bold."
+          mark:
+            - text: "<h1>Luna's Bakery</h1>"
+          point:
+            sel: h1
+            label: "<h1> main heading"
+        - type: "<p>"
+          before: Fresh bread
+          say: "`<p>` means **paragraph**."
+        - type: "</p>"
+          at: "morning."
+          mark: "<p>Fresh bread every morning.</p>"
+          point:
+            sel: p
+            label: "<p> paragraph"
+          say: "Now the browser knows it's a paragraph: its own block, with space above and below."
+        - scene: Elements inside elements
+          sub: How real pages are built
+        - type: "<h2>Our breads</h2>\n"
+          say: "`<h2>` is a **smaller heading** — a section title under the `<h1>`."
+          mark: "<h2>Our breads</h2>"
+          point:
+            sel: h2
+            label: "<h2> section heading"
+        - type: "<p>Rye and <strong>warm croissants</strong>!</p>\n"
+          say: "`<strong>` marks **important** words — it sits *inside* the paragraph."
+          mark:
+            - "<strong>warm croissants</strong>"
+          point:
+            sel: strong
+            label: "<strong> important"
+        - say: "The rule for nesting: the last tag opened is the **first** one closed — like boxes inside boxes."
+          mark:
+            - text: "<strong>"
+              color: green
+            - text: "</strong>"
+              color: green
+            - text: "<p>"
+              nth: -1
+              color: blue
+            - text: "</p>"
+              nth: -1
+              color: blue
+          zoom: code
+        - say: "Every page you'll ever build is made this way: text, wrapped in tags that say what it is."
+          point:
+            - sel: h1
+              label: heading
+            - sel: p
+              label: paragraphs
+            - sel: h2
+              label: heading
+
   - type: lesson
     id: html1-elements
     title: Elements and tags
@@ -227,6 +313,85 @@ items:
         back: Putting elements inside others. Close them in reverse order — the last opened is the first closed.
       - front: How do you write a comment in HTML?
         back: "`<!-- like this -->` — the browser ignores it."
+
+  - type: video
+    id: html1-video-skeleton
+    title: "Watch: the skeleton of every page"
+    body: |
+      **What you just saw**
+
+      - `<!DOCTYPE html>` comes first: it says the file is modern HTML.
+      - `<html lang="en">` wraps everything; `lang` is an **attribute** — extra information inside an opening tag.
+      - The `<head>` is information *about* the page: `<meta charset="utf-8">` and the `<title>` shown in the browser tab.
+      - The `<body>` is the page itself: everything you see.
+    video:
+      steps:
+        - scene: The skeleton of a page
+          sub: The same few lines start every HTML file
+        - say: "Real pages start with a few lines the browser needs. Let's build them one at a time."
+        - type: "<!DOCTYPE html>\n"
+          say: "`<!DOCTYPE html>` goes first. It tells the browser: *this is modern HTML*."
+          mark: "<!DOCTYPE html>"
+        - type: "<html lang=\"en\">\n</html>\n"
+          say: "`<html>` wraps **everything** else. Every other tag goes between these two."
+          mark:
+            - "<html lang=\"en\">"
+            - text: "</html>"
+              color: gold
+        - say: "`lang=\"en\"` is an **attribute**: extra information inside the opening tag. This page is in English."
+          mark:
+            text: "lang=\"en\""
+            color: pink
+        - scene: The head
+          sub: Information about the page
+        - type: "  <head>\n  </head>\n"
+          at: "<html lang=\"en\">\n"
+          say: "The `<head>` holds information **about** the page. Nothing in it appears on the page itself."
+          mark: "<head>"
+        - type: "    <meta charset=\"utf-8\">\n"
+          at: "<head>\n"
+          say: "`<meta charset=\"utf-8\">` lets the page use any letter: é, ñ, ü — even emoji 🍰."
+          mark: "<meta charset=\"utf-8\">"
+        - type: "    <title>Luna's Bakery</title>\n"
+          at: "utf-8\">\n"
+          say: "`<title>` is the name in the browser **tab** — look up there!"
+          mark:
+            text: "<title>Luna's Bakery</title>"
+          point:
+            sel: "@tab"
+            label: "← your <title>"
+        - say: "The title also names the page in bookmarks and in search results."
+          point:
+            sel: "@tab"
+            label: "← your <title>"
+          hold: 2.5
+        - scene: The body
+          sub: Everything you see
+        - type: "  <body>\n  </body>\n"
+          before: "</html>"
+          say: "`<body>` holds everything you **see** on the page."
+          mark:
+            text: "<body>"
+            color: green
+        - type: "    <h1>Luna's Bakery</h1>\n    <p>Fresh bread every morning.</p>\n"
+          at: "<body>\n"
+          say: "Headings, paragraphs, images, links — they all go inside the body."
+        - say: "**Head**: facts about the page. **Body**: the page itself."
+          mark:
+            - text: "<head>"
+              color: gold
+            - text: "<body>"
+              color: green
+          point:
+            - sel: "@tab"
+              label: "from the head"
+              color: gold
+            - sel: body
+              label: "the body"
+              color: green
+        - say: "Indenting the inside of each element makes the structure easy to see. The browser doesn't mind either way."
+          zoom: code
+        - say: "Every page you write from now on starts from this skeleton."
 
   - type: lesson
     id: html1-document
@@ -410,6 +575,86 @@ items:
           </html>
         answer: 5
         why: "The `<h1>` is visible content, so it belongs in the `<body>`, not the `<head>`."
+
+  - type: video
+    id: html1-video-whitespace
+    title: "Watch: spaces, line breaks and headings"
+    body: |
+      **What you just saw**
+
+      - The browser turns every run of spaces and new lines into **one space**.
+      - `<br>` breaks a line inside a paragraph; `<hr>` is a break between topics. Both are **empty elements** — no closing tag.
+      - Six heading levels, `<h1>` to `<h6>`: choose them by **importance**, like a book's chapters and sections — never by size.
+    video:
+      steps:
+        - scene: Where did my line breaks go?
+          sub: How the browser treats spaces
+        - type: "<p>Roses are red,\nViolets are blue.</p>\n"
+          say: "A poem, on two lines in the code…"
+        - say: "…but on **one** line in the browser. New lines in your code don't show on the page."
+          point:
+            sel: p
+            label: "one line!"
+        - type: "<p>Lots      of      spaces</p>\n"
+          say: "Same for spaces: any run of spaces becomes **just one**."
+          mark: "Lots      of      spaces"
+          point:
+            sel: "p:last-of-type"
+            label: "one space each"
+        - scene: Breaking lines
+          sub: "<br> and <hr>"
+        - type: "<br>"
+          at: "red,"
+          say: "`<br>` is a **line break**. Now the poem is on two lines."
+          mark: "<br>"
+          point:
+            sel: "p:first-of-type"
+            label: "<br> broke the line"
+        - say: "`<br>` has no content, so it has **no closing tag**. It's an *empty element*."
+          mark: "<br>"
+        - type: "<hr>\n"
+          before: "<p>Lots"
+          say: "`<hr>` draws a line between two topics — another empty element."
+          mark: "<hr>"
+          point:
+            sel: hr
+            label: "<hr>"
+        - scene: Six heading levels
+          sub: Like a book's chapters and sections
+        - set: ""
+          type: "<h1>Heading 1</h1>\n<h2>Heading 2</h2>\n<h3>Heading 3</h3>\n<h4>Heading 4</h4>\n<h5>Heading 5</h5>\n<h6>Heading 6</h6>\n"
+          speed: 1.6
+          say: "HTML has six heading levels: `<h1>` is the most important, `<h6>` the least."
+        - say: "The browser shows each level a little smaller."
+          point:
+            - sel: h1
+              label: "<h1>"
+            - sel: h2
+              label: "<h2>"
+            - sel: h3
+              label: "<h3>"
+        - set: ""
+          type: "<h1>Trip to Japan</h1>\n<h2>Tokyo</h2>\n<h3>Where we ate</h3>\n<h2>Kyoto</h2>\n"
+          say: "Use them like an outline: one `<h1>` for the page, `<h2>` for sections, `<h3>` inside those."
+        - say: "One `<h1>` — the whole page is about this."
+          mark: "<h1>Trip to Japan</h1>"
+          point:
+            sel: h1
+            label: "the page's topic"
+        - say: "Two `<h2>` sections, and an `<h3>` inside Tokyo."
+          mark:
+            - text: "<h2>Tokyo</h2>"
+              color: pink
+            - text: "<h3>Where we ate</h3>"
+              color: green
+          point:
+            - sel: h2
+              label: "section"
+              color: pink
+            - sel: h3
+              label: "sub-section"
+              color: green
+        - say: "Pick headings by **importance**, never for their size — CSS changes sizes later."
 
   - type: lesson
     id: html1-whitespace

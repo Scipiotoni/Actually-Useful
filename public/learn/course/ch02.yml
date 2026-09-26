@@ -12,6 +12,79 @@ goals:
   - Read numbers and words typed by the user with `std::cin`
 
 items:
+  - type: video
+    id: c2-video-vars
+    title: "Watch: variables are named boxes"
+    body: |
+      **What you just saw**
+
+      - `int age{12};` makes a box that holds **whole numbers**, named `age`, starting at 12.
+      - `age = age + 1;` reads the box, adds one, and stores the result back.
+      - Every box has a **type**: `int` for whole numbers, `double` for decimals, `std::string` for text.
+      - `std::cout << age` prints the value in the box.
+    video:
+      steps:
+        - scene: Variables
+          sub: Named boxes for values
+        - type: "#include <iostream>\n#include <string>\n\nint main() {\n}\n"
+          speed: 2.5
+          say: "An empty program. Let's give it some memory."
+        - type: "    int age{12};\n"
+          at: "int main() {\n"
+          say: "`int age{12};` makes a box called `age` that holds **whole numbers**, starting at 12."
+          mark: "int age{12};"
+        - run: true
+          line: 5
+          vars:
+            age: "12"
+          say: "When it runs, the box appears in memory."
+        - type: "    age = age + 1;\n"
+          at: "int age{12};\n"
+          say: "Read the box, add one, store it back."
+          mark:
+            text: "age = age + 1;"
+            color: pink
+        - line: 6
+          vars:
+            age: "13"
+          say: "Happy birthday: `age` is now **13**."
+        - scene: Every box has a type
+          sub: int, double, std::string
+        - type: "    double price{2.5};\n    std::string name{\"Ada\"};\n"
+          at: "age = age + 1;\n"
+          say: "`double` holds numbers with a decimal point; `std::string` holds text."
+          mark:
+            - text: "double"
+              color: green
+            - text: "std::string"
+              color: blue
+        - line: 7
+          vars:
+            price: "2.5"
+          hold: 1.2
+        - line: 8
+          vars:
+            name: "\"Ada\""
+          say: "Three boxes, three types."
+        - type: "    std::cout << name << \" is \" << age << \"\\n\";\n"
+          at: "name{\"Ada\"};\n"
+          say: "`std::cout << name` prints what's **in** the box — not the word *name*."
+          mark: "<< name <<"
+        - line: 9
+          print: "Ada is 13"
+          say: "**Ada is 13**."
+        - type: "    std::cout << \"Bread costs \" << price << \"\\n\";\n"
+          at: "<< age << \"\\n\";\n"
+          say: "The same for the `double`…"
+          mark:
+            text: "<< price <<"
+            color: green
+        - line: 10
+          print: "Bread costs 2.5"
+          say: "…prints **2.5**."
+        - line: 0
+          say: "Boxes with names and types: every program keeps its data this way."
+
   - type: lesson
     id: c2-vars
     title: "Variables: named boxes for values"

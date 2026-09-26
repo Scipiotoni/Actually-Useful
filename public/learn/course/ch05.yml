@@ -226,6 +226,84 @@ items:
       - front: "A `while (i <= 5)` loop starting at `i = 1` runs its body how many times, and how often is the condition checked?"
         back: The body runs 5 times; the condition is checked 6 times (the last check is false).
 
+  - type: video
+    id: c5-video-loop
+    title: "Watch: a loop that adds up"
+    body: |
+      **What you just saw**
+
+      - `for (int i{1}; i <= 4; ++i)` counts `i` from 1 to 4.
+      - `sum += i;` adds each `i` to a running total that starts at 0 — the *accumulator* pattern.
+      - When the condition turns false, the loop ends and the next line prints the result.
+    video:
+      steps:
+        - scene: Adding up with a loop
+          sub: 1 + 2 + 3 + 4
+        - type: "#include <iostream>\n\nint main() {\n    int sum{0};\n    for (int i{1}; i <= 4; ++i) {\n        sum += i;\n    }\n    std::cout << sum << \"\\n\";\n}\n"
+          speed: 2
+          say: "A program that adds up 1 + 2 + 3 + 4."
+        - say: "`sum` starts at **0**: nothing added yet."
+          mark: "int sum{0};"
+        - say: "The loop counts `i` from 1 while `i <= 4`…"
+          mark:
+            text: "int i{1}; i <= 4; ++i"
+            color: pink
+        - say: "…and each round adds `i` to `sum`."
+          mark:
+            text: "sum += i;"
+            color: green
+        - scene: Watch it run
+          sub: One round at a time
+        - run: true
+          line: 4
+          vars:
+            sum: "0"
+          hold: 1.4
+        - line: 5
+          vars:
+            i: "1"
+          say: "`i` is 1. `1 <= 4`, so in we go."
+        - line: 6
+          vars:
+            sum: "1"
+          say: "`sum += i`: 0 + 1 = **1**."
+        - line: 5
+          vars:
+            i: "2"
+          hold: 1
+        - line: 6
+          vars:
+            sum: "3"
+          say: "1 + 2 = **3**."
+        - line: 5
+          vars:
+            i: "3"
+          hold: 1
+        - line: 6
+          vars:
+            sum: "6"
+          say: "3 + 3 = **6**."
+        - line: 5
+          vars:
+            i: "4"
+          hold: 1
+        - line: 6
+          vars:
+            sum: "10"
+          say: "6 + 4 = **10**."
+        - line: 5
+          vars:
+            i: "5"
+          say: "`i` is 5: `5 <= 4` is **false**. The loop is done."
+          mark:
+            text: "i <= 4"
+            color: pink
+        - line: 8
+          print: "10"
+          say: "Then the next line prints the total: **10**."
+        - line: 0
+          say: "Change `4` to `100` and the same loop adds up to 5050 — in a blink."
+
   - type: lesson
     id: c5-for
     title: for loops

@@ -124,6 +124,69 @@ items:
       - front: What is an infinite loop?
         back: A loop whose condition never becomes false — usually a missing update like `i++`.
 
+  - type: video
+    id: js4-video-loop
+    title: "Watch: a for loop, one step at a time"
+    body: |
+      **What you just saw**
+
+      - `for (start; condition; step)`: `let i = 1` runs once, then the condition is checked before **every** round.
+      - While the condition is true, the body runs, then `i++` adds one.
+      - When the condition becomes false, the loop ends and the program carries on after it.
+    video:
+      steps:
+        - scene: The for loop
+          sub: Doing something again and again
+        - type: "for (let i = 1; i <= 3; i++) {\n  console.log(i * 10);\n}\nconsole.log(\"Done!\");\n"
+          speed: 1.4
+          say: "A loop that prints 10, 20, 30 — then Done!"
+        - say: "Three parts in the brackets. **Start**: `i` begins at 1."
+          mark: "let i = 1"
+        - say: "**Condition**: keep going while `i <= 3`."
+          mark:
+            text: "i <= 3"
+            color: pink
+        - say: "**Step**: after each round, `i++` adds one to `i`."
+          mark:
+            text: "i++"
+            color: green
+        - scene: Let's run it
+          sub: Watch i change
+        - run: true
+          line: 1
+          vars:
+            i: "1"
+          say: "`i` is 1. Is `1 <= 3`? **Yes** — run the body."
+        - line: 2
+          print: "10"
+          say: "`i * 10` is 10."
+        - line: 1
+          vars:
+            i: "2"
+          say: "`i++`: now `i` is 2. Is `2 <= 3`? Yes."
+        - line: 2
+          print: "20"
+          hold: 1.4
+        - line: 1
+          vars:
+            i: "3"
+          say: "`i` is 3. `3 <= 3`? Still yes."
+        - line: 2
+          print: "30"
+          hold: 1.4
+        - line: 1
+          vars:
+            i: "4"
+          say: "`i` is 4. Is `4 <= 3`? **No** — the loop ends."
+          mark:
+            text: "i <= 3"
+            color: pink
+        - line: 4
+          print: "Done!"
+          say: "The program carries on after the loop."
+        - line: 0
+          say: "Change `3` to `100`, and the same three lines print a hundred numbers."
+
   - type: lesson
     id: js4-for
     title: for loops

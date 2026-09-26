@@ -95,12 +95,37 @@
    */
   function render(md, hooks) {
     hooks = hooks || {};
+    var html = parse(md, hooks).html;
+    // Numbered top-level blocks let the app point at one part of a lesson.
+    if (hooks.number) {
+      html = html.map(function (s, n) { return s.replace(/^<([a-z][\w-]*)/i, '<$1 data-b="' + n + '"'); });
+    }
+    return html.join('\n');
+  }
+
+  /**
+   * The top-level blocks of a text, in the order (and with the numbers)
+   * render(md, {number: true}) gives them: {kind, text, lang?, level?}.
+   * kind is p, h, list, code, callout, quote, table, hr or slot; text is the
+   * block's markdown.
+   */
+  function blocks(md) {
+    return parse(md, {}).meta;
+  }
+
+  function parse(md, hooks) {
     var lines = String(md == null ? '' : md).replace(/\r\n?/g, '\n').split('\n');
     var html = [];
+    var meta = [];
     var i = 0;
 
+    function emit(out, kind, text, extra) {
+      html.push(out);
+      meta.push(Object.assign({ kind: kind, text: text }, extra || {}));
+    }
+
     function para(buf) {
-      if (buf.length) html.push('<p>' + inline(buf.join(' ')) + '</p>');
+      if (buf.length) emit('<p>' + inline(buf.join(' ')) + '</p>', 'p', buf.join(' '));
     }
 
     function listAt(start) {
@@ -175,15 +200,15 @@
             i = k;
           }
         }
-        html.push(hooks.code ? hooks.code(lang, flags, code, extras) :
-          '<pre><code>' + escapeHtml(code) + '</code></pre>');
+        emit(hooks.code ? hooks.code(lang, flags, code, extras) :
+          '<pre><code>' + escapeHtml(code) + '</code></pre>', 'code', code, { lang: lang });
         continue;
       }
 
       var slot = /^\s*\{\{\s*(check|task)\s+([\w-]+)\s*\}\}\s*$/.exec(line);
       if (slot) {
         para(buf); buf = [];
-        html.push(hooks.slot ? hooks.slot(slot[1], slot[2]) : '');
+        emit(hooks.slot ? hooks.slot(slot[1], slot[2]) : '', 'slot', slot[2], { slot: slot[1] });
         i += 1;
         continue;
       }
@@ -195,14 +220,14 @@
         para(buf); buf = [];
         var level = Math.min(6, heading[1].length + 1); // # in a lesson is an h2
         var id = heading[2].toLowerCase().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '');
-        html.push('<h' + level + ' id="h-' + id + '">' + inline(heading[2]) + '</h' + level + '>');
+        emit('<h' + level + ' id="h-' + id + '">' + inline(heading[2]) + '</h' + level + '>', 'h', heading[2], { level: level, id: 'h-' + id });
         i += 1;
         continue;
       }
 
       if (/^\s*(?:---+|\*\*\*+)\s*$/.test(line)) {
         para(buf); buf = [];
-        html.push('<hr>');
+        emit('<hr>', 'hr', '');
         i += 1;
         continue;
       }
@@ -218,10 +243,11 @@
         if (callout && CALLOUTS[callout[1].toLowerCase()]) {
           var kind = callout[1].toLowerCase();
           var title = callout[2] || CALLOUTS[kind];
-          html.push('<aside class="callout callout-' + kind + '"><div class="callout-title">' +
-            inline(title) + '</div>' + render(quoted.slice(1).join('\n'), hooks) + '</aside>');
+          emit('<aside class="callout callout-' + kind + '"><div class="callout-title">' +
+            inline(title) + '</div>' + parse(quoted.slice(1).join('\n'), hooks).html.join('\n') + '</aside>',
+          'callout', quoted.slice(1).join('\n'), { callout: kind, title: title });
         } else {
-          html.push('<blockquote>' + render(quoted.join('\n'), hooks) + '</blockquote>');
+          emit('<blockquote>' + parse(quoted.join('\n'), hooks).html.join('\n') + '</blockquote>', 'quote', quoted.join('\n'));
         }
         continue;
       }
@@ -234,23 +260,24 @@
         });
         i += 2;
         var rows = [];
+        var tableStart = i - 2;
         while (i < lines.length && /^\s*\|/.test(lines[i])) { rows.push(splitRow(lines[i])); i += 1; }
         var cell = function (tag, text, n) {
           var align = aligns[n] ? ' style="text-align:' + aligns[n] + '"' : '';
           return '<' + tag + align + '>' + inline(text) + '</' + tag + '>';
         };
-        html.push('<div class="table-wrap"><table><thead><tr>' +
+        emit('<div class="table-wrap"><table><thead><tr>' +
           head.map(function (h, n) { return cell('th', h, n); }).join('') + '</tr></thead><tbody>' +
           rows.map(function (r) {
             return '<tr>' + r.map(function (c, n) { return cell('td', c, n); }).join('') + '</tr>';
-          }).join('') + '</tbody></table></div>');
+          }).join('') + '</tbody></table></div>', 'table', lines.slice(tableStart, i).join('\n'));
         continue;
       }
 
       if (/^\s*(?:[-*]|\d+[.)])\s+/.test(line)) {
         para(buf); buf = [];
         var list = listAt(i);
-        html.push(list[0]);
+        emit(list[0], 'list', lines.slice(i, list[1]).join('\n'));
         i = list[1];
         continue;
       }
@@ -259,8 +286,19 @@
       i += 1;
     }
     para(buf);
-    return html.join('\n');
+    return { html: html, meta: meta };
   }
 
-  return { render: render, inline: inline, escapeHtml: escapeHtml, CALLOUTS: CALLOUTS };
+  /** What inline markdown looks like once rendered, as plain text. */
+  function plain(src) {
+    return String(src == null ? '' : src)
+      .replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, function (_, ticks, body) { return body.replace(/^ (.*) $/, '$1'); })
+      .replace(/\[\[([^\]\n]+)\]\]/g, function (_, keys) { return keys.split('+').map(function (k) { return k.trim(); }).join('+'); })
+      .replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, '$1')
+      .replace(/\*\*([^*\n]+(?:\*(?!\*)[^*\n]*)*)\*\*/g, '$1')
+      .replace(/(^|[^\w*])\*([^*\s][^*\n]*?)\*(?!\w)/g, '$1$2')
+      .replace(/(^|[^\w])_([^_\s][^_\n]*?)_(?!\w)/g, '$1$2');
+  }
+
+  return { render: render, blocks: blocks, inline: inline, plain: plain, escapeHtml: escapeHtml, CALLOUTS: CALLOUTS };
 });

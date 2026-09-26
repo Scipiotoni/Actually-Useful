@@ -12,6 +12,98 @@ goals:
   - Label every field so forms are accessible
 
 items:
+  - type: video
+    id: html6-video-form
+    title: "Watch: a sign-up form, piece by piece"
+    body: |
+      **What you just saw**
+
+      - `<form>` wraps the fields; `action` is where the answers go.
+      - `<label>` names a field. Its `for` matches the input's `id`, so clicking the label jumps into the field.
+      - `<input>` is a field (an empty element); its `type` decides what kind; `name` labels the answer that's sent.
+      - A `<button>` inside the form sends it.
+    video:
+      start:
+        index.html: |
+          <h1>Join the book club</h1>
+      steps:
+        - scene: Forms
+          sub: Letting visitors send you things
+        - type: "<form action=\"/join\">\n</form>\n"
+          say: "`<form>` wraps everything a visitor fills in. `action` is where the answers are sent."
+          mark: "<form action=\"/join\">"
+        - type: "  <label for=\"name\">Your name</label>\n  <input id=\"name\" name=\"name\">\n"
+          at: "<form action=\"/join\">\n"
+          say: "An `<input>` is a box to type in. A `<label>` says what goes in it."
+          point:
+            - sel: label
+              label: "<label>"
+            - sel: input
+              label: "<input>"
+              color: pink
+        - say: "The label's `for` matches the input's `id` — that links them together."
+          mark:
+            - text: "for=\"name\""
+            - text: "id=\"name\""
+              color: gold
+        - fill:
+            sel: "#name"
+            text: "Maya"
+          say: "Click the field and type. Screen readers read the label out loud."
+          point:
+            sel: "#name"
+            label: "the visitor types here"
+            color: green
+        - say: "`name=\"name\"` is the label the answer gets when it's sent: *name=Maya*."
+          mark:
+            text: "name=\"name\""
+            color: pink
+        - scene: Different kinds of input
+          sub: The type attribute
+        - type: "  <label for=\"email\">Email</label>\n  <input id=\"email\" type=\"email\" name=\"email\">\n"
+          before: "</form>"
+          say: "`type=\"email\"` asks for an email address. Phones even show a keyboard with @."
+          mark:
+            text: "type=\"email\""
+            color: green
+        - fill:
+            sel: "#email"
+            text: "maya@mail.example"
+          point:
+            sel: "#email"
+            label: "type=\"email\""
+            color: green
+        - type: "  <label><input type=\"checkbox\" name=\"news\"> News</label>\n"
+          before: "</form>"
+          say: "`type=\"checkbox\"` is a tick box. Here the label wraps the input — that works too."
+          mark:
+            text: "type=\"checkbox\""
+            color: pink
+        - tick: "input[type=checkbox]"
+          say: "Tick!"
+          point:
+            sel: "input[type=checkbox]"
+            label: "checkbox"
+            color: pink
+        - scene: Sending it
+          sub: "<button>"
+        - type: "  <button>Join</button>\n"
+          before: "</form>"
+          say: "A `<button>` inside the form **sends** it."
+          mark:
+            text: "<button>Join</button>"
+            color: blue
+          point:
+            sel: button
+            label: "<button>"
+            color: blue
+        - click: button
+          say: "Click, and the browser sends *name=Maya&email=maya@mail.example&news=on* to `/join`."
+        - say: "Label + input for every question, a button to send: that's every form on the web."
+          point:
+            sel: form
+            label: "<form>"
+
   - type: lesson
     id: html6-basics
     title: Your first form
@@ -126,6 +218,84 @@ items:
         back: "`<label for=\"x\">` matching `<input id=\"x\">` — or put the input inside the label."
       - front: Why isn't a placeholder a replacement for a label?
         back: It disappears when you type, is often faint, and many screen readers ignore it.
+
+  - type: video
+    id: html6-video-inputs
+    title: "Watch: kinds of input"
+    body: |
+      **What you just saw**
+
+      - `type="number"`, `type="date"` and `type="range"` give special controls — for free.
+      - Radio buttons with the same `name` form a group: only one can be picked.
+      - `<select>` with `<option>`s is a drop-down menu; `<textarea>` is a box for longer text.
+    video:
+      start:
+        index.html: |
+          <h1>Pizza order</h1>
+          <form>
+          </form>
+      steps:
+        - scene: Kinds of input
+          sub: One tag, many controls
+        - type: "  <label>How many? <input type=\"number\" min=\"1\"></label>\n"
+          at: "<form>\n"
+          say: "`type=\"number\"` gives a box with little arrows. `min` stops it going below 1."
+          mark: "type=\"number\""
+          point:
+            sel: "input[type=number]"
+            label: "number"
+        - type: "  <p><label>When? <input type=\"date\"></label></p>\n"
+          before: "</form>"
+          say: "`type=\"date\"` gives a date picker — no extra code needed."
+          mark:
+            text: "type=\"date\""
+            color: pink
+          point:
+            sel: "input[type=date]"
+            label: "date"
+            color: pink
+        - scene: Pick one
+          sub: Radio buttons
+        - type: "  <p>Size:\n    <label><input type=\"radio\" name=\"size\"> S</label>\n    <label><input type=\"radio\" name=\"size\"> L</label>\n  </p>\n"
+          before: "</form>"
+          say: "Radio buttons with the **same** `name` are one group…"
+          mark:
+            text: "name=\"size\""
+            all: true
+            color: green
+          point:
+            sel: "input[type=radio]"
+            label: "same name"
+            color: green
+        - tick: "input[type=radio]"
+          say: "…so picking one un-picks the others. Only one size!"
+        - scene: Menus and long answers
+          sub: "<select> and <textarea>"
+        - type: "  <select>\n    <option>Margherita</option>\n    <option>Veggie</option>\n  </select>\n"
+          before: "</form>"
+          say: "`<select>` is a drop-down menu. Each choice is an `<option>`."
+          mark:
+            - text: "<select>"
+              color: blue
+            - text: "<option>"
+              all: true
+              color: blue
+          point:
+            sel: select
+            label: "<select>"
+            color: blue
+        - type: "  <textarea>Extra cheese</textarea>\n"
+          before: "</form>"
+          say: "`<textarea>` is a box for **longer** text. Unlike `<input>`, it has a closing tag."
+          mark:
+            text: "<textarea>Extra cheese</textarea>"
+            color: pink
+          point:
+            sel: textarea
+            label: "<textarea>"
+            color: pink
+        - say: "Pick the right type, and the browser gives visitors the right control — for free."
+          zoom: page
 
   - type: lesson
     id: html6-inputs

@@ -11,6 +11,97 @@ goals:
   - Know what to learn next
 
 items:
+  - type: video
+    id: html8-video-site
+    title: "Watch: a personal website, from empty file to finished"
+    body: |
+      **What you just saw**
+
+      Every tag from the course, working together: the skeleton, landmarks
+      (`<header>`, `<nav>`, `<main>`, `<footer>`), headings, a picture with
+      `alt`, a list, and links — then one `<link>` to a stylesheet gives it a
+      look. Plan the parts first, then fill them in. That's how every site is built.
+    video:
+      assets:
+        me.svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#c7d2fe"/><circle cx="60" cy="46" r="22" fill="#f5c9a8"/><path d="M38 40c2-18 42-18 44 0-6-8-38-8-44 0z" fill="#4b2e1f"/><path d="M20 120c4-30 76-30 80 0z" fill="#6366f1"/></svg>'
+      start:
+        index.html: ""
+        style.css: |
+          body { font-family: sans-serif; margin: 0; }
+          header { background: #4f46e5; color: white; }
+          header { padding: 12px 16px; }
+          header h1 { margin: 0; }
+          nav a { color: #e0e7ff; margin-right: 10px; }
+          main { padding: 4px 16px; color: #1e293b; }
+          img { border-radius: 50%; float: left; }
+          img { margin: 0 12px 6px 0; }
+          footer { background: #eef2ff; clear: both; }
+          footer { padding: 8px 16px; }
+      steps:
+        - scene: A whole website
+          sub: Everything from the course, working together
+        - type: "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\">\n    <title>Sam Rivera</title>\n  </head>\n  <body>\n  </body>\n</html>\n"
+          speed: 3
+          say: "Every page starts with the skeleton. The title goes straight to the tab."
+          point:
+            sel: "@tab"
+            label: "← <title>"
+        - type: "    <header>\n      <h1>Sam Rivera</h1>\n      <nav>\n        <a href=\"#about\">About</a>\n        <a href=\"#contact\">Contact</a>\n      </nav>\n    </header>\n"
+          at: "<body>\n"
+          speed: 1.6
+          say: "The **header**: a name, and a **nav** with links to the parts of the page."
+          mark: "<header>"
+          point:
+            sel: header
+            label: "<header>"
+        - type: "    <main>\n      <h2 id=\"about\">About me</h2>\n      <img src=\"me.svg\" alt=\"Sam, smiling\"\n           width=\"90\" height=\"90\">\n      <p>I build things and bake bread.</p>\n    </main>\n"
+          before: "  </body>"
+          speed: 1.6
+          say: "**main** holds the content: a heading, a photo with `alt` text, a paragraph."
+          mark:
+            text: "<main>"
+            color: green
+          point:
+            sel: main
+            label: "<main>"
+            color: green
+        - type: "      <h2>Things I love</h2>\n      <ul>\n        <li>Cycling</li>\n        <li>Sourdough</li>\n        <li>Old maps</li>\n      </ul>\n"
+          before: "    </main>"
+          speed: 1.6
+          say: "A **list** of favourite things — `<ul>` and `<li>`."
+          point:
+            sel: li
+            label: "<li> ×3"
+            color: pink
+        - type: "    <footer id=\"contact\">\n      <a href=\"mailto:sam@mail.example\">Email me</a>\n    </footer>\n"
+          before: "  </body>"
+          speed: 1.6
+          say: "And a **footer** with a way to get in touch."
+          mark:
+            text: "<footer id=\"contact\">"
+            color: blue
+          point:
+            sel: footer
+            label: "<footer>"
+            color: blue
+        - say: "That's the whole structure. It works — but it's plain."
+          zoom: page
+        - scene: One more line
+          sub: A stylesheet gives it a look
+        - type: "    <link rel=\"stylesheet\" href=\"style.css\">\n"
+          at: "</title>\n"
+          say: "Link the stylesheet…"
+          mark: "<link rel=\"stylesheet\" href=\"style.css\">"
+        - say: "…and it's a real website. HTML says **what** everything is; CSS says how it looks."
+          zoom: page
+          point:
+            - sel: header
+              label: "styled header"
+            - sel: img
+              label: "round photo"
+              color: pink
+        - say: "Your turn next: plan the parts, then build them one by one."
+
   - type: lesson
     id: html8-plan
     title: Planning a page
@@ -878,8 +969,8 @@ items:
 
       There's only one rule: your page must use the ingredients below.
       What it says, how it's organised and how long it is are entirely up to
-      you. Check as often as you like: each ingredient turns green when your
-      page has it.
+      you. Each ingredient ticks itself green as soon as your page has it —
+      watch the list as you write.
     ideas:
       - A fan page for your favourite band, with their albums in a list and a photo
       - A guide to your town for visitors — what to see, where to eat

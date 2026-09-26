@@ -246,6 +246,62 @@ items:
       - front: Why is *predicting* before running so useful?
         back: When your prediction is wrong, you've found exactly what you don't understand yet — and fixing that is learning.
 
+  - type: video
+    id: c0-video-hello
+    title: "Watch: your first program, line by line"
+    body: |
+      **What you just saw**
+
+      - `#include <iostream>` brings in the part of the library that prints.
+      - Every program starts running at `int main()`; its statements run top to bottom.
+      - `std::cout << "…";` prints text; `\n` starts a new line; every statement ends with `;`.
+      - `return 0;` tells the computer the program finished without problems.
+    video:
+      steps:
+        - scene: Hello, World!
+          sub: The program every programmer writes first
+        - type: "#include <iostream>\n"
+          say: "`#include <iostream>` brings in the tools for **input and output** — printing."
+          mark: "#include <iostream>"
+        - type: "\nint main() {\n}\n"
+          say: "`int main()` is where every C++ program **starts**. Its code goes between `{` and `}`."
+          mark:
+            text: "int main()"
+            color: pink
+        - type: "    std::cout << \"Hello, World!\\n\";\n"
+          at: "int main() {\n"
+          say: "`std::cout` is the screen. `<<` sends the text to it."
+          mark:
+            - text: "std::cout"
+              color: green
+            - text: "<<"
+              color: green
+        - say: "The text is in double quotes. `\\n` means **new line**."
+          mark:
+            - text: "\"Hello, World!\\n\""
+            - text: "\\n"
+              color: pink
+        - say: "And every statement ends with a **semicolon** `;` — like a full stop."
+          mark:
+            text: ";"
+            color: blue
+        - type: "    return 0;\n"
+          at: "World!\\n\";\n"
+          say: "`return 0;` says: *finished, all went well*."
+          mark: "return 0;"
+        - scene: Run it
+          sub: Compile, then run
+        - run: true
+          print: "$ g++ main.cpp -o program\n$ ./program"
+          say: "The **compiler** turns your code into a program the computer can run…"
+        - line: 4
+          print: "Hello, World!"
+          say: "…and it runs `main` from the top: it prints **Hello, World!**"
+        - line: 5
+          say: "Then `return 0;` ends the program."
+        - line: 0
+          say: "Five lines — and you've written a real program."
+
   - type: lesson
     id: c0-hello
     title: "Hello, World!"

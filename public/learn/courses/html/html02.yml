@@ -11,6 +11,85 @@ goals:
   - Write characters that HTML treats as special, like `<` and `&`
 
 items:
+  - type: video
+    id: html2-video-meaning
+    title: "Watch: tags that give words meaning"
+    body: |
+      **What you just saw**
+
+      - `<strong>` = important (bold), `<em>` = stressed (italic), `<mark>` = highlighted, `<small>` = side notes.
+      - `<b>` and `<i>` *look* the same as `<strong>` and `<em>` but carry no meaning — screen readers and search engines can't tell they matter.
+      - Choose a tag for what the words **mean**; CSS decides how they look.
+    video:
+      steps:
+        - scene: Meaning, not looks
+          sub: Tags that say what your words are
+        - type: "<h1>Movie night</h1>\n<p>The film starts at 8.</p>\n"
+          say: "A real message to friends. Some words matter more than others…"
+        - type: "<strong>"
+          before: "8."
+          say: "`<strong>` marks words that are **important**."
+        - type: "</strong>"
+          at: "<strong>8"
+          say: "The browser shows them in bold — and screen readers say them with more weight."
+          mark: "<strong>8</strong>"
+          point:
+            sel: strong
+            label: "<strong> important"
+        - type: "<p>Please <em>don't</em> be late!</p>\n"
+          say: "`<em>` is **emphasis** — the word you'd stress out loud. Shown in italics."
+          mark:
+            text: "<em>don't</em>"
+            color: pink
+          point:
+            sel: em
+            label: "<em> stressed"
+            color: pink
+        - type: "<p>Bring <mark>popcorn</mark> and a blanket.</p>\n"
+          say: "`<mark>` **highlights** something, like a marker pen on paper."
+          mark:
+            text: "<mark>popcorn</mark>"
+            color: green
+          point:
+            sel: mark
+            label: "<mark> highlighted"
+            color: green
+        - type: "<p><small>Snacks are not included.</small></p>\n"
+          say: "`<small>` is for side notes and fine print."
+          mark:
+            text: "<small>Snacks are not included.</small>"
+            color: blue
+          point:
+            sel: small
+            label: "<small> fine print"
+            color: blue
+        - scene: Looks the same, means less
+          sub: "<b> and <i>"
+        - type: "<p><b>Popcorn</b> vs <strong>Popcorn</strong></p>\n"
+          say: "`<b>` looks exactly like `<strong>`…"
+          point:
+            - sel: b
+              label: "<b>"
+              color: pink
+            - sel: "p:nth-of-type(5) strong"
+              label: "<strong>"
+        - say: "…but only `<strong>` tells screen readers and search engines the words **matter**."
+          mark:
+            - text: "<b>Popcorn</b>"
+              color: pink
+            - text: "<strong>Popcorn</strong>"
+              color: gold
+        - say: "Rule of thumb: pick the tag for what the words **mean**. CSS will decide how they look."
+          point:
+            - sel: strong
+              label: "important"
+            - sel: em
+              label: "stressed"
+              color: pink
+            - sel: mark
+              label: "highlighted"
+              color: green
+
   - type: lesson
     id: html2-emphasis
     title: Meaning, not looks
@@ -120,6 +199,77 @@ items:
         back: "`<abbr title=\"World Wide Web\">WWW</abbr>`"
       - front: Why does meaning matter more than looks in HTML?
         back: Screen readers and search engines use the meaning, and CSS can change the looks of anything.
+
+  - type: video
+    id: html2-video-lists
+    title: "Watch: lists — ul, ol and li"
+    body: |
+      **What you just saw**
+
+      - `<ul>` is an **unordered** list (bullets) — for things where order doesn't matter, like ingredients.
+      - `<ol>` is an **ordered** list (numbers) — for steps that happen in order.
+      - Every item is an `<li>`, and only `<li>` goes directly inside `<ul>` or `<ol>`.
+      - A list can go inside an `<li>` to make a nested list.
+    video:
+      steps:
+        - scene: Lists
+          sub: A recipe needs two kinds
+        - type: "<h1>Pancakes</h1>\n<h2>You need</h2>\n"
+          say: "A recipe page. First, the ingredients — the order doesn't matter."
+        - type: "<ul>\n</ul>\n"
+          say: "`<ul>` starts an **unordered list** — a list with bullets."
+          mark: "<ul>"
+        - type: "  <li>2 eggs</li>\n"
+          at: "<ul>\n"
+          say: "Each item is an `<li>` — a **list item**."
+          mark: "<li>2 eggs</li>"
+          point:
+            sel: li
+            label: "<li>"
+        - type: "  <li>1 cup of flour</li>\n  <li>1 cup of milk</li>\n"
+          at: "<li>2 eggs</li>\n"
+          say: "Add more items and the browser puts a bullet before each one."
+        - say: "`<ul>` around the whole list, one `<li>` per item."
+          mark:
+            - text: "<ul>"
+              color: gold
+            - text: "<li>"
+              all: true
+              color: pink
+          point:
+            - sel: ul
+              label: "<ul>"
+            - sel: li
+              label: "<li>"
+              color: pink
+        - scene: Steps in order
+          sub: "<ol> numbers them for you"
+        - type: "<h2>Steps</h2>\n<ol>\n  <li>Mix everything</li>\n  <li>Heat the pan</li>\n  <li>Cook both sides</li>\n</ol>\n"
+          say: "The steps **must** happen in order, so they go in an `<ol>` — an **ordered list**."
+        - say: "The browser numbers the items itself: 1, 2, 3."
+          mark: "<ol>"
+          point:
+            sel: ol
+            label: "<ol> numbers"
+        - type: "  <li>Add syrup</li>\n"
+          before: "</ol>"
+          say: "Add a step and the numbers keep up — no retyping."
+          point:
+            sel: "ol li:last-child"
+            label: "number 4, automatically"
+        - scene: Lists inside lists
+          sub: Nesting
+        - type: "\n    <ul><li>Maple</li><li>Honey</li></ul>\n  "
+          at: "Add syrup"
+          say: "A whole list can go **inside** an `<li>`: a nested list."
+          mark:
+            text: "<ul><li>Maple</li><li>Honey</li></ul>"
+            color: green
+          point:
+            sel: "ol ul"
+            label: "a list in a list"
+            color: green
+        - say: "Remember: directly inside `<ul>` and `<ol>`, only `<li>` is allowed."
 
   - type: lesson
     id: html2-lists
@@ -369,6 +519,76 @@ items:
           - A bookmark
         answer: 1
         why: "Like a highlighter pen — relevant in the current context."
+
+  - type: video
+    id: html2-video-quotes
+    title: "Watch: quotes, code and special characters"
+    body: |
+      **What you just saw**
+
+      - `<blockquote>` is a quotation of its own; `<q>` is a short quote inside a sentence (the browser adds the quote marks).
+      - `<code>` shows code, `<kbd>` shows keys to press.
+      - `<` and `&` are special in HTML, so you write them as **entities**: `&lt;` and `&amp;`. `&copy;` is ©.
+    video:
+      steps:
+        - scene: Quotes
+          sub: Words from someone else
+        - type: "<h1>Book club</h1>\n<blockquote>\n  <p>It was the best of times.</p>\n</blockquote>\n"
+          say: "`<blockquote>` is a quotation that stands on its own. The browser indents it."
+          mark: "<blockquote>"
+          point:
+            sel: blockquote
+            label: "<blockquote>"
+        - type: "<p>Maya said <q>let's read it again</q>.</p>\n"
+          say: "`<q>` is a short quote **inside** a sentence. The browser adds the quote marks for you."
+          mark:
+            text: "<q>let's read it again</q>"
+            color: pink
+          point:
+            sel: q
+            label: "<q> adds “ ”"
+            color: pink
+        - scene: Code and keys
+          sub: "<code> and <kbd>"
+        - type: "<p>Save with <kbd>Ctrl</kbd> + <kbd>S</kbd>.</p>\n"
+          say: "`<kbd>` shows keys to press on the keyboard."
+          mark:
+            text: "<kbd>"
+            all: true
+          point:
+            sel: kbd
+            label: "<kbd> keys"
+        - type: "<p>Write <code>&lt;p&gt;</code> for a paragraph.</p>\n"
+          say: "`<code>` shows a piece of code, in a typewriter font."
+          point:
+            sel: code
+            label: "<code>"
+            color: green
+          mark:
+            text: "<code>&lt;p&gt;</code>"
+            color: green
+        - scene: Special characters
+          sub: "When < would confuse the browser"
+        - say: "Why `&lt;p&gt;` and not `<p>`? A real `<` would **start a tag**!"
+          mark:
+            - text: "&lt;"
+              color: pink
+            - text: "&gt;"
+              color: pink
+          point:
+            sel: code
+            label: "shows <p>"
+            color: pink
+        - type: "<p>Fish &amp; chips &copy; 2025</p>\n"
+          say: "These are **entities**: `&lt;` is <, `&amp;` is &, `&copy;` is ©."
+          mark:
+            - text: "&amp;"
+            - text: "&copy;"
+              color: green
+          point:
+            sel: "p:last-of-type"
+            label: "& and ©"
+        - say: "An entity starts with `&` and ends with `;`. The browser shows the character instead."
 
   - type: lesson
     id: html2-quotes-code

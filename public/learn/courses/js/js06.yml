@@ -174,6 +174,90 @@ items:
       - front: Can you change the items of a `const` array?
         back: Yes — const only stops the variable being reassigned to another array.
 
+  - type: video
+    id: js6-video-arrays
+    title: "Watch: map, filter and reduce"
+    body: |
+      **What you just saw**
+
+      - `map` runs a function on **each** item and collects the results in a new array.
+      - `filter` keeps only the items for which the function returns `true`.
+      - `reduce` combines all the items into one value, like a total.
+      - None of them change the original array.
+    video:
+      steps:
+        - scene: Arrays
+          sub: One variable, many values
+        - type: "const prices = [3, 8, 1, 12];\n"
+          say: "An **array**: a list of values in square brackets."
+        - run: true
+          line: 1
+          vars:
+            prices: "[3, 8, 1, 12]"
+          say: "Four prices, in one box."
+        - scene: map
+          sub: Change every item
+        - type: "const doubled = prices.map((p) => p * 2);\n"
+          say: "`map` runs the function on **each** price…"
+          mark: "(p) => p * 2"
+        - line: 2
+          vars:
+            doubled: "[6]"
+          say: "3 × 2 = 6…"
+          hold: 1.2
+        - vars:
+            doubled: "[6, 16]"
+          hold: 0.9
+        - vars:
+            doubled: "[6, 16, 2]"
+          hold: 0.9
+        - vars:
+            doubled: "[6, 16, 2, 24]"
+          say: "…and collects the results in a **new** array."
+        - scene: filter
+          sub: Keep some items
+        - type: "const cheap = prices.filter((p) => p < 5);\n"
+          say: "`filter` keeps only the items where the test is **true**: under 5."
+          mark:
+            text: "(p) => p < 5"
+            color: pink
+        - line: 3
+          vars:
+            cheap: "[3]"
+          say: "3 < 5 ✓ kept. 8 < 5 ✗ left out…"
+        - vars:
+            cheap: "[3, 1]"
+          say: "1 < 5 ✓ kept. 12 ✗. Two prices are cheap."
+        - scene: reduce
+          sub: Many values into one
+        - type: "const total = prices.reduce((sum, p) => sum + p, 0);\n"
+          say: "`reduce` walks the list with a running **total**, starting at 0."
+          mark:
+            text: "(sum, p) => sum + p, 0"
+            color: green
+        - line: 4
+          vars:
+            total: "3"
+          say: "0 + 3 = 3…"
+          hold: 1.1
+        - vars:
+            total: "11"
+          say: "3 + 8 = 11…"
+          hold: 1.1
+        - vars:
+            total: "12"
+          say: "11 + 1 = 12…"
+          hold: 1.1
+        - vars:
+            total: "24"
+          say: "12 + 12 = **24**."
+        - type: "console.log(total);\n"
+          line: 5
+          print: "24"
+          say: "And `prices` is untouched — each method made something **new**."
+          mark: "const prices = [3, 8, 1, 12];"
+        - line: 0
+
   - type: lesson
     id: js6-transform
     title: map, filter and reduce

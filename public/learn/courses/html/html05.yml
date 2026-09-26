@@ -11,6 +11,104 @@ goals:
   - Make tables accessible with header cells and `scope`, and use them only for data
 
 items:
+  - type: video
+    id: html5-video-tables
+    title: "Watch: building a table, row by row"
+    body: |
+      **What you just saw**
+
+      - `<table>` holds the table; each `<tr>` is a **row**.
+      - Inside a row, `<th>` is a **heading** cell and `<td>` a normal **data** cell.
+      - `<thead>` groups the heading row, `<tbody>` the data; `<caption>` gives the table a title.
+      - `colspan="2"` makes a cell stretch across two columns.
+      - (A little hidden CSS draws the borders here, so you can see the cells.)
+    video:
+      css: "table { border-collapse: collapse; margin-top: 8px; } th, td { border: 1px solid #9aa4b2; padding: 6px 12px; } th { background: #eef2f7; }"
+      start:
+        index.html: |
+          <h1>Opening hours</h1>
+      steps:
+        - scene: Tables
+          sub: Rows and columns of data
+        - type: "<table>\n</table>\n"
+          say: "A real use: a shop's opening hours. It starts with `<table>`."
+          mark: "<table>"
+        - type: "  <tr>\n    <th>Day</th>\n    <th>Open</th>\n  </tr>\n"
+          at: "<table>\n"
+          say: "`<tr>` is a **table row**. `<th>` cells are **headings** — bold and centred."
+          mark:
+            - text: "<tr>"
+            - text: "<th>"
+              all: true
+              color: pink
+          point:
+            - sel: tr
+              label: "<tr> row"
+            - sel: th
+              label: "<th>"
+              color: pink
+        - type: "  <tr>\n    <td>Mon–Fri</td>\n    <td>7–18</td>\n  </tr>\n"
+          before: "</table>"
+          say: "The next row holds **data**: each `<td>` is one cell."
+          mark:
+            text: "<td>"
+            all: true
+            color: green
+          point:
+            sel: td
+            label: "<td> cell"
+            color: green
+        - type: "  <tr>\n    <td>Saturday</td>\n    <td>8–14</td>\n  </tr>\n"
+          before: "</table>"
+          say: "One `<tr>` per row. The columns line up by themselves."
+          point:
+            sel: "tr:last-child td"
+            label: "a new row"
+            color: green
+        - scene: A table with a structure
+          sub: "caption, thead and tbody"
+        - type: "\n  <caption>Luna's Bakery</caption>"
+          at: "<table>"
+          say: "`<caption>` is the table's title, shown above it."
+          mark:
+            text: "<caption>Luna's Bakery</caption>"
+            color: blue
+          point:
+            sel: caption
+            label: "<caption>"
+            color: blue
+        - type: "\n  <tbody>"
+          at: "</tr>"
+          say: "`<tbody>` groups the data rows…"
+        - type: "  </tbody>\n"
+          before: "</table>"
+          mark:
+            - text: "<tbody>"
+              color: green
+            - text: "</tbody>"
+              color: green
+          point:
+            sel: tbody
+            label: "<tbody>"
+            color: green
+          say: "…so browsers, screen readers and CSS know which rows are data."
+        - scene: Merging cells
+          sub: colspan
+        - type: "    <tr>\n      <td colspan=\"2\">Closed on Sundays</td>\n    </tr>\n"
+          before: "  </tbody>"
+          say: "`colspan=\"2\"` stretches one cell across **two columns**."
+          mark:
+            text: "colspan=\"2\""
+            color: pink
+          point:
+            sel: "td[colspan]"
+            label: "colspan=\"2\""
+            color: pink
+        - say: "Use tables for data in rows and columns — never just to place things on the page."
+          point:
+            sel: table
+            label: "<table>"
+
   - type: lesson
     id: html5-basics
     title: Rows, columns and cells

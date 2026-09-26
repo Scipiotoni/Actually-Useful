@@ -11,6 +11,98 @@ goals:
   - Build navigation bars, sidebars, card rows and sticky footers
 
 items:
+  - type: video
+    id: css7-video-flex
+    title: "Watch: Flexbox lines things up"
+    body: |
+      **What you just saw**
+
+      - `display: flex` on a **parent** puts its children in a row.
+      - `gap` spaces them; `justify-content` spreads them along the row; `align-items` lines them up across it.
+      - `flex: 1` lets an item grow to fill the free space.
+    video:
+      css: ".box { padding: 10px 16px; border-radius: 8px; color: white; font: 700 18px sans-serif; } .a { background: #f97316; } .b { background: #8b5cf6; padding-top: 30px; padding-bottom: 30px; } .c { background: #10b981; }"
+      start:
+        index.html: |
+          <link rel="stylesheet" href="style.css">
+          <div class="row">
+            <div class="box a">A</div>
+            <div class="box b">B</div>
+            <div class="box c">C</div>
+          </div>
+        style.css: |
+          .row {
+            background: #f1f5f9;
+          }
+      steps:
+        - scene: Flexbox
+          sub: Putting things in a row
+        - file: style.css
+          say: "Three boxes inside a `.row`. Normally they stack, one per line."
+          point:
+            sel: ".box"
+            label: "stacked"
+        - type: "  display: flex;\n"
+          at: ".row {\n"
+          say: "`display: flex` on the **parent** — and the children line up in a row!"
+          mark: "display: flex;"
+          point:
+            sel: ".row"
+            label: "flex container"
+        - type: "  gap: 12px;\n"
+          at: "flex;\n"
+          say: "`gap` puts space **between** the items."
+          mark:
+            text: "gap: 12px;"
+            color: pink
+        - scene: Spreading them out
+          sub: justify-content
+        - type: "  justify-content: center;\n"
+          at: "gap: 12px;\n"
+          say: "`justify-content` places them along the row: **center**…"
+          mark:
+            text: "justify-content: center;"
+            color: green
+          point:
+            sel: ".box"
+            label: "centred"
+            color: green
+        - replace: "center"
+          with: "space-between"
+          say: "…**space-between** pushes them to the edges…"
+          point:
+            sel: ".box"
+            label: "space-between"
+            color: green
+        - replace: "space-between"
+          with: "flex-end"
+          say: "…and **flex-end** packs them at the end."
+        - scene: Lining up
+          sub: align-items
+        - say: "B is taller. By default the others **stretch** to its height."
+          point:
+            sel: ".b"
+            label: "tallest"
+            color: pink
+        - type: "  align-items: center;\n"
+          at: "flex-end;\n"
+          say: "`align-items: center` lines them up through the **middle** instead."
+          mark:
+            text: "align-items: center;"
+            color: blue
+          point:
+            sel: ".box"
+            label: "middle"
+            color: blue
+        - type: ".b {\n  flex: 1;\n}\n"
+          say: "`flex: 1` lets B **grow** to fill all the free space."
+          mark: "flex: 1;"
+          point:
+            sel: ".b"
+            label: "flex: 1"
+        - say: "Nav bars, button rows, cards side by side — all Flexbox."
+          zoom: page
+
   - type: lesson
     id: css7-container
     title: Flex containers

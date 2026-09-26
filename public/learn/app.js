@@ -16,6 +16,8 @@
   const Explain = window.LearnExplain;
   const Web = window.LearnWeb;
   const Build = window.LearnBuild;
+  const Lookup = window.LearnLookup;
+  const Video = window.LearnVideo;
   const MiniEditor = window.MiniEditor;
 
   const STORE_KEY = 'au-learn-progress-v1';
@@ -129,11 +131,11 @@
   }
 
   function typeIcon(type) {
-    return { lesson: '📖', quiz: '❓', challenge: '🧩', review: '🔁', exam: '🎓', project: '🏗️', build: '🚀' }[type] || '•';
+    return { lesson: '📖', video: '🎬', quiz: '❓', challenge: '🧩', review: '🔁', exam: '🎓', project: '🏗️', build: '🚀' }[type] || '•';
   }
 
   function typeName(type) {
-    return { lesson: 'Lesson', quiz: 'Quiz', challenge: 'Challenge', review: 'Review', exam: 'Exam', project: 'Project', build: 'Build' }[type] || type;
+    return { lesson: 'Lesson', video: 'Video', quiz: 'Quiz', challenge: 'Challenge', review: 'Review', exam: 'Exam', project: 'Project', build: 'Build' }[type] || type;
   }
 
   function stars(n) {
@@ -325,7 +327,7 @@
     const prev = chapterAfter(ch, -1);
     const gate = examOf(prev);
     if (gate) return isDone(gate.id);
-    return prev.items.every((it) => it.type === 'challenge' || isDone(it.id));
+    return prev.items.every((it) => it.type === 'challenge' || it.type === 'video' || isDone(it.id));
   }
 
   function chapterStats(ch) {
@@ -360,6 +362,8 @@
       if (!isUnlocked(ch)) return null;
       for (const item of ch.items) {
         if (item.type === 'challenge') continue;
+        // A video you have already moved past (say, one added later) isn't "next".
+        if (item.type === 'video' && ch.items.slice(ch.items.indexOf(item) + 1).some((later) => isDone(later.id))) continue;
         if (!isDone(item.id)) return item;
       }
     }
@@ -412,6 +416,7 @@
       challenges: done('challenge'),
       projects: done('project').length,
       builds: done('build').length,
+      videos: done('video').length,
       exams: done('exam').length,
       perfect: exams.some((e) => (P.exams[e.id] || []).some((a) => a.score >= 1)),
       streak: Engine.streak(P.days, undefined, P.frozen),
@@ -428,6 +433,7 @@
       { id: 'hello', icon: '👋', name: 'Hello, World', desc: 'Ran your first program', test: (c) => c.runs >= 1 },
       { id: 'polyglot', icon: '🌍', name: 'Polyglot', desc: 'Completed lessons in three different courses', test: () => courses.filter((cr) => cr.items.some((i) => i.type === 'lesson' && isDone(i.id))).length >= 3 },
       { id: 'builder', icon: '🚀', name: 'Builder', desc: 'Finished a build-anything final project', test: (c) => c.builds >= 1 },
+      { id: 'videos-5', icon: '🎬', name: 'Front Row', desc: 'Watched 5 video lessons to the end', test: (c) => c.videos >= 5 },
       { id: 'first-error', icon: '🧯', name: 'Met an Error', desc: 'Got your first error message — every programmer does, daily', test: (c) => c.compileErrors >= 1 },
       { id: 'lesson-1', icon: '📘', name: 'First Lesson', desc: 'Completed a lesson', test: (c) => c.lessons >= 1 },
       { id: 'lesson-10', icon: '📚', name: 'Bookworm', desc: 'Completed 10 lessons', test: (c) => c.lessons >= 10 },
@@ -1099,6 +1105,7 @@
     const kicker = h('div', { class: 'q-kicker' },
       h('span', null, opts.kicker || kickerFor(q)), kickerState);
     box.append(kicker);
+    if (opts.note) box.append(h('div', { class: 'q-note', html: MD.inline(opts.note) }));
     if (q.prompt) box.append(h('div', { class: 'q-prompt' }, md(q.prompt)));
 
     const feedback = h('div');
@@ -1106,6 +1113,13 @@
     let revealed = false;
     let firstTry = true;
     let impl;
+    // In a quiz: "I don't know this" goes to where the lesson explains it.
+    const idk = opts.idk ? h('button', {
+      class: 'mini-btn q-idk',
+      type: 'button',
+      title: 'Go to the part of the lesson that explains this — then come back and answer it',
+      onclick: () => opts.idk()
+    }, '🤔 I don\'t know this') : null;
 
     const api = {
       el: box,
@@ -1119,6 +1133,7 @@
 
     function reveal(result) {
       revealed = true;
+      if (idk) idk.remove();
       box.classList.toggle('is-right', result.ok);
       box.classList.toggle('is-wrong', !result.ok);
       kickerState.textContent = result.ok ? '✓ Correct' : '✗ Not quite';
@@ -1148,6 +1163,7 @@
     // A code question checks itself; in a quiz or lesson that counts as answering.
     const onCodeChecked = (result) => {
       if (mode !== 'instant') return;
+      if (idk) idk.remove();
       box.classList.toggle('is-right', result.ok);
       box.classList.toggle('is-wrong', !result.ok);
       kickerState.textContent = result.ok ? '✓ Solved' : '✗ Not yet';
@@ -1156,10 +1172,9 @@
     };
 
     impl = buildQuestion(q, box, onInput, Object.assign({}, opts, { onCodeChecked }));
-    if (mode === 'instant' && q.type !== 'code') {
-      actions.append(check);
-      box.append(actions);
-    }
+    if (mode === 'instant' && q.type !== 'code') actions.append(check);
+    if (idk) actions.append(idk);
+    if (actions.childNodes.length) box.append(actions);
     box.append(feedback);
     return api;
   }
@@ -1795,8 +1810,15 @@
       runBtn.disabled = true;
       out.replaceChildren(spinner(isCpp ? undefined : 'Running…'));
       try {
-        if (isCpp) showRun(out, await runCpp({ source: ed.value(), stdin: stdin ? stdin.value : '' }), { editor: ed.editor });
-        else showWebRun(out, await runJs(ed.value()), { jump: ed.jump });
+        if (isCpp) {
+          const data = await runCpp({ source: ed.value(), stdin: stdin ? stdin.value : '' });
+          showRun(out, data, { editor: ed.editor });
+          if (opts.onRan && data.compile && data.compile.ok) opts.onRan({ output: (data.runs && data.runs[0] && data.runs[0].stdout) || '' });
+        } else {
+          const result = await runJs(ed.value());
+          showWebRun(out, result, { jump: ed.jump });
+          if (opts.onRan) opts.onRan({ output: Web.allOutputText(result) });
+        }
       } catch (err) {
         showRunError(out, err);
       } finally {
@@ -2068,6 +2090,7 @@
       const done = isDone(item.id);
       let sub = '';
       if (item.type === 'lesson') sub = itemLabel(item) + (item.minutes ? ' · ' + item.minutes + ' min' : '');
+      if (item.type === 'video') sub = 'Video lesson · ' + clockOf(item.video ? item.video.duration : 0) + ' · no sound needed';
       if (item.type === 'quiz' || item.type === 'review') sub = typeName(item.type) + ' · ' + plural(item.questions.length, 'question');
       if (item.type === 'exam') sub = (isFinal(item) ? 'Final exam · ' : 'Chapter exam · ') + (item.pick || item.questions.length) + ' questions · pass with ' + pct(item.pass);
       if (item.type === 'challenge') sub = 'Challenge · ' + ['', 'warm-up', 'solid', 'hard'][item.difficulty];
@@ -2088,7 +2111,7 @@
 
   // ================================================================ views: lesson
 
-  function lessonView(item) {
+  function lessonView(item, focus) {
     const p = page();
     p.append(itemCrumbs(item));
     p.append(h('h1', null, item.title));
@@ -2108,6 +2131,7 @@
     const placed = new Set();
     const slots = [];
     const html = MD.render(item.body, {
+      number: true,
       code: codeHook(slots),
       slot: (kind, id) => {
         const full = item.id + '/' + id;
@@ -2125,8 +2149,13 @@
       }
     });
     const body = h('article', { class: 'prose', html });
-    body.querySelectorAll('[data-slot]').forEach((el) => el.replaceWith(slots[Number(el.dataset.slot)]()));
+    body.querySelectorAll('[data-slot]').forEach((el) => {
+      const widget = slots[Number(el.dataset.slot)]();
+      if (el.dataset.b) widget.dataset.b = el.dataset.b;
+      el.replaceWith(widget);
+    });
     p.append(body);
+    if (focus) spotlight(p, body, item, focus);
 
     const loose = item.checks.filter((q) => !placed.has(q.id));
     if (loose.length) {
@@ -2226,7 +2255,222 @@
       h('summary', null, '✍️ Your notes on this lesson'), area);
   }
 
+  // ================================================================ retakes
+
+  /** Minutes to wait before an exam or quiz can be taken again. */
+  function cooldownOf(item) {
+    if (item.cooldown !== null && item.cooldown !== undefined) return item.cooldown;
+    const own = Number((item.chapter.course.cooldowns || {})[item.type]);
+    return own >= 0 ? own : (Engine.COOLDOWN[item.type] || 0);
+  }
+
+  /** Milliseconds until an exam or quiz can be taken again (0: now). */
+  function waitLeft(item) {
+    const times = (P.exams[item.id] || []).map((a) => a.at).concat([(rec(item.id) || {}).started]);
+    return Engine.cooldownLeft(times, cooldownOf(item));
+  }
+
+  /** A start button that counts down while the cooldown lasts. */
+  function retakeButton(item, label, onStart, opts) {
+    opts = opts || {};
+    const btn = h('button', { class: 'btn' + (opts.plain ? '' : ' btn-primary') + (opts.big ? ' btn-big' : '') });
+    let timer = null;
+    const draw = () => {
+      const left = waitLeft(item);
+      btn.disabled = left > 0;
+      btn.textContent = left > 0 ? '⏳ ' + label + ' in ' + Engine.formatWait(left) : label;
+      btn.title = left > 0 ? 'Retakes open ' + plural(cooldownOf(item), 'minute') + ' after your last attempt' : '';
+      if (!left && timer) {
+        clearInterval(timer);
+        timer = null;
+        if (opts.onReady) opts.onReady();
+      }
+    };
+    draw();
+    if (btn.disabled) {
+      timer = setInterval(draw, 1000);
+      view.cleanup.push(() => clearInterval(timer));
+    }
+    btn.addEventListener('click', () => { if (!waitLeft(item)) onStart(); });
+    return btn;
+  }
+
+  function cooldownNote(item) {
+    const what = item.type === 'exam' ? 'exam' : 'quiz';
+    return h('p', { class: 'cooldown-note' },
+      '⏳ You can take this ' + what + ' again ' + plural(cooldownOf(item), 'minute') + ' after your last attempt. Make the wait count: ',
+      h('a', { href: '#/review/mistakes' }, 'practise your mistakes'), ' or ',
+      h('a', { href: '#/c/' + item.chapter.id }, 'go back over the chapter'), '.');
+  }
+
+  // ================================================================ where things are taught
+
+  const lookupIndex = new Map();
+
+  /** The part of a lesson that teaches what a question asks: {lesson, block, sentence, …} or null. */
+  function taughtIn(q, owner) {
+    const c = owner.chapter.course;
+    if (!lookupIndex.has(c)) lookupIndex.set(c, Lookup.index(c));
+    return Lookup.find(lookupIndex.get(c), q, owner);
+  }
+
+  /** A link to that part, which highlights it and leads back to question n of `from`. */
+  function seeHref(where, from, n) {
+    return '#/i/' + where.lesson + '/see/' + (where.block === null ? 0 : where.block) + '/' + from.id + '/' + (n || 0);
+  }
+
+  /** Wraps the text `wanted` inside `root` in highlighter marks (it may cross <code> and <b>). */
+  function markText(root, wanted) {
+    const target = String(wanted || '').replace(/\s+/g, ' ').trim();
+    if (!target) return false;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    const map = [];
+    let text = '';
+    let space = true;
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (node.parentElement && node.parentElement.closest('button, .ex, .task, section.q, textarea')) continue;
+      nodes.push(node);
+      const value = node.nodeValue;
+      for (let i = 0; i < value.length; i += 1) {
+        const c = /\s/.test(value[i]) ? ' ' : value[i];
+        if (c === ' ' && space) continue;
+        space = c === ' ';
+        text += c;
+        map.push([node, i]);
+      }
+    }
+    const at = text.indexOf(target);
+    if (at === -1) return false;
+    const [startNode, startAt] = map[at];
+    const [endNode, endAt] = map[at + target.length - 1];
+    const first = nodes.indexOf(startNode);
+    const last = nodes.indexOf(endNode);
+    for (let k = first; k <= last; k += 1) {
+      const node = nodes[k];
+      const from = node === startNode ? startAt : 0;
+      const to = node === endNode ? endAt + 1 : node.nodeValue.length;
+      if (to <= from || !node.nodeValue.slice(from, to).trim()) continue;
+      let mid = node;
+      if (from > 0) mid = node.splitText(from);
+      if (to - from < mid.nodeValue.length) mid.splitText(to - from);
+      const mark = h('mark', { class: 'spot-mark' });
+      mid.parentNode.insertBefore(mark, mid);
+      mark.append(mid);
+    }
+    return true;
+  }
+
+  /** Highlights the part of a lesson a quiz question sent the learner to. */
+  function spotlight(p, body, item, focus) {
+    const target = body.querySelector('[data-b="' + focus.block + '"]');
+    const from = ALL.byId[focus.from] || null;
+    const q = from && from.questions ? from.questions[focus.q - 1] : null;
+    const back = from ? '#/i/' + from.id : null;
+    const banner = h('div', { class: 'spot-banner', role: 'note' },
+      h('span', { class: 'spot-pin', 'aria-hidden': 'true' }, '📍'),
+      h('div', null,
+        h('b', null, target ? 'The highlighted part explains it.' : 'This lesson explains it.'),
+        ' ', from ? 'Read it, then go back to ' + (from.type === 'quiz' ? 'question ' + (focus.q || 1) + ' of “' + from.title + '”' : '“' + from.title + '”') + ' and answer it.' : ''),
+      back ? h('a', { class: 'btn btn-primary', href: back }, '← Back to the question') : null);
+    p.insertBefore(banner, p.querySelector('.meta-row').nextSibling);
+    if (back) p.append(h('a', { class: 'spot-back', href: back }, '← Back to the quiz'));
+    if (!target) return;
+    target.classList.add('spot');
+    let heading = target.previousElementSibling;
+    while (heading && !/^H[2-5]$/.test(heading.tagName)) heading = heading.previousElementSibling;
+    if (heading) heading.classList.add('spot-heading');
+    if (q) {
+      const where = taughtIn(q, from);
+      if (where && where.lesson === item.id && where.block === focus.block) markText(target, where.sentence);
+    }
+    // Once it is on the page, bring it into view.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (target.scrollIntoView) target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }));
+  }
+
+  // ================================================================ views: video
+
+  function clockOf(seconds) {
+    const s = Math.max(0, Math.round(seconds));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function videoView(item) {
+    const p = page('page-video');
+    p.append(itemCrumbs(item));
+    p.append(h('h1', null, item.title));
+    const watchedTag = h('span', { class: 'tag tag-ok', hidden: !isDone(item.id) }, '✓ Watched');
+    p.append(h('div', { class: 'meta-row' },
+      h('span', { class: 'tag tag-accent' }, '🎬 Video lesson'),
+      item.video ? h('span', { class: 'tag' }, '⏱ ' + clockOf(item.video.duration)) : null,
+      h('span', { class: 'tag' }, '🔇 No sound — everything is shown'),
+      watchedTag));
+    if (!item.video || !window.LearnPlayer) {
+      p.append(h('p', null, 'This video could not be loaded.'));
+      return p;
+    }
+    p.append(h('div', { class: 'video-hints' },
+      h('span', null, '🖱️ Hover over it: slow motion'),
+      h('span', null, '👆 Click: pause'),
+      h('span', null, '⌨️ Space pauses · ← → skip 5 seconds')));
+    const foot = h('section', { class: 'lesson-foot' });
+    const player = window.LearnPlayer.create(item.video, {
+      title: item.title,
+      highlight: (code, mode) => highlight(code, mode),
+      inline: (text) => MD.inline(text),
+      onEnd: () => {
+        const was = isDone(item.id);
+        const gained = complete(item.id, { xp: Engine.XP.video });
+        save();
+        if (!was) toast('<b>🎬 Watched!</b>' + (gained ? ' +' + gained + ' XP' : ''), 'ok');
+        watchedTag.hidden = false;
+        drawFoot();
+      }
+    });
+    view.cleanup.push(() => player.destroy());
+    p.append(player.el);
+    if (item.body) p.append(md(item.body));
+
+    const lines = Video.transcript(item.video);
+    p.append(h('details', { class: 'transcript' },
+      h('summary', null, '📜 Transcript — every caption, to read or jump to'),
+      h('ol', null, lines.map((l) => h('li', {
+        class: l.scene ? 'is-scene' : '',
+        onclick: () => {
+          player.seek(l.at);
+          player.play();
+          player.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }, h('time', null, clockOf(l.at)), h('span', { html: l.scene ? esc(l.scene) + (l.sub ? ' — ' + esc(l.sub) : '') : MD.inline(l.say) }))))));
+
+    const drawFoot = () => {
+      foot.replaceChildren();
+      const n = neighbours(item).next;
+      if (isDone(item.id)) {
+        foot.append(h('p', null, '✓ You watched this video. Rewatch any part whenever you like.'));
+      } else {
+        foot.append(h('p', null, 'Watch it to the end to mark it as watched — or skip ahead if you know this already.'));
+      }
+      if (n) foot.append(h('a', { class: 'btn btn-primary btn-big', href: '#/i/' + n.id }, 'Next: ' + n.title + ' →'));
+    };
+    drawFoot();
+    p.append(foot);
+    p.append(pager(item));
+    return p;
+  }
+
   // ================================================================ views: quiz
+
+  // A quiz in progress lives on while you look something up (and across a reload).
+  const QUIZ_KEY = 'au-learn-quizzes-v1';
+  let quizRuns = {};
+  try { quizRuns = JSON.parse(sessionStorage.getItem(QUIZ_KEY) || '{}') || {}; } catch (e) { quizRuns = {}; }
+  function keepQuizRuns() {
+    try { sessionStorage.setItem(QUIZ_KEY, JSON.stringify(quizRuns)); } catch (e) { /* private mode: in memory only */ }
+  }
 
   function quizView(item) {
     const p = page();
@@ -2239,43 +2483,76 @@
     if (item.body) p.append(md(item.body));
     const stage = h('div');
     p.append(stage);
+    const questions = item.questions;
 
     const start = () => {
-      const questions = item.questions;
-      let i = 0;
-      let score = 0;
-      const missed = [];
+      quizRuns[item.id] = { i: 0, score: 0, missed: [], looked: [], answered: false, n: questions.length };
+      keepQuizRuns();
+      touch(item.id, { started: iso() });
+      save({ quiet: true });
+      play();
+    };
+
+    const play = () => {
+      const run = quizRuns[item.id];
       const bar = h('div', { class: 'quiz-progress' }, h('i', { style: { width: '0%' } }));
       const holder = h('div');
       const nav = h('div', { class: 'quiz-nav' });
       stage.replaceChildren(bar, holder, nav);
 
       const show = () => {
-        bar.firstChild.style.width = pct(i / questions.length);
-        const q = questions[i];
-        const next = h('button', { class: 'btn btn-primary', disabled: true }, i === questions.length - 1 ? 'See my score' : 'Next question →');
+        if (run.answered) {
+          run.i += 1;
+          run.answered = false;
+          keepQuizRuns();
+        }
+        if (run.i >= questions.length) { finish(); return; }
+        bar.firstChild.style.width = pct(run.i / questions.length);
+        const q = questions[run.i];
+        const looked = run.looked.indexOf(q.id) !== -1;
+        const next = h('button', { class: 'btn btn-primary', disabled: true }, run.i === questions.length - 1 ? 'See my score' : 'Next question →');
         const w = questionWidget(q, {
           mode: 'instant',
-          kicker: 'Question ' + (i + 1) + ' of ' + questions.length + ' · ' + kickerFor(q),
+          kicker: 'Question ' + (run.i + 1) + ' of ' + questions.length + ' · ' + kickerFor(q),
+          note: looked ? '📖 **You looked this one up.** Answer it now to lock it in — it won\'t count toward your score.' : '',
+          idk: looked ? null : () => dontKnow(q),
           onAnswered: (result) => {
-            if (result.ok) score += 1; else missed.push(q);
-            recordAnswer(q, result, true);
+            if (!looked) {
+              if (result.ok) run.score += 1;
+              else run.missed.push(q.id);
+            }
+            run.answered = true;
+            keepQuizRuns();
+            recordAnswer(q, result, !looked);
             next.disabled = false;
             next.focus();
           }
         });
         holder.replaceChildren(w.el);
         nav.replaceChildren(h('span'), next);
-        next.addEventListener('click', () => {
-          i += 1;
-          if (i < questions.length) show(); else finish();
-        });
+        next.addEventListener('click', show);
         main.scrollTop = 0;
       };
 
+      // Counts as missed (and goes to the mistake bank), then off to the lesson.
+      const dontKnow = (q) => {
+        if (run.looked.indexOf(q.id) === -1) {
+          run.looked.push(q.id);
+          run.missed.push(q.id);
+        }
+        keepQuizRuns();
+        recordAnswer(q, { ok: false }, false);
+        const where = taughtIn(q, item);
+        if (where) location.hash = seeHref(where, item, run.i + 1);
+        else { toast('This one isn\'t in a lesson — answer it and the explanation will show.'); show(); }
+      };
+
       const finish = () => {
-        const ratio = score / questions.length;
+        delete quizRuns[item.id];
+        keepQuizRuns();
+        const ratio = run.score / questions.length;
         const passed = ratio >= item.pass;
+        (P.exams[item.id] = P.exams[item.id] || []).push({ score: Math.round(ratio * 1000) / 1000, passed, at: iso() });
         let gained = 0;
         if (passed) gained = complete(item.id, { xp: Engine.XP.quiz * ratio, best: ratio });
         else touch(item.id, { best: Math.max((rec(item.id) || {}).best || 0, ratio) });
@@ -2283,23 +2560,45 @@
         bar.firstChild.style.width = '100%';
         holder.replaceChildren(scoreCard(ratio, passed,
           passed ? 'Well done!' : 'Keep practising',
-          passed ? (gained ? '+' + gained + ' XP. ' : '') + 'The questions you missed are in your mistake bank.'
-            : 'You need ' + pct(item.pass) + ' to complete this quiz. Re-read the lessons behind the questions you missed, then try again.'));
+          passed ? (gained ? '+' + gained + ' XP. ' : '') + (run.missed.length ? 'The questions you missed are in your mistake bank.' : 'Every question right.')
+            : 'You need ' + pct(item.pass) + ' to complete this quiz. Re-read the parts below, then try again.'));
+        const missed = questions.filter((q) => run.missed.indexOf(q.id) !== -1);
         if (missed.length) {
           holder.append(h('h2', null, 'Revisit'));
-          holder.append(h('ul', { class: 'prose' }, missed.map((q) =>
-            h('li', null, h('span', { html: MD.inline(firstLine(q.prompt) || kickerFor(q)) })))));
+          holder.append(h('ul', { class: 'prose revisit' }, missed.map((q) => {
+            const where = taughtIn(q, item);
+            return h('li', null,
+              h('span', { html: MD.inline(firstLine(q.prompt) || kickerFor(q)) }),
+              run.looked.indexOf(q.id) !== -1 ? h('span', { class: 'tag' }, 'looked up') : null,
+              where ? h('a', { class: 'revisit-link', href: seeHref(where, item, questions.indexOf(q) + 1) }, '📖 Where it\'s taught') : null);
+          })));
         }
         const n = neighbours(item).next;
-        nav.replaceChildren(h('button', { class: 'btn', onclick: start }, 'Try again'),
+        nav.replaceChildren(
+          h('div', null, retakeButton(item, 'Try again', start, { plain: true }), cooldownOf(item) ? cooldownNote(item) : null),
           n ? h('a', { class: 'btn btn-primary', href: '#/i/' + n.id }, 'Next: ' + n.title + ' →') : h('span'));
       };
       show();
     };
 
-    stage.append(h('div', { class: 'exam-intro' },
-      h('p', { style: { margin: 0 } }, 'One question at a time, with the answer explained straight away. Trying to remember — even when you get it wrong — is one of the most effective ways to learn.'),
-      h('div', { class: 'row-actions', style: { marginTop: '16px' } }, h('button', { class: 'btn btn-primary btn-big', onclick: start }, 'Start the quiz'))));
+    const intro = () => {
+      const history = P.exams[item.id] || [];
+      const card = h('div', { class: 'exam-intro' },
+        h('p', { style: { margin: 0 } }, 'One question at a time, with the answer explained straight away. Trying to remember — even when you get it wrong — is one of the most effective ways to learn. Stuck? Press ', h('b', null, '🤔 I don\'t know this'), ' and you\'ll be taken to the part of the lesson that explains it.'));
+      if (history.length) {
+        card.append(h('div', { style: { color: 'var(--text-dim)', fontSize: '13px', marginTop: '14px' } }, 'Previous attempts:'));
+        card.append(h('ul', { class: 'history' }, history.slice(-12).map((a) =>
+          h('li', { class: a.passed ? 'is-pass' : '' }, pct(a.score) + ' · ' + String(a.at).slice(0, 10)))));
+      }
+      card.append(h('div', { class: 'row-actions', style: { marginTop: '16px' } },
+        retakeButton(item, history.length ? 'Take the quiz again' : 'Start the quiz', start, { big: true, onReady: intro })));
+      if (waitLeft(item)) card.append(cooldownNote(item));
+      stage.replaceChildren(card);
+    };
+
+    const running = quizRuns[item.id];
+    if (running && running.n === questions.length && running.i <= questions.length) play();
+    else intro();
     p.append(pager(item));
     return p;
   }
@@ -2321,7 +2620,6 @@
     const p = page();
     p.append(itemCrumbs(item));
     p.append(h('h1', null, item.title));
-    const history = P.exams[item.id] || [];
     const passedBefore = isDone(item.id);
     const count = item.pick || item.questions.length;
     const hasCode = item.questions.some((q) => q.type === 'code');
@@ -2346,18 +2644,25 @@
         item.minutes ? h('li', null, 'Time limit: ' + item.minutes + ' minutes. It submits itself when time is up.') : h('li', null, 'No time limit — but try to answer from memory.'),
         h('li', null, 'No feedback until you submit. Then every answer is explained.'),
         hasCode ? h('li', null, 'Coding questions are marked by running your code against tests — use ▶ Run to try things before submitting.') : null,
-        h('li', null, 'You can retake it as often as you like. Missed questions go to your mistake bank.')));
+        cooldownOf(item)
+          ? h('li', null, 'You can retake it ' + plural(cooldownOf(item), 'minute') + ' after an attempt — starting it and leaving counts as one. Missed questions go to your mistake bank.')
+          : h('li', null, 'You can retake it as often as you like. Missed questions go to your mistake bank.')));
+      const history = P.exams[item.id] || [];
       if (history.length) {
         card.append(h('div', { style: { color: 'var(--text-dim)', fontSize: '13px' } }, 'Previous attempts:'));
         card.append(h('ul', { class: 'history' }, history.slice(-12).map((a) =>
           h('li', { class: a.passed ? 'is-pass' : '' }, pct(a.score) + ' · ' + String(a.at).slice(0, 10)))));
       }
       card.append(h('div', { class: 'row-actions', style: { marginTop: '18px' } },
-        h('button', { class: 'btn btn-primary btn-big', onclick: begin }, history.length ? 'Retake the exam' : 'Start the exam')));
+        retakeButton(item, history.length ? 'Retake the exam' : 'Start the exam', begin, { big: true, onReady: intro })));
+      if (waitLeft(item)) card.append(cooldownNote(item));
       stage.replaceChildren(card);
     };
 
     const begin = () => {
+      // The cooldown counts from here: leaving part-way is an attempt too.
+      touch(item.id, { started: iso() });
+      save({ quiet: true });
       const seed = Date.now() % 2147483646 + 1;
       let questions = item.pick ? Engine.shuffle(item.questions, seed).slice(0, item.pick) : item.questions.slice();
       // Code questions last: they take longest.
@@ -2404,7 +2709,8 @@
       }
 
       let submitting = false;
-      view.guard = () => confirm('Leave the exam? Your answers will be lost.');
+      view.guard = () => confirm('Leave the exam? Your answers will be lost' +
+        (cooldownOf(item) ? ', and it counts as an attempt: you can take it again ' + plural(cooldownOf(item), 'minute') + ' after you started.' : '.'));
       const stop = () => { clearInterval(counter); clearInterval(tick); view.guard = null; };
       view.cleanup.push(stop);
 
@@ -2452,7 +2758,7 @@
         stage.prepend(scoreCard(ratio, passed,
           passed ? (ratio >= 1 ? 'Perfect score!' : 'Passed!') : (timeUp ? 'Time\'s up — not passed yet' : 'Not passed yet'),
           passed ? (gained ? '+' + gained + ' XP. ' : '') + 'Scroll down to see every answer explained.'
-            : 'You need ' + pct(item.pass) + '. Read the explanations below, revisit those lessons, then retake — the exam is there to show you what to review, not to judge you.'));
+            : 'You need ' + pct(item.pass) + '. Read the explanations below and revisit those lessons' + (cooldownOf(item) ? ' — you can retake it in ' + plural(cooldownOf(item), 'minute') : ', then retake') + '. The exam is there to show you what to review, not to judge you.'));
         endBtn.replaceChildren(h('div', { class: 'row-actions', style: { justifyContent: 'center' } },
           h('button', { class: 'btn', onclick: () => { stage.replaceChildren(); intro(); main.scrollTop = 0; } }, 'Back to the exam page'),
           n ? h('a', { class: 'btn btn-primary', href: '#/i/' + n.id }, 'Continue: ' + n.title + ' →') : null));
@@ -2837,9 +3143,13 @@
     const banner = compilerBanner(item.chapter.course);
     if (banner) left.append(banner);
     left.append(md(item.body));
-    left.append(h('h3', null, 'Your project must use'));
+    const tally = h('span', { class: 'build-tally' });
+    left.append(h('h3', null, 'Your project must use ', tally));
     const reqs = b.requirements.map((r) => h('li', { html: MD.inline(r.text) }));
     left.append(h('ul', { class: 'build-reqs' }, reqs));
+    left.append(h('p', { class: 'build-live' }, b.kind === 'cpp'
+      ? '✓ Each ingredient ticks itself as you write it. The ones about what your program prints tick when you ▶ Run it.'
+      : '✓ Each ingredient ticks itself as you write it — no need to press anything.'));
     if (b.ideas.length) {
       left.append(h('details', { class: 'build-ideas' }, h('summary', null, '💡 Stuck for an idea?'),
         h('ul', null, b.ideas.map((idea) => h('li', { html: MD.inline(idea) })))));
@@ -2847,11 +3157,98 @@
     left.append(h('p', { style: { color: 'var(--text-dim)', fontSize: '13px' } }, b.kind === 'cpp'
       ? 'The check looks for each ingredient in your code and runs your program. If it reads input, type some in the input box first — the check uses it.'
       : 'The check looks for each ingredient in your code and on the running ' + (b.kind === 'page' ? 'page' : 'program') + '. What you build with them is entirely up to you.'));
-    const widget = taskWidget(buildTask(item), {
+    // Live ticks: code is looked at as you type; pages and JavaScript also run
+    // quietly in the background; C++ output is checked when you run it.
+    const task = buildTask(item);
+    const state = b.requirements.map(() => ({ code: null, check: null, output: null }));
+    const paint = () => {
+      let met = 0;
+      b.requirements.forEach((r, i) => {
+        const parts = [];
+        if (r.code) parts.push(state[i].code);
+        if (r.check) parts.push(state[i].check);
+        if (r.output) parts.push(state[i].output);
+        const ok = parts.length > 0 && parts.every((x) => x === true);
+        const waiting = !ok && !parts.some((x) => x === false);
+        const was = reqs[i].classList.contains('is-met');
+        reqs[i].classList.toggle('is-met', ok);
+        reqs[i].classList.toggle('is-waiting', waiting);
+        reqs[i].title = ok ? 'Done!' : waiting ? (b.kind === 'cpp' ? 'Checked when you run your program' : 'Checking…') : 'Not in your project yet';
+        if (ok && !was) {
+          reqs[i].classList.remove('just-met');
+          void reqs[i].offsetWidth;
+          reqs[i].classList.add('just-met');
+        }
+        if (ok) met += 1;
+      });
+      tally.textContent = met + ' of ' + b.requirements.length;
+      tally.classList.toggle('is-all', met === b.requirements.length);
+    };
+    const mineOf = (code) => (b.kind === 'page' ? parseFiles(code, task.files) : [{ name: b.kind === 'cpp' ? 'main.cpp' : 'main.js', content: code }]);
+    const outputs = (text) => {
+      b.requirements.forEach((r, i) => {
+        if (!r.output) return;
+        try { state[i].output = new RegExp(r.output, r.flags || '').test(String(text || '')); } catch (e) { state[i].output = false; }
+      });
+    };
+    const liveCode = (code) => {
+      const mine = mineOf(code);
+      b.requirements.forEach((r, i) => {
+        if (!r.code) return;
+        try { state[i].code = Build.codeMet(r, mine); } catch (e) { state[i].code = false; }
+      });
+      paint();
+    };
+    let running = false;
+    let again = false;
+    const liveRun = async () => {
+      if (b.kind === 'cpp' || !b.requirements.some((r) => r.check || r.output)) return;
+      if (running) { again = true; return; }
+      running = true;
+      try {
+        const code = widget.code();
+        const harness = Build.harness(b.requirements);
+        const r = b.kind === 'page'
+          ? await Web.runPage({ files: mergeFiles(task.given, mineOf(code)), harness, width: task.width || 800, timeoutMs: 6000, settleMs: 300 })
+          : await Web.runJs({ code, harness, timeoutMs: 4000, settleMs: 400 });
+        let n = 0;
+        b.requirements.forEach((req, i) => {
+          if (!req.check) return;
+          const c = r.checks[n];
+          n += 1;
+          state[i].check = Boolean(c && c.ok);
+        });
+        outputs(Web.allOutputText(r));
+        if (widget.code() === code) paint();
+      } catch (e) {
+        /* a live check is only a preview; ✓ Check says what's wrong */
+      } finally {
+        running = false;
+        if (again) { again = false; liveRun(); }
+      }
+    };
+    let codeTimer = null;
+    let runTimer = null;
+    const onEdit = () => {
+      clearTimeout(codeTimer);
+      clearTimeout(runTimer);
+      codeTimer = setTimeout(() => liveCode(widget.code()), 250);
+      runTimer = setTimeout(liveRun, b.kind === 'page' ? 900 : 1400);
+    };
+    view.cleanup.push(() => { clearTimeout(codeTimer); clearTimeout(runTimer); });
+
+    const widget = taskWidget(task, {
       kind: 'build',
       showPrompt: false,
+      onChange: onEdit,
+      onRan: (ran) => { outputs(ran.output); paint(); },
       onChecked: (result) => {
-        (result.checks || []).forEach((c, i) => { if (reqs[i]) reqs[i].classList.toggle('is-met', Boolean(c.ok)); });
+        (result.checks || []).forEach((c, i) => {
+          if (!state[i]) return;
+          const r = b.requirements[i];
+          state[i] = { code: r.code ? Boolean(c.ok) : null, check: r.check ? Boolean(c.ok) : null, output: r.output ? Boolean(c.ok) : null };
+        });
+        paint();
       },
       onSolved: (result, wasDone) => {
         const gained = complete(item.id, { xp: Engine.XP.build });
@@ -2864,6 +3261,8 @@
     });
     p.append(h('div', { class: 'split' }, left, widget.el));
     p.append(pager(item));
+    liveCode(widget.code());
+    requestAnimationFrame(liveRun);
     return p;
   }
 
@@ -3633,10 +4032,12 @@
         const item = ALL.byId[parts[1]];
         setCourse(item.chapter.course);
         // Exams stay open, so anyone who already knows a chapter can test out of it.
+        // #/i/lesson/see/<block>/<quiz>/<question>: sent from a quiz to the part that explains it.
+        const focus = parts[2] === 'see' ? { block: Number(parts[3]) || 0, from: parts[4] || '', q: Number(parts[5]) || 0 } : null;
         if (!isUnlocked(item.chapter) && item.type !== 'exam') node = lockedView(item, item.chapter);
         else {
           node = {
-            lesson: lessonView, quiz: quizView, exam: examView, review: reviewItemView,
+            lesson: (it) => lessonView(it, focus), video: videoView, quiz: quizView, exam: examView, review: reviewItemView,
             challenge: challengeView, project: projectView, build: buildView
           }[item.type](item);
           touchVisit(item);

@@ -9,9 +9,9 @@
  * their own line. Two-space indentation; no tabs.
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.LearnCourse = factory();
-})(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./video.js'));
+  else root.LearnCourse = factory(root.LearnVideo);
+})(typeof self !== 'undefined' ? self : this, function (Video) {
   'use strict';
 
   // ------------------------------------------------------------ YAML-ish
@@ -183,7 +183,7 @@
 
   // ------------------------------------------------------------ course
 
-  var ITEM_TYPES = ['lesson', 'quiz', 'challenge', 'review', 'exam', 'project', 'build'];
+  var ITEM_TYPES = ['lesson', 'video', 'quiz', 'challenge', 'review', 'exam', 'project', 'build'];
   var QUESTION_TYPES = ['mcq', 'tf', 'output', 'fill', 'order', 'spot', 'code'];
   var ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -303,6 +303,8 @@
       why: text(raw.why),
       std: text(raw.std),
       lang: text(raw.lang) || CTX.codeLang,
+      // Where it is taught, when the automatic guess (lookup.js) is wrong: lesson-id or lesson-id#heading
+      see: text(raw.see),
       _raw: raw
     };
     switch (q.type) {
@@ -371,6 +373,8 @@
       item.questions = normalizeQuestions(raw.questions, id);
       item.pass = raw.pass === undefined ? (item.type === 'exam' ? 0.8 : 0.7) : Number(raw.pass);
       item.pick = Number(raw.pick) || 0;
+      // Minutes to wait before taking it again (null: the course's default).
+      item.cooldown = raw.cooldown === undefined || raw.cooldown === null ? null : Number(raw.cooldown);
     } else if (item.type === 'challenge') {
       item.task = normalizeTask(raw, id);
       item.difficulty = item.task.difficulty || 1;
@@ -396,6 +400,10 @@
           return req;
         })
       };
+    } else if (item.type === 'video') {
+      // A silent animated explanation (video.js); `body` is shown under it.
+      item.videoLang = CTX.codeLang;
+      item.video = Video ? Video.build(raw.video, { lang: CTX.codeLang }) : null;
     } else if (item.type === 'project') {
       item.milestones = list(raw.milestones).map(function (m, i) {
         return normalizeTask(m || {}, id + '/m' + (i + 1));
@@ -435,6 +443,7 @@
       title: text(index.title),
       subtitle: text(index.subtitle),
       intro: text(index.intro),
+      cooldowns: isMap(index.cooldowns) ? index.cooldowns : {},
       method: text(index.method),
       parts: [],
       chapters: [],
@@ -558,6 +567,18 @@
       }
       if (q.type === 'code') checkTask(q.task, where);
       if (!q.why && q.type !== 'code') report(where, 'every question should explain its answer (why:)');
+      if (q.see) {
+        var see = q.see.split('#');
+        var lesson = course.byId[see[0]];
+        if (!lesson || lesson.type !== 'lesson') report(where, 'see: ' + see[0] + ' is not a lesson');
+        else if (see[1]) {
+          var want = see[1].toLowerCase().replace(/[^\w]+/g, '-');
+          var headings = (lesson.body.match(/^#{1,4}\s+.*$/gm) || []).map(function (l) {
+            return l.replace(/^#+\s+/, '').toLowerCase().replace(/[^\w]+/g, '-');
+          });
+          if (!headings.some(function (h) { return h.indexOf(want) !== -1; })) report(where, 'see: no heading in ' + see[0] + ' matches "' + see[1] + '"');
+        }
+      }
     };
 
     course.chapters.forEach(function (chapter) {
@@ -598,10 +619,14 @@
         }
         if (item.type === 'quiz' || item.type === 'exam' || item.type === 'review') {
           if (item.type !== 'review' && !item.questions.length) report(at, 'needs questions');
+          if (item.cooldown !== null && !(item.cooldown >= 0)) report(at, 'cooldown must be a number of minutes');
           item.questions.forEach(function (q) { checkQuestion(q, q.id); });
           if (item.pick && item.pick > item.questions.length) report(at, 'pick is larger than the pool');
         }
         if (item.type === 'review' && !item.body) report(at, 'a review needs a body');
+        if (item.type === 'video' && Video) {
+          Video.problems(item._raw.video, { lang: item.videoLang }).forEach(function (p) { report(at, p); });
+        }
         if (item.type === 'challenge') checkTask(item.task, at);
         if (item.type === 'build') {
           var b = item.build;

@@ -376,8 +376,46 @@
     exam: 100,
     milestone: 40,
     build: 250,
+    video: 10,
     review: 2
   };
+
+  // ------------------------------------------------------------ retake cooldowns
+
+  /**
+   * Minutes to wait before taking an exam or a quiz again: long enough to go
+   * back over what was missed, instead of guessing until something passes.
+   */
+  var COOLDOWN = { exam: 30, quiz: 5 };
+
+  function ms(now) {
+    if (now === undefined) return Date.now();
+    return now instanceof Date ? now.getTime() : Number(now);
+  }
+
+  /**
+   * Milliseconds until something can be taken again (0: now).
+   * @param {string[]} times  when the last attempts started or ended (ISO)
+   * @param {number} minutes  the cooldown
+   */
+  function cooldownLeft(times, minutes, now) {
+    if (!minutes) return 0;
+    var last = (times || []).filter(Boolean).map(String).sort().pop();
+    var at = last ? Date.parse(last) : NaN;
+    if (isNaN(at)) return 0;
+    var left = at + minutes * 60000 - ms(now);
+    // A clock that was wrong (or moved) never locks anything for longer than the cooldown.
+    return left > 0 ? Math.min(left, minutes * 60000) : 0;
+  }
+
+  /** "4:05", or "1:02:09" for an hour or more. */
+  function formatWait(left) {
+    var total = Math.max(0, Math.ceil(Number(left) / 1000));
+    var hours = Math.floor(total / 3600);
+    var minutes = Math.floor((total % 3600) / 60);
+    var seconds = total % 60;
+    return (hours ? hours + ':' + pad(minutes) : String(minutes)) + ':' + pad(seconds);
+  }
 
   var LEVELS = [
     { xp: 0, title: 'Newcomer' },
@@ -613,6 +651,9 @@
     schedule: schedule,
     isDue: isDue,
     XP: XP,
+    COOLDOWN: COOLDOWN,
+    cooldownLeft: cooldownLeft,
+    formatWait: formatWait,
     LEVELS: LEVELS,
     levelFor: levelFor,
     streak: streak,
