@@ -1521,3 +1521,4 @@ body.learn {
 .vp-tabtitle.vp-pointed { overflow: visible; }
 .vp-out.is-error { color: #fca5a5; background: rgba(248, 113, 113, .12); border-left: 3px solid #f87171; padding-left: 8px; margin-left: -11px; }
 .vp-out.is-cmd { color: #7f8aa3; }
+.course-reset { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }

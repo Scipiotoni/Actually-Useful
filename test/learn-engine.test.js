@@ -285,3 +285,61 @@ test('retake cooldowns count from the latest attempt, and never lock for longer 
   assert.strictEqual(Engine.formatWait(400), '0:01', 'rounds up, so 0:00 means open');
   assert.strictEqual(Engine.XP.video, 10);
 });
+
+test('resetting one course drops only that course, everywhere, and stale copies cannot bring it back', () => {
+  const before = '2026-01-01T10:00:00.000Z';
+  const reset = '2026-01-02T10:00:00.000Z';
+  const later = '2026-01-03T10:00:00.000Z';
+  const old = Object.assign(Engine.emptyProgress(), {
+    items: {
+      'c3-intdiv': { status: 'done', xp: 20, at: before },
+      'js2-variables': { status: 'done', xp: 20, at: before },
+      'html1-web': { status: 'done', xp: 20, at: before },
+      'final-exam': { status: 'done', xp: 100, at: before }
+    },
+    cards: { 'c3-intdiv#1': { due: '2026-01-05', at: before }, 'html1-web#1': { due: '2026-01-05', at: before } },
+    mistakes: { 'js2-quiz1/q1': { count: 1, at: before } },
+    exams: { 'ch03-exam': [{ score: 1, passed: true, at: before }] },
+    unlocked: { ch04: before, html02: before },
+    badges: { graduate: before, 'part-p1': before, 'graduate-html': before, 'lesson-1': before },
+    stats: { runs: 50 },
+    days: { '2026-01-01': 200 }
+  });
+  const cleared = Engine.mergeProgress(old, { resets: { cpp: reset, js: reset } });
+  assert.deepStrictEqual(Object.keys(cleared.items), ['html1-web']);
+  assert.deepStrictEqual(Object.keys(cleared.cards), ['html1-web#1']);
+  assert.deepStrictEqual(cleared.mistakes, {});
+  assert.deepStrictEqual(Object.keys(cleared.unlocked), ['html02']);
+  assert.deepStrictEqual(Object.keys(cleared.badges).sort(), ['graduate-html', 'lesson-1']);
+  assert.strictEqual(cleared.stats.runs, 50, 'counters stay unless they are reset too');
+
+  // Another device still has the old copy: merging it changes nothing.
+  assert.deepStrictEqual(Object.keys(Engine.mergeProgress(cleared, old).items), ['html1-web']);
+  // Work done after the reset counts again.
+  const redone = Engine.mergeProgress(cleared, { items: { 'c3-intdiv': { status: 'done', xp: 20, at: later } } });
+  assert.ok(redone.items['c3-intdiv']);
+
+  // A counters reset drops XP-by-day, stats and overall badges from stale copies too.
+  const fresh = Engine.mergeProgress(old, { resets: { counters: reset } });
+  assert.deepStrictEqual(fresh.stats, {});
+  assert.deepStrictEqual(fresh.days, {});
+  assert.ok(!fresh.badges['lesson-1'] && fresh.badges.graduate, 'overall badges go, course badges stay');
+  assert.deepStrictEqual(Engine.mergeProgress(fresh, old).stats, {});
+});
+
+test('every id in every course belongs to its own course', () => {
+  const { loadCourseAt, courseDirs } = require('./web-course-lib.js');
+  courseDirs().map((dir) => loadCourseAt(dir).course).forEach((course) => {
+    const ids = [].concat(
+      course.items.map((i) => i.id),
+      course.chapters.map((c) => c.id),
+      course.parts.map((p) => 'part-' + p.id),
+      Object.keys(course.questions),
+      course.cards.map((c) => c.id),
+      [course.id === 'cpp' ? 'graduate' : 'graduate-' + course.id]
+    );
+    course.items.forEach((i) => (i.tasks || []).concat(i.milestones || []).forEach((t) => ids.push(t.id)));
+    ids.forEach((id) => assert.strictEqual(Engine.courseOf(id), course.id, `${id} is in ${course.id}`));
+  });
+  ['lesson-1', 'hello', 'streak-7'].forEach((id) => assert.strictEqual(Engine.courseOf(id), ''));
+});

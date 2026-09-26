@@ -33,6 +33,13 @@
   // Where each account's pages are published.
   var PAGES = ACCOUNT ? '/a/' : '/p/';
 
+  /**
+   * Sent with every request, so the server can refuse one from a page opened
+   * for another account (after signing in as the other one in another tab),
+   * instead of mixing the two accounts' work.
+   */
+  var ACCOUNT_HEADER = { 'x-au-account': ACCOUNT || 'main' };
+
   function isObject(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
   }
@@ -134,6 +141,7 @@
     VERSION: VERSION,
     KEYS: KEYS,
     ACCOUNT: ACCOUNT,
+    ACCOUNT_HEADER: ACCOUNT_HEADER,
     PAGES: PAGES,
     create: create,
     parse: parse,

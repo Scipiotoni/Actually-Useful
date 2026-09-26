@@ -371,6 +371,16 @@ function createApp(options = {}) {
       }
 
       // --- API ------------------------------------------------------------
+      // A page says which account it was opened for. If that is no longer
+      // the one signed in (you signed in as the other in another tab), its
+      // requests are refused rather than mixing the two accounts' work.
+      const claimed = String(req.headers['x-au-account'] || '');
+      if (claimed && claimed !== acct.id && pathname.startsWith('/api/') && pathname !== '/api/config') {
+        return sendJson(res, 409, {
+          error: 'You signed in to a different account since this page opened. Reload the page to continue.',
+          account: acct.id
+        });
+      }
       if (pathname === '/api/config' && req.method === 'GET') {
         return sendJson(res, 200, {
           auth: authOn,

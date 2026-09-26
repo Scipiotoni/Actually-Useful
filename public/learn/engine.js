@@ -487,6 +487,7 @@
       v: 1,
       updatedAt: '',
       resetAt: '',
+      resets: {},     // course id (or "counters") -> when that part was reset
       items: {},      // id -> {status, best, attempts, xp, at}
       code: {},       // id -> {src, at}
       cards: {},      // card id -> schedule
@@ -582,9 +583,17 @@
     out.frozen = mergeMaps(keep(a.frozen), keep(b.frozen), earliest);
     out.badges = mergeMaps(keep(a.badges), keep(b.badges), earliest);
 
+    // One course reset (or the counters): the latest reset time wins, and
+    // whatever that course had before it is dropped from both sides.
+    out.resets = mergeMaps(keep(a.resets), keep(b.resets), function (x, y) { return String(x) >= String(y) ? x : y; });
+    applyResets(out);
+
     // Counters and daily XP only grow; a reset starts them again from zero.
-    var resetA = a.resetAt === out.resetAt;
-    var resetB = b.resetAt === out.resetAt;
+    // Counters can't be split by course, so a counters reset (like a full
+    // reset) only keeps them from a side that has seen it.
+    var countersAt = String(out.resets.counters || '');
+    var resetA = a.resetAt === out.resetAt && String((a.resets || {}).counters || '') === countersAt;
+    var resetB = b.resetAt === out.resetAt && String((b.resets || {}).counters || '') === countersAt;
     var counters = function (x, y) { return Math.max(Number(x) || 0, Number(y) || 0); };
     out.days = mergeMaps(resetA ? a.days : {}, resetB ? b.days : {}, counters);
     out.stats = mergeMaps(resetA ? a.stats : {}, resetB ? b.stats : {}, counters);
@@ -592,6 +601,47 @@
     out.settings = newer(a.settings || {}, b.settings || {});
     out.updatedAt = [a.updatedAt, b.updatedAt].sort().pop() || '';
     return out;
+  }
+
+  /**
+   * Which course an id belongs to, from how the courses name things: html…,
+   * css…, js…, and the C++ course's c<n>-…, cpp-…, chNN, pN and final-exam.
+   * Card, question and task ids start with their item's id. Tested against
+   * every id in every course.
+   */
+  function courseOf(id) {
+    var s = String(id).replace(/^part-/, '');
+    if (/^graduate-/.test(s)) s = s.slice('graduate-'.length);
+    if (/^html/.test(s)) return 'html';
+    if (/^css/.test(s)) return 'css';
+    if (/^js/.test(s)) return 'js';
+    if (/^(c\d+-|cpp-|ch\d|p\d+$|final-exam|graduate$)/.test(s)) return 'cpp';
+    return '';
+  }
+
+  /** Drops everything of a reset course that is older than its reset. */
+  function applyResets(progress) {
+    var resets = progress.resets || {};
+    if (!Object.keys(resets).length) return progress;
+    var gone = function (id, at, key) {
+      var course = courseOf(id);
+      // Badges for overall activity go with the counters they were earned from.
+      var when = course ? resets[course] : key === 'badges' ? resets.counters : '';
+      return Boolean(when) && String(at || '') <= String(when);
+    };
+    ['items', 'code', 'cards', 'notes', 'mistakes', 'unlocked', 'badges'].forEach(function (key) {
+      var map = progress[key] || {};
+      Object.keys(map).forEach(function (id) {
+        var entry = map[id];
+        if (gone(id, typeof entry === 'string' ? entry : stamp(entry), key)) delete map[id];
+      });
+    });
+    var exams = progress.exams || {};
+    Object.keys(exams).forEach(function (id) {
+      var kept = (exams[id] || []).filter(function (e) { return !gone(id, stamp(e)); });
+      if (kept.length) exams[id] = kept; else delete exams[id];
+    });
+    return progress;
   }
 
   /** Total XP: what each item earned plus flashcard reviews. */
@@ -659,6 +709,8 @@
     streak: streak,
     missedDays: missedDays,
     emptyProgress: emptyProgress,
+    courseOf: courseOf,
+    applyResets: applyResets,
     mergeProgress: mergeProgress,
     totalXp: totalXp,
     shuffle: shuffle,

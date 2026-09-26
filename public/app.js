@@ -831,7 +831,8 @@
     'run "npm start", then open http://127.0.0.1:3000';
 
   function api(path, options) {
-    return fetch(path, Object.assign({ headers: { 'content-type': 'application/json' } }, options))
+    var headers = Object.assign({ 'content-type': 'application/json' }, Backup.ACCOUNT_HEADER);
+    return fetch(path, Object.assign({}, options, { headers: headers }))
       .catch(function () { throw new Error(NO_SERVER); })
       .then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (body) {

@@ -148,3 +148,22 @@ test('the main account keeps its pages where they always were', async () => {
     assert.deepStrictEqual((await (await main.call('/api/deploys')).json()).deploys.map((d) => d.slug), ['old']);
   });
 });
+
+test('a page opened for one account cannot save into the other', async () => {
+  await withApp({}, async (at) => {
+    const alt = await signIn(at, ALT);
+    // A tab still open from the main account, now carrying the second account's session.
+    const stale = await alt.call('/api/learn/progress', {
+      method: 'PUT',
+      headers: { 'x-au-account': 'main' },
+      body: JSON.stringify({ progress: { items: { 'c0-what': { status: 'done', at: new Date().toISOString() } } } })
+    });
+    assert.strictEqual(stale.status, 409);
+    assert.strictEqual((await alt.call('/api/learn/progress', { headers: { 'x-au-account': 'main' } })).status, 409);
+    assert.strictEqual((await alt.call('/api/deploys', { method: 'POST', headers: { 'x-au-account': 'main' }, body: JSON.stringify({ name: 'x', html: '<p>x</p>' }) })).status, 409);
+    assert.deepStrictEqual((await (await alt.call('/api/learn/progress')).json()).progress.items, {});
+    // Pages that say the right account (or say nothing) work as before.
+    assert.strictEqual((await alt.call('/api/learn/progress', { headers: { 'x-au-account': 'alt' } })).status, 200);
+    assert.strictEqual((await alt.call('/api/config', { headers: { 'x-au-account': 'main' } })).status, 200);
+  });
+});

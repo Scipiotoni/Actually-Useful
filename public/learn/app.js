@@ -166,10 +166,23 @@
     syncState.textContent = text;
   }
 
+  // This page belongs to the account it was opened for (see backup.js).
+  const ACCOUNT_HEADER = window.Backup ? window.Backup.ACCOUNT_HEADER : {};
+
+  /** Signed in as another account since this page opened: stop syncing, never mix them. */
+  function accountChanged() {
+    sync.blocked = true;
+    sync.dirty = false;
+    setSync('off', 'Signed in to another account — reload this page');
+    toast('<b>You signed in to another account</b> in another tab. This page stopped syncing so the two stay apart — <a href="javascript:location.reload()">reload it</a>.', 'err', 20000);
+  }
+
   async function pull() {
+    if (sync.blocked) return;
     try {
-      const res = await fetch('/api/learn/progress', { cache: 'no-store' });
+      const res = await fetch('/api/learn/progress', { cache: 'no-store', headers: ACCOUNT_HEADER });
       if (res.status === 401) { signIn(); return; }
+      if (res.status === 409) { accountChanged(); return; }
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       sync.storage = data.storage;
@@ -199,17 +212,18 @@
 
   async function push() {
     if (sync.storage === 'local') { sync.dirty = false; return; }
-    if (sync.busy || !sync.dirty) return;
+    if (sync.busy || !sync.dirty || sync.blocked) return;
     sync.busy = true;
     sync.dirty = false;
     setSync('busy', 'Saving progress…');
     try {
       const res = await fetch('/api/learn/progress', {
         method: 'PUT',
-        headers: { 'content-type': 'application/json' },
+        headers: Object.assign({ 'content-type': 'application/json' }, ACCOUNT_HEADER),
         body: JSON.stringify({ progress: P })
       });
       if (res.status === 401) { signIn(); return; }
+      if (res.status === 409) { accountChanged(); return; }
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       sync.storage = data.storage;
@@ -3739,6 +3753,27 @@
 
   // ================================================================ views: progress
 
+  /** Resets one course everywhere (its lessons, scores, cards, notes), keeping the others. */
+  function courseReset() {
+    const select = h('select', { class: 'goal-select', 'aria-label': 'Course to reset' },
+      courses.map((c) => h('option', { value: c.id }, (c.icon ? c.icon + ' ' : '') + c.title)));
+    const button = h('button', {
+      class: 'btn',
+      style: { color: 'var(--err)' },
+      onclick: () => {
+        const c = courses.find((x) => x.id === select.value);
+        if (!c || !confirm('Reset all your progress in ' + c.title + ' — its lessons, scores, flashcards and notes' +
+          (sync.storage === 'local' ? '' : ', on every device') + '? Your other courses stay as they are.')) return;
+        P.resets = Object.assign({}, P.resets, { [c.id]: iso() });
+        P = Engine.mergeProgress(P, {});
+        save();
+        toast(c.short + ' progress reset', 'ok');
+        route();
+      }
+    }, 'Reset this course…');
+    return h('span', { class: 'course-reset' }, select, button);
+  }
+
   function progressView() {
     const p = page('page-wide');
     p.append(h('h1', null, 'Your progress'));
@@ -3884,6 +3919,7 @@
           location.hash = '#/';
         }
       }, 'Reset progress…'),
+      courseReset(),
       fileInput));
     p.append(h('p', { style: { color: 'var(--text-dim)', fontSize: '12.5px', marginTop: '14px' } },
       (compiler.available ? 'C++ runs on: ' + (compiler.compiler || compiler.backend) + (compiler.std ? ' (' + compiler.std + ')' : '')
@@ -4105,11 +4141,11 @@
   });
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && sync.dirty && sync.storage !== 'local') {
+    if (document.visibilityState === 'hidden' && sync.dirty && !sync.blocked && sync.storage !== 'local') {
       try {
         const body = JSON.stringify({ progress: P });
         if (body.length < 60000) {
-          fetch('/api/learn/progress', { method: 'PUT', headers: { 'content-type': 'application/json' }, body, keepalive: true })
+          fetch('/api/learn/progress', { method: 'PUT', headers: Object.assign({ 'content-type': 'application/json' }, ACCOUNT_HEADER), body, keepalive: true })
             .then(() => { sync.dirty = false; }, () => {});
         } else push();
       } catch (e) { /* best effort */ }
