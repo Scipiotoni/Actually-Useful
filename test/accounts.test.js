@@ -167,3 +167,43 @@ test('a page opened for one account cannot save into the other', async () => {
     assert.strictEqual((await alt.call('/api/config', { headers: { 'x-au-account': 'main' } })).status, 200);
   });
 });
+
+test('a third account (AU_THIRD_PASSWORD) is apart from both others', async () => {
+  const THIRD = 'yet another code';
+  await withApp({ thirdPassword: THIRD }, async (at, dir, app) => {
+    assert.deepStrictEqual(app.accounts.map((a) => [a.id, a.prefix]), [['main', 'p'], ['alt', 'a'], ['third', 'b']]);
+    const main = await signIn(at, MAIN);
+    const alt = await signIn(at, ALT);
+    const third = await signIn(at, THIRD);
+    assert.match(third.hint, /^au_account=third;/);
+    const config = await (await third.call('/api/config')).json();
+    assert.deepStrictEqual([config.account, config.pages], ['third', '/b/']);
+
+    // Same name in all three: three pages at three addresses.
+    await publish(main, 'Home', '<h1>One</h1>');
+    await publish(alt, 'Home', '<h1>Two</h1>');
+    const c = await (await publish(third, 'Home', '<h1>Three</h1>')).json();
+    assert.strictEqual(c.url, `${at}/b/home/`);
+    assert.match(await (await fetch(`${at}/b/home/`)).text(), /Three/);
+    assert.match(await (await fetch(`${at}/a/home/`)).text(), /Two/);
+    assert.match(await (await fetch(`${at}/p/home/`)).text(), /One/);
+    assert.ok(fs.existsSync(path.join(dir, '_third', 'home', 'meta.json')));
+
+    await third.call('/api/assets', { method: 'POST', body: JSON.stringify({ name: 'dot.png', data: PNG }) });
+    assert.strictEqual((await fetch(`${at}/b/assets/dot.png`)).status, 200);
+    assert.strictEqual((await fetch(`${at}/a/assets/dot.png`)).status, 404);
+
+    const progress = { items: { 'ard1-circuit': { status: 'done', xp: 20, at: new Date().toISOString() } } };
+    await third.call('/api/learn/progress', { method: 'PUT', body: JSON.stringify({ progress }) });
+    assert.ok((await (await third.call('/api/learn/progress')).json()).progress.items['ard1-circuit']);
+    assert.deepStrictEqual((await (await alt.call('/api/learn/progress')).json()).progress.items, {});
+    assert.deepStrictEqual((await (await main.call('/api/learn/progress')).json()).progress.items, {});
+    assert.strictEqual((await third.call('/api/deploys', { headers: { 'x-au-account': 'alt' } })).status, 409);
+  });
+  // It works without the second account, but never with a password already in use.
+  await withApp({ altPassword: '', thirdPassword: THIRD }, async (at, dir, app) => {
+    assert.deepStrictEqual(app.accounts.map((a) => a.id), ['main', 'third']);
+    assert.notStrictEqual((await fetch(`${at}/a/anything/`, { redirect: 'manual' })).status, 200);
+  });
+  await withApp({ thirdPassword: ALT }, async (at, dir, app) => assert.deepStrictEqual(app.accounts.map((a) => a.id), ['main', 'alt']));
+});

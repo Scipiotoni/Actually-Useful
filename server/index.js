@@ -166,11 +166,15 @@ function serveStatic(res, urlPath) {
 }
 
 /**
- * The second account (AU_ALT_PASSWORD): everything it makes is kept apart
- * from the main account's — pages in their own folder on disk and on GitHub,
- * served at their own address, with their own images and learning progress.
+ * Extra accounts, each switched on by a password of its own (AU_ALT_PASSWORD,
+ * AU_THIRD_PASSWORD): everything one makes is kept apart from every other
+ * account's — pages in their own folder on disk and on GitHub, served at their
+ * own address, with their own images and learning progress.
  */
-const ALT = { id: 'alt', prefix: 'a', folder: 'alt', dataDir: '_alt', learnFile: 'learn/alt/progress.json' };
+const EXTRA_ACCOUNTS = [
+  { id: 'alt', name: 'second', prefix: 'a', folder: 'alt', dataDir: '_alt', learnFile: 'learn/alt/progress.json', env: 'AU_ALT_PASSWORD', option: 'altPassword' },
+  { id: 'third', name: 'third', prefix: 'b', folder: 'third', dataDir: '_third', learnFile: 'learn/third/progress.json', env: 'AU_THIRD_PASSWORD', option: 'thirdPassword' }
+];
 
 /** GitHub storage when a token is configured, local disk otherwise. */
 function createStore(options) {
@@ -212,31 +216,41 @@ function createApp(options = {}) {
   const authOn = !open && Boolean(password);
   const throttle = new auth.Throttle();
 
-  // Accounts: the main one, and a second, independent one when it has a
-  // password of its own. Which one you are is decided by the password you
+  // Accounts: the main one, and independent extra ones that each have a
+  // password of their own. Which one you are is decided by the password you
   // sign in with.
   const accounts = [{ id: 'main', prefix: 'p', password, store, progress }];
-  const altPassword = options.altPassword !== undefined ? options.altPassword : process.env.AU_ALT_PASSWORD;
-  if (altPassword && !authOn) {
-    console.warn('AU_ALT_PASSWORD is ignored: a second account needs AU_PASSWORD set for the first one.');
-  } else if (altPassword && altPassword === password) {
-    console.warn('AU_ALT_PASSWORD is ignored: it must differ from AU_PASSWORD.');
-  } else if (altPassword) {
-    const altDir = path.join(options.dataDir || DATA_DIR, ALT.dataDir);
-    const altStore = createStore({ ...options, open, root: ALT.folder, dataDir: altDir });
+  EXTRA_ACCOUNTS.forEach((extra) => {
+    const own = options[extra.option] !== undefined ? options[extra.option] : process.env[extra.env];
+    if (!own) return;
+    if (!authOn) {
+      console.warn(`${extra.env} is ignored: a ${extra.name} account needs AU_PASSWORD set for the first one.`);
+      return;
+    }
+    if (accounts.some((a) => a.password === own)) {
+      console.warn(`${extra.env} is ignored: it must differ from the other accounts' passwords.`);
+      return;
+    }
+    const dir = path.join(options.dataDir || DATA_DIR, extra.dataDir);
+    const ownStore = createStore({ ...options, open, root: extra.folder, dataDir: dir });
     accounts.push({
-      id: ALT.id,
-      prefix: ALT.prefix,
-      password: altPassword,
-      store: altStore,
-      progress: createProgressStore(altStore, {
-        file: path.join(altDir, '.learn', 'progress.json'),
+      id: extra.id,
+      prefix: extra.prefix,
+      password: own,
+      store: ownStore,
+      progress: createProgressStore(ownStore, {
+        file: path.join(dir, '.learn', 'progress.json'),
         branch: options.learnBranch,
-        githubFile: ALT.learnFile
+        githubFile: extra.learnFile
       })
     });
-  }
+  });
   const accountAt = (prefix) => accounts.find((a) => a.prefix === (prefix || 'p')) || null;
+  // Addresses only exist for the accounts that are switched on.
+  const prefixes = accounts.map((a) => a.prefix).join('');
+  const ASSET_PATH = new RegExp(`^/(?:([${prefixes}])/)?assets/([^/]+)$`);
+  const BARE_PAGE_PATH = new RegExp(`^/([${prefixes}])/([^/]+)$`);
+  const PAGE_PATH = new RegExp(`^/([${prefixes}])/([^/]+)/(.*)$`);
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -250,8 +264,8 @@ function createApp(options = {}) {
       // Public like the pages that embed them, so this sits above the gate.
       // Mirrors the layout on GitHub Pages, where a page at
       // /published/<slug>/ reaches images as ../assets/<name>.
-      // A second account's images are under /a/assets/.
-      const assetMatch = pathname.match(/^\/(?:([pa])\/)?assets\/([^/]+)$/);
+      // Other accounts' images are under /a/assets/ and /b/assets/.
+      const assetMatch = pathname.match(ASSET_PATH);
       if (assetMatch && (req.method === 'GET' || req.method === 'HEAD')) {
         const owner = accountAt(assetMatch[1]);
         const name = assetMatch[2];
@@ -274,14 +288,15 @@ function createApp(options = {}) {
       // A deploy is a directory of files. The trailing slash matters: it is
       // what makes "styles.css" in a page resolve to a sibling file, here and
       // on GitHub Pages alike.
-      // /p/<slug>/ is the main account's; /a/<slug>/ the second account's.
-      const bareMatch = pathname.match(/^\/([pa])\/([^/]+)$/);
+      // /p/<slug>/ is the main account's; /a/<slug>/ the second account's,
+      // /b/<slug>/ the third's.
+      const bareMatch = pathname.match(BARE_PAGE_PATH);
       if (bareMatch && accountAt(bareMatch[1]) && (req.method === 'GET' || req.method === 'HEAD')) {
         res.writeHead(302, { location: `/${bareMatch[1]}/${encodeURIComponent(bareMatch[2])}/${url.search}` });
         return res.end();
       }
 
-      const pageMatch = pathname.match(/^\/([pa])\/([^/]+)\/(.*)$/);
+      const pageMatch = pathname.match(PAGE_PATH);
       if (pageMatch && accountAt(pageMatch[1])) {
         const served = await accountAt(pageMatch[1]).store.file(pageMatch[2], pageMatch[3] || undefined);
         if (!served) {
@@ -568,7 +583,8 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  createApp().listen(port, host, () => {
+  const server = createApp();
+  server.listen(port, host, () => {
     if (isLoopback(host)) {
       console.log(`Actually Useful → http://${host}:${port}`);
       console.log('Only this computer can reach that address. To open it on your phone,');
@@ -591,9 +607,10 @@ if (require.main === module) {
       console.log(process.env.AU_PASSWORD
         ? 'Password protection is ON (published pages stay public).'
         : 'No AU_PASSWORD set — anyone who can reach this port can edit and deploy.');
-      if (process.env.AU_PASSWORD && process.env.AU_ALT_PASSWORD && process.env.AU_ALT_PASSWORD !== process.env.AU_PASSWORD) {
-        console.log('Second account is ON: sign in with AU_ALT_PASSWORD. Its pages are at /a/<slug>, apart from everything else.');
-      }
+      server.accounts.slice(1).forEach((a) => {
+        const extra = EXTRA_ACCOUNTS.find((e) => e.id === a.id);
+        console.log(`The ${extra.name} account is ON: sign in with ${extra.env}. Its pages are at /${a.prefix}/<slug>, apart from everything else.`);
+      });
     }
   });
 }

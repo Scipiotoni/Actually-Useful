@@ -13,8 +13,8 @@
   var VERSION = 1;
   /**
    * The account signed in, when it is not the main one (the server says so in
-   * a cookie). A second account keeps its own project and progress in the
-   * browser, so two accounts used on one device never see each other's work.
+   * a cookie). Every other account keeps its own project and progress in the
+   * browser, so accounts used on one device never see each other's work.
    */
   function currentAccount() {
     if (typeof document === 'undefined') return '';
@@ -30,8 +30,8 @@
     ? { editor: 'actually-useful:' + ACCOUNT + ':draft:v1', learn: 'au-learn-progress-v1:' + ACCOUNT }
     : { editor: 'actually-useful:draft:v1', learn: 'au-learn-progress-v1' };
 
-  // Where each account's pages are published.
-  var PAGES = ACCOUNT ? '/a/' : '/p/';
+  // Where each account's pages are published (the server's prefixes).
+  var PAGES = { alt: '/a/', third: '/b/' }[ACCOUNT] || '/p/';
 
   /**
    * Sent with every request, so the server can refuse one from a page opened
