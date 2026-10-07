@@ -6,14 +6,11 @@
       "entry": "index.html",
       "files": [
         "index.html",
-        "about.html",
-        "styles.css",
-        "app.js",
         "mathpath-logo.png"
       ],
       "createdAt": "2026-10-06T08:17:10.759Z",
-      "updatedAt": "2026-10-06T08:23:00.864Z",
-      "version": 3
+      "updatedAt": "2026-10-07T06:53:33.504Z",
+      "version": 4
     }
   ]
 }
