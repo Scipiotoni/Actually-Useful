@@ -521,24 +521,30 @@ with `AU_ALLOW_PUBLIC_WRITES=1` if you really mean it.
 
 ### More accounts
 
-Set `AU_ALT_PASSWORD` and/or `AU_THIRD_PASSWORD` as well (on Render:
-Environment → Add variable) and the same sign-in page opens a **second** and a
-**third, completely separate account** for whoever types that code instead:
+Besides the main account, there are **49 free account slots**. Each one is
+closed until you give it a password, then opens as a **completely separate
+account** for whoever types that code on the same sign-in page. To open slot
+*n*, add the environment variable `AU_PASSWORD_<n>` (on Render: your service →
+Environment → Add Environment Variable; Render restarts the app). To close a
+slot again, delete its variable — its pages and progress stay where they are
+and come back if you give it a password again.
 
-| | Main account (`AU_PASSWORD`) | Second account (`AU_ALT_PASSWORD`) | Third account (`AU_THIRD_PASSWORD`) |
-|---|---|---|---|
-| Published pages | `/p/<slug>/`, and `published/<slug>/` on GitHub Pages | `/a/<slug>/`, and `alt/<slug>/` on GitHub Pages | `/b/<slug>/`, and `third/<slug>/` on GitHub Pages |
-| Images | `/assets/…` (`published/assets/`) | `/a/assets/…` (`alt/assets/`) | `/b/assets/…` (`third/assets/`) |
-| Learning progress | `learn/progress.json` on the `au-learn` branch | `learn/alt/progress.json` on the same branch | `learn/third/progress.json` on the same branch |
-| Draft in the browser | its own | its own, even on the same device | its own, even on the same device |
+| Slot | Password variable | Published pages | On GitHub Pages | Learning progress (`au-learn` branch) |
+|---|---|---|---|---|
+| 1 (main) | `AU_PASSWORD` | `/p/<slug>/` | `published/<slug>/` | `learn/progress.json` |
+| 2 | `AU_PASSWORD_2` (or `AU_ALT_PASSWORD`) | `/a/<slug>/` | `alt/<slug>/` | `learn/alt/progress.json` |
+| 3 | `AU_PASSWORD_3` (or `AU_THIRD_PASSWORD`) | `/b/<slug>/` | `third/<slug>/` | `learn/third/progress.json` |
+| 4 … 50 | `AU_PASSWORD_4` … `AU_PASSWORD_50` | `/4/<slug>/` … `/50/<slug>/` | `account-4/<slug>/` … | `learn/account-4/progress.json` … |
 
-Every account can publish, and none can see, change or delete another's
-pages — pages may even share a name. Which account you are in depends only on
-the password you sign in with; the **Sign out** button says "account 2" or
-"account 3". Nothing about the existing accounts changes when you add one:
-their pages, drafts and progress stay exactly where they were. Each password
-must differ from the others, and they only work when `AU_PASSWORD` is set (the
-third works with or without the second).
+Images follow the pages: `/a/assets/…`, `/4/assets/…`, and so on. Every
+account can publish, and none can see, change or delete another's pages —
+pages may even share a name. Each keeps its own draft and progress in the
+browser, even when several are used on one device. Which account you are in
+depends only on the password you sign in with, and the **Sign out** button
+says its number ("Sign out (account 4)"). Slots don't need to be opened in
+order. Opening a slot changes nothing about the others. Each password must
+differ from all the others (a repeated one is ignored, with a warning in the
+log), and slots only open when `AU_PASSWORD` is set.
 
 ## The open version
 
@@ -569,8 +575,7 @@ button is there too, as an extra safety net.
 | `PORT` | `3000` | Port to listen on |
 | `HOST` | `127.0.0.1` | Bind address — set to `0.0.0.0` to expose it |
 | `AU_PASSWORD` | *(unset)* | Password for the editor. Unset means no login |
-| `AU_ALT_PASSWORD` | *(unset)* | Password for a second, independent account (see [More accounts](#more-accounts)) |
-| `AU_THIRD_PASSWORD` | *(unset)* | Password for a third, independent account (see [More accounts](#more-accounts)) |
+| `AU_PASSWORD_2` … `AU_PASSWORD_50` | *(unset)* | Each opens one more independent account slot (see [More accounts](#more-accounts)); `AU_ALT_PASSWORD` and `AU_THIRD_PASSWORD` also work for slots 2 and 3 |
 | `AU_DATA_DIR` | `./data/sites` | Where deployed pages are stored on disk |
 | `AU_GITHUB_TOKEN` | *(unset)* | Fine-grained token; enables GitHub storage |
 | `AU_GITHUB_REPO` | *(unset)* | `owner/repo` to store published pages in |

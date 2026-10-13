@@ -1732,7 +1732,7 @@
       document.getElementById('logout').hidden = !config.auth;
       if (config.account && config.account !== 'main') {
         // Say which account this is, so they are never confused.
-        var number = { alt: 2, third: 3 }[config.account] || 2;
+        var number = config.number || (Backup.slotOf(config.account) || {}).number || 2;
         document.getElementById('logout').textContent = 'Sign out (account ' + number + ')';
         document.body.classList.add('is-second-account');
       }

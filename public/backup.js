@@ -24,6 +24,33 @@
   }
   var ACCOUNT = currentAccount();
 
+  /**
+   * Account slots. Slot 1 is the main account (AU_PASSWORD); every other slot
+   * stays closed until it is given a password of its own: AU_PASSWORD_<n>
+   * (slots 2 and 3 also answer to their older names, AU_ALT_PASSWORD and
+   * AU_THIRD_PASSWORD). Each has its own address for pages, its own folder
+   * on GitHub and its own progress. Slots 2 and 3 keep the names they always
+   * had, so nothing already published moves.
+   */
+  var MAX_ACCOUNTS = 50;
+  function accountSlot(n) {
+    n = Number(n);
+    if (!(n >= 1 && n <= MAX_ACCOUNTS && Math.floor(n) === n)) return null;
+    if (n === 1) return { number: 1, id: 'main', prefix: 'p', folder: 'published', env: ['AU_PASSWORD'] };
+    if (n === 2) return { number: 2, id: 'alt', prefix: 'a', folder: 'alt', env: ['AU_ALT_PASSWORD', 'AU_PASSWORD_2'] };
+    if (n === 3) return { number: 3, id: 'third', prefix: 'b', folder: 'third', env: ['AU_THIRD_PASSWORD', 'AU_PASSWORD_3'] };
+    return { number: n, id: 'account-' + n, prefix: String(n), folder: 'account-' + n, env: ['AU_PASSWORD_' + n] };
+  }
+  /** The slot of an account id ('main', 'alt', 'account-7'…), or null. */
+  function slotOf(id) {
+    if (!id || id === 'main') return accountSlot(1);
+    if (id === 'alt') return accountSlot(2);
+    if (id === 'third') return accountSlot(3);
+    var m = /^account-(\d+)$/.exec(id);
+    var slot = m ? accountSlot(Number(m[1])) : null;
+    return slot && slot.number >= 4 ? slot : null;
+  }
+
   // Where each part lives in the browser (the editor and Learn share an origin).
   // The main account's keys never change, so nothing saved before moves.
   var KEYS = ACCOUNT
@@ -31,7 +58,7 @@
     : { editor: 'actually-useful:draft:v1', learn: 'au-learn-progress-v1' };
 
   // Where each account's pages are published (the server's prefixes).
-  var PAGES = { alt: '/a/', third: '/b/' }[ACCOUNT] || '/p/';
+  var PAGES = '/' + (slotOf(ACCOUNT) || accountSlot(1)).prefix + '/';
 
   /**
    * Sent with every request, so the server can refuse one from a page opened
@@ -143,6 +170,9 @@
     ACCOUNT: ACCOUNT,
     ACCOUNT_HEADER: ACCOUNT_HEADER,
     PAGES: PAGES,
+    MAX_ACCOUNTS: MAX_ACCOUNTS,
+    accountSlot: accountSlot,
+    slotOf: slotOf,
     create: create,
     parse: parse,
     collect: collect,

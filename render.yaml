@@ -28,6 +28,9 @@ services:
       # Optional: a third account, just as separate (pages at /b/<slug>).
       - key: AU_THIRD_PASSWORD
         sync: false
+      # More free account slots: add AU_PASSWORD_4 … AU_PASSWORD_50 in the
+      # dashboard (Environment) whenever you want one; each opens its own
+      # account, with pages at /4/<slug> … /50/<slug>.
       # A fine-grained GitHub token with Contents: read and write on the repo
       # below. Leave blank to fall back to the (erasable) container disk.
       - key: AU_GITHUB_TOKEN

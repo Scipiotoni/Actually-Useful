@@ -207,3 +207,45 @@ test('a third account (AU_THIRD_PASSWORD) is apart from both others', async () =
   });
   await withApp({ thirdPassword: ALT }, async (at, dir, app) => assert.deepStrictEqual(app.accounts.map((a) => a.id), ['main', 'alt']));
 });
+
+test('free slots 4 to 50 open only when given a password, each at its own number', async () => {
+  const codes = { 4: 'four four', 12: 'twelve code', 50: 'last slot' };
+  await withApp({ passwords: codes }, async (at, dir, app) => {
+    assert.deepStrictEqual(app.accounts.map((a) => [a.id, a.prefix]),
+      [['main', 'p'], ['alt', 'a'], ['account-4', '4'], ['account-12', '12'], ['account-50', '50']]);
+    const four = await signIn(at, codes[4]);
+    const twelve = await signIn(at, codes[12]);
+    assert.match(twelve.hint, /^au_account=account-12;/);
+    const config = await (await twelve.call('/api/config')).json();
+    assert.deepStrictEqual([config.account, config.number, config.pages], ['account-12', 12, '/12/']);
+
+    await publish(four, 'Same', '<h1>Four</h1>');
+    const t = await (await publish(twelve, 'Same', '<h1>Twelve</h1>')).json();
+    assert.strictEqual(t.url, `${at}/12/same/`);
+    assert.match(await (await fetch(`${at}/4/same/`)).text(), /Four/);
+    assert.match(await (await fetch(`${at}/12/same/`)).text(), /Twelve/);
+    assert.strictEqual((await fetch(`${at}/12/same`, { redirect: 'manual' })).headers.get('location'), '/12/same/');
+    assert.ok(fs.existsSync(path.join(dir, '_account-12', 'same', 'meta.json')));
+    assert.deepStrictEqual((await (await four.call('/api/deploys')).json()).deploys.map((d) => d.url), [`${at}/4/same/`]);
+
+    // Slots without a password are closed: no sign-in, no pages.
+    assert.notStrictEqual((await fetch(`${at}/5/same/`, { redirect: 'manual' })).status, 200);
+    assert.strictEqual((await signIn(at, 'not a code')).res.status, 401);
+    assert.strictEqual((await four.call('/api/deploys', { headers: { 'x-au-account': 'account-12' } })).status, 409);
+  });
+  // A code already used by another account opens nothing.
+  await withApp({ passwords: { 7: ALT } }, async (at, dir, app) => assert.deepStrictEqual(app.accounts.map((a) => a.id), ['main', 'alt']));
+});
+
+test('slots are read from AU_PASSWORD_<n>, and slots 2 and 3 from their old names too', async () => {
+  const saved = { ...process.env };
+  try {
+    Object.assign(process.env, { AU_PASSWORD_2: 'two by number', AU_THIRD_PASSWORD: 'three by name', AU_PASSWORD_9: 'nine' });
+    await withApp({ altPassword: undefined }, async (at, dir, app) => {
+      assert.deepStrictEqual(app.accounts.map((a) => a.id), ['main', 'alt', 'third', 'account-9']);
+      assert.strictEqual((await signIn(at, 'nine')).res.status, 303);
+    });
+  } finally {
+    for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
+  }
+});
