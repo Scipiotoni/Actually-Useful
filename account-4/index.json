@@ -1,0 +1,18 @@
+{
+  "pages": [
+    {
+      "slug": "hello-actually-useful",
+      "name": "Hello, Actually Useful",
+      "entry": "index.html",
+      "files": [
+        "index.html",
+        "about.html",
+        "styles.css",
+        "app.js"
+      ],
+      "createdAt": "2026-10-13T08:38:39.635Z",
+      "updatedAt": "2026-10-13T08:38:39.635Z",
+      "version": 1
+    }
+  ]
+}

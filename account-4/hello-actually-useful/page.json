@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "slug": "hello-actually-useful",
+    "name": "Hello, Actually Useful",
+    "entry": "index.html",
+    "files": [
+      "index.html",
+      "about.html",
+      "styles.css",
+      "app.js"
+    ],
+    "createdAt": "2026-10-13T08:38:39.635Z",
+    "updatedAt": "2026-10-13T08:38:39.635Z",
+    "version": 1
+  },
+  "source": [
+    {
+      "name": "index.html",
+      "content": "<main class=\"card\">\n  <h1>Hello 👋</h1>\n  <p>Edit on the left, watch it render on the right, then hit <strong>Deploy</strong>.</p>\n  <button id=\"cheer\">Cheer me up</button>\n  <p id=\"out\"></p>\n  <p><a href=\"about.html\">A second page →</a></p>\n</main>"
+    },
+    {
+      "name": "about.html",
+      "content": "<main class=\"card\">\n  <h1>Page two</h1>\n  <p>Add as many pages as you like with <strong>＋</strong>, and link them by name.</p>\n  <p><a href=\"index.html\">← Back</a></p>\n</main>"
+    },
+    {
+      "name": "styles.css",
+      "content": "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  background: linear-gradient(135deg, #1f2937, #0f172a);\n  font-family: system-ui, sans-serif;\n  color: #e5e7eb;\n}\n\n.card {\n  max-width: 34rem;\n  padding: 2.5rem;\n  background: rgba(255, 255, 255, 0.04);\n  border: 1px solid rgba(255, 255, 255, 0.1);\n  border-radius: 16px;\n  text-align: center;\n}\n\na { color: #6ea8fe; }\n\nbutton {\n  padding: 0.6rem 1.2rem;\n  border: 0;\n  border-radius: 8px;\n  background: #3d7dfd;\n  color: #fff;\n  font-size: 1rem;\n  cursor: pointer;\n}"
+    },
+    {
+      "name": "app.js",
+      "content": "var lines = ['You are doing great.', 'Ship it.', 'That looks sharp.'];\nvar button = document.getElementById('cheer');\nif (button) {\n  button.addEventListener('click', function () {\n    var pick = lines[Math.floor(Math.random() * lines.length)];\n    document.getElementById('out').textContent = pick;\n    console.log('cheered:', pick);\n  });\n}"
+    }
+  ]
+}
