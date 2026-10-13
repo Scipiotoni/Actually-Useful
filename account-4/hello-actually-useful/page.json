@@ -10,13 +10,13 @@
       "app.js"
     ],
     "createdAt": "2026-10-13T08:38:39.635Z",
-    "updatedAt": "2026-10-13T08:40:04.341Z",
-    "version": 2
+    "updatedAt": "2026-10-13T10:57:53.267Z",
+    "version": 3
   },
   "source": [
     {
       "name": "index.html",
-      "content": "<main class=\"card\">\n  <h1>Hello 👋</h1>\n  <p>Edit on the left, watch it render on the right, then hit <strong>Deploy</strong>.</p>\n  <button id=\"cheer\">Cheer me up</button>\n  <p id=\"out\"></p>\n  <p><a href=\"about.html\">A second page →</a></p>\n</main>"
+      "content": ""
     },
     {
       "name": "about.html",
