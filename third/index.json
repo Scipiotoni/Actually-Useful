@@ -10,6 +10,17 @@
       "createdAt": "2026-10-06T08:17:10.759Z",
       "updatedAt": "2026-10-15T20:09:10.793Z",
       "version": 12
+    },
+    {
+      "slug": "untitled-page",
+      "name": "Untitled page",
+      "entry": "index.html",
+      "files": [
+        "index.html"
+      ],
+      "createdAt": "2026-10-23T08:20:48.199Z",
+      "updatedAt": "2026-10-23T08:20:48.199Z",
+      "version": 1
     }
   ]
 }
