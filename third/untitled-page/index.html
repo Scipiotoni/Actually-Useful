@@ -127,7 +127,7 @@ canvas{display:block}
   <div class="left">
     <div>
       <div class="brand">STRIKE <span>OPS 20</span></div>
-      <div class="sub">Scopes on every weapon • Fixed hip-fire view • Grenades • Minimap • XP</div>
+      <div class="sub">Fixed weapon twisting • Scopes on all weapons • Stable ADS</div>
 
       <div class="modes" id="modeList"></div>
       <div class="row" id="mapList"></div>
@@ -294,6 +294,8 @@ const camera=new THREE.PerspectiveCamera(save.fov,innerWidth/innerHeight,.08,450
 const controls=new PointerLockControls(camera,renderer.domElement);
 controls.pointerSpeed=save.sensitivity;
 
+scene.add(camera);
+
 scene.add(new THREE.HemisphereLight(0xd8eaf8,0x6d655a,1.25));
 
 const sun=new THREE.DirectionalLight(0xfff3d5,2.6);
@@ -314,8 +316,6 @@ scene.add(new THREE.Mesh(
 ));
 
 /* Player */
-const playerBody=new THREE.Object3D();scene.add(playerBody);
-
 const player={
   position:new THREE.Vector3(0,0,66),velocity:new THREE.Vector3(),
   hp:100,maxHp:100,armor:75,maxArmor:75,stamina:100,maxStamina:100,
@@ -760,16 +760,15 @@ function move(dt){
 
   camera.position.copy(peekPosition);
 
-  /* IMPORTANT: no camera roll. This fixes the “view goes to the floor” issue. */
+  /* No camera roll at all. This prevents the twisting/floor-pointing view. */
   camera.rotation.z=0;
 
   const targetFov=player.aiming?save.fov/(w.scopeZoom||1.35):save.fov;
   camera.fov=THREE.MathUtils.lerp(camera.fov,targetFov,Math.min(1,dt*12));
   camera.updateProjectionMatrix();
 
-  const scoped=player.aiming;
-  document.getElementById('scope').style.display=scoped?'block':'none';
-  document.getElementById('crosshair').style.opacity=scoped?0:1;
+  document.getElementById('scope').style.display=player.aiming?'block':'none';
+  document.getElementById('crosshair').style.opacity=player.aiming?0:1;
 
   const moving=moveVector.lengthSq()>0&&player.grounded;
   footstepTimer-=dt;
@@ -787,8 +786,9 @@ function move(dt){
   document.getElementById('stf').style.width=(player.stamina/player.maxStamina*100)+'%';
 }
 
-/* Viewmodel */
-const viewmodel=new THREE.Group();camera.add(viewmodel);scene.add(camera);
+/* Viewmodel — locked forward, no twisting */
+const viewmodel=new THREE.Group();
+camera.add(viewmodel);
 
 const gunBody=new THREE.MeshStandardMaterial({color:0x252b31,roughness:.32,metalness:.88});
 const gunAccent=new THREE.MeshStandardMaterial({color:0x414c56,roughness:.42,metalness:.75});
@@ -829,45 +829,45 @@ function makeViewmodel(id){
   const handle=new THREE.Mesh(new THREE.CylinderGeometry(.024,.028,.15,10),handleMat);
   handle.rotation.x=Math.PI/2;handle.position.set(0,.02,.08);knifeGroup.add(handle);
 
-  knifeGroup.position.set(.2,-.18,-.32);knifeGroup.rotation.set(.15,-.35,.2);knifeGroup.visible=false;
+  knifeGroup.position.set(.2,-.18,-.32);
+  knifeGroup.visible=false;
 
   viewmodel.add(gunGroup);viewmodel.add(knifeGroup);
   viewmodel.userData.flash=flashSprite;
   viewmodel.userData.gunGroup=gunGroup;
   viewmodel.userData.knifeGroup=knifeGroup;
-  viewmodel.userData.base=new THREE.Vector3(.24,-.21,-.45);
-  viewmodel.position.copy(viewmodel.userData.base);
+
+  /* Weapon always points straight forward. */
   viewmodel.rotation.set(0,0,0);
+  viewmodel.position.set(.24,-.21,-.45);
 }
 
 makeViewmodel(save.primary);
 
-let recoil=0,walkCycle=0,switchTimer=0;
+let recoil=0,walkCycle=0;
 
 function updateViewmodel(dt,moving){
   walkCycle+=dt*(moving?10:2.5);
   recoil=Math.max(0,recoil-dt*5);
-  switchTimer=Math.max(0,switchTimer-dt);
 
   if(knifeActive)return;
 
   const hip=player.aiming?new THREE.Vector3(0,-.095,-.27):new THREE.Vector3(.24,-.21,-.45);
-  const bob=player.aiming?.004:.013;
-  const reloadDip=reloading?Math.sin(Math.min(1,(1-(reloadEnd-performance.now())/1000))*Math.PI)*.14:0;
+  const bob=player.aiming?.003:.012;
 
   viewmodel.position.set(
     hip.x+Math.sin(walkCycle)*bob-player.lean*.04,
-    hip.y+Math.abs(Math.sin(walkCycle))*(bob*1.2)-recoil*.05-switchTimer*.25-reloadDip,
-    hip.z+recoil*.12+switchTimer*.2
+    hip.y+Math.abs(Math.sin(walkCycle))*(bob*1.1)-recoil*.04,
+    hip.z+recoil*.1
   );
 
-  /* Keep the weapon level when not aiming. */
-  viewmodel.rotation.set(recoil*(player.aiming?.05:.08),0,0);
+  /* Only a very small recoil pitch. No yaw, roll, switching twist, or floor tilt. */
+  viewmodel.rotation.set(recoil*.35,0,0);
 
   viewmodel.userData.flash.material.opacity=Math.max(0,viewmodel.userData.flash.material.opacity-dt*18);
 }
 
-/* Weapons — every weapon has a scope */
+/* Weapons — all have scopes */
 const weaponCatalog={
   rifle:{name:'PHANTOM-7',type:'ASSAULT RIFLE',damage:34,fireRate:.105,mag:30,reserve:120,spread:.011,adsSpread:.35,recoil:.05,auto:true,range:220,pellets:1,moveSpeed:1,sound:950,scopeZoom:1.35},
   smg:{name:'HORNET-9',type:'SMG',damage:24,fireRate:.075,mag:35,reserve:140,spread:.019,adsSpread:.45,recoil:.04,auto:true,range:110,pellets:1,moveSpeed:1.14,sound:1250,scopeZoom:1.25},
@@ -902,7 +902,7 @@ let current=0;
 
 function equip(i){
   if(i<weapons.length&&!knifeActive){
-    current=i;makeViewmodel(weapons[i].id);switchTimer=.28;updateHUD();
+    current=i;makeViewmodel(weapons[i].id);updateHUD();
     beep(520,.06,'triangle',.045);
   }
 }
@@ -1460,18 +1460,18 @@ function updateGrenades(dt){
   }
 }
 
-/* Knife */
+/* Knife — simple forward stab, no twisting */
 function startKnife(){
   if(knifeActive||knifeCooldown>0||reloading)return;
 
-  knifeActive=true;knifeTime=.42;knifeCooldown=.8;knifeHitDone=false;
+  knifeActive=true;knifeTime=.38;knifeCooldown=.75;knifeHitDone=false;
   player.aiming=false;
 
   viewmodel.userData.gunGroup.visible=false;
   viewmodel.userData.knifeGroup.visible=true;
 
   beep(320,.08,'triangle',.06);
-  setTimeout(()=>beep(180,.09,'sawtooth',.05),130);
+  setTimeout(()=>beep(180,.09,'sawtooth',.05),120);
 }
 
 function updateKnife(dt){
@@ -1479,14 +1479,19 @@ function updateKnife(dt){
   if(!knifeActive)return;
 
   knifeTime-=dt;
-  const progress=1-Math.max(0,knifeTime/.42);
+  const progress=1-Math.max(0,knifeTime/.38);
   const swipe=Math.sin(progress*Math.PI);
+
   const knife=viewmodel.userData.knifeGroup;
 
-  knife.position.set(player.aiming?0:.2-swipe*.24,player.aiming?-.1:-.18+swipe*.1,player.aiming?-.3:-.32-swipe*.34);
-  knife.rotation.set(.15-swipe*.5,-.35+swipe*.75,.2+swipe*.55);
+  /* Position-only stab. The knife never rotates wildly. */
+  knife.position.set(
+    .2-swipe*.18,
+    -.18+swipe*.05,
+    -.32-swipe*.3
+  );
 
-  if(!knifeHitDone&&progress>.34){
+  if(!knifeHitDone&&progress>.35){
     knifeHitDone=true;
 
     const forward=new THREE.Vector3();camera.getWorldDirection(forward);forward.y=0;forward.normalize();
@@ -1532,7 +1537,7 @@ function updateKnife(dt){
     knifeActive=false;
     viewmodel.userData.gunGroup.visible=true;
     viewmodel.userData.knifeGroup.visible=false;
-    knife.position.set(.2,-.18,-.32);knife.rotation.set(.15,-.35,.2);
+    knife.position.set(.2,-.18,-.32);
   }
 }
 
