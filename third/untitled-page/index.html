@@ -3,28 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>STRIKE OPS 6 — Vertical District</title>
+<title>STRIKE OPS 7 — Downtown Siege</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{overflow:hidden;background:#04070b;color:#e9eff4;font-family:Inter,Arial,sans-serif}
   canvas{display:block}
 
-  .overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:linear-gradient(155deg,#071019,#122231 55%,#04070b)}
-  .lobby{width:min(1200px,96vw);height:min(780px,94vh);display:flex;background:#0a1117;border:1px solid #25303b;border-radius:18px;overflow:hidden;box-shadow:0 40px 120px #000}
-  .side{width:270px;background:#070d12;border-right:1px solid #212c36;padding:22px 16px;display:flex;flex-direction:column;gap:8px}
-  .logo{font-size:27px;font-weight:900;color:#ffcc33;letter-spacing:3px;margin-bottom:16px}
+  .overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:#05090e}
+  .lobby{width:min(1280px,97vw);height:min(820px,95vh);display:flex;flex-direction:column;background:#0a1117;border:1px solid #26323e;border-radius:20px;overflow:hidden;box-shadow:0 50px 140px #000}
+
+  .hero{
+    position:relative;padding:26px 32px;
+    background:linear-gradient(120deg,#122435,#1d3a50 45%,#0d1721);
+    border-bottom:1px solid #26323e;overflow:hidden
+  }
+  .hero::after{
+    content:"";position:absolute;inset:0;
+    background:radial-gradient(circle at 82% 25%,rgba(255,204,51,.16),transparent 42%);
+    pointer-events:none
+  }
+  .heroTop{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+  .title{font-size:38px;font-weight:900;letter-spacing:4px;color:#ffcc33}
+  .subtitle{color:#a9bcc9;margin-top:6px;font-size:14px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#dce8f0;padding:6px 11px;border-radius:999px;font-size:12px;font-weight:700}
+  .heroBottom{display:flex;gap:18px;margin-top:20px;align-items:center;flex-wrap:wrap}
+  .mapPreview{width:230px;height:130px;border-radius:12px;border:1px solid #33465a;background:#0b131b}
+  .summary{flex:1;min-width:280px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:10px 12px}
+  .stat small{display:block;color:#93a6b4;font-size:11px;margin-bottom:4px}
+  .stat b{font-size:15px;color:#fff}
+
+  .body{flex:1;display:flex;min-height:0}
+  .side{width:265px;background:#070d12;border-right:1px solid #212c36;padding:20px 15px;display:flex;flex-direction:column;gap:8px}
   .nav{padding:12px 14px;border-radius:10px;background:#101a23;color:#a7b6c2;cursor:pointer;border:1px solid transparent;font-weight:800}
   .nav.active{background:#182430;color:#fff;border-color:#35485c}
   .grow{flex:1}
   .profile{background:#101a23;border:1px solid #26323e;border-radius:12px;padding:12px}
   .credits{color:#ffcc33;font-weight:900;font-size:21px}
 
-  .main{flex:1;padding:26px;overflow:auto}
+  .main{flex:1;padding:24px;overflow:auto}
   .tab{display:none}.tab.active{display:block}
-  h1{font-size:30px;letter-spacing:2px}
+  h1{font-size:27px;letter-spacing:2px}
   h2{color:#ffcc33;margin:20px 0 10px;font-size:18px}
   .muted{color:#9fb0bd;font-size:13.5px;margin-top:5px;line-height:1.5}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:13px;margin-top:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:13px;margin-top:12px}
   .card{background:#101a23;border:1px solid #26323e;border-radius:13px;padding:15px}
   .card h3{font-size:16px}
   .card p{font-size:12.5px;color:#9cadba;margin:6px 0 10px;line-height:1.45}
@@ -37,7 +60,7 @@
   button:disabled{opacity:.4;cursor:not-allowed}
   button.ghost{background:#212e3b;color:#dce6ee}
   button.gold{background:#ffcc33;color:#231a03}
-  .deploy{width:100%;margin-top:22px;padding:16px;font-size:17px;letter-spacing:1px}
+  .deploy{width:100%;margin-top:20px;padding:16px;font-size:17px;letter-spacing:1px}
   .selected{outline:2px solid #ffcc33;outline-offset:-2px}
 
   #hud{position:fixed;inset:0;z-index:10;pointer-events:none;display:none}
@@ -61,8 +84,8 @@
   #ammo{font-size:32px;font-weight:900;color:#ffcc33}
   #gunname{font-size:12px;color:#9cadba}
   #mods{font-size:11px;color:#8dffb0;margin-top:3px}
-  #minimap{position:absolute;right:22px;top:58px;width:210px;height:210px;background:rgba(4,8,12,.72);border:1px solid #2b3743;border-radius:10px}
-  #feed{position:absolute;right:22px;top:285px;width:340px;font-size:12px;text-align:right}
+  #minimap{position:absolute;right:22px;top:58px;width:220px;height:220px;background:rgba(4,8,12,.72);border:1px solid #2b3743;border-radius:10px}
+  #feed{position:absolute;right:22px;top:295px;width:350px;font-size:12px;text-align:right}
   .feed{background:rgba(5,9,13,.72);border-right:3px solid #ff5d5d;padding:6px 9px;margin-bottom:5px;border-radius:5px}
   #hit{position:absolute;left:50%;top:50%;width:36px;height:36px;transform:translate(-50%,-50%) rotate(45deg);opacity:0}
   #hit b{position:absolute;width:13px;height:2px;background:#fff}
@@ -117,7 +140,7 @@
     <div id="mods">No attachments</div>
   </div>
 
-  <canvas id="minimap" width="210" height="210"></canvas>
+  <canvas id="minimap" width="220" height="220"></canvas>
   <div id="feed"></div>
 </div>
 
@@ -131,66 +154,94 @@
 
 <div class="overlay" id="lobby">
   <div class="lobby">
-    <div class="side">
-      <div class="logo">STRIKE OPS 6</div>
-      <div class="nav active" data-tab="play">PLAY</div>
-      <div class="nav" data-tab="loadout">LOADOUT</div>
-      <div class="nav" data-tab="workshop">WORKSHOP</div>
-      <div class="nav" data-tab="operators">OPERATORS</div>
-      <div class="nav" data-tab="store">STORE</div>
-      <div class="grow"></div>
-      <div class="profile">
-        <div style="font-size:11px;color:#9fb0bd">CREDITS</div>
-        <div class="credits">CR <span id="lobbyCredits">0</span></div>
-        <div style="font-size:11px;color:#9fb0bd;margin-top:8px">Progress saves automatically</div>
+    <div class="hero">
+      <div class="heroTop">
+        <div>
+          <div class="title">STRIKE OPS 7</div>
+          <div class="subtitle">Downtown Siege • Multi-level urban combat • Squad bots • Local split-screen multiplayer</div>
+        </div>
+        <div class="badges">
+          <div class="badge">VERSION 7</div>
+          <div class="badge">BRIGHT MAP</div>
+          <div class="badge">MULTI-LEVEL</div>
+          <div class="badge">LINE OF SIGHT AI</div>
+        </div>
+      </div>
+
+      <div class="heroBottom">
+        <canvas id="lobbyMap" class="mapPreview" width="460" height="260"></canvas>
+        <div class="summary">
+          <div class="stat"><small>MODE</small><b id="sumMode">Squad Assault</b></div>
+          <div class="stat"><small>DIFFICULTY</small><b id="sumDifficulty">Regular</b></div>
+          <div class="stat"><small>PRIMARY</small><b id="sumPrimary">Phantom-7</b></div>
+          <div class="stat"><small>SECONDARY</small><b id="sumSecondary">Viper .45</b></div>
+          <div class="stat"><small>OPERATOR</small><b id="sumOperator">Ranger</b></div>
+        </div>
       </div>
     </div>
 
-    <div class="main">
-      <div class="tab active" id="tab-play">
-        <h1>Deploy to Vertical District</h1>
-        <p class="muted">
-          Bright multi-level combat map with ground floors, stairs, second floors, catwalks,
-          rooftops, and long sightlines. Bots spawn close enough to see and fight.
-        </p>
-        <div class="grid" id="modeList"></div>
-        <div class="grid" id="difficultyList"></div>
-        <button class="deploy gold" id="deployBtn">START OPERATION</button>
-        <p class="muted">
-          <b>Local Multiplayer:</b> Player 1 uses WASD + Mouse + Left Click.<br>
-          Player 2 uses IJKL to move, Arrow Left/Right to turn, Arrow Up/Down to aim, and Enter to fire.
-        </p>
+    <div class="body">
+      <div class="side">
+        <div class="nav active" data-tab="play">PLAY</div>
+        <div class="nav" data-tab="loadout">LOADOUT</div>
+        <div class="nav" data-tab="workshop">WORKSHOP</div>
+        <div class="nav" data-tab="operators">OPERATORS</div>
+        <div class="nav" data-tab="store">STORE</div>
+        <div class="grow"></div>
+        <div class="profile">
+          <div style="font-size:11px;color:#9fb0bd">CREDITS</div>
+          <div class="credits">CR <span id="lobbyCredits">0</span></div>
+          <div style="font-size:11px;color:#9fb0bd;margin-top:8px">Progress saves automatically</div>
+        </div>
       </div>
 
-      <div class="tab" id="tab-loadout">
-        <h1>Primary & Secondary</h1>
-        <div class="grid" id="weaponList"></div>
-      </div>
+      <div class="main">
+        <div class="tab active" id="tab-play">
+          <h1>Deploy to Downtown Siege</h1>
+          <p class="muted">
+            Fight across a bright downtown block with multi-story buildings, stairwells,
+            rooftops, catwalks, parked cars, interiors, and long sightlines.
+            Bots spawn near the action and cannot shoot through walls.
+          </p>
+          <div class="grid" id="modeList"></div>
+          <div class="grid" id="difficultyList"></div>
+          <button class="deploy gold" id="deployBtn">START OPERATION</button>
+          <p class="muted">
+            <b>Local Multiplayer:</b> Player 1 uses WASD + Mouse + Left Click.<br>
+            Player 2 uses IJKL to move, Arrow Left/Right to turn, Arrow Up/Down to aim, and Enter to fire.
+          </p>
+        </div>
 
-      <div class="tab" id="tab-workshop">
-        <h1>Weapon Workshop</h1>
-        <p class="muted">Every attachment has an advantage and disadvantage. Install attachments separately on each weapon.</p>
-        <div class="grid" id="modList"></div>
-      </div>
+        <div class="tab" id="tab-loadout">
+          <h1>Primary & Secondary</h1>
+          <div class="grid" id="weaponList"></div>
+        </div>
 
-      <div class="tab" id="tab-operators">
-        <h1>Operators</h1>
-        <div class="grid" id="operatorList"></div>
-      </div>
+        <div class="tab" id="tab-workshop">
+          <h1>Weapon Workshop</h1>
+          <p class="muted">Every attachment has an advantage and disadvantage. Install attachments separately on each weapon.</p>
+          <div class="grid" id="modList"></div>
+        </div>
 
-      <div class="tab" id="tab-store">
-        <h1>Store</h1>
-        <h2>Attachments</h2>
-        <div class="grid" id="storeMods"></div>
-        <h2>Operator Skins</h2>
-        <div class="grid" id="storeOperators"></div>
+        <div class="tab" id="tab-operators">
+          <h1>Operators</h1>
+          <div class="grid" id="operatorList"></div>
+        </div>
+
+        <div class="tab" id="tab-store">
+          <h1>Store</h1>
+          <h2>Attachments</h2>
+          <div class="grid" id="storeMods"></div>
+          <h2>Operator Skins</h2>
+          <div class="grid" id="storeOperators"></div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <div class="overlay" id="end" style="display:none">
-  <div class="lobby" style="width:min(680px,94vw);height:auto;display:block;padding:34px;text-align:center">
+  <div class="lobby" style="width:min(700px,94vw);height:auto;display:block;padding:34px;text-align:center">
     <h1 id="endTitle">OPERATION SUCCESS</h1>
     <p class="muted" id="endText"></p>
     <button class="deploy gold" id="continueBtn">RETURN TO LOBBY</button>
@@ -223,16 +274,16 @@ const defaults={
   mode:'assault'
 };
 
-const save=Object.assign({},defaults,JSON.parse(localStorage.getItem('strikeOps6')||'{}'));
+const save=Object.assign({},defaults,JSON.parse(localStorage.getItem('strikeOps7')||'{}'));
 save.installedMods??={};
 save.ownedMods??=[];
 save.ownedOperators??=['ranger'];
 
-const persist=()=>localStorage.setItem('strikeOps6',JSON.stringify(save));
+const persist=()=>localStorage.setItem('strikeOps7',JSON.stringify(save));
 
 /* ==================== ENGINE ==================== */
 const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(78,innerWidth/innerHeight,.08,500);
+const camera=new THREE.PerspectiveCamera(78,innerWidth/innerHeight,.08,600);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 
 renderer.setSize(innerWidth,innerHeight);
@@ -240,12 +291,12 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.15;
+renderer.toneMappingExposure=1.18;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const controls=new PointerLockControls(camera,renderer.domElement);
 
-/* Bright, readable environment */
 scene.background=new THREE.Color(0x8fc3e8);
 scene.fog=null;
 
@@ -271,11 +322,21 @@ function grain(g,s,a,n=7000){
 
 const T={
   asphalt:makeTexture((g,s)=>{
-    g.fillStyle='#5a5f64';g.fillRect(0,0,s,s);grain(g,s,.07,10000);
-  },256,[26,26]),
+    g.fillStyle='#5c6166';g.fillRect(0,0,s,s);grain(g,s,.07,10000);
+  },256,[28,28]),
+
+  sidewalk:makeTexture((g,s)=>{
+    g.fillStyle='#b8b4aa';g.fillRect(0,0,s,s);
+    g.strokeStyle='rgba(0,0,0,.22)';g.lineWidth=3;
+    for(let i=0;i<=s;i+=64){
+      g.beginPath();g.moveTo(i,0);g.lineTo(i,s);g.stroke();
+      g.beginPath();g.moveTo(0,i);g.lineTo(s,i);g.stroke();
+    }
+    grain(g,s,.05,5000);
+  },256,[24,4]),
 
   concrete:makeTexture((g,s)=>{
-    g.fillStyle='#a8a49c';g.fillRect(0,0,s,s);grain(g,s,.06,8000);
+    g.fillStyle='#aaa69e';g.fillRect(0,0,s,s);grain(g,s,.06,8000);
     g.strokeStyle='rgba(0,0,0,.15)';g.lineWidth=2;
     for(let i=0;i<8;i++){
       g.beginPath();g.moveTo(0,Math.random()*s);g.lineTo(s,Math.random()*s);g.stroke();
@@ -283,7 +344,7 @@ const T={
   },256,[6,6]),
 
   plaster:makeTexture((g,s)=>{
-    g.fillStyle='#d4c29c';g.fillRect(0,0,s,s);grain(g,s,.05,7000);
+    g.fillStyle='#d8c6a0';g.fillRect(0,0,s,s);grain(g,s,.05,7000);
     g.fillStyle='rgba(120,96,60,.15)';
     for(let i=0;i<45;i++){
       g.fillRect(Math.random()*s,Math.random()*s,Math.random()*30+6,Math.random()*9+2);
@@ -291,8 +352,8 @@ const T={
   },256,[5,5]),
 
   brick:makeTexture((g,s)=>{
-    g.fillStyle='#8a7660';g.fillRect(0,0,s,s);
-    g.fillStyle='#a5876a';
+    g.fillStyle='#8d7963';g.fillRect(0,0,s,s);
+    g.fillStyle='#a98a6c';
     for(let y=0;y<s;y+=32){
       for(let x=(y/32%2)*32;x<s;x+=64){
         g.fillRect(x+2,y+2,60,28);
@@ -300,6 +361,17 @@ const T={
     }
     grain(g,s,.06,5000);
   },256,[5,5]),
+
+  office:makeTexture((g,s)=>{
+    g.fillStyle='#9aa4ac';g.fillRect(0,0,s,s);
+    g.fillStyle='#7f8a92';
+    for(let y=20;y<s;y+=55){
+      for(let x=18;x<s;x+=55){
+        g.fillRect(x,y,38,30);
+      }
+    }
+    grain(g,s,.04,3500);
+  },256,[4,6]),
 
   wood:makeTexture((g,s)=>{
     g.fillStyle='#8a6538';g.fillRect(0,0,s,s);
@@ -314,7 +386,7 @@ const T={
   },256,[4,4]),
 
   metal:makeTexture((g,s)=>{
-    g.fillStyle='#74808b';g.fillRect(0,0,s,s);
+    g.fillStyle='#76828d';g.fillRect(0,0,s,s);
     for(let i=0;i<220;i++){
       g.strokeStyle=`rgba(255,255,255,${Math.random()*.09})`;
       g.beginPath();g.moveTo(Math.random()*s,0);g.lineTo(Math.random()*s,s);g.stroke();
@@ -323,7 +395,7 @@ const T={
   },256,[3,3]),
 
   tile:makeTexture((g,s)=>{
-    g.fillStyle='#6b7278';g.fillRect(0,0,s,s);
+    g.fillStyle='#6f767c';g.fillRect(0,0,s,s);
     g.strokeStyle='rgba(0,0,0,.3)';g.lineWidth=3;
     for(let i=0;i<=s;i+=64){
       g.beginPath();g.moveTo(i,0);g.lineTo(i,s);g.stroke();
@@ -411,13 +483,13 @@ function cover(x,y,z,w,h,d,m){
   return o;
 }
 
-function lamp(x,y,z,color=0xffe3b0,intensity=22,distance=26){
+function lamp(x,y,z,color=0xffe3b0,intensity=24,distance=28){
   const light=new THREE.PointLight(color,intensity,distance,2);
   light.position.set(x,y,z);
   world.add(light);
 
   const fixture=new THREE.Mesh(
-    new THREE.BoxGeometry(.8,.1,.38),
+    new THREE.BoxGeometry(.85,.1,.4),
     new THREE.MeshStandardMaterial({
       color:0x22282e,
       emissive:color,
@@ -430,8 +502,7 @@ function lamp(x,y,z,color=0xffe3b0,intensity=22,distance=26){
   world.add(fixture);
 }
 
-/* Stairs made from walkable platforms */
-function stairs(x,z,direction,steps=10,stepHeight=.32,stepDepth=.75,width=4){
+function stairs(x,z,direction,steps=12,stepHeight=.34,stepDepth=.8,width=4.5){
   const m=mat(T.concrete,0xd9d4c8,.85,0,[2,1]);
 
   for(let i=0;i<steps;i++){
@@ -445,79 +516,124 @@ function stairs(x,z,direction,steps=10,stepHeight=.32,stepDepth=.75,width=4){
   }
 }
 
-function building(x,z,w,d,levels=2){
-  const brick=mat(T.brick,0xffffff,.9,0,[5,4]);
-  const concrete=mat(T.concrete,0xd8d3c8,.86,0,[5,4]);
-  const floorMat=mat(T.tile,0xb5ada0,.75,.05,[8,6]);
+/* Realistic downtown building */
+function downtownBuilding(x,z,w,d,floors,style){
+  const floorHeight=4.4;
+  const totalH=floors*floorHeight;
+  const t=.55;
+
+  const facade=style==='brick'
+    ? mat(T.brick,0xffffff,.9,0,[6,5])
+    : style==='plaster'
+      ? mat(T.plaster,0xffffff,.88,0,[5,4])
+      : mat(T.office,0xffffff,.55,.12,[5,7]);
+
+  const trim=mat(T.concrete,0xd8d3c8,.85,0,[4,3]);
+  const floorMat=mat(T.tile,0xb5ada0,.75,.05,[9,7]);
   const wood=mat(T.wood,0xffffff,.85,0,[2,2]);
   const glass=mat(T.glass,0xffffff,.14,.08);
 
-  const floorHeight=4.2;
-  const t=.5;
-
-  // Ground floor
   platform(x,0,z,w,d,floorMat);
 
-  // Outer walls
-  wall(x,half(0),z-d/2,w,levels*floorHeight,t,brick);
-  wall(x,levels*floorHeight/2,z+d/2,w,levels*floorHeight,t,brick);
-  wall(x-w/2,levels*floorHeight/2,z,t,levels*floorHeight,d,brick);
-  wall(x+w/2,levels*floorHeight/2,z,t,levels*floorHeight,d,brick);
+  // Ground floor walls with wide entrance
+  const door=5;
+  wall(x-w/2+(w-door)/4,floorHeight/2,z-d/2,(w-door)/2,floorHeight,t,facade);
+  wall(x+w/2-(w-door)/4,floorHeight/2,z-d/2,(w-door)/2,floorHeight,t,facade);
+  wall(x,floorHeight-(floorHeight-3.3)/2,z-d/2,door,floorHeight-3.3,t,facade);
 
-  // Ground-floor interior
-  wall(x-w/4,floorHeight/2,z,t*.8,floorHeight,d*.62,brick);
-  wall(x+w/4,floorHeight/2,z,t*.8,floorHeight,d*.62,brick);
-  cover(x-w/5,0,z-d/5,4.5,2.1,2.2,wood);
-  cover(x+w/5,0,z-d/5,4.5,2.1,2.2,wood);
+  wall(x,totalH/2,z+d/2,w,totalH,t,facade);
+  wall(x-w/2,totalH/2,z,t,totalH,d,facade);
+  wall(x+w/2,totalH/2,z,t,totalH,d,facade);
 
-  // Ground lights
-  lamp(x-w/4,floorHeight-.7,z-d/5);
-  lamp(x+w/4,floorHeight-.7,z-d/5);
+  // Interior rooms and cover
+  wall(x-w/4,floorHeight/2,z,t*.8,floorHeight,d*.6,facade);
+  wall(x+w/4,floorHeight/2,z,t*.8,floorHeight,d*.6,facade);
+  cover(x-w/5,0,z-d/5,5,2.2,2.4,wood);
+  cover(x+w/5,0,z-d/5,5,2.2,2.4,wood);
 
-  // Second floor
-  if(levels>=2){
-    platform(x,floorHeight,z,w*.86,d*.86,concrete);
+  lamp(x-w/4,floorHeight-.75,z-d/5);
+  lamp(x+w/4,floorHeight-.75,z-d/5);
 
-    // Second-floor railing
-    wall(x,floorHeight+1,z-d*.43,w*.86,1,.22,concrete);
-    wall(x,floorHeight+1,z+d*.43,w*.86,1,.22,concrete);
-    wall(x-w*.43,floorHeight+1,z,.22,1,d*.86,concrete);
-    wall(x+w*.43,floorHeight+1,z,.22,1,d*.86,concrete);
+  // Upper floors
+  for(let f=1;f<floors;f++){
+    const y=f*floorHeight;
 
-    // Second-floor cover
-    cover(x-w/5,floorHeight,z,4,1.2,2,wood);
-    cover(x+w/5,floorHeight,z,4,1.2,2,wood);
+    platform(x,y,z,w*.88,d*.88,f===1?mat(T.concrete,0xcfc9bd,.86,0,[8,6]):trim);
 
-    // Second-floor lights
-    lamp(x,floorHeight+2.6,z,0xfff0c8,25,30);
-    lamp(x-w/4,floorHeight+2.6,z+d/5,0xcfe4ff,16,20);
-    lamp(x+w/4,floorHeight+2.6,z+d/5,0xcfe4ff,16,20);
+    // Railings
+    wall(x,y+1,z-d*.44,w*.88,1,.22,trim);
+    wall(x,y+1,z+d*.44,w*.88,1,.22,trim);
+    wall(x-w*.44,y+1,z,.22,1,d*.88,trim);
+    wall(x+w*.44,y+1,z,.22,1,d*.88,trim);
+
+    // Floor cover
+    cover(x-w/5,y,z,4.5,1.2,2.2,wood);
+    cover(x+w/5,y,z,4.5,1.2,2.2,wood);
+
+    // Lights
+    lamp(x,y+2.7,z,0xfff0c8,26,32);
+    lamp(x-w/4,y+2.7,z+d/5,0xcfe4ff,16,20);
+    lamp(x+w/4,y+2.7,z+d/5,0xcfe4ff,16,20);
 
     // Windows
     for(const sx of [-w/2,w/2]){
       for(let i=-1;i<=1;i++){
-        const win=new THREE.Mesh(
-          new THREE.BoxGeometry(t+.1,1.7,2.4),
-          glass
-        );
-        win.position.set(x+sx,floorHeight+2,z+i*(d/3.4));
+        const win=new THREE.Mesh(new THREE.BoxGeometry(t+.12,1.9,2.6),glass);
+        win.position.set(x+sx,y+2.2,z+i*(d/3.6));
         world.add(win);
       }
     }
-
-    // Exterior stairs to second floor
-    stairs(x+w/2+4,z,'west',12,.35,.8,4);
-
-    // Rooftop catwalk
-    platform(x,levels*floorHeight,z,w*.5,3,mat(T.metal,0x9aa5b0,.45,.65,[6,1]));
-    wall(x,levels*floorHeight+1,z-1.5,w*.5,1,.2,mat(T.metal,0x7d8792,.45,.7));
-    wall(x,levels*floorHeight+1,z+1.5,w*.5,1,.2,mat(T.metal,0x7d8792,.45,.7));
   }
 
-  spawnPoints.push(new THREE.Vector3(x,0,z+d/2+4));
+  // Rooftop access and catwalk
+  if(floors>=2){
+    stairs(x+w/2+5,z,'west',Math.round((floors-1)*floorHeight/.34),.34,.8,4.5);
+
+    platform(x,totalH,z,w*.55,3.2,mat(T.metal,0x9aa5b0,.45,.65,[7,1]));
+    wall(x,totalH+1,z-1.6,w*.55,1,.22,mat(T.metal,0x7d8792,.45,.7));
+    wall(x,totalH+1,z+1.6,w*.55,1,.22,mat(T.metal,0x7d8792,.45,.7));
+  }
+
+  spawnPoints.push(new THREE.Vector3(x,0,z+d/2+6));
 }
 
-function half(n){return n;}
+function car(x,z,rot,color){
+  const g=new THREE.Group();
+
+  const body=new THREE.Mesh(
+    new THREE.BoxGeometry(4.6,1.15,2),
+    new THREE.MeshStandardMaterial({color,roughness:.35,metalness:.65})
+  );
+  body.position.y=.75;
+  body.castShadow=true;
+  g.add(body);
+
+  const cabin=new THREE.Mesh(
+    new THREE.BoxGeometry(2.4,.85,1.8),
+    mat(T.glass,0xffffff,.18,.1)
+  );
+  cabin.position.set(-.2,1.65,0);
+  g.add(cabin);
+
+  for(const wx of [-1.55,1.55]){
+    for(const wz of [-1,1]){
+      const wheel=new THREE.Mesh(
+        new THREE.CylinderGeometry(.42,.42,.28,18),
+        new THREE.MeshStandardMaterial({color:0x14181c,roughness:.85})
+      );
+      wheel.rotation.x=Math.PI/2;
+      wheel.position.set(wx,.42,wz);
+      g.add(wheel);
+    }
+  }
+
+  g.position.set(x,0,z);
+  g.rotation.y=rot;
+  world.add(g);
+
+  walls.push(new THREE.Box3().setFromObject(g));
+  solidMeshes.push(body);
+}
 
 function container(x,z,rot,color){
   const g=new THREE.Group();
@@ -547,95 +663,124 @@ function container(x,z,rot,color){
   solidMeshes.push(body);
 }
 
-function buildVerticalDistrict(){
+function buildDowntownSiege(){
   scene.background=new THREE.Color(0x8fc3e8);
   scene.fog=null;
 
   const ground=new THREE.Mesh(
-    new THREE.PlaneGeometry(230,230),
-    mat(T.asphalt,0xffffff,.93,0,[30,30])
+    new THREE.PlaneGeometry(250,250),
+    mat(T.asphalt,0xffffff,.93,0,[32,32])
   );
   ground.rotation.x=-Math.PI/2;
   ground.receiveShadow=true;
   world.add(ground);
 
+  // Main road
   const road=new THREE.Mesh(
-    new THREE.PlaneGeometry(24,230),
-    mat(T.asphalt,0x71767b,.9,0,[4,34])
+    new THREE.PlaneGeometry(26,250),
+    mat(T.asphalt,0x767b80,.9,0,[4,36])
   );
   road.rotation.x=-Math.PI/2;
   road.position.y=.02;
   world.add(road);
 
+  // Road markings
+  for(let z=-115;z<=115;z+=12){
+    const mark=new THREE.Mesh(
+      new THREE.PlaneGeometry(.45,5),
+      new THREE.MeshStandardMaterial({color:0xf2e9c8,roughness:.8})
+    );
+    mark.rotation.x=-Math.PI/2;
+    mark.position.set(0,.04,z);
+    world.add(mark);
+  }
+
+  // Sidewalks
+  const sidewalkMat=mat(T.sidewalk,0xffffff,.9,0,[30,6]);
+  for(const sx of [-16,16]){
+    const walk=new THREE.Mesh(new THREE.PlaneGeometry(9,250),sidewalkMat);
+    walk.rotation.x=-Math.PI/2;
+    walk.position.set(sx,.03,0);
+    walk.receiveShadow=true;
+    world.add(walk);
+  }
+
   const concrete=mat(T.concrete,0xd8d3c8,.86,0,[4,4]);
   const wood=mat(T.wood,0xffffff,.85,0,[2,2]);
 
   // Boundary
-  wall(0,6,-110,224,12,3,concrete);
-  wall(0,6,110,224,12,3,concrete);
-  wall(-110,6,0,3,12,224,concrete);
-  wall(110,6,0,3,12,224,concrete);
+  wall(0,7,-120,244,14,3,concrete);
+  wall(0,7,120,244,14,3,concrete);
+  wall(-120,7,0,3,14,244,concrete);
+  wall(120,7,0,3,14,244,concrete);
 
-  // Main multi-level buildings
-  building(-55,-35,55,38,2);
-  building(55,-35,55,38,2);
-  building(-55,45,50,36,2);
-  building(55,45,50,36,2);
+  // Downtown buildings
+  downtownBuilding(-62,-48,58,42,3,'brick');
+  downtownBuilding(62,-48,62,46,4,'office');
+  downtownBuilding(-68,48,54,40,2,'plaster');
+  downtownBuilding(68,48,58,44,3,'office');
+  downtownBuilding(0,-92,70,42,2,'plaster');
+  downtownBuilding(0,96,76,46,3,'brick');
 
   // Central elevated plaza
-  platform(0,3.4,0,34,26,mat(T.concrete,0xd8d3c8,.86,0,[8,6]));
-  wall(0,4.4,-13,34,1,.35,concrete);
-  wall(0,4.4,13,34,1,.35,concrete);
-  wall(-17,4.4,0,.35,1,26,concrete);
-  wall(17,4.4,0,.35,1,26,concrete);
+  platform(0,3.8,0,40,30,mat(T.concrete,0xd8d3c8,.86,0,[9,7]));
+  wall(0,4.8,-15,40,1,.4,concrete);
+  wall(0,4.8,15,40,1,.4,concrete);
+  wall(-20,4.8,0,.4,1,30,concrete);
+  wall(20,4.8,0,.4,1,30,concrete);
 
-  // Ramps/stairs to central plaza
-  stairs(0,20,'north',11,.31,.85,6);
-  stairs(0,-20,'south',11,.31,.85,6);
+  stairs(0,24,'north',12,.32,.85,7);
+  stairs(0,-24,'south',12,.32,.85,7);
 
   // Catwalks
-  platform(-32,3.4,0,22,4,mat(T.metal,0x9aa5b0,.45,.65,[6,1]));
-  platform(32,3.4,0,22,4,mat(T.metal,0x9aa5b0,.45,.65,[6,1]));
-  wall(-32,4.4,-2,22,1,.2,mat(T.metal,0x7d8792,.45,.7));
-  wall(-32,4.4,2,22,1,.2,mat(T.metal,0x7d8792,.45,.7));
-  wall(32,4.4,-2,22,1,.2,mat(T.metal,0x7d8792,.45,.7));
-  wall(32,4.4,2,22,1,.2,mat(T.metal,0x7d8792,.45,.7));
+  platform(-38,3.8,0,26,4.5,mat(T.metal,0x9aa5b0,.45,.65,[7,1]));
+  platform(38,3.8,0,26,4.5,mat(T.metal,0x9aa5b0,.45,.65,[7,1]));
+  wall(-38,4.8,-2.25,26,1,.22,mat(T.metal,0x7d8792,.45,.7));
+  wall(-38,4.8,2.25,26,1,.22,mat(T.metal,0x7d8792,.45,.7));
+  wall(38,4.8,-2.25,26,1,.22,mat(T.metal,0x7d8792,.45,.7));
+  wall(38,4.8,2.25,26,1,.22,mat(T.metal,0x7d8792,.45,.7));
 
-  // Street cover
-  cover(-25,0,70,16,2.6,8,wood);
-  cover(25,0,70,16,2.6,8,wood);
-  cover(-45,0,-75,18,2.6,9,wood);
-  cover(45,0,-75,18,2.6,9,wood);
+  // Street cover and vehicles
+  cover(-30,0,75,18,2.7,9,wood);
+  cover(30,0,75,18,2.7,9,wood);
+  cover(-52,0,-82,20,2.7,10,wood);
+  cover(52,0,-82,20,2.7,10,wood);
 
-  container(-35,-85,0,0x8a4b3a);
-  container(-18,-85,0,0x2f5d8a);
-  container(35,-85,Math.PI/2,0x3f7a4d);
-  container(60,90,Math.PI/4,0x6b5a8a);
-  container(-60,90,-Math.PI/4,0x8a4b3a);
+  car(-10,65,0,0xb3392f);
+  car(10,65,0,0x2f5d8a);
+  car(-10,-70,Math.PI,0x3f7a4d);
+  car(10,-70,Math.PI,0xd8b13a);
+  car(-30,20,Math.PI/2,0x8a4b3a);
+  car(30,20,Math.PI/2,0x2f5d8a);
 
-  // Bright street lighting
-  lamp(-18,7,45,0xffe8bb,30,40);
-  lamp(18,7,45,0xffe8bb,30,40);
-  lamp(-18,7,-15,0xffe8bb,30,40);
-  lamp(18,7,-15,0xffe8bb,30,40);
-  lamp(-60,7,0,0xdfeaff,24,35);
-  lamp(60,7,0,0xdfeaff,24,35);
+  container(-45,-105,0,0x8a4b3a);
+  container(-27,-105,0,0x2f5d8a);
+  container(45,-105,Math.PI/2,0x3f7a4d);
+  container(65,105,Math.PI/4,0x6b5a8a);
+  container(-65,105,-Math.PI/4,0x8a4b3a);
 
-  // Player spawn
-  spawnPoints.unshift(new THREE.Vector3(0,0,98));
+  // Street lights
+  lamp(-20,7.5,50,0xffe8bb,32,45);
+  lamp(20,7.5,50,0xffe8bb,32,45);
+  lamp(-20,7.5,-20,0xffe8bb,32,45);
+  lamp(20,7.5,-20,0xffe8bb,32,45);
+  lamp(-70,7.5,0,0xdfeaff,26,40);
+  lamp(70,7.5,0,0xdfeaff,26,40);
+
+  spawnPoints.unshift(new THREE.Vector3(0,0,110));
 }
 
-/* ==================== LIGHTING ==================== */
-scene.add(new THREE.HemisphereLight(0xcfe4f5,0x6a6156,1.15));
+/* ==================== GLOBAL LIGHTING ==================== */
+scene.add(new THREE.HemisphereLight(0xd3e8f7,0x6f675c,1.25));
 
-const sun=new THREE.DirectionalLight(0xfff3d5,2.6);
-sun.position.set(65,95,40);
+const sun=new THREE.DirectionalLight(0xfff3d5,2.7);
+sun.position.set(70,100,45);
 sun.castShadow=true;
 sun.shadow.mapSize.set(4096,4096);
-sun.shadow.camera.left=-125;
-sun.shadow.camera.right=125;
-sun.shadow.camera.top=125;
-sun.shadow.camera.bottom=-125;
+sun.shadow.camera.left=-135;
+sun.shadow.camera.right=135;
+sun.shadow.camera.top=135;
+sun.shadow.camera.bottom=-135;
 sun.shadow.bias=-.0004;
 scene.add(sun);
 
@@ -709,7 +854,7 @@ function groundHeightAt(x,z){
     if(
       x>=p.min.x&&x<=p.max.x&&
       z>=p.min.z&&z<=p.max.z&&
-      p.max.y<=camera.position.y+1.1
+      p.max.y<=camera.position.y+1.2
     ){
       h=Math.max(h,p.max.y);
     }
@@ -722,7 +867,7 @@ function blocked(pos){
   const h=player.crouching||player.sliding?player.crouchHeight:player.standHeight;
 
   const p=new THREE.Box3(
-    new THREE.Vector3(pos.x-player.radius,pos.y-h+.2,pos.z-player.radius),
+    new THREE.Vector3(pos.x-player.radius,pos.y-h+.25,pos.z-player.radius),
     new THREE.Vector3(pos.x+player.radius,pos.y,pos.z+player.radius)
   );
 
@@ -732,10 +877,10 @@ function blocked(pos){
 function move(dt){
   const w=weapons[current];
 
-  let speed=6.1*w.moveSpeed;
-  if(keys['ShiftLeft'])speed=9.4*w.moveSpeed;
+  let speed=6.2*w.moveSpeed;
+  if(keys['ShiftLeft'])speed=9.6*w.moveSpeed;
   if(player.crouching)speed*=.48;
-  if(player.sliding)speed=14;
+  if(player.sliding)speed=14.2;
 
   const fwd=new THREE.Vector3();
   camera.getWorldDirection(fwd);
@@ -781,12 +926,12 @@ function move(dt){
   }
 
   if(keys['Space']&&player.grounded&&!player.crouching&&!player.sliding){
-    player.vel.y=8.6;
+    player.vel.y=8.8;
     player.grounded=false;
   }
 
-  camera.position.x=THREE.MathUtils.clamp(camera.position.x,-106,106);
-  camera.position.z=THREE.MathUtils.clamp(camera.position.z,-106,106);
+  camera.position.x=THREE.MathUtils.clamp(camera.position.x,-116,116);
+  camera.position.z=THREE.MathUtils.clamp(camera.position.z,-116,116);
 
   document.getElementById('stance').textContent=
     player.sliding?'SLIDING':
@@ -799,37 +944,37 @@ const weaponCatalog={
   rifle:{
     class:'ASSAULT RIFLE',name:'PHANTOM-7',
     damage:27,fireRate:.102,mag:30,reserve:120,
-    spread:.011,recoil:.026,auto:true,range:220,pellets:1,
+    spread:.011,recoil:.026,auto:true,range:230,pellets:1,
     moveSpeed:1,sound:950,price:0
   },
   smg:{
     class:'SMG',name:'HORNET-9',
     damage:19,fireRate:.072,mag:35,reserve:140,
-    spread:.019,recoil:.021,auto:true,range:110,pellets:1,
+    spread:.019,recoil:.021,auto:true,range:115,pellets:1,
     moveSpeed:1.14,sound:1250,price:450
   },
   shotgun:{
     class:'SHOTGUN',name:'BREACHER-12',
     damage:16,fireRate:.82,mag:7,reserve:35,
-    spread:.055,recoil:.075,auto:false,range:42,pellets:8,
+    spread:.055,recoil:.075,auto:false,range:45,pellets:8,
     moveSpeed:.98,sound:420,price:650
   },
   sniper:{
     class:'SNIPER',name:'LONGSHOT .338',
     damage:115,fireRate:1.45,mag:5,reserve:25,
-    spread:.0012,recoil:.11,auto:false,range:450,pellets:1,
+    spread:.0012,recoil:.11,auto:false,range:480,pellets:1,
     moveSpeed:.83,sound:520,price:1100
   },
   lmg:{
     class:'LMG',name:'BASTION-58',
     damage:25,fireRate:.093,mag:75,reserve:225,
-    spread:.021,recoil:.035,auto:true,range:190,pellets:1,
+    spread:.021,recoil:.035,auto:true,range:200,pellets:1,
     moveSpeed:.82,sound:760,price:950
   },
   pistol:{
     class:'PISTOL',name:'VIPER .45',
     damage:39,fireRate:.23,mag:12,reserve:60,
-    spread:.006,recoil:.019,auto:false,range:140,pellets:1,
+    spread:.006,recoil:.019,auto:false,range:145,pellets:1,
     moveSpeed:1.1,sound:1350,price:0
   }
 };
@@ -1260,7 +1405,7 @@ const difficultyCatalog={
 const modeCatalog={
   assault:{
     name:'Squad Assault',
-    desc:'Your AI squad pushes Vertical District while enemy bots defend. Bots spawn nearby and use line of sight.'
+    desc:'Your AI squad pushes Downtown Siege while enemy bots defend. Bots spawn near the action and use line of sight.'
   },
   deathmatch:{
     name:'Bot Deathmatch',
@@ -1282,15 +1427,19 @@ function addBot(team,opId,nearPlayer=true){
   do{
     if(nearPlayer){
       const angle=Math.random()*Math.PI*2;
-      const distance=22+Math.random()*22;
+      const distance=24+Math.random()*24;
       x=camera.position.x+Math.cos(angle)*distance;
       z=camera.position.z+Math.sin(angle)*distance;
     }else{
-      x=(Math.random()*2-1)*95;
-      z=(Math.random()*2-1)*95;
+      x=(Math.random()*2-1)*105;
+      z=(Math.random()*2-1)*105;
     }
     tries++;
-  }while(tries<30&&(blocked(new THREE.Vector3(x,2,z))||Math.hypot(x-camera.position.x,z-camera.position.z)<14));
+  }while(
+    tries<40&&
+    (blocked(new THREE.Vector3(x,2,z))||
+    Math.hypot(x-camera.position.x,z-camera.position.z)<16)
+  );
 
   s.g.position.set(x,groundHeightAt(x,z),z);
 
@@ -1301,7 +1450,7 @@ function addBot(team,opId,nearPlayer=true){
     team,
     alive:true,
     hp:team==='enemy'?D.enemyHp:110,
-    speed:team==='enemy'?3.1+Math.random()*1.3:3.4+Math.random(),
+    speed:team==='enemy'?3.2+Math.random()*1.3:3.5+Math.random(),
     nextShot:0,
     weapon:['rifle','smg','shotgun','sniper','lmg'][Math.floor(Math.random()*5)]
   });
@@ -1323,7 +1472,7 @@ function hasLineOfSight(from,to){
   dir.normalize();
 
   losRay.set(from,dir);
-  losRay.far=distance-.4;
+  losRay.far=distance-.45;
 
   return losRay.intersectObjects(solidMeshes,false).length===0;
 }
@@ -1487,10 +1636,10 @@ function botCombat(bot,dt){
   dir.normalize();
 
   const D=difficultyCatalog[save.difficulty];
-  const engageRange=bot.team==='enemy'?42:38;
+  const engageRange=bot.team==='enemy'?45:40;
   const preferredRange=
     bot.weapon==='shotgun'?10:
-    bot.weapon==='sniper'?48:19;
+    bot.weapon==='sniper'?50:20;
 
   if(!visible||dist>preferredRange){
     const next=bot.g.position.clone().add(dir.multiplyScalar(bot.speed*dt));
@@ -1571,30 +1720,36 @@ function createDuelPlayers(){
   const p2Ops=Object.keys(operatorCatalog).filter(x=>x!==save.equippedOperator);
   const p2Model=soldier(p2Ops[Math.floor(Math.random()*p2Ops.length)]);
 
-  const p1Camera=camera;
-  const p2Camera=new THREE.PerspectiveCamera(78,(innerWidth/2)/innerHeight,.08,500);
+  const p2Camera=new THREE.PerspectiveCamera(78,(innerWidth/2)/innerHeight,.08,600);
 
-  p1Model.g.position.set(-12,0,90);
-  p2Model.g.position.set(12,0,90);
+  p1Model.g.position.set(-14,0,110);
+  p2Model.g.position.set(14,0,110);
 
-  p1Camera.position.set(-12,1.72,90);
-  p2Camera.position.set(12,1.72,90);
+  camera.position.set(-14,1.72,110);
+  p2Camera.position.set(14,1.72,110);
 
   duelPlayers.push({
-    id:0,model:p1Model,camera:p1Camera,hp:100,
-    yaw:Math.PI,pitch:0,cooldown:0,
-    controls:{forward:'KeyW',back:'KeyS',left:'KeyA',right:'KeyD',fire:'Mouse'}
+    id:0,model:p1Model,camera,hp:100,
+    yaw:Math.PI,pitch:0,cooldown:0
   });
 
   duelPlayers.push({
     id:1,model:p2Model,camera:p2Camera,hp:100,
-    yaw:Math.PI,pitch:0,cooldown:0,
-    controls:{forward:'KeyI',back:'KeyK',left:'KeyJ',right:'KeyL',fire:'Enter'}
+    yaw:Math.PI,pitch:0,cooldown:0
   });
 }
 
+function duelBlocked(pos){
+  const box=new THREE.Box3(
+    new THREE.Vector3(pos.x-.42,pos.y,pos.z-.42),
+    new THREE.Vector3(pos.x+.42,pos.y+1.72,pos.z+.42)
+  );
+
+  return walls.some(w=>box.intersectsBox(w));
+}
+
 function updateDuelPlayer(p,dt){
-  const speed=8.5;
+  const speed=9;
   const fwd=new THREE.Vector3(Math.sin(p.yaw),0,Math.cos(p.yaw)).multiplyScalar(-1);
   const right=new THREE.Vector3().crossVectors(fwd,new THREE.Vector3(0,1,0)).normalize();
   const move=new THREE.Vector3();
@@ -1610,10 +1765,10 @@ function updateDuelPlayer(p,dt){
     if(duelKeys['KeyL'])move.add(right);
     if(duelKeys['KeyJ'])move.sub(right);
 
-    if(duelKeys['ArrowLeft'])p.yaw+=2.4*dt;
-    if(duelKeys['ArrowRight'])p.yaw-=2.4*dt;
-    if(duelKeys['ArrowUp'])p.pitch=Math.min(1,p.pitch+1.8*dt);
-    if(duelKeys['ArrowDown'])p.pitch=Math.max(-1,p.pitch-1.8*dt);
+    if(duelKeys['ArrowLeft'])p.yaw+=2.5*dt;
+    if(duelKeys['ArrowRight'])p.yaw-=2.5*dt;
+    if(duelKeys['ArrowUp'])p.pitch=Math.min(1,p.pitch+1.9*dt);
+    if(duelKeys['ArrowDown'])p.pitch=Math.max(-1,p.pitch-1.9*dt);
   }
 
   if(move.lengthSq()>0){
@@ -1622,10 +1777,7 @@ function updateDuelPlayer(p,dt){
     const next=p.model.g.position.clone().add(move);
     next.y=groundHeightAt(next.x,next.z);
 
-    const test=camera.position;
-    const oldRef=player.radius;
-
-    if(!duelBlocked(p,next))p.model.g.position.copy(next);
+    if(!duelBlocked(next))p.model.g.position.copy(next);
   }
 
   const ground=groundHeightAt(p.model.g.position.x,p.model.g.position.z);
@@ -1640,9 +1792,9 @@ function updateDuelPlayer(p,dt){
   p.camera.rotation.set(p.pitch,p.yaw,0,'YXZ');
   p.model.g.rotation.y=p.yaw;
 
-  // Walk animation
   const moving=move.lengthSq()>0;
   p.model.phase+=dt*(moving?9:2);
+
   const swing=moving?Math.sin(p.model.phase)*.5:Math.sin(p.model.phase)*.04;
   const counter=Math.sin(p.model.phase+Math.PI)*.5;
 
@@ -1653,7 +1805,6 @@ function updateDuelPlayer(p,dt){
   p.model.lUpper.rotation.x=counter*.45;
   p.model.rUpper.rotation.x=swing*.45;
 
-  // Shooting
   p.cooldown-=dt;
 
   const shooting=p.id===0?firing:duelKeys['Enter'];
@@ -1695,74 +1846,7 @@ function updateDuelPlayer(p,dt){
   }
 }
 
-function duelBlocked(p,pos){
-  const box=new THREE.Box3(
-    new THREE.Vector3(pos.x-.42,pos.y,pos.z-.42),
-    new THREE.Vector3(pos.x+.42,pos.y+1.72,pos.z+.42)
-  );
-
-  return walls.some(w=>box.intersectsBox(w));
-}
-
-/* ==================== LOBBY ==================== */
-let score=0,kills=0,round=1;
-let enemiesToSpawn=0,alliesToSpawn=0;
-let roundActive=false;
-let duelActive=false;
-
-function openLobby(tab='play'){
-  controls.unlock();
-
-  duelActive=false;
-  document.getElementById('splitHud').style.display='none';
-  document.getElementById('end').style.display='none';
-  document.getElementById('hud').style.display='none';
-  document.getElementById('lobby').style.display='flex';
-
-  document.querySelectorAll('.nav').forEach(n=>{
-    n.classList.toggle('active',n.dataset.tab===tab);
-  });
-
-  document.querySelectorAll('.tab').forEach(t=>{
-    t.classList.toggle('active',t.id==='tab-'+tab);
-  });
-
-  renderLobby();
-}
-
-document.querySelectorAll('.nav').forEach(n=>{
-  n.onclick=()=>openLobby(n.dataset.tab);
-});
-
-function card(title,desc,tags=[],actions=[]){
-  const c=document.createElement('div');
-  c.className='card';
-
-  c.innerHTML=`
-    <div class="row">
-      <h3>${title}</h3>
-      ${tags.map(t=>`<span class="tag ${t.type||''}">${t.text}</span>`).join('')}
-    </div>
-    <p>${desc}</p>
-  `;
-
-  const r=document.createElement('div');
-  r.className='row';
-  actions.forEach(a=>r.append(a));
-  c.append(r);
-
-  return c;
-}
-
-function btn(text,disabled,fn,ghost=false){
-  const b=document.createElement('button');
-  b.textContent=text;
-  b.disabled=disabled;
-  if(ghost)b.className='ghost';
-  b.onclick=fn;
-  return b;
-}
-
+/* ==================== LOBBY PREVIEWS ==================== */
 function operatorPreview(id){
   const o=operatorCatalog[id];
 
@@ -1856,8 +1940,111 @@ function modPreview(id){
   return c.toDataURL();
 }
 
+function drawLobbyMap(){
+  const c=document.getElementById('lobbyMap');
+  const g=c.getContext('2d');
+
+  g.fillStyle='#101a23';
+  g.fillRect(0,0,460,260);
+
+  g.fillStyle='#232f3a';
+  g.fillRect(215,0,30,260);
+
+  g.fillStyle='#394653';
+
+  const blocks=[
+    [50,35,110,70],[300,35,120,75],
+    [45,155,105,65],[305,155,115,70],
+    [190,205,80,40]
+  ];
+
+  blocks.forEach(([x,y,w,h])=>g.fillRect(x,y,w,h));
+
+  g.fillStyle='#ffcc33';
+  g.font='bold 22px Arial';
+  g.textAlign='center';
+  g.fillText('A',105,75);
+  g.fillText('B',360,78);
+  g.fillText('C',230,230);
+
+  g.fillStyle='#8dffb0';
+  g.beginPath();g.arc(230,245,7,0,Math.PI*2);g.fill();
+
+  g.fillStyle='#9fb0bd';
+  g.font='12px Arial';
+  g.textAlign='left';
+  g.fillText('DOWNTOWN SIEGE — MULTI-LEVEL',12,24);
+}
+
+/* ==================== LOBBY ==================== */
+let score=0,kills=0,round=1;
+let enemiesToSpawn=0,alliesToSpawn=0;
+let roundActive=false;
+let duelActive=false;
+
+function openLobby(tab='play'){
+  controls.unlock();
+
+  duelActive=false;
+  document.getElementById('splitHud').style.display='none';
+  document.getElementById('end').style.display='none';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('lobby').style.display='flex';
+
+  document.querySelectorAll('.nav').forEach(n=>{
+    n.classList.toggle('active',n.dataset.tab===tab);
+  });
+
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.toggle('active',t.id==='tab-'+tab);
+  });
+
+  renderLobby();
+}
+
+document.querySelectorAll('.nav').forEach(n=>{
+  n.onclick=()=>openLobby(n.dataset.tab);
+});
+
+function card(title,desc,tags=[],actions=[]){
+  const c=document.createElement('div');
+  c.className='card';
+
+  c.innerHTML=`
+    <div class="row">
+      <h3>${title}</h3>
+      ${tags.map(t=>`<span class="tag ${t.type||''}">${t.text}</span>`).join('')}
+    </div>
+    <p>${desc}</p>
+  `;
+
+  const r=document.createElement('div');
+  r.className='row';
+  actions.forEach(a=>r.append(a));
+  c.append(r);
+
+  return c;
+}
+
+function btn(text,disabled,fn,ghost=false){
+  const b=document.createElement('button');
+  b.textContent=text;
+  b.disabled=disabled;
+  if(ghost)b.className='ghost';
+  b.onclick=fn;
+  return b;
+}
+
 function renderLobby(){
   document.getElementById('lobbyCredits').textContent=save.credits;
+
+  document.getElementById('sumMode').textContent=modeCatalog[save.mode].name;
+  document.getElementById('sumDifficulty').textContent=difficultyCatalog[save.difficulty].name;
+  document.getElementById('sumPrimary').textContent=weaponCatalog[save.primary].name;
+  document.getElementById('sumSecondary').textContent=weaponCatalog[save.secondary].name;
+  document.getElementById('sumOperator').textContent=operatorCatalog[save.equippedOperator].name;
+
+  drawLobbyMap();
 
   const modeList=document.getElementById('modeList');
   modeList.innerHTML='';
@@ -2046,7 +2233,7 @@ function renderLobby(){
 function deploy(){
   clearBots();
   resetWorld();
-  buildVerticalDistrict();
+  buildDowntownSiege();
 
   score=0;kills=0;round=1;
   player.hp=player.maxHp;
@@ -2107,7 +2294,7 @@ function endMatch(win){
   controls.unlock();
 
   const D=difficultyCatalog[save.difficulty];
-  const reward=Math.round((380+round*140)*D.reward);
+  const reward=Math.round((420+round*160)*D.reward);
 
   save.credits+=reward;
   persist();
@@ -2181,12 +2368,12 @@ const minimap=document.getElementById('minimap');
 const mctx=minimap.getContext('2d');
 
 function drawMinimap(){
-  mctx.clearRect(0,0,210,210);
+  mctx.clearRect(0,0,220,220);
   mctx.fillStyle='rgba(5,9,13,.86)';
-  mctx.fillRect(0,0,210,210);
+  mctx.fillRect(0,0,220,220);
 
-  const scale=210/224;
-  const center=105;
+  const scale=220/244;
+  const center=110;
 
   mctx.fillStyle='#3b4753';
 
@@ -2207,7 +2394,7 @@ function drawMinimap(){
     mctx.arc(
       center+b.g.position.x*scale,
       center+b.g.position.z*scale,
-      3.6,0,Math.PI*2
+      3.7,0,Math.PI*2
     );
     mctx.fill();
   });
@@ -2217,7 +2404,7 @@ function drawMinimap(){
   mctx.arc(
     center+camera.position.x*scale,
     center+camera.position.z*scale,
-    4.7,0,Math.PI*2
+    4.8,0,Math.PI*2
   );
   mctx.fill();
 }
