@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>STRIKE OPS 20</title>
+<title>STRIKE OPS 21</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#070b10;color:#eef4f8;font-family:Inter,Arial,sans-serif}
 canvas{display:block}
 
 #lobby{position:fixed;inset:0;z-index:50;display:flex;pointer-events:none}
-.left{width:min(460px,46vw);padding:36px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:auto}
+.left{width:min(440px,44vw);padding:36px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:auto}
 .brand{font-size:44px;font-weight:900;letter-spacing:4px}
 .brand span{color:#ffcc33}
 .sub{color:#c8d6e0;margin-top:8px;font-size:14px}
@@ -22,23 +22,16 @@ canvas{display:block}
 .row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .choice{background:rgba(8,14,20,.72);border:1px solid rgba(255,255,255,.12);color:#c8d6e0;padding:9px 13px;border-radius:10px;cursor:pointer;font-weight:800;font-size:13px}
 .choice.active{background:#ffcc33;color:#231a03;border-color:#ffcc33}
-.deploy{margin-top:22px;width:100%;padding:18px;border:none;border-radius:14px;font-size:20px;font-weight:900;cursor:pointer;background:linear-gradient(90deg,#ffcc33,#ffb02e);color:#231a03}
-.netRow{display:flex;gap:8px;margin-top:12px}
-.netBtn{flex:1;padding:13px;border:none;border-radius:11px;font-weight:900;cursor:pointer;background:#26333f;color:#dce6ee}
-.netBtn.primary{background:#8dffb0;color:#06120b}
-#joinCode{flex:1;padding:12px;border-radius:11px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);color:#fff;font-weight:800;letter-spacing:3px;text-transform:uppercase}
-#netStatus{margin-top:10px;font-size:12px;color:#8dffb0;min-height:18px}
-.right{margin-left:auto;width:min(470px,44vw);padding:36px;display:flex;flex-direction:column;justify-content:center;gap:14px;pointer-events:auto}
+.deploy{margin-top:24px;width:100%;padding:18px;border:none;border-radius:14px;font-size:20px;font-weight:900;cursor:pointer;background:linear-gradient(90deg,#ffcc33,#ffb02e);color:#231a03}
+.right{margin-left:auto;width:min(460px,44vw);padding:36px;display:flex;flex-direction:column;justify-content:center;gap:14px;pointer-events:auto}
 .panel{background:rgba(8,14,20,.74);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:18px}
 .panel h2{font-size:17px;color:#ffcc33;margin-bottom:10px}
 .small{font-size:12px;color:#a9bcc9}
 .weaponName{font-weight:800}
 .weaponType{font-size:11px;color:#ffcc33;font-weight:800;letter-spacing:1px}
-.mods{font-size:11px;color:#8dffb0;margin-top:3px}
-.shop{max-height:250px;overflow:auto;display:flex;flex-direction:column;gap:9px}
+.shop{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:9px}
 .item{display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px}
 .buy{border:none;border-radius:7px;padding:7px 11px;font-weight:800;cursor:pointer;background:#8dffb0;color:#06120b}
-.buy:disabled{opacity:.4;cursor:not-allowed}
 .buy.ghost{background:#26333f;color:#dce6ee}
 .credits{color:#ffcc33;font-weight:900}
 
@@ -75,7 +68,7 @@ canvas{display:block}
 #damageArrow::before{content:"";position:absolute;left:50%;top:-18px;transform:translateX(-50%);border-left:20px solid transparent;border-right:20px solid transparent;border-bottom:32px solid rgba(255,60,60,.92)}
 
 #end{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(3,6,10,.88)}
-.endCard{width:min(720px,96vw);background:#0a1117;border:1px solid #26323e;border-radius:18px;padding:34px;text-align:center}
+.endCard{width:min(700px,96vw);background:#0a1117;border:1px solid #26323e;border-radius:18px;padding:34px;text-align:center}
 #podium{display:flex;justify-content:center;align-items:flex-end;gap:18px;margin:24px 0;height:200px}
 .podiumSpot{width:130px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
 .podiumName{font-weight:900;margin-bottom:6px}
@@ -91,22 +84,12 @@ canvas{display:block}
 <div id="lobby">
   <div class="left">
     <div>
-      <div class="brand">STRIKE <span>OPS 20</span></div>
-      <div class="sub">ADS • Join-code multiplayer • Real knife • Podium</div>
+      <div class="brand">STRIKE <span>OPS 21</span></div>
+      <div class="sub">ADS • Real knife • Crouch • Slide • Corner peek • Podium</div>
 
       <div class="modes" id="modeList"></div>
       <div class="row" id="difficultyList"></div>
-
-      <div class="netRow">
-        <button class="netBtn primary" id="hostBtn">HOST MATCH</button>
-      </div>
-      <div class="netRow">
-        <input id="joinCode" placeholder="ENTER CODE" maxlength="8">
-        <button class="netBtn" id="joinBtn">JOIN</button>
-      </div>
-      <div id="netStatus"></div>
-
-      <button class="deploy" id="deployBtn">DEPLOY SOLO</button>
+      <button class="deploy" id="deployBtn">DEPLOY</button>
     </div>
 
     <div class="panel">
@@ -180,23 +163,21 @@ canvas{display:block}
 <script type="importmap">
 {"imports":{
 "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-"peerjs":"https://esm.sh/peerjs@1.5.4"
+"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
 }}
 </script>
 
 <script type="module">
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
-import Peer from 'peerjs';
 
 /* Save */
 const save=Object.assign({
   credits:1500,primary:'rifle',secondary:'pistol',
   difficulty:'regular',mode:'assault',operator:'ranger'
-},JSON.parse(localStorage.getItem('strikeOps20')||'{}'));
+},JSON.parse(localStorage.getItem('strikeOps21')||'{}'));
 
-const persist=()=>localStorage.setItem('strikeOps20',JSON.stringify(save));
+const persist=()=>localStorage.setItem('strikeOps21',JSON.stringify(save));
 
 /* Renderer */
 const renderer=new THREE.WebGLRenderer({antialias:true});
@@ -243,7 +224,7 @@ const playerBody=new THREE.Object3D();
 scene.add(playerBody);
 
 const player={
-  position:new THREE.Vector3(0,0,62),
+  position:new THREE.Vector3(0,0,58),
   velocity:new THREE.Vector3(),
   hp:100,maxHp:100,armor:75,maxArmor:75,
   grounded:true,crouching:false,sliding:false,
@@ -490,7 +471,7 @@ function buildMap(){
   peekWall(-48,14,0,22,1.15,.45,concrete);
   peekWall(48,-14,0,22,1.15,.45,concrete);
 
-  /* Props */
+  /* Containers */
   function container(x,z,rotation,color){
     const c=new THREE.Mesh(new THREE.BoxGeometry(12,5,5),mat(rustTexture(),color,.62,.55));
     c.position.set(x,2.5,z);c.rotation.y=rotation;
@@ -503,6 +484,7 @@ function buildMap(){
   container(-34,-16,Math.PI/2,0x3f7a4d);
   container(34,-16,Math.PI/2,0x6b5a8a);
 
+  /* Barrels */
   function barrel(x,z,color=0x9a3b2a){
     const b=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,1.05,18),mat(rustTexture(),color,.62,.42));
     b.position.set(x,.525,z);b.castShadow=true;b.receiveShadow=true;
@@ -513,6 +495,7 @@ function buildMap(){
   barrel(26,26);barrel(25,26.9);
   barrel(-26,-26,0x2f5d8a);barrel(26,-26,0x3f7a4d);
 
+  /* Pallets */
   function palletStack(x,z){
     const woodMat=mat(T.wood,0xa98050,.9,0);
 
@@ -532,6 +515,7 @@ function buildMap(){
   palletStack(-32,32);palletStack(32,32);
   palletStack(-32,-32);palletStack(32,-32);
 
+  /* Lights */
   function lightPole(x,z){
     const pole=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,7.5,10),mat(T.metal,0x525a62,.5,.7));
     pole.position.set(x,3.75,z);pole.castShadow=true;world.add(pole);
@@ -546,6 +530,7 @@ function buildMap(){
   lightPole(-16,34);lightPole(16,34);
   lightPole(-16,-34);lightPole(16,-34);
 
+  /* Puddles */
   function puddle(x,z,size=2.4){
     const p=new THREE.Mesh(new THREE.CircleGeometry(size,26),new THREE.MeshStandardMaterial({color:0x1e2a33,roughness:.08,metalness:.55,transparent:true,opacity:.82}));
     p.rotation.x=-Math.PI/2;p.position.set(x,.012,z);world.add(p);
@@ -903,46 +888,41 @@ function updateKnife(dt){
       .add(forward.clone().multiplyScalar(1.15))
       .add(right.clone().multiplyScalar(player.lean*.68));
 
-    const targets=onlineOpponent
-      ?[onlineOpponent]
-      :bots.filter(b=>b.alive&&b.team==='enemy');
+    bots.forEach(bot=>{
+      if(!bot.alive||bot.team!=='enemy')return;
 
-    targets.forEach(target=>{
-      const center=target.g.position.clone();
-      center.y+=1.2;
+      const botCenter=bot.g.position.clone();
+      botCenter.y+=1.2;
 
-      const distance=knifePoint.distanceTo(center);
+      const distance=knifePoint.distanceTo(botCenter);
 
       if(distance<1.5){
-        const toTarget=new THREE.Vector3()
-          .subVectors(center,player.position)
+        const toBot=new THREE.Vector3()
+          .subVectors(botCenter,player.position)
           .setY(0)
           .normalize();
 
-        if(forward.dot(toTarget)>.45){
-          if(onlineOpponent){
-            sendNet({t:'hit',damage:135,weapon:'KNIFE'});
+        if(forward.dot(toBot)>.45){
+          bot.hp-=135;
+
+          const hitPoint=botCenter.clone();
+          spawnBlood(hitPoint,new THREE.Vector3(0,1,0),24);
+
+          const hitEl=document.getElementById('hit');
+          hitEl.style.opacity=1;
+          setTimeout(()=>hitEl.style.opacity=0,80);
+
+          beep(1250,.06,'sine',.06);
+
+          if(bot.hp<=0){
+            bot.alive=false;scene.remove(bot.g);
+            spawnBlood(hitPoint,new THREE.Vector3(0,1,0),34);
+
+            save.credits+=230;score+=300;kills++;player.kills++;
+            feed(`KNIFE ELIMINATED ${bot.name} +CR230`);
+            persist();updateHUD();
           }else{
-            target.hp-=135;
-
-            spawnBlood(center,new THREE.Vector3(0,1,0),24);
-
-            const hitEl=document.getElementById('hit');
-            hitEl.style.opacity=1;
-            setTimeout(()=>hitEl.style.opacity=0,80);
-
-            beep(1250,.06,'sine',.06);
-
-            if(target.hp<=0){
-              target.alive=false;scene.remove(target.g);
-              spawnBlood(center,new THREE.Vector3(0,1,0),34);
-
-              save.credits+=230;score+=300;kills++;player.kills++;
-              feed(`KNIFE ELIMINATED ${target.name} +CR230`);
-              persist();updateHUD();
-            }else{
-              feed(`KNIFE HIT ${target.name} -135`);
-            }
+            feed(`KNIFE HIT ${bot.name} -135`);
           }
         }
       }
@@ -1218,8 +1198,18 @@ function feed(text){
   setTimeout(()=>d.remove(),3500);
 }
 
-function fireHitscan(){
-  const w=weapons[current];
+function shoot(){
+  const now=performance.now()/1000,w=weapons[current];
+
+  if(reloading||knifeActive||now-lastShot<w.fireRate)return;
+
+  if(w.ammo<=0){reload();return;}
+
+  lastShot=now;w.ammo--;
+  recoil=Math.min(.25,recoil+w.recoil);
+  viewmodel.userData.flash.intensity=20;
+
+  updateHUD();gunshot(w.sound);
 
   const baseDir=new THREE.Vector3();
   camera.getWorldDirection(baseDir);
@@ -1242,13 +1232,8 @@ function fireHitscan(){
     ray.set(camera.position.clone(),dir);
     ray.camera=camera;ray.far=w.range;
 
-    let targets=[];
-
-    if(onlineOpponent){
-      targets=[onlineOpponent.g];
-    }else{
-      bots.forEach(b=>{if(b.alive&&b.team==='enemy')targets.push(b.g)});
-    }
+    const targets=[];
+    bots.forEach(b=>{if(b.alive&&b.team==='enemy')targets.push(b.g)});
 
     const hit=ray.intersectObjects(targets,true)[0];
     const start=camera.position.clone().add(dir.clone().multiplyScalar(.65));
@@ -1257,38 +1242,34 @@ function fireHitscan(){
     if(hit){
       end=hit.point.clone();
 
-      if(onlineOpponent&&hit.object.parent===onlineOpponent.g){
-        sendNet({t:'hit',damage:w.damage,weapon:w.name});
-      }else{
-        const bot=bots.find(b=>b.g===hit.object.parent);
+      const bot=bots.find(b=>b.g===hit.object.parent);
 
-        if(bot){
-          const headshot=hit.object===bot.head;
-          const damage=headshot?w.damage*3.2:w.damage;
+      if(bot){
+        const headshot=hit.object===bot.head;
+        const damage=headshot?w.damage*3.2:w.damage;
 
-          bot.hp-=damage;
+        bot.hp-=damage;
 
-          const hitEl=document.getElementById('hit');
-          hitEl.style.opacity=1;
-          setTimeout(()=>hitEl.style.opacity=0,70);
+        const hitEl=document.getElementById('hit');
+        hitEl.style.opacity=1;
+        setTimeout(()=>hitEl.style.opacity=0,70);
 
-          beep(headshot?1350:920,.045,'sine',.05);
+        beep(headshot?1350:920,.045,'sine',.05);
 
-          const normal=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):dir.clone().negate();
-          spawnBlood(hit.point,normal,headshot?22:13);
+        const normal=hit.face?hit.face.normal.clone().transformDirection(hit.object.matrixWorld):dir.clone().negate();
+        spawnBlood(hit.point,normal,headshot?22:13);
 
-          if(bot.hp<=0){
-            bot.alive=false;scene.remove(bot.g);
-            spawnBlood(hit.point,normal,30);
+        if(bot.hp<=0){
+          bot.alive=false;scene.remove(bot.g);
+          spawnBlood(hit.point,normal,30);
 
-            save.credits+=headshot?190:115;
-            score+=headshot?250:120;kills++;player.kills++;
+          save.credits+=headshot?190:115;
+          score+=headshot?250:120;kills++;player.kills++;
 
-            feed(`${headshot?'HEADSHOT':'ELIMINATED'} ${bot.name}`);
-            persist();updateHUD();
-          }else{
-            feed(`${headshot?'HEADSHOT HIT':'HIT'} ${bot.name} -${Math.round(damage)}`);
-          }
+          feed(`${headshot?'HEADSHOT':'ELIMINATED'} ${bot.name}`);
+          persist();updateHUD();
+        }else{
+          feed(`${headshot?'HEADSHOT HIT':'HIT'} ${bot.name} -${Math.round(damage)}`);
         }
       }
     }
@@ -1300,33 +1281,6 @@ function fireHitscan(){
 
     scene.add(line);
     tracers.push({line,life:.05});
-  }
-}
-
-function shoot(){
-  const now=performance.now()/1000,w=weapons[current];
-
-  if(reloading||knifeActive||now-lastShot<w.fireRate)return;
-
-  if(w.ammo<=0){reload();return;}
-
-  lastShot=now;w.ammo--;
-  recoil=Math.min(.25,recoil+w.recoil);
-  viewmodel.userData.flash.intensity=20;
-
-  updateHUD();gunshot(w.sound);
-  fireHitscan();
-
-  if(onlineOpponent){
-    const dir=new THREE.Vector3();
-    camera.getWorldDirection(dir);
-
-    sendNet({
-      t:'shot',
-      origin:camera.position.toArray(),
-      dir:dir.toArray(),
-      weapon:w.name
-    });
   }
 }
 
@@ -1363,13 +1317,7 @@ function damagePlayer(n,fromPosition,attackerName='UNKNOWN ENEMY'){
 
   if(player.hp<=0){
     feed(`KILLED BY ${attackerName}`);
-
-    if(onlineOpponent){
-      sendNet({t:'died'});
-      endOnlineMatch(false);
-    }else{
-      endMatch(false);
-    }
+    endMatch(false);
   }
 }
 
@@ -1515,11 +1463,11 @@ function showPodium(entries,title,color){
 
 /* Lobby */
 let score=0,kills=0,round=1,enemiesToSpawn=0,alliesToSpawn=0;
-let roundActive=false,onlineActive=false;
+let roundActive=false;
 
 function openLobby(){
   controls.unlock();
-  roundActive=false;onlineActive=false;
+  roundActive=false;
 
   document.getElementById('end').style.display='none';
   document.getElementById('hud').style.display='none';
@@ -1587,204 +1535,12 @@ document.getElementById('secondaryBtn').onclick=()=>{
   persist();renderLobby();
 };
 
-/* Online multiplayer */
-let peer=null,netConn=null,onlineOpponent=null,netCode='';
-let netTimer=0;
-
-function netStatus(text,color='#8dffb0'){
-  const s=document.getElementById('netStatus');
-  s.textContent=text;
-  s.style.color=color;
-}
-
-function sendNet(data){
-  if(netConn&&netConn.open){
-    netConn.send(data);
-  }
-}
-
-function createOnlineOpponent(){
-  if(onlineOpponent)return;
-
-  const model=soldier('urban');
-  model.g.position.set(0,0,50);
-  model.g.userData.setTeamTint('enemy');
-
-  model.g.add(makeNameTag('OPPONENT','#ff5d5d'));
-  model.g.add(makeTeamRing(0xff5d5d));
-
-  scene.add(model.g);
-
-  onlineOpponent={
-    ...model,
-    name:'OPPONENT',
-    hp:100,
-    targetPosition:new THREE.Vector3(0,0,50)
-  };
-}
-
-function startOnlineMatch(){
-  clearBots();
-  createOnlineOpponent();
-
-  onlineActive=true;roundActive=false;
-
-  player.hp=100;player.armor=75;
-  player.position.set(0,0,66);
-  player.velocity.set(0,0,0);
-  player.kills=0;
-
-  knifeActive=false;knifeTime=0;knifeCooldown=0;
-
-  weapons=[buildWeapon(save.primary),buildWeapon(save.secondary)];
-  current=0;makeViewmodel(save.primary);
-
-  document.getElementById('lobby').style.display='none';
-  document.getElementById('end').style.display='none';
-  document.getElementById('hud').style.display='block';
-
-  updateHUD();
-  controls.lock();
-}
-
-function endOnlineMatch(win){
-  onlineActive=false;controls.unlock();
-
-  const entries=[
-    {name:'YOU',kills:player.kills},
-    {name:'OPPONENT',kills:onlineOpponent?.kills||0}
-  ];
-
-  showPodium(entries,win?'VICTORY':'DEFEAT',win?'#8dffb0':'#ff5d5d');
-
-  document.getElementById('endText').textContent=
-    `Online duel • Join code ${netCode}`;
-
-  document.getElementById('hud').style.display='none';
-  document.getElementById('end').style.display='flex';
-}
-
-function handleNet(data){
-  if(!data)return;
-
-  if(data.t==='state'&&onlineOpponent){
-    onlineOpponent.targetPosition.set(...data.p);
-    onlineOpponent.g.position.lerp(onlineOpponent.targetPosition,.35);
-    onlineOpponent.g.rotation.y=data.yaw;
-  }
-
-  if(data.t==='shot'){
-    const origin=new THREE.Vector3(...data.origin);
-    const dir=new THREE.Vector3(...data.dir);
-
-    const start=origin.clone().add(dir.clone().multiplyScalar(.65));
-    const end=start.clone().add(dir.clone().multiplyScalar(180));
-
-    const line=new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([start,end]),
-      new THREE.LineBasicMaterial({color:0xffe38a,transparent:true,opacity:.7})
-    );
-
-    scene.add(line);
-    tracers.push({line,life:.05});
-
-    gunshot(900,.12,.14);
-  }
-
-  if(data.t==='hit'){
-    damagePlayer(data.damage,onlineOpponent?.g.position,data.weapon||'OPPONENT');
-  }
-
-  if(data.t==='died'){
-    if(onlineOpponent)onlineOpponent.kills++;
-    endOnlineMatch(true);
-  }
-}
-
-function setupConnection(connection){
-  netConn=connection;
-
-  connection.on('open',()=>{
-    netStatus('CONNECTED — MATCH STARTING');
-    startOnlineMatch();
-  });
-
-  connection.on('data',handleNet);
-
-  connection.on('close',()=>{
-    netStatus('OPPONENT DISCONNECTED','#ff5d5d');
-
-    if(onlineActive){
-      onlineActive=false;
-      endOnlineMatch(true);
-    }
-  });
-}
-
-function randomCode(){
-  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code='';
-
-  for(let i=0;i<6;i++)code+=chars[Math.floor(Math.random()*chars.length)];
-
-  return code;
-}
-
-document.getElementById('hostBtn').onclick=()=>{
-  netCode=randomCode();
-
-  netStatus('CREATING MATCH...');
-
-  peer=new Peer(`strike-ops-20-${netCode}`);
-
-  peer.on('open',()=>{
-    netStatus(`SHARE CODE: ${netCode}`,'#ffcc33');
-  });
-
-  peer.on('connection',connection=>{
-    setupConnection(connection);
-  });
-
-  peer.on('error',()=>{
-    netStatus('COULD NOT CREATE MATCH. TRY AGAIN.','#ff5d5d');
-  });
-};
-
-document.getElementById('joinBtn').onclick=()=>{
-  const code=document.getElementById('joinCode').value.trim().toUpperCase();
-
-  if(!code){
-    netStatus('ENTER A JOIN CODE','#ff5d5d');
-    return;
-  }
-
-  netCode=code;
-
-  netStatus('CONNECTING...');
-
-  peer=new Peer();
-
-  peer.on('open',()=>{
-    const connection=peer.connect(`strike-ops-20-${code}`);
-    setupConnection(connection);
-  });
-
-  peer.on('error',()=>{
-    netStatus('INVALID CODE OR HOST OFFLINE','#ff5d5d');
-  });
-};
-
 /* Match flow */
 function deploy(){
   clearBots();
 
   bloodParticles.forEach(p=>scene.remove(p.mesh));bloodParticles.length=0;
   bloodDecals.forEach(d=>scene.remove(d.mesh));bloodDecals.length=0;
-
-  if(onlineOpponent){
-    scene.remove(onlineOpponent.g);
-    onlineOpponent=null;
-  }
 
   scene.remove(world);
   world=new THREE.Group();scene.add(world);
@@ -1861,7 +1617,7 @@ document.getElementById('continueBtn').onclick=()=>{
 };
 
 controls.addEventListener('unlock',()=>{
-  if(roundActive&&player.hp>0&&!onlineActive)openLobby();
+  if(roundActive&&player.hp>0)openLobby();
 });
 
 controls.addEventListener('lock',()=>{
@@ -1879,10 +1635,8 @@ function updateHUD(){
   document.getElementById('hpf').style.width=(player.hp/player.maxHp*100)+'%';
   document.getElementById('arf').style.width=(player.armor/player.maxArmor*100)+'%';
   document.getElementById('round').textContent=round;
-  document.getElementById('enemyLeft').textContent=
-    onlineActive?(onlineOpponent?1:0):bots.filter(b=>b.alive&&b.team==='enemy').length+enemiesToSpawn;
-  document.getElementById('teamLeft').textContent=
-    onlineActive?1:bots.filter(b=>b.alive&&b.team==='ally').length+alliesToSpawn;
+  document.getElementById('enemyLeft').textContent=bots.filter(b=>b.alive&&b.team==='enemy').length+enemiesToSpawn;
+  document.getElementById('teamLeft').textContent=bots.filter(b=>b.alive&&b.team==='ally').length+alliesToSpawn;
   document.getElementById('score').textContent=score;
   document.getElementById('hudCredits').textContent=save.credits;
 }
@@ -1901,27 +1655,7 @@ function animate(){
     return;
   }
 
-  if(onlineActive&&onlineOpponent){
-    move(dt);
-
-    const moving=keys['KeyW']||keys['KeyA']||keys['KeyS']||keys['KeyD'];
-    updateViewmodel(dt,moving);
-
-    if(firing&&!knifeActive)shoot();
-    updateKnife(dt);
-
-    netTimer-=dt;
-
-    if(netTimer<=0){
-      netTimer=.05;
-
-      sendNet({
-        t:'state',
-        p:[player.position.x,player.position.y,player.position.z],
-        yaw:camera.rotation.y
-      });
-    }
-  }else if(controls.isLocked&&roundActive){
+  if(controls.isLocked&&roundActive){
     move(dt);
 
     const moving=keys['KeyW']||keys['KeyA']||keys['KeyS']||keys['KeyD'];
