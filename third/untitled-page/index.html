@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>STRIKE OPS 16</title>
+<title>STRIKE OPS 17</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#05080c;color:#eef4f8;font-family:Inter,Arial,sans-serif}
@@ -79,8 +79,8 @@ canvas{display:block}
 <div id="lobby">
   <div class="left">
     <div>
-      <div class="brand">STRIKE <span>OPS 16</span></div>
-      <div class="sub">Crouch • Slide • Corner peek • Knife melee • Two maps</div>
+      <div class="brand">STRIKE <span>OPS 17</span></div>
+      <div class="sub">Crouch • Slide • Corner peek • Knife • Bots stay in map</div>
 
       <div class="modes" id="modeList"></div>
       <div class="row" id="mapList"></div>
@@ -171,10 +171,10 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 const save=Object.assign({
   credits:1500,ownedMods:[],installedMods:{},primary:'rifle',secondary:'pistol',
   difficulty:'regular',mode:'assault',map:'foundry',operator:'ranger',ownedOperators:['ranger']
-},JSON.parse(localStorage.getItem('strikeOps16')||'{}'));
+},JSON.parse(localStorage.getItem('strikeOps17')||'{}'));
 
 save.installedMods??={};save.ownedMods??=[];save.ownedOperators??=['ranger'];
-const persist=()=>localStorage.setItem('strikeOps16',JSON.stringify(save));
+const persist=()=>localStorage.setItem('strikeOps17',JSON.stringify(save));
 
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
@@ -188,7 +188,6 @@ const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(82,innerWidth/innerHeight,.08,450);
 const controls=new PointerLockControls(camera,renderer.domElement);
 
-/* Separate player body from camera */
 const playerBody=new THREE.Object3D();
 scene.add(playerBody);
 
@@ -202,6 +201,8 @@ const player={
   standEye:1.68,crouchEye:1.05,
   radius:.42
 };
+
+const MAP_LIMIT=72;
 
 const keys={};
 
@@ -488,7 +489,6 @@ function buildFoundryYard(){
   patch(-52,24,28,22,grass);
   patch(52,-24,28,22,grass);
 
-  /* Warehouse */
   const warehouse=new THREE.Group();
 
   const floor=new THREE.Mesh(new THREE.BoxGeometry(48,.4,34),concrete);
@@ -530,7 +530,6 @@ function buildFoundryYard(){
 
   platform(0,.9,-30,24,8,concrete);
 
-  /* Central factory */
   platform(0,0,0,54,40,concrete);
 
   wall(0,2.3,-20,54,4.6,.6,brick);
@@ -833,10 +832,9 @@ function move(dt){
     player.grounded=false;
   }
 
-  player.position.x=THREE.MathUtils.clamp(player.position.x,-76,76);
-  player.position.z=THREE.MathUtils.clamp(player.position.z,-76,76);
+  player.position.x=THREE.MathUtils.clamp(player.position.x,-MAP_LIMIT,MAP_LIMIT);
+  player.position.z=THREE.MathUtils.clamp(player.position.z,-MAP_LIMIT,MAP_LIMIT);
 
-  /* Corner peek */
   player.lean=THREE.MathUtils.lerp(player.lean,player.leanTarget,Math.min(1,dt*10));
 
   const cameraPosition=player.position.clone();
@@ -862,8 +860,6 @@ camera.add(viewmodel);scene.add(camera);
 
 const gunBody=new THREE.MeshStandardMaterial({color:0x252b31,roughness:.32,metalness:.88});
 const gunAccent=new THREE.MeshStandardMaterial({color:0x414c56,roughness:.42,metalness:.75});
-const knifeBlade=new THREE.MeshStandardMaterial({color:0xd8dee4,roughness:.18,metalness:.95});
-const knifeHandle=new THREE.MeshStandardMaterial({color:0x1d2228,roughness:.65});
 
 function makeViewmodel(id){
   viewmodel.clear();
@@ -1014,7 +1010,6 @@ function updateKnife(dt){
   const progress=1-Math.max(0,knifeTime/.38);
   const swipe=Math.sin(progress*Math.PI);
 
-  /* Knife swipe animation */
   viewmodel.position.set(
     .24-swipe*.24,
     -.21+swipe*.09,
@@ -1302,9 +1297,13 @@ function addBot(team,opId,nearPlayer=true){
       x=player.position.x+Math.cos(a)*d;
       z=player.position.z+Math.sin(a)*d;
     }else{
-      x=(Math.random()*2-1)*68;
-      z=(Math.random()*2-1)*68;
+      x=(Math.random()*2-1)*58;
+      z=(Math.random()*2-1)*58;
     }
+
+    x=THREE.MathUtils.clamp(x,-58,58);
+    z=THREE.MathUtils.clamp(z,-58,58);
+
     tries++;
   }while(tries<40&&(blockedAt(new THREE.Vector3(x,0,z),1.72)||Math.hypot(x-player.position.x,z-player.position.z)<12));
 
@@ -1512,15 +1511,22 @@ function botCombat(bot,dt){
 
   if(!visible||flatDistance>preferredRange){
     const next=bot.g.position.clone().add(dir.multiplyScalar(bot.speed*dt));
+    next.x=THREE.MathUtils.clamp(next.x,-MAP_LIMIT,MAP_LIMIT);
+    next.z=THREE.MathUtils.clamp(next.z,-MAP_LIMIT,MAP_LIMIT);
     next.y=groundHeightAt(next.x,next.z);
 
     if(!blockedAt(next,1.72))bot.g.position.copy(next);
   }else if(flatDistance<preferredRange*.55){
     const next=bot.g.position.clone().sub(dir.multiplyScalar(bot.speed*.6*dt));
+    next.x=THREE.MathUtils.clamp(next.x,-MAP_LIMIT,MAP_LIMIT);
+    next.z=THREE.MathUtils.clamp(next.z,-MAP_LIMIT,MAP_LIMIT);
     next.y=groundHeightAt(next.x,next.z);
 
     if(!blockedAt(next,1.72))bot.g.position.copy(next);
   }
+
+  bot.g.position.x=THREE.MathUtils.clamp(bot.g.position.x,-MAP_LIMIT,MAP_LIMIT);
+  bot.g.position.z=THREE.MathUtils.clamp(bot.g.position.z,-MAP_LIMIT,MAP_LIMIT);
 
   const targetAngle=Math.atan2(target.x-bot.g.position.x,target.z-bot.g.position.z);
   let difference=targetAngle-bot.g.rotation.y;
