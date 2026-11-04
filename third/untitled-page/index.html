@@ -53,10 +53,19 @@ canvas{display:block}
 #crosshair i:nth-child(2){left:19px;bottom:0;width:2px;height:9px}
 #crosshair i:nth-child(3){top:19px;left:0;width:9px;height:2px}
 #crosshair i:nth-child(4){top:19px;right:0;width:9px;height:2px}
-#scope{position:absolute;inset:0;display:none;background:radial-gradient(circle at center,transparent 26%,rgba(0,0,0,.96) 30%)}
-#scope::before,#scope::after{content:"";position:absolute;background:rgba(0,0,0,.85)}
-#scope::before{left:0;right:0;top:50%;height:1px}
-#scope::after{top:0;bottom:0;left:50%;width:1px}
+
+#scope{position:absolute;inset:0;display:none}
+#scopeRing{
+  position:absolute;left:50%;top:50%;width:64vmin;height:64vmin;
+  transform:translate(-50%,-50%);border-radius:50%;
+  border:2px solid rgba(220,235,245,.8);
+  box-shadow:0 0 0 9999px rgba(0,0,0,.82),inset 0 0 40px rgba(0,0,0,.35);
+}
+#scopeLineH,#scopeLineV{position:absolute;left:50%;top:50%;background:rgba(225,240,250,.85);transform:translate(-50%,-50%)}
+#scopeLineH{width:58vmin;height:1px}
+#scopeLineV{width:1px;height:58vmin}
+#scopeDot{position:absolute;left:50%;top:50%;width:5px;height:5px;transform:translate(-50%,-50%);border-radius:50%;background:#ff5555}
+
 .box{position:absolute;background:rgba(5,9,13,.68);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 12px}
 #top{left:50%;top:14px;transform:translateX(-50%);font-size:13px}
 #cash{right:20px;top:14px;color:#ffcc33;font-weight:900}
@@ -118,7 +127,7 @@ canvas{display:block}
   <div class="left">
     <div>
       <div class="brand">STRIKE <span>OPS 20</span></div>
-      <div class="sub">50 upgrades • Grenades • Pickups • Minimap • XP • Two maps</div>
+      <div class="sub">Scopes on every weapon • Fixed hip-fire view • Grenades • Minimap • XP</div>
 
       <div class="modes" id="modeList"></div>
       <div class="row" id="mapList"></div>
@@ -187,7 +196,14 @@ canvas{display:block}
 
 <div id="hud">
   <div id="crosshair"><i></i><i></i><i></i><i></i></div>
-  <div id="scope"></div>
+
+  <div id="scope">
+    <div id="scopeRing"></div>
+    <div id="scopeLineH"></div>
+    <div id="scopeLineV"></div>
+    <div id="scopeDot"></div>
+  </div>
+
   <div id="hit"><b></b><b></b><b></b><b></b></div>
   <div id="dmg"></div>
   <div id="lowHp"></div>
@@ -310,7 +326,7 @@ const player={
 };
 
 const MAP_LIMIT=72,keys={};
-let paused=false,roundActive=false,intermission=false;
+let paused=false,roundActive=false;
 let score=0,kills=0,round=1,enemiesToSpawn=0,alliesToSpawn=0;
 let streak=0,streakTimer=0,xpGained=0;
 
@@ -318,7 +334,7 @@ addEventListener('keydown',e=>{
   keys[e.code]=true;
 
   if(e.code==='Escape'){
-    if(roundActive&&!intermission){
+    if(roundActive){
       paused=!paused;
       document.getElementById('pause').style.display=paused?'flex':'none';
       if(paused)controls.unlock();else controls.lock();
@@ -743,13 +759,15 @@ function move(dt){
   }
 
   camera.position.copy(peekPosition);
-  camera.rotation.z=player.sliding?-.08:player.lean*-.025;
 
-  const targetFov=player.aiming?(weapons[current].scope?24:52):save.fov;
-  camera.fov=THREE.MathUtils.lerp(camera.fov,targetFov,Math.min(1,dt*11));
+  /* IMPORTANT: no camera roll. This fixes the “view goes to the floor” issue. */
+  camera.rotation.z=0;
+
+  const targetFov=player.aiming?save.fov/(w.scopeZoom||1.35):save.fov;
+  camera.fov=THREE.MathUtils.lerp(camera.fov,targetFov,Math.min(1,dt*12));
   camera.updateProjectionMatrix();
 
-  const scoped=player.aiming&&weapons[current].scope;
+  const scoped=player.aiming;
   document.getElementById('scope').style.display=scoped?'block':'none';
   document.getElementById('crosshair').style.opacity=scoped?0:1;
 
@@ -819,6 +837,7 @@ function makeViewmodel(id){
   viewmodel.userData.knifeGroup=knifeGroup;
   viewmodel.userData.base=new THREE.Vector3(.24,-.21,-.45);
   viewmodel.position.copy(viewmodel.userData.base);
+  viewmodel.rotation.set(0,0,0);
 }
 
 makeViewmodel(save.primary);
@@ -832,31 +851,33 @@ function updateViewmodel(dt,moving){
 
   if(knifeActive)return;
 
-  const hip=player.aiming?new THREE.Vector3(0,-.115,-.32):new THREE.Vector3(.24,-.21,-.45);
+  const hip=player.aiming?new THREE.Vector3(0,-.095,-.27):new THREE.Vector3(.24,-.21,-.45);
   const bob=player.aiming?.004:.013;
-  const reloadDip=reloading?Math.sin(Math.min(1,(1-(reloadEnd-performance.now())/1000))*Math.PI)*.16:0;
+  const reloadDip=reloading?Math.sin(Math.min(1,(1-(reloadEnd-performance.now())/1000))*Math.PI)*.14:0;
 
   viewmodel.position.set(
     hip.x+Math.sin(walkCycle)*bob-player.lean*.04,
-    hip.y+Math.abs(Math.sin(walkCycle))*(bob*1.2)-recoil*.055-switchTimer*.25-reloadDip,
-    hip.z+recoil*.13+switchTimer*.2
+    hip.y+Math.abs(Math.sin(walkCycle))*(bob*1.2)-recoil*.05-switchTimer*.25-reloadDip,
+    hip.z+recoil*.12+switchTimer*.2
   );
 
-  viewmodel.rotation.x=recoil*(player.aiming?.07:.15)+switchTimer*.7;
+  /* Keep the weapon level when not aiming. */
+  viewmodel.rotation.set(recoil*(player.aiming?.05:.08),0,0);
+
   viewmodel.userData.flash.material.opacity=Math.max(0,viewmodel.userData.flash.material.opacity-dt*18);
 }
 
-/* Weapons */
+/* Weapons — every weapon has a scope */
 const weaponCatalog={
-  rifle:{name:'PHANTOM-7',type:'ASSAULT RIFLE',damage:34,fireRate:.105,mag:30,reserve:120,spread:.011,adsSpread:.35,recoil:.05,auto:true,range:220,pellets:1,moveSpeed:1,sound:950,scope:false},
-  smg:{name:'HORNET-9',type:'SMG',damage:24,fireRate:.075,mag:35,reserve:140,spread:.019,adsSpread:.45,recoil:.04,auto:true,range:110,pellets:1,moveSpeed:1.14,sound:1250,scope:false},
-  shotgun:{name:'BREACHER-12',type:'SHOTGUN',damage:20,fireRate:.85,mag:7,reserve:35,spread:.055,adsSpread:.6,recoil:.13,auto:false,range:42,pellets:8,moveSpeed:.98,sound:420,scope:false},
-  sniper:{name:'LONGSHOT .338',type:'SNIPER RIFLE',damage:135,fireRate:1.5,mag:5,reserve:25,spread:.0012,adsSpread:.05,recoil:.2,auto:false,range:450,pellets:1,moveSpeed:.83,sound:520,scope:true},
-  lmg:{name:'BASTION-58',type:'LMG',damage:31,fireRate:.095,mag:75,reserve:225,spread:.021,adsSpread:.5,recoil:.06,auto:true,range:190,pellets:1,moveSpeed:.82,sound:760,scope:false},
-  pistol:{name:'VIPER .45',type:'PISTOL',damage:48,fireRate:.24,mag:12,reserve:60,spread:.006,adsSpread:.35,recoil:.06,auto:false,range:145,pellets:1,moveSpeed:1.1,sound:1350,scope:false},
-  battleRifle:{name:'VANGUARD-3',type:'BATTLE RIFLE',damage:44,fireRate:.19,mag:20,reserve:80,spread:.008,adsSpread:.3,recoil:.09,auto:false,range:260,pellets:1,moveSpeed:.94,sound:720,scope:false},
-  dmr:{name:'MARKSMAN-14',type:'DMR',damage:72,fireRate:.42,mag:12,reserve:48,spread:.004,adsSpread:.15,recoil:.13,auto:false,range:340,pellets:1,moveSpeed:.9,sound:620,scope:true},
-  revolver:{name:'JUDGE .357',type:'REVOLVER',damage:78,fireRate:.55,mag:6,reserve:30,spread:.005,adsSpread:.3,recoil:.16,auto:false,range:170,pellets:1,moveSpeed:1.06,sound:480,scope:false}
+  rifle:{name:'PHANTOM-7',type:'ASSAULT RIFLE',damage:34,fireRate:.105,mag:30,reserve:120,spread:.011,adsSpread:.35,recoil:.05,auto:true,range:220,pellets:1,moveSpeed:1,sound:950,scopeZoom:1.35},
+  smg:{name:'HORNET-9',type:'SMG',damage:24,fireRate:.075,mag:35,reserve:140,spread:.019,adsSpread:.45,recoil:.04,auto:true,range:110,pellets:1,moveSpeed:1.14,sound:1250,scopeZoom:1.25},
+  shotgun:{name:'BREACHER-12',type:'SHOTGUN',damage:20,fireRate:.85,mag:7,reserve:35,spread:.055,adsSpread:.6,recoil:.13,auto:false,range:42,pellets:8,moveSpeed:.98,sound:420,scopeZoom:1.15},
+  sniper:{name:'LONGSHOT .338',type:'SNIPER RIFLE',damage:135,fireRate:1.5,mag:5,reserve:25,spread:.0012,adsSpread:.05,recoil:.2,auto:false,range:450,pellets:1,moveSpeed:.83,sound:520,scopeZoom:4},
+  lmg:{name:'BASTION-58',type:'LMG',damage:31,fireRate:.095,mag:75,reserve:225,spread:.021,adsSpread:.5,recoil:.06,auto:true,range:190,pellets:1,moveSpeed:.82,sound:760,scopeZoom:1.45},
+  pistol:{name:'VIPER .45',type:'PISTOL',damage:48,fireRate:.24,mag:12,reserve:60,spread:.006,adsSpread:.35,recoil:.06,auto:false,range:145,pellets:1,moveSpeed:1.1,sound:1350,scopeZoom:1.2},
+  battleRifle:{name:'VANGUARD-3',type:'BATTLE RIFLE',damage:44,fireRate:.19,mag:20,reserve:80,spread:.008,adsSpread:.3,recoil:.09,auto:false,range:260,pellets:1,moveSpeed:.94,sound:720,scopeZoom:1.6},
+  dmr:{name:'MARKSMAN-14',type:'DMR',damage:72,fireRate:.42,mag:12,reserve:48,spread:.004,adsSpread:.15,recoil:.13,auto:false,range:340,pellets:1,moveSpeed:.9,sound:620,scopeZoom:2.5},
+  revolver:{name:'JUDGE .357',type:'REVOLVER',damage:78,fireRate:.55,mag:6,reserve:30,spread:.005,adsSpread:.3,recoil:.16,auto:false,range:170,pellets:1,moveSpeed:1.06,sound:480,scopeZoom:1.25}
 };
 
 const modCatalog={
@@ -934,7 +955,7 @@ function gunshot(freq=900,d=.15,v=.24){
   src.start();src.stop(audio.currentTime+d);
 }
 
-/* Effects pools */
+/* Effects */
 const tracers=[],impacts=[],casings=[],explosions=[];
 const maxTracers=45,maxImpacts=70,maxCasings=40;
 
@@ -1165,7 +1186,7 @@ function addBot(team,opId,nearPlayer=true){
     ...s,team,alive:true,name,
     hp:Math.round((ally?110:D.enemyHp)*roundScale),
     speed:ally?3.5+Math.random():3+Math.random()*1.2,
-    nextShot:0,awareness:0,burst:0,reloading:false,
+    nextShot:0,awareness:0,burst:0,reloading:false,reloadTimer:0,
     weapon:['rifle','smg','shotgun','sniper','lmg','battleRifle','dmr'][Math.floor(Math.random()*7)]
   });
 
@@ -1285,7 +1306,6 @@ function fireHitscan(){
             const reward=Math.round((headshot?190:115)*D.reward);
 
             streak++;streakTimer=4;
-
             const multiplier=1+Math.min(streak-1,4)*.15;
             score+=Math.round((headshot?250:120)*multiplier);
 
@@ -1627,7 +1647,7 @@ function botCombat(bot,dt){
 
     gunshot(bot.team==='enemy'?820:900,.1,.1);
 
-    if(bot.team==='enemy'&&Math.random()<.012&&player.grenades>0){
+    if(bot.team==='enemy'&&Math.random()<.012){
       const grenadePosition=bot.g.position.clone();
       grenadePosition.y+=1.5;
       explode(grenadePosition);
@@ -2053,12 +2073,10 @@ function updateMinimap(){
   const c=minimapContext,s=minimapCanvas.width,range=75;
   c.clearRect(0,0,s,s);
 
-  const toMap=(x,z)=>{
-    return [
-      s/2+(x-player.position.x)/range*s*.48,
-      s/2+(z-player.position.z)/range*s*.48
-    ];
-  };
+  const toMap=(x,z)=>[
+    s/2+(x-player.position.x)/range*s*.48,
+    s/2+(z-player.position.z)/range*s*.48
+  ];
 
   c.fillStyle='#2a3138';
   walls.forEach(w=>{
