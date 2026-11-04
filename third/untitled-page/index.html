@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>STRIKE OPS 11 — Foundry Yard</title>
+<title>STRIKE OPS 12 — Foundry Yard</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{overflow:hidden;background:#05080c;color:#eef4f8;font-family:Inter,Arial,sans-serif}
@@ -102,8 +102,8 @@
 <div id="lobby">
   <div class="left">
     <div>
-      <div class="brand">STRIKE <span>OPS 11</span></div>
-      <div class="sub">Foundry Yard • Human soldiers • Fair AI • Local multiplayer</div>
+      <div class="brand">STRIKE <span>OPS 12</span></div>
+      <div class="sub">Foundry Yard • Human soldiers • Blood effects • Fair AI</div>
 
       <div class="modes" id="modeList"></div>
       <div class="difficulty" id="difficultyList"></div>
@@ -230,12 +230,12 @@ const defaults={
   operator:'ranger',ownedOperators:['ranger']
 };
 
-const save=Object.assign({},defaults,JSON.parse(localStorage.getItem('strikeOps11')||'{}'));
+const save=Object.assign({},defaults,JSON.parse(localStorage.getItem('strikeOps12')||'{}'));
 save.installedMods??={};
 save.ownedMods??=[];
 save.ownedOperators??=['ranger'];
 
-const persist=()=>localStorage.setItem('strikeOps11',JSON.stringify(save));
+const persist=()=>localStorage.setItem('strikeOps12',JSON.stringify(save));
 
 /* ==================== RENDERER ==================== */
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -726,12 +726,12 @@ function updateViewmodel(dt,moving){
 
 /* ==================== WEAPONS ==================== */
 const weaponCatalog={
-  rifle:{class:'ASSAULT RIFLE',name:'PHANTOM-7',damage:27,fireRate:.105,mag:30,reserve:120,spread:.011,recoil:.05,auto:true,range:220,pellets:1,moveSpeed:1,sound:950,price:0},
-  smg:{class:'SMG',name:'HORNET-9',damage:19,fireRate:.075,mag:35,reserve:140,spread:.019,recoil:.04,auto:true,range:110,pellets:1,moveSpeed:1.14,sound:1250,price:450},
-  shotgun:{class:'SHOTGUN',name:'BREACHER-12',damage:16,fireRate:.85,mag:7,reserve:35,spread:.055,recoil:.13,auto:false,range:42,pellets:8,moveSpeed:.98,sound:420,price:650},
-  sniper:{class:'SNIPER',name:'LONGSHOT .338',damage:115,fireRate:1.5,mag:5,reserve:25,spread:.0012,recoil:.2,auto:false,range:450,pellets:1,moveSpeed:.83,sound:520,price:1100},
-  lmg:{class:'LMG',name:'BASTION-58',damage:25,fireRate:.095,mag:75,reserve:225,spread:.021,recoil:.06,auto:true,range:190,pellets:1,moveSpeed:.82,sound:760,price:950},
-  pistol:{class:'PISTOL',name:'VIPER .45',damage:39,fireRate:.24,mag:12,reserve:60,spread:.006,recoil:.06,auto:false,range:145,pellets:1,moveSpeed:1.1,sound:1350,price:0}
+  rifle:{class:'ASSAULT RIFLE',name:'PHANTOM-7',damage:34,fireRate:.105,mag:30,reserve:120,spread:.011,recoil:.05,auto:true,range:220,pellets:1,moveSpeed:1,sound:950,price:0},
+  smg:{class:'SMG',name:'HORNET-9',damage:24,fireRate:.075,mag:35,reserve:140,spread:.019,recoil:.04,auto:true,range:110,pellets:1,moveSpeed:1.14,sound:1250,price:450},
+  shotgun:{class:'SHOTGUN',name:'BREACHER-12',damage:20,fireRate:.85,mag:7,reserve:35,spread:.055,recoil:.13,auto:false,range:42,pellets:8,moveSpeed:.98,sound:420,price:650},
+  sniper:{class:'SNIPER',name:'LONGSHOT .338',damage:135,fireRate:1.5,mag:5,reserve:25,spread:.0012,recoil:.2,auto:false,range:450,pellets:1,moveSpeed:.83,sound:520,price:1100},
+  lmg:{class:'LMG',name:'BASTION-58',damage:31,fireRate:.095,mag:75,reserve:225,spread:.021,recoil:.06,auto:true,range:190,pellets:1,moveSpeed:.82,sound:760,price:950},
+  pistol:{class:'PISTOL',name:'VIPER .45',damage:48,fireRate:.24,mag:12,reserve:60,spread:.006,recoil:.06,auto:false,range:145,pellets:1,moveSpeed:1.1,sound:1350,price:0}
 };
 
 const modCatalog={
@@ -844,7 +844,7 @@ function gunshot(freq=900,duration=.15,volume=.24,suppressed=false){
   boom.start();boom.stop(audio.currentTime+duration);
 }
 
-/* ==================== HUMAN SOLDIERS ==================== */
+/* ==================== OPERATORS ==================== */
 const operatorCatalog={
   ranger:{name:'Ranger',price:0,mask:'none',hair:0x2b211a,uniform:0x43503c,vest:0x2b3238,helmet:0x333b42,accent:0x6d7a55,skinTone:0xc99870},
   desert:{name:'Desert Recon',price:350,mask:'shemagh',hair:0x241a12,uniform:0xa98d5d,vest:0x5b4a31,helmet:0x8b7448,accent:0xc9ab72,skinTone:0xb87f55},
@@ -870,7 +870,6 @@ function soldier(opId){
   const g=new THREE.Group();
   let teamTint=null;
 
-  // Neck and head
   const neck=new THREE.Mesh(new THREE.CylinderGeometry(.062,.07,.11,12),skin);
   neck.position.y=1.56;g.add(neck);
 
@@ -879,7 +878,6 @@ function soldier(opId){
   head.scale.set(.9,1.12,.96);
   g.add(head);
 
-  // Face
   const nose=new THREE.Mesh(new THREE.ConeGeometry(.028,.07,10),skin);
   nose.rotation.x=Math.PI/2;
   nose.position.set(0,1.7,.145);
@@ -897,7 +895,6 @@ function soldier(opId){
   const pupilR=new THREE.Mesh(new THREE.SphereGeometry(.009,8,6),dark);
   pupilR.position.set(.052,1.735,.143);g.add(pupilR);
 
-  // Headwear / masks
   if(o.mask==='ski'){
     const mask=new THREE.Mesh(new THREE.SphereGeometry(.155,18,14),dark);
     mask.position.y=1.69;mask.scale.set(.96,1.08,.98);g.add(mask);
@@ -933,7 +930,6 @@ function soldier(opId){
     helm.position.y=1.755;g.add(helm);
   }
 
-  // Human torso
   const torso=new THREE.Mesh(new THREE.CylinderGeometry(.19,.23,.52,16),uniform);
   torso.position.y=1.24;g.add(torso);
 
@@ -956,7 +952,6 @@ function soldier(opId){
   const backpack=new THREE.Mesh(new THREE.BoxGeometry(.34,.42,.17),accent);
   backpack.position.set(0,1.29,-.21);g.add(backpack);
 
-  // Arms
   const upperArmGeo=new THREE.CapsuleGeometry(.062,.22,4,10);
   const lowerArmGeo=new THREE.CapsuleGeometry(.052,.2,4,10);
 
@@ -978,7 +973,6 @@ function soldier(opId){
   const rHand=new THREE.Mesh(new THREE.SphereGeometry(.055,10,8),skin);
   rHand.position.set(.3,.9,.08);g.add(rHand);
 
-  // Legs
   const upperLegGeo=new THREE.CapsuleGeometry(.082,.26,4,10);
   const lowerLegGeo=new THREE.CapsuleGeometry(.068,.26,4,10);
 
@@ -1023,6 +1017,9 @@ function soldier(opId){
       })
     );
 
+    // Important: UI glow must never block bullets.
+    teamTint.raycast=()=>{};
+
     teamTint.position.y=1.25;
     g.add(teamTint);
   };
@@ -1060,6 +1057,9 @@ function makeNameTag(text,color){
     })
   );
 
+  // Important: name tags must never block bullets.
+  sprite.raycast=()=>{};
+
   sprite.scale.set(1.7,.42,1);
   sprite.position.y=2.18;
 
@@ -1077,10 +1077,135 @@ function makeTeamRing(color){
     })
   );
 
+  ring.raycast=()=>{};
+
   ring.rotation.x=-Math.PI/2;
   ring.position.y=.05;
 
   return ring;
+}
+
+/* ==================== BLOOD EFFECTS ==================== */
+const bloodParticles=[];
+const bloodDecals=[];
+
+const bloodGeometry=new THREE.PlaneGeometry(.09,.09);
+
+function spawnBlood(point,normal,amount=14){
+  for(let i=0;i<amount;i++){
+    const material=new THREE.MeshBasicMaterial({
+      color:new THREE.Color().setHSL(.99,1,.22+Math.random()*.12),
+      transparent:true,
+      opacity:.95,
+      side:THREE.DoubleSide
+    });
+
+    const particle=new THREE.Mesh(bloodGeometry,material);
+
+    particle.position.copy(point);
+
+    const velocity=new THREE.Vector3(
+      (Math.random()-.5)*4.5,
+      Math.random()*3.2+.8,
+      (Math.random()-.5)*4.5
+    );
+
+    particle.rotation.set(
+      Math.random()*Math.PI,
+      Math.random()*Math.PI,
+      Math.random()*Math.PI
+    );
+
+    scene.add(particle);
+
+    bloodParticles.push({
+      mesh:particle,
+      velocity,
+      life:.7+Math.random()*.4
+    });
+  }
+
+  // Surface splatter
+  const splatterTexture=texture((g,s)=>{
+    g.clearRect(0,0,s,s);
+
+    for(let i=0;i<22;i++){
+      const x=s/2+(Math.random()-.5)*s*.55;
+      const y=s/2+(Math.random()-.5)*s*.55;
+      const r=Math.random()*13+3;
+
+      g.fillStyle=`rgba(${110+Math.random()*45},8,12,${.5+Math.random()*.4})`;
+      g.beginPath();
+      g.arc(x,y,r,0,Math.PI*2);
+      g.fill();
+    }
+  },[1,1]);
+
+  const splatter=new THREE.Mesh(
+    new THREE.PlaneGeometry(.55+Math.random()*.45,.55+Math.random()*.45),
+    new THREE.MeshBasicMaterial({
+      map:splatterTexture,
+      transparent:true,
+      opacity:.92,
+      depthWrite:false
+    })
+  );
+
+  splatter.position.copy(point).add(normal.clone().multiplyScalar(.015));
+
+  splatter.lookAt(point.clone().add(normal));
+  splatter.rotateZ(Math.random()*Math.PI*2);
+
+  splatter.raycast=()=>{};
+  scene.add(splatter);
+
+  bloodDecals.push({
+    mesh:splatter,
+    life:9+Math.random()*4
+  });
+}
+
+function updateBlood(dt){
+  for(let i=bloodParticles.length-1;i>=0;i--){
+    const p=bloodParticles[i];
+
+    p.life-=dt;
+    p.velocity.y-=12*dt;
+
+    p.mesh.position.addScaledVector(p.velocity,dt);
+    p.mesh.rotation.x+=dt*8;
+    p.mesh.rotation.y+=dt*6;
+
+    p.mesh.material.opacity=Math.max(0,p.life/.8);
+
+    if(p.mesh.position.y<.03){
+      p.mesh.position.y=.03;
+      p.velocity.set(0,0,0);
+    }
+
+    if(p.life<=0){
+      scene.remove(p.mesh);
+      p.mesh.material.dispose();
+      bloodParticles.splice(i,1);
+    }
+  }
+
+  for(let i=bloodDecals.length-1;i>=0;i--){
+    const d=bloodDecals[i];
+
+    d.life-=dt;
+
+    if(d.life<2){
+      d.mesh.material.opacity=Math.max(0,d.life/2*.92);
+    }
+
+    if(d.life<=0){
+      scene.remove(d.mesh);
+      d.mesh.material.map?.dispose();
+      d.mesh.material.dispose();
+      bloodDecals.splice(i,1);
+    }
+  }
 }
 
 /* ==================== LOBBY SCENE ==================== */
@@ -1249,6 +1374,7 @@ function shoot(){
     dir.normalize();
 
     ray.set(camera.position.clone(),dir);
+    ray.camera=camera;
     ray.far=w.range;
 
     const targets=[];
@@ -1266,7 +1392,9 @@ function shoot(){
 
       if(bot){
         const headshot=hit.object===bot.head;
-        bot.hp-=headshot?w.damage*3.2:w.damage;
+        const damage=headshot?w.damage*3.2:w.damage;
+
+        bot.hp-=damage;
 
         const hitEl=document.getElementById('hit');
         hitEl.style.opacity=1;
@@ -1274,9 +1402,17 @@ function shoot(){
 
         beep(headshot?1350:920,.045,'sine',.05);
 
+        const normal=hit.face
+          ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
+          : dir.clone().negate();
+
+        spawnBlood(hit.point,normal,headshot?22:13);
+
         if(bot.hp<=0){
           bot.alive=false;
           scene.remove(bot.g);
+
+          spawnBlood(hit.point,normal,30);
 
           const D=difficultyCatalog[save.difficulty];
           const reward=Math.round((headshot?190:115)*D.reward);
@@ -1285,10 +1421,12 @@ function shoot(){
           score+=headshot?250:120;
           kills++;
 
-          feed(`${headshot?'HEADSHOT':'ELIMINATED'} +CR${reward}`);
+          feed(`${headshot?'HEADSHOT':'ELIMINATED'} ${bot.name} +CR${reward}`);
           persist();
           updateHUD();
           beep(310,.16,'triangle',.08);
+        }else{
+          feed(`${headshot?'HEADSHOT HIT':'HIT'} ${bot.name} -${Math.round(damage)}`);
         }
       }
     }
@@ -1377,7 +1515,6 @@ function botCombat(bot,dt){
   const direction=toTarget.clone().normalize();
 
   const forward=new THREE.Vector3(0,0,1).applyQuaternion(bot.g.quaternion);
-
   const facing=forward.dot(direction)>.15;
 
   const visible=
@@ -1651,6 +1788,12 @@ document.getElementById('secondaryBtn').onclick=()=>{
 function deploy(){
   clearBots();
 
+  bloodParticles.forEach(p=>scene.remove(p.mesh));
+  bloodParticles.length=0;
+
+  bloodDecals.forEach(d=>scene.remove(d.mesh));
+  bloodDecals.length=0;
+
   scene.remove(world);
   world=new THREE.Group();
   scene.add(world);
@@ -1891,8 +2034,11 @@ function updateDuelPlayer(p,dt){
         enemy.hp-=24;
         beep(920,.045,'sine',.05);
 
+        spawnBlood(target,new THREE.Vector3(0,1,0),8);
+
         if(enemy.hp<=0){
           enemy.hp=0;
+          spawnBlood(target,new THREE.Vector3(0,1,0),22);
           setTimeout(()=>endMatch(p.id===0),1000);
         }
       }
@@ -1990,6 +2136,8 @@ function animate(){
       endMatch(false);
     }
   }
+
+  updateBlood(dt);
 
   for(let i=tracers.length-1;i>=0;i--){
     tracers[i].life-=dt;
