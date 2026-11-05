@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>STRIKE OPS 22</title>
+<title>STRIKE OPS 23</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#05080c;color:#eef4f8;font-family:Inter,Arial,sans-serif}
@@ -47,7 +47,7 @@ canvas{display:block}
 .slider{width:100%;accent-color:#ffcc33}
 
 #hud{position:fixed;inset:0;z-index:10;pointer-events:none;display:none}
-#crosshair{position:absolute;left:50%;top:50%;width:36px;height:36px;transform:translate(-50%,-50%)}
+#crosshair{position:absolute;left:50%;top:50%;width:36px;height:36px;transform:translate(-50%,-50%);transition:transform .05s linear}
 #crosshair i{position:absolute;background:#8dffb0}
 #crosshair i:nth-child(1){left:17px;top:0;width:2px;height:9px}
 #crosshair i:nth-child(2){left:17px;bottom:0;width:2px;height:9px}
@@ -55,12 +55,7 @@ canvas{display:block}
 #crosshair i:nth-child(4){top:17px;right:0;width:9px;height:2px}
 
 #scope{position:absolute;inset:0;display:none}
-#scopeRing{
-  position:absolute;left:50%;top:50%;width:64vmin;height:64vmin;
-  transform:translate(-50%,-50%);border-radius:50%;
-  border:2px solid rgba(220,235,245,.8);
-  box-shadow:0 0 0 9999px rgba(0,0,0,.82),inset 0 0 40px rgba(0,0,0,.35);
-}
+#scopeRing{position:absolute;left:50%;top:50%;width:64vmin;height:64vmin;transform:translate(-50%,-50%);border-radius:50%;border:2px solid rgba(220,235,245,.8);box-shadow:0 0 0 9999px rgba(0,0,0,.82),inset 0 0 40px rgba(0,0,0,.35)}
 #scopeLineH,#scopeLineV{position:absolute;left:50%;top:50%;background:rgba(225,240,250,.85);transform:translate(-50%,-50%)}
 #scopeLineH{width:58vmin;height:1px}
 #scopeLineV{width:1px;height:58vmin}
@@ -126,8 +121,8 @@ canvas{display:block}
 <div id="lobby">
   <div class="left">
     <div>
-      <div class="brand">STRIKE <span>OPS 22</span></div>
-      <div class="sub">Stable camera • Detailed weapons • Knife stab • Blood • Two maps • Online</div>
+      <div class="brand">STRIKE <span>OPS 23</span></div>
+      <div class="sub">Stable camera • Detailed weapons • Knife stab • Advanced blood • Online</div>
 
       <div class="modes" id="modeList"></div>
       <div class="row" id="mapList"></div>
@@ -187,8 +182,8 @@ canvas{display:block}
       <div class="small">
         WASD move • Shift sprint • Hold C crouch<br>
         Sprint + C slide • Q/E peek • V knife • G grenade<br>
-        Right mouse ADS • Space jump • R reload<br>
-        Left mouse fire • 1/2 weapons • Esc pause
+        F inspect weapon • Right mouse ADS • Space jump<br>
+        R reload • Left mouse fire • 1/2 weapons • Esc pause
       </div>
     </div>
   </div>
@@ -273,10 +268,10 @@ const save=Object.assign({
   primary:'rifle',secondary:'pistol',difficulty:'regular',
   mode:'assault',map:'foundry',operator:'ranger',ownedOperators:['ranger'],
   sensitivity:1,fov:80,blood:1
-},JSON.parse(localStorage.getItem('strikeOps22')||'{}'));
+},JSON.parse(localStorage.getItem('strikeOps23')||'{}'));
 
 save.installedMods??={};save.ownedMods??=[];save.ownedOperators??=['ranger'];
-const persist=()=>localStorage.setItem('strikeOps22',JSON.stringify(save));
+const persist=()=>localStorage.setItem('strikeOps23',JSON.stringify(save));
 
 /* Renderer */
 const renderer=new THREE.WebGLRenderer({antialias:true});
@@ -290,12 +285,8 @@ document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(save.fov,innerWidth/innerHeight,.08,450);
 camera.rotation.order='YXZ';
-
-/* Stable camera */
-let yaw=0,pitch=0,mouseLocked=false;
-let paused=false,roundActive=false,onlineActive=false;
-
 scene.add(camera);
+
 scene.add(new THREE.HemisphereLight(0xd8eaf8,0x6d655a,1.25));
 
 const sun=new THREE.DirectionalLight(0xfff3d5,2.6);
@@ -315,7 +306,10 @@ scene.add(new THREE.Mesh(
   })
 ));
 
-/* Player */
+/* Stable camera */
+let yaw=0,pitch=0,mouseLocked=false;
+let paused=false,roundActive=false,onlineActive=false;
+
 const player={
   position:new THREE.Vector3(0,0,66),velocity:new THREE.Vector3(),
   hp:100,maxHp:100,armor:75,maxArmor:75,stamina:100,maxStamina:100,
@@ -329,20 +323,16 @@ const MAP_LIMIT=72,keys={};
 let score=0,kills=0,round=1,enemiesToSpawn=0,alliesToSpawn=0;
 let streak=0,streakTimer=0,xpGained=0;
 
-/* Mouse look */
 document.addEventListener('mousemove',e=>{
   if(!mouseLocked||paused)return;
-
   yaw-=e.movementX*.0022*save.sensitivity;
   pitch-=e.movementY*.0022*save.sensitivity;
   pitch=Math.max(-1.45,Math.min(1.45,pitch));
-
   camera.rotation.set(pitch,yaw,0);
 });
 
 document.addEventListener('pointerlockchange',()=>{
   mouseLocked=document.pointerLockElement===renderer.domElement;
-
   if(!mouseLocked&&roundActive&&!onlineActive&&!paused)openLobby();
 });
 
@@ -364,10 +354,10 @@ addEventListener('keydown',e=>{
   if(e.code==='Digit1')equip(0);
   if(e.code==='Digit2')equip(1);
   if(e.code==='KeyG')throwGrenade();
+  if(e.code==='KeyF')startInspect();
 
   if(e.code==='KeyC'){
     const moving=keys['KeyW']||keys['KeyA']||keys['KeyS']||keys['KeyD'];
-
     if(keys['ShiftLeft']&&moving&&player.grounded&&!player.sliding&&!player.crouching&&player.stamina>18){
       player.sliding=true;player.slideTime=.9;
       const fwd=getForward();
@@ -375,7 +365,6 @@ addEventListener('keydown',e=>{
       player.stamina-=18;
       beep(180,.22,'sawtooth',.05);
     }
-
     player.crouching=true;
   }
 
@@ -404,13 +393,8 @@ addEventListener('mouseup',e=>{
 
 addEventListener('contextmenu',e=>e.preventDefault());
 
-function getForward(){
-  return new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
-}
-
-function getRight(){
-  return new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
-}
+function getForward(){return new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));}
+function getRight(){return new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));}
 
 /* Textures */
 function texture(draw,repeat=[1,1]){
@@ -796,8 +780,6 @@ function move(dt){
   }
 
   camera.position.copy(peekPosition);
-
-  /* The camera rotation is always exactly yaw + pitch. Zero roll. */
   camera.rotation.set(pitch,yaw,0);
 
   const targetFov=player.aiming?save.fov/(weapons[current].scopeZoom||1.35):save.fov;
@@ -918,14 +900,43 @@ function makeViewmodel(id){
 makeViewmodel(save.primary);
 
 let recoil=0,walkCycle=0;
+let inspecting=false,inspectTime=0;
 
-function updateViewmodel(dt,moving){
+function startInspect(){
+  if(inspecting||knifeActive||reloading)return;
+  inspecting=true;inspectTime=1.1;
+  beep(540,.06,'triangle',.04);
+}
+
+function updateViewmodel(dt,moving,sprinting){
   walkCycle+=dt*(moving?10:2.5);
   recoil=Math.max(0,recoil-dt*5);
 
   if(knifeActive)return;
 
-  const hip=player.aiming?new THREE.Vector3(0,-.085,-.25):new THREE.Vector3(.24,-.21,-.45);
+  let hip;
+
+  if(inspecting){
+    inspectTime-=dt;
+    const p=1-Math.max(0,inspectTime/1.1);
+    const wave=Math.sin(p*Math.PI);
+
+    /* Position-only inspection: no camera or weapon rotation */
+    hip=new THREE.Vector3(
+      .24-wave*.16,
+      -.21+wave*.06,
+      -.45+wave*.14
+    );
+
+    if(inspectTime<=0)inspecting=false;
+  }else if(sprinting&&!player.aiming){
+    hip=new THREE.Vector3(.3,-.3,-.38);
+  }else if(player.aiming){
+    hip=new THREE.Vector3(0,-.085,-.25);
+  }else{
+    hip=new THREE.Vector3(.24,-.21,-.45);
+  }
+
   const bob=player.aiming?.0025:.012;
 
   viewmodel.position.set(
@@ -1031,10 +1042,10 @@ function gunshot(freq=900,d=.15,v=.22){
   src.start();src.stop(audio.currentTime+d);
 }
 
-/* Blood */
-const bloodParticles=[],bloodDecals=[];
+/* Blood system */
+const bloodParticles=[],bloodDecals=[],bloodPools=[];
 const bloodGeometry=new THREE.PlaneGeometry(.09,.09);
-const maxBloodParticles=180,maxBloodDecals=32;
+const maxBloodParticles=180,maxBloodDecals=32,maxBloodPools=18;
 
 function spawnBlood(point,direction,amount=16,big=false){
   const count=Math.round(amount*save.blood);
@@ -1084,6 +1095,37 @@ function spawnBlood(point,direction,amount=16,big=false){
   if(bloodDecals.length>maxBloodDecals){
     bloodDecals.splice(0,bloodDecals.length-maxBloodDecals).forEach(d=>scene.remove(d.mesh));
   }
+
+  /* Wall drip */
+  if(!big&&Math.random()<.35){
+    for(let i=0;i<4;i++){
+      const drip=new THREE.Mesh(bloodGeometry,new THREE.MeshBasicMaterial({color:0x7a0d16,transparent:true,opacity:.85,side:THREE.DoubleSide}));
+      drip.position.copy(point).add(normal.clone().multiplyScalar(.015));
+      drip.position.y-=Math.random()*.25;
+      scene.add(drip);
+      bloodParticles.push({mesh:drip,velocity:new THREE.Vector3(0,-.7-Math.random(),0),life:1+Math.random()});
+    }
+  }
+}
+
+function spawnBloodPool(position,size=1){
+  if(save.blood<=0)return;
+
+  const pool=new THREE.Mesh(
+    new THREE.CircleGeometry(size,24),
+    new THREE.MeshBasicMaterial({map:bloodTexture(),transparent:true,opacity:.9,depthWrite:false})
+  );
+
+  pool.rotation.x=-Math.PI/2;
+  pool.position.set(position.x,.025,position.z);
+  pool.raycast=()=>{};
+
+  scene.add(pool);
+  bloodPools.push({mesh:pool,life:20,targetSize:size*(1+Math.random()*.4)});
+
+  if(bloodPools.length>maxBloodPools){
+    bloodPools.splice(0,bloodPools.length-maxBloodPools).forEach(p=>scene.remove(p.mesh));
+  }
 }
 
 function updateBlood(dt){
@@ -1103,6 +1145,19 @@ function updateBlood(dt){
     d.life-=dt;
     if(d.life<2)d.mesh.material.opacity=Math.max(0,d.life/2*.92);
     if(d.life<=0){scene.remove(d.mesh);bloodDecals.splice(i,1);}
+  }
+
+  for(let i=bloodPools.length-1;i>=0;i--){
+    const p=bloodPools[i];
+    p.life-=dt;
+
+    if(p.mesh.scale.x<p.targetSize){
+      const next=p.mesh.scale.x+dt*.8;
+      p.mesh.scale.setScalar(Math.min(next,p.targetSize));
+    }
+
+    if(p.life<3)p.mesh.material.opacity=Math.max(0,p.life/3*.9);
+    if(p.life<=0){scene.remove(p.mesh);bloodPools.splice(i,1);}
   }
 }
 
@@ -1183,9 +1238,8 @@ function soldier(opId){
   const vest=new THREE.MeshStandardMaterial({color:o.vest,roughness:.58,metalness:.18});
   const helmet=new THREE.MeshStandardMaterial({color:o.helmet,roughness:.44,metalness:.24});
   const skin=new THREE.MeshStandardMaterial({color:o.skin,roughness:.66});
-  const hair=new THREE.MeshStandardMaterial({color:o.hair,roughness:.92});
 
-  const g=new THREE.Group();let tint=null;
+  const g=new THREE.Group();
 
   const head=new THREE.Mesh(new THREE.SphereGeometry(.145,24,18),skin);
   head.position.y=1.71;head.scale.set(.9,1.12,.96);g.add(head);
@@ -1221,14 +1275,12 @@ function soldier(opId){
   [head,torso,chest,hips,lUpper,rUpper,lLower,rLower,lUpperLeg,rUpperLeg,lLowerLeg,rLowerLeg].forEach(p=>p.castShadow=true);
 
   g.userData.setTeamTint=team=>{
-    if(tint){g.remove(tint);tint=null;}
-    if(!team)return;
-    tint=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12),
+    const tint=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12),
       new THREE.MeshBasicMaterial({color:team==='ally'?0x8dffb0:0xff5d5d,transparent:true,opacity:.12,depthWrite:false}));
     tint.raycast=()=>{};tint.position.y=1.25;g.add(tint);
   };
 
-  return {g,head,lUpper,lLower,rUpper,rLower,lUpperLeg,lLowerLeg,rUpperLeg,rLowerLeg,phase:Math.random()*10,kills:0};
+  return {g,head,lUpper,lLower,rUpper,rLower,lUpperLeg,lLowerLeg,rUpperLeg,rLowerLeg,phase:Math.random()*10,kills:0,flinch:0};
 }
 
 function makeNameTag(text,color){
@@ -1392,6 +1444,7 @@ function fireHitscan(){
           const damage=headshot?w.damage*3.2:w.damage;
 
           bot.hp-=damage;
+          bot.flinch=.35;
 
           if(headshot)player.headshots++;
 
@@ -1409,6 +1462,7 @@ function fireHitscan(){
           if(bot.hp<=0){
             bot.alive=false;scene.remove(bot.g);
             spawnBlood(hit.point,dir.clone(),34,true);
+            spawnBloodPool(bot.g.position,1.1);
 
             const D=difficultyCatalog[save.difficulty];
             const reward=Math.round((headshot?190:115)*D.reward);
@@ -1538,10 +1592,12 @@ function explode(position){
     if(distance<7.5){
       const dir=new THREE.Vector3().subVectors(bot.g.position,position).normalize();
       bot.hp-=Math.max(0,120-distance*14);
+      bot.flinch=.5;
 
       if(bot.hp<=0){
         bot.alive=false;scene.remove(bot.g);
         spawnBlood(bot.g.position.clone().setY(1.2),dir,34,true);
+        spawnBloodPool(bot.g.position,1.3);
 
         score+=180;kills++;player.kills++;addXp(80);
         save.credits+=150;
@@ -1628,12 +1684,15 @@ function updateKnife(dt){
         spawnBlood(center,forward.clone(),24);
       }else{
         target.hp-=damage;
+        target.flinch=.45;
+
         beep(1250,.06,'sine',.06);
         spawnBlood(center,forward.clone(),facingAway?32:22,facingAway);
 
         if(target.hp<=0){
           target.alive=false;scene.remove(target.g);
           spawnBlood(center,forward.clone(),38,true);
+          spawnBloodPool(target.g.position,1.3);
 
           const D=difficultyCatalog[save.difficulty];
           const reward=Math.round(230*D.reward);
@@ -1656,6 +1715,8 @@ function updateKnife(dt){
 
 /* Bot AI */
 function botCombat(bot,dt){
+  bot.flinch=Math.max(0,bot.flinch-dt);
+
   const enemyTargets=bots.filter(b=>b.alive&&b.team!==bot.team).map(b=>b.g.position);
   const targets=bot.team==='enemy'?[player.position,...enemyTargets]:enemyTargets;
   if(!targets.length)return;
@@ -1724,13 +1785,19 @@ function botCombat(bot,dt){
   const moving=!visible||flatDistance>preferredRange;
   bot.phase+=dt*(moving?8.5:2.2);
 
+  const flinchOffset=bot.flinch>0?Math.sin(bot.flinch*22)*.18:0;
+
   const swing=moving?Math.sin(bot.phase)*.48:Math.sin(bot.phase)*.04;
   const counter=Math.sin(bot.phase+Math.PI)*.48;
 
-  bot.lUpperLeg.rotation.x=swing;bot.rUpperLeg.rotation.x=counter;
-  bot.lLowerLeg.rotation.x=Math.max(0,-swing*.75);bot.rLowerLeg.rotation.x=Math.max(0,-counter*.75);
-  bot.lUpper.rotation.x=counter*.45;bot.rUpper.rotation.x=swing*.45;
-  bot.lLower.rotation.x=-.4;bot.rLower.rotation.x=-.4;
+  bot.lUpperLeg.rotation.x=swing+flinchOffset;
+  bot.rUpperLeg.rotation.x=counter-flinchOffset;
+  bot.lLowerLeg.rotation.x=Math.max(0,-swing*.75);
+  bot.rLowerLeg.rotation.x=Math.max(0,-counter*.75);
+  bot.lUpper.rotation.x=counter*.45-flinchOffset;
+  bot.rUpper.rotation.x=swing*.45+flinchOffset;
+  bot.lLower.rotation.x=-.4;
+  bot.rLower.rotation.x=-.4;
 
   const now=performance.now()/1000;
   const D=difficultyCatalog[save.difficulty];
@@ -1757,8 +1824,11 @@ function botCombat(bot,dt){
         const enemy=bots.find(b=>b.alive&&b.team==='enemy'&&b.g.position.distanceTo(bot.g.position)<30);
         if(enemy){
           enemy.hp-=22+Math.random()*14;
+          enemy.flinch=.35;
+
           if(enemy.hp<=0){
             enemy.alive=false;scene.remove(enemy.g);bot.kills++;
+            spawnBloodPool(enemy.g.position,1.1);
             feed(`${bot.name} ELIMINATION +CR45`);
             save.credits+=45;addXp(25);persist();updateHUD();
           }
@@ -1768,7 +1838,7 @@ function botCombat(bot,dt){
 
     gunshot(bot.team==='enemy'?820:900,.1,.1);
 
-    if(bot.team==='enemy'&&Math.random()<.012){
+    if(bot.team==='enemy'&&Math.random()<.02){
       const grenadePosition=bot.g.position.clone();
       grenadePosition.y+=1.5;
       explode(grenadePosition);
@@ -1883,7 +1953,7 @@ function setupConnection(connection){
 document.getElementById('hostBtn').onclick=()=>{
   netCode=randomCode();netStatus('CREATING MATCH...');
 
-  peer=new Peer(`strike-ops-22-${netCode}`);
+  peer=new Peer(`strike-ops-23-${netCode}`);
   peer.on('open',()=>netStatus(`SHARE CODE: ${netCode}`,'#ffcc33'));
   peer.on('connection',setupConnection);
   peer.on('error',()=>netStatus('COULD NOT CREATE MATCH. TRY AGAIN.','#ff5d5d'));
@@ -1897,7 +1967,7 @@ document.getElementById('joinBtn').onclick=()=>{
   netCode=code;netStatus('CONNECTING...');
   peer=new Peer();
 
-  peer.on('open',()=>setupConnection(peer.connect(`strike-ops-22-${code}`)));
+  peer.on('open',()=>setupConnection(peer.connect(`strike-ops-23-${code}`)));
   peer.on('error',()=>netStatus('INVALID CODE OR HOST OFFLINE','#ff5d5d'));
 };
 
@@ -2113,6 +2183,7 @@ function deploy(){
 
   bloodParticles.forEach(p=>scene.remove(p.mesh));bloodParticles.length=0;
   bloodDecals.forEach(d=>scene.remove(d.mesh));bloodDecals.length=0;
+  bloodPools.forEach(p=>scene.remove(p.mesh));bloodPools.length=0;
   grenades.forEach(g=>scene.remove(g.mesh));grenades.length=0;
 
   if(onlineOpponent){scene.remove(onlineOpponent.g);onlineOpponent=null;}
@@ -2135,6 +2206,7 @@ function deploy(){
   yaw=0;pitch=0;camera.rotation.set(0,0,0);
 
   knifeActive=false;knifeTime=0;knifeCooldown=0;knifeHitDone=false;
+  inspecting=false;inspectTime=0;
 
   weapons=[buildWeapon(save.primary),buildWeapon(save.secondary)];
   current=0;makeViewmodel(save.primary);
@@ -2267,6 +2339,24 @@ function updateCompass(){
     directions[Math.round(angle/45)%8]+' • '+Math.round(angle)+'°';
 }
 
+/* Dynamic crosshair */
+function updateCrosshair(){
+  const w=weapons[current];
+
+  let spread=w.spread;
+
+  if(player.aiming)spread*=w.adsSpread;
+  if(player.crouching)spread*=.55;
+  if(player.sliding)spread*=2.6;
+  if(!player.grounded)spread*=3;
+  if(Math.abs(player.lean)>.4)spread*=1.15;
+
+  const scale=1+spread*28;
+
+  document.getElementById('crosshair').style.transform=
+    `translate(-50%,-50%) scale(${scale})`;
+}
+
 /* Loop */
 const clock=new THREE.Clock();
 
@@ -2283,7 +2373,10 @@ function animate(){
       move(dt);
 
       const moving=keys['KeyW']||keys['KeyA']||keys['KeyS']||keys['KeyD'];
-      updateViewmodel(dt,moving);
+      const sprinting=keys['ShiftLeft']&&moving&&player.stamina>2&&!player.crouching&&!player.aiming;
+
+      updateViewmodel(dt,moving,sprinting);
+      updateCrosshair();
 
       if(firing&&!knifeActive)shoot();
       updateKnife(dt);updateGrenades(dt);
@@ -2302,7 +2395,10 @@ function animate(){
       move(dt);
 
       const moving=keys['KeyW']||keys['KeyA']||keys['KeyS']||keys['KeyD'];
-      updateViewmodel(dt,moving);
+      const sprinting=keys['ShiftLeft']&&moving&&player.stamina>2&&!player.crouching&&!player.aiming;
+
+      updateViewmodel(dt,moving,sprinting);
+      updateCrosshair();
 
       if(firing&&!knifeActive)shoot();
       updateKnife(dt);updateGrenades(dt);
