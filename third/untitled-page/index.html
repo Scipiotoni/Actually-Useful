@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>STRIKE OPS 20</title>
+<title>STRIKE OPS 21</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#05080c;color:#eef4f8;font-family:Inter,Arial,sans-serif}
@@ -93,7 +93,7 @@ canvas{display:block}
 <div id="lobby">
   <div class="left">
     <div>
-      <div class="brand">STRIKE <span>OPS 20</span></div>
+      <div class="brand">STRIKE <span>OPS 21</span></div>
       <div class="sub">New stable camera • Scopes on every weapon • Clean ADS</div>
 
       <div class="modes" id="difficultyList"></div>
@@ -194,9 +194,9 @@ import * as THREE from 'three';
 const save=Object.assign({
   credits:1500,primary:'rifle',secondary:'pistol',
   difficulty:'regular',sensitivity:1,fov:80
-},JSON.parse(localStorage.getItem('strikeOps20New')||'{}'));
+},JSON.parse(localStorage.getItem('strikeOps21')||'{}'));
 
-const persist=()=>localStorage.setItem('strikeOps20New',JSON.stringify(save));
+const persist=()=>localStorage.setItem('strikeOps21',JSON.stringify(save));
 
 /* Renderer */
 const renderer=new THREE.WebGLRenderer({antialias:true});
@@ -210,7 +210,7 @@ document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(save.fov,innerWidth/innerHeight,.08,450);
 
-/* New stable camera system */
+/* Stable camera system */
 camera.rotation.order='YXZ';
 let yaw=0,pitch=0;
 let mouseLocked=false;
@@ -247,9 +247,9 @@ const player={
 
 const MAP_LIMIT=68,keys={};
 let roundActive=false,score=0,kills=0,round=1;
-let enemiesToSpawn=0,enemyTarget=4;
+let enemiesToSpawn=0;
 
-/* Mouse look — direct and stable */
+/* Mouse look */
 document.addEventListener('mousemove',e=>{
   if(!mouseLocked)return;
 
@@ -258,7 +258,6 @@ document.addEventListener('mousemove',e=>{
 
   pitch=Math.max(-1.45,Math.min(1.45,pitch));
 
-  /* Yaw then pitch. Zero roll means the view can never twist. */
   camera.rotation.set(pitch,yaw,0);
 });
 
@@ -530,7 +529,6 @@ function move(dt){
   player.position.x=THREE.MathUtils.clamp(player.position.x,-MAP_LIMIT,MAP_LIMIT);
   player.position.z=THREE.MathUtils.clamp(player.position.z,-MAP_LIMIT,MAP_LIMIT);
 
-  /* Camera position and rotation are fully controlled here. */
   camera.position.set(
     player.position.x,
     player.position.y+eyeHeight(),
@@ -559,7 +557,7 @@ function move(dt){
     keys['ShiftLeft']?'SPRINTING':'STANDING';
 }
 
-/* Viewmodel — fixed forward, no twisting */
+/* Viewmodel */
 const viewmodel=new THREE.Group();
 camera.add(viewmodel);
 
@@ -626,13 +624,12 @@ function updateViewmodel(dt,moving){
     hip.z+recoil*.1
   );
 
-  /* Always locked straight forward. */
   viewmodel.rotation.set(0,0,0);
 
   viewmodel.userData.flash.material.opacity=Math.max(0,viewmodel.userData.flash.material.opacity-dt*18);
 }
 
-/* Weapons — every weapon has a scope */
+/* Weapons */
 const weaponCatalog={
   rifle:{name:'PHANTOM-7',type:'ASSAULT RIFLE',damage:34,fireRate:.105,mag:30,reserve:120,spread:.011,adsSpread:.35,recoil:.05,auto:true,range:220,pellets:1,moveSpeed:1,sound:950,scopeZoom:1.35},
   smg:{name:'HORNET-9',type:'SMG',damage:24,fireRate:.075,mag:35,reserve:140,spread:.019,adsSpread:.45,recoil:.04,auto:true,range:110,pellets:1,moveSpeed:1.14,sound:1250,scopeZoom:1.25},
@@ -1041,7 +1038,7 @@ function updateGrenades(dt){
   }
 }
 
-/* Knife — simple forward stab */
+/* Knife */
 function startKnife(){
   if(knifeActive||knifeCooldown>0||reloading)return;
 
@@ -1285,7 +1282,7 @@ function deploy(){
   roundActive=true;
 
   const D=difficultyCatalog[save.difficulty];
-  enemiesToSpawn=D.count;enemyTarget=D.count;
+  enemiesToSpawn=D.count;
 
   for(let i=0;i<D.count;i++)addBot();
 
@@ -1300,7 +1297,7 @@ function endMatch(win){
   document.exitPointerLock?.();
 
   const D=difficultyCatalog[save.difficulty];
-  const reward=Math.round((450+round*180));
+  const reward=Math.round(450+round*180);
   save.credits+=reward;persist();
 
   const entries=[
