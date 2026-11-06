@@ -13,77 +13,74 @@ canvas{display:block}
   radial-gradient(circle at 80% 80%,rgba(60,40,20,.25),transparent 60%),
   #06090d}
 .lobbyGrid{display:flex;width:100%;pointer-events:auto}
-.lobbyLeft{width:min(520px,48vw);padding:36px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid rgba(255,255,255,.06)}
-.lobbyRight{flex:1;padding:36px;display:flex;flex-direction:column;gap:16px;overflow:auto}
-.brand{font-size:46px;font-weight:900;letter-spacing:5px;line-height:1}
+.lobbyLeft{width:min(520px,48vw);padding:28px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:100vh;border-right:1px solid rgba(255,255,255,.06)}
+.lobbyRight{flex:1;padding:28px;display:flex;flex-direction:column;gap:14px;overflow:auto;max-height:100vh}
+.brand{font-size:44px;font-weight:900;letter-spacing:5px;line-height:1}
 .brand span{color:#ffcc33}
-.tagline{margin-top:10px;font-size:13px;color:#8fa3b0;letter-spacing:1px}
-.sectionLabel{font-size:11px;font-weight:800;letter-spacing:2px;color:#6f8290;margin:22px 0 8px}
-.briefing{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-left:3px solid #ffcc33;border-radius:10px;padding:14px 16px;font-size:13px;color:#b8c6d0;line-height:1.6}
+.tagline{margin-top:8px;font-size:13px;color:#8fa3b0;letter-spacing:1px}
+.sectionLabel{font-size:11px;font-weight:800;letter-spacing:2px;color:#6f8290;margin:16px 0 8px}
+.briefing{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-left:3px solid #ffcc33;border-radius:10px;padding:12px 14px;font-size:13px;color:#b8c6d0;line-height:1.6}
 .briefing b{color:#ffcc33}
 .modeGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.modeCard{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;cursor:pointer;transition:.15s}
-.modeCard:hover{border-color:rgba(255,204,51,.4)}
+.modeCard{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;cursor:pointer}
 .modeCard.active{border-color:#ffcc33;background:rgba(255,204,51,.1)}
-.modeCard h3{font-size:14px;color:#eef4f8}
+.modeCard h3{font-size:14px}
 .modeCard p{font-size:11px;color:#8fa3b0;margin-top:4px}
-.mapGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:180px;overflow:auto;padding-right:4px}
-.mapCard{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;cursor:pointer;font-size:12px;font-weight:700;color:#b8c6d0;text-align:center;transition:.15s}
-.mapCard:hover{border-color:rgba(255,204,51,.4)}
+.mapGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:150px;overflow:auto}
+.mapCard{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px;cursor:pointer;font-size:11px;font-weight:700;color:#b8c6d0;text-align:center}
 .mapCard.active{border-color:#ffcc33;background:rgba(255,204,51,.12);color:#ffcc33}
 .diffRow{display:flex;gap:8px;flex-wrap:wrap}
-.diffBtn{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);color:#b8c6d0;padding:9px 16px;border-radius:9px;cursor:pointer;font-weight:800;font-size:12px}
+.diffBtn{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);color:#b8c6d0;padding:8px 14px;border-radius:9px;cursor:pointer;font-weight:800;font-size:12px}
 .diffBtn.active{background:#ffcc33;color:#231a03;border-color:#ffcc33}
-.netPanel{margin-top:18px;background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px}
-.netRow{display:flex;gap:8px;margin-top:10px}
-.netBtn{flex:1;padding:12px;border:none;border-radius:9px;font-weight:900;cursor:pointer;background:#1e2a34;color:#dce6ee;font-size:13px}
+.netPanel{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}
+.netRow{display:flex;gap:8px;margin-top:8px}
+.netBtn{flex:1;padding:11px;border:none;border-radius:9px;font-weight:900;cursor:pointer;background:#1e2a34;color:#dce6ee;font-size:13px}
 .netBtn.primary{background:#8dffb0;color:#06120b}
-#joinCode{flex:1;padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.4);color:#fff;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-size:13px}
-#netStatus{margin-top:8px;font-size:12px;color:#8dffb0;min-height:16px}
-.deploy{margin-top:22px;width:100%;padding:18px;border:none;border-radius:12px;font-size:19px;font-weight:900;cursor:pointer;background:linear-gradient(90deg,#ffcc33,#e8a020);color:#1a1200;letter-spacing:2px;box-shadow:0 4px 20px rgba(255,180,40,.25)}
+#joinCode{flex:1;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.4);color:#fff;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-size:13px}
+#netStatus{margin-top:6px;font-size:12px;color:#8dffb0;min-height:16px}
+.deploy{margin-top:14px;width:100%;padding:16px;border:none;border-radius:12px;font-size:18px;font-weight:900;cursor:pointer;background:linear-gradient(90deg,#ffcc33,#e8a020);color:#1a1200;letter-spacing:2px;position:sticky;bottom:0;z-index:5;box-shadow:0 4px 20px rgba(255,180,40,.25)}
 .deploy:hover{filter:brightness(1.1)}
-.playerCard{display:flex;align-items:center;gap:14px;background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px}
-.avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#3a4a3a,#2a3428);display:flex;align-items:center;justify-content:center;font-size:22px}
+.playerCard{display:flex;align-items:center;gap:14px;background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}
+.avatar{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#3a4a3a,#2a3428);display:flex;align-items:center;justify-content:center;font-size:22px}
 .playerInfo{flex:1}
-.playerName{font-weight:900;font-size:16px}
+.playerName{font-weight:900;font-size:15px}
 .playerStats{font-size:11px;color:#8fa3b0;margin-top:3px}
-.xpBar{height:5px;background:rgba(255,255,255,.1);border-radius:4px;margin-top:7px;overflow:hidden}
+.xpBar{height:5px;background:rgba(255,255,255,.1);border-radius:4px;margin-top:6px;overflow:hidden}
 .xpFill{height:100%;background:#ffcc33;border-radius:4px}
-.loadoutCard{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px}
-.loadoutHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.loadoutHeader h2{font-size:15px;color:#ffcc33;letter-spacing:1px}
-.weaponRow{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:9px;padding:11px 13px;margin-bottom:8px}
-.weaponRow .weaponName{font-weight:800;font-size:14px}
+.loadoutCard{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}
+.loadoutHeader{margin-bottom:10px}
+.loadoutHeader h2{font-size:14px;color:#ffcc33;letter-spacing:1px}
+.weaponRow{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:9px;padding:10px 12px;margin-bottom:7px}
+.weaponRow .weaponName{font-weight:800;font-size:13px}
 .weaponRow .weaponType{font-size:10px;color:#ffcc33;font-weight:800;letter-spacing:1px}
 .weaponRow .mods{font-size:10px;color:#8dffb0;margin-top:2px}
-.changeBtn{background:#1e2a34;border:1px solid rgba(255,255,255,.12);color:#dce6ee;padding:7px 12px;border-radius:7px;font-weight:800;font-size:11px;cursor:pointer}
-.changeBtn:hover{background:#2a3844}
-.tabs{display:flex;gap:6px;margin-bottom:12px}
-.tabBtn{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#b8c6d0;padding:9px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer}
+.changeBtn{background:#1e2a34;border:1px solid rgba(255,255,255,.12);color:#dce6ee;padding:6px 11px;border-radius:7px;font-weight:800;font-size:11px;cursor:pointer}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabBtn{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#b8c6d0;padding:8px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer}
 .tabBtn.active{background:#ffcc33;color:#231a03;border-color:#ffcc33}
-.shop{max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:7px}
-.shopItem{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:9px;padding:10px 12px}
-.shopItem b{font-size:13px}
+.shop{max-height:200px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.shopItem{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:9px;padding:9px 11px}
+.shopItem b{font-size:12px}
 .shopItem small{display:block;font-size:10px;color:#8fa3b0;margin-top:2px}
-.buy{border:none;border-radius:6px;padding:7px 12px;font-weight:800;font-size:11px;cursor:pointer;background:#8dffb0;color:#06120b}
+.buy{border:none;border-radius:6px;padding:6px 11px;font-weight:800;font-size:11px;cursor:pointer;background:#8dffb0;color:#06120b}
 .buy:disabled{opacity:.35;cursor:not-allowed}
 .buy.ghost{background:#1e2a34;color:#dce6ee}
-.settingsPanel{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:18px}
-.settingsPanel h2{font-size:15px;color:#ffcc33;letter-spacing:1px;margin-bottom:14px}
-.settingRow{margin-bottom:14px}
-.settingLabel{display:flex;justify-content:space-between;font-size:12px;color:#b8c6d0;margin-bottom:6px}
+.settingsPanel{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px}
+.settingsPanel h2{font-size:14px;color:#ffcc33;letter-spacing:1px;margin-bottom:12px}
+.settingRow{margin-bottom:12px}
+.settingLabel{display:flex;justify-content:space-between;font-size:12px;color:#b8c6d0;margin-bottom:5px}
 .settingLabel span{color:#ffcc33;font-weight:800}
 .slider{width:100%;accent-color:#ffcc33;height:4px}
-.toggleRow{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.toggleRow{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
 .toggleLabel{font-size:12px;color:#b8c6d0}
-.toggle{width:44px;height:24px;border-radius:12px;background:rgba(255,255,255,.12);position:relative;cursor:pointer;transition:.2s}
+.toggle{width:42px;height:23px;border-radius:12px;background:rgba(255,255,255,.12);position:relative;cursor:pointer}
 .toggle.on{background:#8dffb0}
-.toggle::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}
-.toggle.on::after{left:23px}
-.colorRow{display:flex;gap:8px;margin-top:6px}
-.colorDot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.toggle::after{content:'';position:absolute;left:3px;top:3px;width:17px;height:17px;border-radius:50%;background:#fff;transition:.2s}
+.toggle.on::after{left:22px}
+.colorRow{display:flex;gap:8px;margin-top:5px}
+.colorDot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent}
 .colorDot.active{border-color:#fff}
-.controlsHint{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;font-size:11px;color:#8fa3b0;line-height:1.8}
+.controlsHint{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;font-size:11px;color:#8fa3b0;line-height:1.8}
 .controlsHint b{color:#dce6ee}
 #hud{position:fixed;inset:0;z-index:10;pointer-events:none;display:none}
 #crosshair{position:absolute;left:50%;top:50%;width:36px;height:36px;transform:translate(-50%,-50%)}
@@ -373,7 +370,7 @@ scene.add(new THREE.Mesh(
   })
 ));
 
-/* Stable camera + realism state */
+/* Stable camera + realism */
 let yaw=0,pitch=0,mouseLocked=false;
 let paused=false,roundActive=false,onlineActive=false;
 let swayX=0,swayY=0,breathe=0,suppression=0;
@@ -393,19 +390,14 @@ const MAP_LIMIT=72,keys={};
 let score=0,kills=0,round=1,enemiesToSpawn=0,alliesToSpawn=0;
 let streak=0,streakTimer=0,xpGained=0;
 
-/* Mouse look with sway and invert Y */
 document.addEventListener('mousemove',e=>{
   if(!mouseLocked||paused)return;
-
   const invert=save.invertY?1:-1;
   const sens=.0022*save.sensitivity;
-
   yaw-=e.movementX*sens;
   pitch-=e.movementY*sens*invert;
-
   swayX=THREE.MathUtils.clamp(swayX-e.movementX*.0004,-.03,.03);
   swayY=THREE.MathUtils.clamp(swayY+e.movementY*.0004,-.02,.02);
-
   pitch=Math.max(-1.45,Math.min(1.45,pitch));
   camera.rotation.set(pitch,yaw,0);
 });
@@ -1055,7 +1047,6 @@ function move(dt){
 
   camera.position.copy(peekPosition);
 
-  /* Recoil recovery */
   recoilPitch=THREE.MathUtils.lerp(recoilPitch,0,Math.min(1,dt*6));
   recoilYaw=THREE.MathUtils.lerp(recoilYaw,0,Math.min(1,dt*6));
 
@@ -1180,7 +1171,6 @@ function updateViewmodel(dt,moving,sprinting){
   walkCycle+=dt*(moving?10:2.5);
   recoil=Math.max(0,recoil-dt*5);
 
-  /* Breathing sway */
   breathe+=dt*(player.aiming?1.2:.7);
   const breatheX=Math.sin(breathe)*(player.aiming?.0012:.003);
   const breatheY=Math.cos(breathe*1.3)*(player.aiming?.0008:.002);
