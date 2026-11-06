@@ -8,42 +8,83 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#05080c;color:#eef4f8;font-family:Inter,Arial,sans-serif}
 canvas{display:block}
-#lobby{position:fixed;inset:0;z-index:50;display:flex;pointer-events:none}
-.left{width:min(460px,46vw);padding:32px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:auto}
-.brand{font-size:44px;font-weight:900;letter-spacing:4px}
+#lobby{position:fixed;inset:0;z-index:50;display:flex;background:
+  radial-gradient(circle at 20% 20%,rgba(40,60,80,.35),transparent 60%),
+  radial-gradient(circle at 80% 80%,rgba(60,40,20,.25),transparent 60%),
+  #06090d}
+.lobbyGrid{display:flex;width:100%;pointer-events:auto}
+.lobbyLeft{width:min(520px,48vw);padding:36px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid rgba(255,255,255,.06)}
+.lobbyRight{flex:1;padding:36px;display:flex;flex-direction:column;gap:16px;overflow:auto}
+.brand{font-size:46px;font-weight:900;letter-spacing:5px;line-height:1}
 .brand span{color:#ffcc33}
-.sub{color:#c8d6e0;margin-top:8px;font-size:14px}
-.modes{display:flex;flex-direction:column;gap:10px;margin-top:20px}
-.mode{background:rgba(8,14,20,.72);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:13px;cursor:pointer}
-.mode.active{border-color:#ffcc33;background:rgba(255,204,51,.13)}
-.mode h3{font-size:16px}
-.mode p{font-size:12px;color:#a9bcc9;margin-top:4px}
-.row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;max-height:150px;overflow:auto}
-.choice{background:rgba(8,14,20,.72);border:1px solid rgba(255,255,255,.12);color:#c8d6e0;padding:9px 13px;border-radius:10px;cursor:pointer;font-weight:800;font-size:13px}
-.choice.active{background:#ffcc33;color:#231a03;border-color:#ffcc33}
-.deploy{margin-top:20px;width:100%;padding:17px;border:none;border-radius:14px;font-size:20px;font-weight:900;cursor:pointer;background:linear-gradient(90deg,#ffcc33,#ffb02e);color:#231a03}
-.netRow{display:flex;gap:8px;margin-top:12px}
-.netBtn{flex:1;padding:12px;border:none;border-radius:11px;font-weight:900;cursor:pointer;background:#26333f;color:#dce6ee}
+.tagline{margin-top:10px;font-size:13px;color:#8fa3b0;letter-spacing:1px}
+.sectionLabel{font-size:11px;font-weight:800;letter-spacing:2px;color:#6f8290;margin:22px 0 8px}
+.briefing{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-left:3px solid #ffcc33;border-radius:10px;padding:14px 16px;font-size:13px;color:#b8c6d0;line-height:1.6}
+.briefing b{color:#ffcc33}
+.modeGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modeCard{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;cursor:pointer;transition:.15s}
+.modeCard:hover{border-color:rgba(255,204,51,.4)}
+.modeCard.active{border-color:#ffcc33;background:rgba(255,204,51,.1)}
+.modeCard h3{font-size:14px;color:#eef4f8}
+.modeCard p{font-size:11px;color:#8fa3b0;margin-top:4px}
+.mapGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:180px;overflow:auto;padding-right:4px}
+.mapCard{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;cursor:pointer;font-size:12px;font-weight:700;color:#b8c6d0;text-align:center;transition:.15s}
+.mapCard:hover{border-color:rgba(255,204,51,.4)}
+.mapCard.active{border-color:#ffcc33;background:rgba(255,204,51,.12);color:#ffcc33}
+.diffRow{display:flex;gap:8px;flex-wrap:wrap}
+.diffBtn{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);color:#b8c6d0;padding:9px 16px;border-radius:9px;cursor:pointer;font-weight:800;font-size:12px}
+.diffBtn.active{background:#ffcc33;color:#231a03;border-color:#ffcc33}
+.netPanel{margin-top:18px;background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px}
+.netRow{display:flex;gap:8px;margin-top:10px}
+.netBtn{flex:1;padding:12px;border:none;border-radius:9px;font-weight:900;cursor:pointer;background:#1e2a34;color:#dce6ee;font-size:13px}
 .netBtn.primary{background:#8dffb0;color:#06120b}
-#joinCode{flex:1;padding:11px;border-radius:11px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);color:#fff;font-weight:800;letter-spacing:3px;text-transform:uppercase}
-#netStatus{margin-top:9px;font-size:12px;color:#8dffb0;min-height:18px}
-.right{margin-left:auto;width:min(470px,44vw);padding:32px;display:flex;flex-direction:column;justify-content:center;gap:13px;pointer-events:auto}
-.panel{background:rgba(8,14,20,.74);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:17px}
-.panel h2{font-size:17px;color:#ffcc33;margin-bottom:9px}
-.small{font-size:12px;color:#a9bcc9}
-.weaponName{font-weight:800}
-.weaponType{font-size:11px;color:#ffcc33;font-weight:800;letter-spacing:1px}
-.mods{font-size:11px;color:#8dffb0;margin-top:3px}
-.tabs{display:flex;gap:8px;margin-bottom:11px}
-.tabBtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#dce8f0;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer}
-.tabBtn.active{background:#ffcc33;color:#231a03}
-.shop{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:8px}
-.item{display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:9px}
-.buy{border:none;border-radius:7px;padding:7px 10px;font-weight:800;cursor:pointer;background:#8dffb0;color:#06120b}
-.buy:disabled{opacity:.4;cursor:not-allowed}
-.buy.ghost{background:#26333f;color:#dce6ee}
-.credits{color:#ffcc33;font-weight:900}
-.slider{width:100%;accent-color:#ffcc33}
+#joinCode{flex:1;padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.4);color:#fff;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-size:13px}
+#netStatus{margin-top:8px;font-size:12px;color:#8dffb0;min-height:16px}
+.deploy{margin-top:22px;width:100%;padding:18px;border:none;border-radius:12px;font-size:19px;font-weight:900;cursor:pointer;background:linear-gradient(90deg,#ffcc33,#e8a020);color:#1a1200;letter-spacing:2px;box-shadow:0 4px 20px rgba(255,180,40,.25)}
+.deploy:hover{filter:brightness(1.1)}
+.playerCard{display:flex;align-items:center;gap:14px;background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px}
+.avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#3a4a3a,#2a3428);display:flex;align-items:center;justify-content:center;font-size:22px}
+.playerInfo{flex:1}
+.playerName{font-weight:900;font-size:16px}
+.playerStats{font-size:11px;color:#8fa3b0;margin-top:3px}
+.xpBar{height:5px;background:rgba(255,255,255,.1);border-radius:4px;margin-top:7px;overflow:hidden}
+.xpFill{height:100%;background:#ffcc33;border-radius:4px}
+.loadoutCard{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px}
+.loadoutHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.loadoutHeader h2{font-size:15px;color:#ffcc33;letter-spacing:1px}
+.weaponRow{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:9px;padding:11px 13px;margin-bottom:8px}
+.weaponRow .weaponName{font-weight:800;font-size:14px}
+.weaponRow .weaponType{font-size:10px;color:#ffcc33;font-weight:800;letter-spacing:1px}
+.weaponRow .mods{font-size:10px;color:#8dffb0;margin-top:2px}
+.changeBtn{background:#1e2a34;border:1px solid rgba(255,255,255,.12);color:#dce6ee;padding:7px 12px;border-radius:7px;font-weight:800;font-size:11px;cursor:pointer}
+.changeBtn:hover{background:#2a3844}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabBtn{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#b8c6d0;padding:9px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer}
+.tabBtn.active{background:#ffcc33;color:#231a03;border-color:#ffcc33}
+.shop{max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:7px}
+.shopItem{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:9px;padding:10px 12px}
+.shopItem b{font-size:13px}
+.shopItem small{display:block;font-size:10px;color:#8fa3b0;margin-top:2px}
+.buy{border:none;border-radius:6px;padding:7px 12px;font-weight:800;font-size:11px;cursor:pointer;background:#8dffb0;color:#06120b}
+.buy:disabled{opacity:.35;cursor:not-allowed}
+.buy.ghost{background:#1e2a34;color:#dce6ee}
+.settingsPanel{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:18px}
+.settingsPanel h2{font-size:15px;color:#ffcc33;letter-spacing:1px;margin-bottom:14px}
+.settingRow{margin-bottom:14px}
+.settingLabel{display:flex;justify-content:space-between;font-size:12px;color:#b8c6d0;margin-bottom:6px}
+.settingLabel span{color:#ffcc33;font-weight:800}
+.slider{width:100%;accent-color:#ffcc33;height:4px}
+.toggleRow{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.toggleLabel{font-size:12px;color:#b8c6d0}
+.toggle{width:44px;height:24px;border-radius:12px;background:rgba(255,255,255,.12);position:relative;cursor:pointer;transition:.2s}
+.toggle.on{background:#8dffb0}
+.toggle::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}
+.toggle.on::after{left:23px}
+.colorRow{display:flex;gap:8px;margin-top:6px}
+.colorDot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.colorDot.active{border-color:#fff}
+.controlsHint{background:rgba(10,16,22,.7);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;font-size:11px;color:#8fa3b0;line-height:1.8}
+.controlsHint b{color:#dce6ee}
 #hud{position:fixed;inset:0;z-index:10;pointer-events:none;display:none}
 #crosshair{position:absolute;left:50%;top:50%;width:36px;height:36px;transform:translate(-50%,-50%)}
 #crosshair i{position:absolute;background:#8dffb0}
@@ -113,63 +154,110 @@ canvas{display:block}
 <body>
 
 <div id="lobby">
-  <div class="left">
-    <div>
-      <div class="brand">STRIKE <span>OPS 24</span></div>
-      <div class="sub">10 maps • Stable camera • Knife stab • Advanced blood • Online</div>
-      <div class="modes" id="modeList"></div>
-      <div class="row" id="mapList"></div>
-      <div class="row" id="difficultyList"></div>
-      <div class="netRow"><button class="netBtn primary" id="hostBtn">HOST MATCH</button></div>
-      <div class="netRow">
-        <input id="joinCode" placeholder="ENTER CODE" maxlength="8">
-        <button class="netBtn" id="joinBtn">JOIN</button>
+  <div class="lobbyGrid">
+    <div class="lobbyLeft">
+      <div>
+        <div class="brand">STRIKE<br><span>OPS 24</span></div>
+        <div class="tagline">TACTICAL OPERATIONS • 10 MAPS • ONLINE</div>
+        <div class="sectionLabel">MISSION BRIEFING</div>
+        <div class="briefing">
+          Hostile forces have occupied the area. Deploy with your squad,
+          eliminate all enemy contacts, and complete the objective.
+          <b>Watch your corners.</b>
+        </div>
+        <div class="sectionLabel">GAME MODE</div>
+        <div class="modeGrid" id="modeList"></div>
+        <div class="sectionLabel">DEPLOYMENT ZONE</div>
+        <div class="mapGrid" id="mapList"></div>
+        <div class="sectionLabel">DIFFICULTY</div>
+        <div class="diffRow" id="difficultyList"></div>
+        <div class="netPanel">
+          <div class="sectionLabel" style="margin:0 0 4px">ONLINE MATCH</div>
+          <div class="netRow"><button class="netBtn primary" id="hostBtn">HOST MATCH</button></div>
+          <div class="netRow">
+            <input id="joinCode" placeholder="ENTER CODE" maxlength="8">
+            <button class="netBtn" id="joinBtn">JOIN</button>
+          </div>
+          <div id="netStatus"></div>
+        </div>
+        <button class="deploy" id="deployBtn">DEPLOY SOLO</button>
       </div>
-      <div id="netStatus"></div>
-      <button class="deploy" id="deployBtn">DEPLOY SOLO</button>
     </div>
-    <div class="panel">
-      <div class="small">OPERATOR</div>
-      <div class="credits" id="lobbyOperator">RANGER</div>
-      <div class="small" style="margin-top:8px">LEVEL <span id="lobbyLevel">1</span> • XP <span id="lobbyXp">0</span></div>
-      <div class="small" style="margin-top:8px">CREDITS <span id="lobbyCredits">0</span></div>
-    </div>
-  </div>
 
-  <div class="right">
-    <div class="panel">
-      <h2>Loadout</h2>
-      <div class="small weaponName" id="primaryName">PHANTOM-7</div>
-      <div class="weaponType" id="primaryType">ASSAULT RIFLE</div>
-      <div class="mods" id="primaryMods">No attachments</div>
-      <button class="buy ghost" id="primaryBtn" style="margin-top:8px">CHANGE PRIMARY</button>
-      <div class="small weaponName" id="secondaryName" style="margin-top:13px">VIPER .45</div>
-      <div class="weaponType" id="secondaryType">PISTOL</div>
-      <div class="mods" id="secondaryMods">No attachments</div>
-      <button class="buy ghost" id="secondaryBtn" style="margin-top:8px">CHANGE SECONDARY</button>
-    </div>
-    <div class="panel">
-      <div class="tabs">
-        <button class="tabBtn active" data-shop="mods">ATTACHMENTS</button>
-        <button class="tabBtn" data-shop="operators">OPERATORS</button>
+    <div class="lobbyRight">
+      <div class="playerCard">
+        <div class="avatar">🎖️</div>
+        <div class="playerInfo">
+          <div class="playerName" id="lobbyOperator">RANGER</div>
+          <div class="playerStats">LEVEL <span id="lobbyLevel">1</span> • <span id="lobbyXp">0</span> XP • <span id="lobbyCredits" style="color:#ffcc33">0</span> CR</div>
+          <div class="xpBar"><div class="xpFill" id="xpFill" style="width:0%"></div></div>
+        </div>
       </div>
-      <div class="shop" id="shop"></div>
-    </div>
-    <div class="panel">
-      <h2>Settings</h2>
-      <div class="small">Sensitivity <span id="sensVal">1.0</span></div>
-      <input class="slider" id="sensSlider" type="range" min="0.3" max="3" step="0.1" value="1">
-      <div class="small" style="margin-top:8px">Field of view <span id="fovVal">80</span></div>
-      <input class="slider" id="fovSlider" type="range" min="65" max="100" step="1" value="80">
-      <div class="small" style="margin-top:8px">Blood effects</div>
-      <input class="slider" id="bloodSlider" type="range" min="0" max="100" step="10" value="100">
-    </div>
-    <div class="panel">
-      <div class="small">
-        WASD move • Shift sprint • Hold C crouch<br>
-        Sprint + C slide • Q/E peek • V knife • G grenade<br>
-        F inspect • Right mouse ADS • Space jump • R reload<br>
-        Left mouse fire • 1/2 weapons • Esc pause
+
+      <div class="loadoutCard">
+        <div class="loadoutHeader"><h2>LOADOUT</h2></div>
+        <div class="weaponRow">
+          <div>
+            <div class="weaponName" id="primaryName">PHANTOM-7</div>
+            <div class="weaponType" id="primaryType">ASSAULT RIFLE</div>
+            <div class="mods" id="primaryMods">No attachments</div>
+          </div>
+          <button class="changeBtn" id="primaryBtn">CHANGE</button>
+        </div>
+        <div class="weaponRow">
+          <div>
+            <div class="weaponName" id="secondaryName">VIPER .45</div>
+            <div class="weaponType" id="secondaryType">PISTOL</div>
+            <div class="mods" id="secondaryMods">No attachments</div>
+          </div>
+          <button class="changeBtn" id="secondaryBtn">CHANGE</button>
+        </div>
+      </div>
+
+      <div class="loadoutCard">
+        <div class="tabs">
+          <button class="tabBtn active" data-shop="mods">ATTACHMENTS</button>
+          <button class="tabBtn" data-shop="operators">OPERATORS</button>
+        </div>
+        <div class="shop" id="shop"></div>
+      </div>
+
+      <div class="settingsPanel">
+        <h2>SETTINGS</h2>
+        <div class="settingRow">
+          <div class="settingLabel">Mouse sensitivity <span id="sensVal">1.00</span></div>
+          <input class="slider" id="sensSlider" type="range" min="0.2" max="4" step="0.05" value="1">
+        </div>
+        <div class="settingRow">
+          <div class="settingLabel">Field of view <span id="fovVal">80</span></div>
+          <input class="slider" id="fovSlider" type="range" min="60" max="110" step="1" value="80">
+        </div>
+        <div class="settingRow">
+          <div class="settingLabel">Blood effects <span id="bloodVal">100%</span></div>
+          <input class="slider" id="bloodSlider" type="range" min="0" max="100" step="10" value="100">
+        </div>
+        <div class="settingRow">
+          <div class="settingLabel">Master volume <span id="volVal">70%</span></div>
+          <input class="slider" id="volSlider" type="range" min="0" max="100" step="5" value="70">
+        </div>
+        <div class="toggleRow">
+          <div class="toggleLabel">Invert Y axis</div>
+          <div class="toggle" id="invertToggle"></div>
+        </div>
+        <div class="toggleRow">
+          <div class="toggleLabel">Camera shake</div>
+          <div class="toggle on" id="shakeToggle"></div>
+        </div>
+        <div class="settingRow">
+          <div class="settingLabel">Crosshair color</div>
+          <div class="colorRow" id="crosshairColors"></div>
+        </div>
+      </div>
+
+      <div class="controlsHint">
+        <b>WASD</b> move • <b>SHIFT</b> sprint • <b>C</b> crouch / slide<br>
+        <b>Q / E</b> peek • <b>V</b> knife • <b>G</b> grenade • <b>F</b> inspect<br>
+        <b>RMB</b> aim • <b>SPACE</b> jump • <b>R</b> reload • <b>ESC</b> pause
       </div>
     </div>
   </div>
@@ -245,7 +333,8 @@ const save=Object.assign({
   credits:1500,xp:0,level:1,ownedMods:[],installedMods:{},
   primary:'rifle',secondary:'pistol',difficulty:'regular',
   mode:'assault',map:'foundry',operator:'ranger',ownedOperators:['ranger'],
-  sensitivity:1,fov:80,blood:1
+  sensitivity:1,fov:80,blood:1,
+  volume:.7,invertY:false,cameraShake:true,crosshairColor:'#8dffb0'
 },JSON.parse(localStorage.getItem('strikeOps24')||'{}'));
 
 save.installedMods??={};save.ownedMods??=[];save.ownedOperators??=['ranger'];
@@ -284,9 +373,12 @@ scene.add(new THREE.Mesh(
   })
 ));
 
-/* Stable camera */
+/* Stable camera + realism state */
 let yaw=0,pitch=0,mouseLocked=false;
 let paused=false,roundActive=false,onlineActive=false;
+let swayX=0,swayY=0,breathe=0,suppression=0;
+let recoilPitch=0,recoilYaw=0;
+let ambientStarted=false;
 
 const player={
   position:new THREE.Vector3(0,0,66),velocity:new THREE.Vector3(),
@@ -301,10 +393,19 @@ const MAP_LIMIT=72,keys={};
 let score=0,kills=0,round=1,enemiesToSpawn=0,alliesToSpawn=0;
 let streak=0,streakTimer=0,xpGained=0;
 
+/* Mouse look with sway and invert Y */
 document.addEventListener('mousemove',e=>{
   if(!mouseLocked||paused)return;
-  yaw-=e.movementX*.0022*save.sensitivity;
-  pitch-=e.movementY*.0022*save.sensitivity;
+
+  const invert=save.invertY?1:-1;
+  const sens=.0022*save.sensitivity;
+
+  yaw-=e.movementX*sens;
+  pitch-=e.movementY*sens*invert;
+
+  swayX=THREE.MathUtils.clamp(swayX-e.movementX*.0004,-.03,.03);
+  swayY=THREE.MathUtils.clamp(swayY+e.movementY*.0004,-.02,.02);
+
   pitch=Math.max(-1.45,Math.min(1.45,pitch));
   camera.rotation.set(pitch,yaw,0);
 });
@@ -542,12 +643,10 @@ function mapFoundry(){
   scene.fog=new THREE.Fog(0xbfd3e2,70,190);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(dirtTexture()));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const concrete=mat(T.concrete,0xd3cec2,.87,0);
   const brick=mat(T.brick,0xffffff,.92,0);
   const metal=mat(T.metal,0x8a97a3,.48,.68);
   const wood=mat(T.wood,0xffffff,.88,0);
-
   platform(0,0,0,54,40,concrete);
   wall(0,2.3,-20,54,4.6,.6,brick);wall(0,2.3,20,54,4.6,.6,brick);
   wall(-27,2.3,0,.6,4.6,40,brick);wall(27,2.3,0,.6,4.6,40,brick);
@@ -558,14 +657,12 @@ function mapFoundry(){
   peekWall(-11,4.6,0,7,1.1,.4,concrete);peekWall(11,4.6,0,7,1.1,.4,concrete);
   stairs(32,0,'west',13,.38,.85,4.5);
   platform(0,9.4,0,26,4.2,metal);
-
   function container(x,z,rot,color){
     const c=new THREE.Mesh(new THREE.BoxGeometry(12.2,5,5),mat(rustTexture(),color,.62,.55));
     c.position.set(x,2.5,z);c.rotation.y=rot;c.castShadow=true;c.receiveShadow=true;addSolid(c);
   }
   container(-38,16,0,0x8a4b3a);container(38,16,0,0x2f5d8a);
   container(-38,-16,Math.PI/2,0x3f7a4d);container(38,-16,Math.PI/2,0x6b5a8a);
-
   barrel(-29,24);barrel(29,24);barrel(-29,-24,0x6b5a8a);barrel(29,-24);
   crate(-34,34);crate(34,34);crate(-34,-34);crate(34,-34);
   lightPole(-18,38);lightPole(18,38);lightPole(-18,-38);lightPole(18,-38);
@@ -579,25 +676,18 @@ function mapHarbor(){
   scene.fog=new THREE.Fog(0xa8c3d4,60,175);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(180,180),mat(T.concrete,0xb9b4a8,.92,0));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const water=new THREE.Mesh(new THREE.PlaneGeometry(180,60),mat(waterTexture(),0x9fd3e8,.12,.75));
   water.rotation.x=-Math.PI/2;water.position.set(0,.02,-82);world.add(water);
-
   const dockMat=mat(T.wood,0xb98d55,.9,0);
   const metal=mat(T.metal,0x8a97a3,.48,.68);
   const concrete=mat(T.concrete,0xcfc9bd,.87,0);
   const brick=mat(T.brick,0xffffff,.92,0);
-
-  for(let i=0;i<4;i++){
-    platform(-45+i*30,.5,-52,34,10,dockMat);
-  }
-
+  for(let i=0;i<4;i++)platform(-45+i*30,.5,-52,34,10,dockMat);
   platform(0,0,0,60,44,concrete);
   wall(0,2.3,-22,60,4.6,.6,brick);wall(0,2.3,22,60,4.6,.6,brick);
   wall(-30,2.3,0,.6,4.6,44,brick);wall(30,2.3,0,.6,4.6,44,brick);
   peekWall(-16,0,-6,9,1.15,.45,concrete);peekWall(16,0,-6,9,1.15,.45,concrete);
   cover(-14,0,-12,6,2.3,3,dockMat);cover(14,0,-12,6,2.3,3,dockMat);
-
   function crane(x,z){
     const base=new THREE.Mesh(new THREE.BoxGeometry(4,1.2,4),metal);
     base.position.set(x,.6,z);base.castShadow=true;addSolid(base);
@@ -605,14 +695,12 @@ function mapHarbor(){
     tower.position.set(x,7.6,z);tower.castShadow=true;addSolid(tower);
   }
   crane(-24,-36);crane(24,-36);crane(-24,36);crane(24,36);
-
   function container(x,z,rot,color){
     const c=new THREE.Mesh(new THREE.BoxGeometry(12,5,5),mat(rustTexture(),color,.62,.55));
     c.position.set(x,2.5,z);c.rotation.y=rot;c.castShadow=true;c.receiveShadow=true;addSolid(c);
   }
   container(-36,18,0,0x8a4b3a);container(36,18,0,0x2f5d8a);
   container(-36,-18,Math.PI/2,0x3f7a4d);container(36,-18,Math.PI/2,0x6b5a8a);
-
   barrel(-28,28);barrel(28,28);crate(-32,32);crate(32,32);
   lightPole(-18,36);lightPole(18,36);
   border(concrete);
@@ -624,25 +712,20 @@ function mapDesert(){
   scene.fog=new THREE.Fog(0xe8d5a8,80,210);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(sandTexture()));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const sand=mat(sandTexture(),0xd8b878,.95,0);
   const wood=mat(T.wood,0xa98050,.9,0);
   const stone=mat(T.concrete,0xbfae90,.92,0);
-
   platform(0,0,0,60,44,sand);
   cover(-18,0,-8,8,2.5,3,stone);cover(18,0,-8,8,2.5,3,stone);
   cover(0,0,10,14,2,3,wood);
   sandbags(-10,18,8,0);sandbags(10,18,8,0);
   sandbags(0,-18,10,Math.PI/2);
-
   tower(-30,30,7);tower(30,30,7);tower(-30,-30,7);tower(30,-30,7);
-
   for(let i=0;i<8;i++){
     const x=(Math.random()*2-1)*55,z=(Math.random()*2-1)*55;
     const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(1.2+Math.random()*1.2,0),stone);
     rock.position.set(x,.8,z);rock.castShadow=true;rock.receiveShadow=true;addSolid(rock);
   }
-
   crate(-20,0);crate(20,0);crate(0,25);crate(0,-25);
   barrel(-28,20);barrel(28,20);
   border(stone);
@@ -654,16 +737,13 @@ function mapSnow(){
   scene.fog=new THREE.Fog(0xdfeaf2,55,160);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(snowTexture()));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const snow=mat(snowTexture(),0xffffff,.9,0);
   const wood=mat(T.wood,0x7a5c3a,.92,0);
   const ice=mat(T.concrete,0xbfd8e8,.35,.25);
-
   platform(0,0,0,60,44,snow);
   cover(-15,0,-10,7,2.5,3,wood);cover(15,0,-10,7,2.5,3,wood);
   cover(0,0,12,12,2.2,3,wood);
   puddle(-12,20,2.5,0x9fc4d8);puddle(12,-20,2.5,0x9fc4d8);
-
   function cabin(x,z){
     wall(x,1.5,z-3,8,3,.4,wood);
     wall(x-4,1.5,z,.4,3,6,wood);
@@ -673,14 +753,11 @@ function mapSnow(){
     const roof=new THREE.Mesh(new THREE.BoxGeometry(9,.4,7),snow);
     roof.position.set(x,3.2,z);roof.castShadow=true;world.add(roof);
   }
-
   cabin(-30,30);cabin(30,30);cabin(-30,-30);cabin(30,-30);
-
   for(let i=0;i<10;i++){
     const x=(Math.random()*2-1)*55,z=(Math.random()*2-1)*55;
     tree(x,z,5+Math.random()*3);
   }
-
   crate(-18,0);crate(18,0);crate(0,25);crate(0,-25);
   border(ice);
   pickup('health',-22,25);pickup('armor',22,25);pickup('ammo',0,-28);
@@ -691,21 +768,17 @@ function mapJungle(){
   scene.fog=new THREE.Fog(0x9fbf8a,45,140);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(jungleTexture()));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const stone=mat(T.concrete,0x9a9484,.92,0);
   const brick=mat(T.brick,0x8a7a60,.92,0);
   const wood=mat(T.wood,0x6a4f30,.92,0);
-
   platform(0,0,0,55,40,stone);
   cover(-14,0,-8,7,2.5,3,brick);cover(14,0,-8,7,2.5,3,brick);
   cover(0,0,10,12,2.2,3,brick);
   peekWall(-20,0,12,8,1.2,.5,stone);peekWall(20,0,12,8,1.2,.5,stone);
-
   for(let i=0;i<16;i++){
     const x=(Math.random()*2-1)*58,z=(Math.random()*2-1)*58;
     tree(x,z,6+Math.random()*4);
   }
-
   tower(-28,28,8);tower(28,28,8);tower(-28,-28,8);tower(28,-28,8);
   crate(-18,0);crate(18,0);crate(0,25);crate(0,-25);
   puddle(-10,25,2.5,0x2a4a2a);puddle(10,-25,2.5,0x2a4a2a);
@@ -718,32 +791,25 @@ function mapUrban(){
   scene.fog=new THREE.Fog(0xb8c4cc,60,170);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(T.asphalt));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const roadMat=mat(roadTexture());
   const concrete=mat(T.concrete,0xc8c2b6,.87,0);
   const brick=mat(T.brick,0xffffff,.92,0);
   const metal=mat(T.metal,0x8a97a3,.48,.68);
-
   const road=new THREE.Mesh(new THREE.PlaneGeometry(20,170),roadMat);
   road.rotation.x=-Math.PI/2;road.position.set(0,.012,0);road.receiveShadow=true;world.add(road);
-
   platform(0,0,0,60,44,concrete);
   wall(0,2.3,-22,60,4.6,.6,brick);wall(0,2.3,22,60,4.6,.6,brick);
   wall(-30,2.3,0,.6,4.6,44,brick);wall(30,2.3,0,.6,4.6,44,brick);
-
   function car(x,z,color){
     const body=new THREE.Mesh(new THREE.BoxGeometry(4.2,1.2,2),mat(T.metal,color,.5,.6));
     body.position.set(x,.6,z);body.castShadow=true;addSolid(body);
     const top=new THREE.Mesh(new THREE.BoxGeometry(2.2,.8,1.8),mat(T.metal,color,.5,.6));
     top.position.set(x-.3,1.6,z);top.castShadow=true;addSolid(top);
   }
-
   car(-18,-12,0x8a2f2f);car(18,-12,0x2f5d8a);car(-18,12,0x3f7a4d);car(18,12,0x6b5a8a);
   car(0,-18,0x8a8a2f);car(0,18,0x2f2f8a);
-
   peekWall(-12,0,0,6,1.1,.4,concrete);peekWall(12,0,0,6,1.1,.4,concrete);
   cover(-25,0,0,4,2.5,2.5,brick);cover(25,0,0,4,2.5,2.5,brick);
-
   lightPole(-15,25);lightPole(15,25);lightPole(-15,-25);lightPole(15,-25);
   crate(-28,28);crate(28,28);crate(-28,-28);crate(28,-28);
   border(concrete);
@@ -755,28 +821,20 @@ function mapCanyon(){
   scene.fog=new THREE.Fog(0xd8b088,70,190);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(dirtTexture(),0xc9a06a));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const rock=mat(T.concrete,0xb09070,.95,0);
   const wood=mat(T.wood,0x8a6538,.9,0);
-
   platform(0,0,0,55,40,rock);
-
-  /* Canyon walls */
   wall(-35,6,-20,6,12,40,rock);wall(35,6,-20,6,12,40,rock);
   wall(-35,6,20,6,12,40,rock);wall(35,6,20,6,12,40,rock);
-
-  /* Bridge */
   platform(0,6,0,70,5,wood);
   wall(0,7,-2.5,70,1,.3,wood);wall(0,7,2.5,70,1,.3,wood);
   stairs(-38,0,'east',15,.4,.85,4);
   stairs(38,0,'west',15,.4,.85,4);
-
   for(let i=0;i<12;i++){
     const x=(Math.random()*2-1)*55,z=(Math.random()*2-1)*55;
     const rockF=new THREE.Mesh(new THREE.DodecahedronGeometry(1.5+Math.random()*1.5,0),rock);
     rockF.position.set(x,1,z);rockF.castShadow=true;rockF.receiveShadow=true;addSolid(rockF);
   }
-
   crate(-20,25);crate(20,25);crate(-20,-25);crate(20,-25);
   barrel(-28,0);barrel(28,0);
   border(rock);
@@ -788,35 +846,26 @@ function mapIndustrial(){
   scene.fog=new THREE.Fog(0x9aa5ad,55,160);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(T.metal,0x6a747e,.6,.5));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const metal=mat(T.metal,0x8a97a3,.48,.68);
   const rust=mat(rustTexture(),0x8a5a3a,.7,.4);
   const concrete=mat(T.concrete,0x9a9488,.88,0);
-
   platform(0,0,0,60,44,concrete);
-
-  /* Tanks */
   for(let i=0;i<4;i++){
     const x=-30+i*20;
     const tank=new THREE.Mesh(new THREE.CylinderGeometry(3,3,8,20),rust);
     tank.position.set(x,4,-30);tank.castShadow=true;addSolid(tank);
   }
-
-  /* Pipes */
   for(let i=0;i<6;i++){
     const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,40,12),metal);
     pipe.rotation.z=Math.PI/2;
     pipe.position.set(0,3+i*.8,-15+i*6);
     pipe.castShadow=true;world.add(pipe);
   }
-
   cover(-15,0,-5,8,3,3,metal);cover(15,0,-5,8,3,3,metal);
   cover(0,0,12,14,2.5,3,metal);
   peekWall(-20,0,18,8,1.2,.4,concrete);peekWall(20,0,18,8,1.2,.4,concrete);
-
   platform(0,5,0,50,20,metal);
   stairs(30,0,'west',12,.42,.85,4);
-
   barrel(-25,25);barrel(25,25);barrel(-25,-25);barrel(25,-25);
   crate(-30,0);crate(30,0);
   lightPole(-15,30,0xaaffcc);lightPole(15,30,0xaaffcc);
@@ -830,16 +879,12 @@ function mapAirfield(){
   scene.fog=new THREE.Fog(0xc4d0da,80,210);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(T.asphalt,0x8a8f94));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const runway=mat(roadTexture(),0xffffff,.85,0);
   const concrete=mat(T.concrete,0xb8b2a6,.88,0);
   const metal=mat(T.metal,0x8a97a3,.48,.68);
-
   const runwayMesh=new THREE.Mesh(new THREE.PlaneGeometry(30,170),runway);
   runwayMesh.rotation.x=-Math.PI/2;runwayMesh.position.set(0,.012,0);runwayMesh.receiveShadow=true;world.add(runwayMesh);
-
   platform(0,0,0,60,44,concrete);
-
   function hangar(x,z){
     wall(x,3,z-8,20,6,.5,metal);
     wall(x-10,3,z,.5,6,16,metal);
@@ -849,18 +894,14 @@ function mapAirfield(){
     const roof=new THREE.Mesh(new THREE.BoxGeometry(21,.5,17),metal);
     roof.position.set(x,6.2,z);roof.castShadow=true;world.add(roof);
   }
-
   hangar(-35,-35);hangar(35,-35);hangar(-35,35);hangar(35,35);
-
   function plane(x,z){
     const body=new THREE.Mesh(new THREE.CylinderGeometry(.8,.8,10,12),mat(T.metal,0x9aa5ad,.5,.6));
     body.rotation.z=Math.PI/2;body.position.set(x,1.5,z);body.castShadow=true;addSolid(body);
     const wing=new THREE.Mesh(new THREE.BoxGeometry(3,.2,14),mat(T.metal,0x9aa5ad,.5,.6));
     wing.position.set(x,1.8,z);wing.castShadow=true;addSolid(wing);
   }
-
   plane(-15,-15);plane(15,-15);plane(-15,15);plane(15,15);
-
   tower(0,-40,10);
   crate(-25,25);crate(25,25);crate(-25,-25);crate(25,-25);
   barrel(-30,0);barrel(30,0);
@@ -874,24 +915,18 @@ function mapNight(){
   scene.fog=new THREE.Fog(0x0a0f14,25,90);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(T.asphalt,0x2a2f34));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const concrete=mat(T.concrete,0x3a4048,.9,0);
   const metal=mat(T.metal,0x4a545e,.5,.6);
   const brick=mat(T.brick,0x3a3230,.92,0);
-
   platform(0,0,0,60,44,concrete);
   wall(0,2.5,-22,60,5,.6,brick);wall(0,2.5,22,60,5,.6,brick);
   wall(-30,2.5,0,.6,5,44,brick);wall(30,2.5,0,.6,5,44,brick);
-
   peekWall(-14,0,-8,8,1.2,.45,concrete);peekWall(14,0,-8,8,1.2,.45,concrete);
   peekWall(0,0,10,12,1.2,.45,concrete);
   cover(-18,0,0,5,2.5,2.5,metal);cover(18,0,0,5,2.5,2.5,metal);
-
-  /* Spotlights */
   lightPole(-20,25,0x88aaff);lightPole(20,25,0x88aaff);
   lightPole(-20,-25,0x88aaff);lightPole(20,-25,0x88aaff);
   lightPole(0,0,0xff8844);
-
   crate(-25,25);crate(25,25);crate(-25,-25);crate(25,-25);
   barrel(-28,0,0x2a2f34);barrel(28,0,0x2a2f34);
   border(brick);
@@ -903,25 +938,18 @@ function mapTraining(){
   scene.fog=new THREE.Fog(0xc8d8e8,90,230);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,190),mat(T.concrete,0xd8d4c8,.9,0));
   ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
-
   const concrete=mat(T.concrete,0xd8d4c8,.88,0);
   const wood=mat(T.wood,0xa98050,.9,0);
-
   platform(0,0,0,70,50,concrete);
-
-  /* Training lanes */
   for(let i=0;i<5;i++){
     const x=-24+i*12;
     cover(x,0,-15,2,2.5,2,wood);
     cover(x,0,0,2,2.5,2,wood);
     cover(x,0,15,2,2.5,2,wood);
   }
-
   peekWall(-30,0,-25,10,1.2,.4,concrete);peekWall(30,0,-25,10,1.2,.4,concrete);
   peekWall(-30,0,25,10,1.2,.4,concrete);peekWall(30,0,25,10,1.2,.4,concrete);
-
   tower(-32,32,6);tower(32,32,6);tower(-32,-32,6);tower(32,-32,6);
-
   crate(-20,20);crate(20,20);crate(-20,-20);crate(20,-20);
   crate(0,30);crate(0,-30);
   barrel(-28,0);barrel(28,0);
@@ -1019,14 +1047,22 @@ function move(dt){
   const peekPosition=cameraPosition.clone().add(peekOffset);
   peekPosition.y-=Math.abs(player.lean)*.1;
 
-  if(shakeAmount>0){
+  if(shakeAmount>0&&save.cameraShake){
     peekPosition.x+=(Math.random()-.5)*shakeAmount;
     peekPosition.y+=(Math.random()-.5)*shakeAmount;
     shakeAmount=Math.max(0,shakeAmount-dt*.9);
   }
 
   camera.position.copy(peekPosition);
-  camera.rotation.set(pitch,yaw,0);
+
+  /* Recoil recovery */
+  recoilPitch=THREE.MathUtils.lerp(recoilPitch,0,Math.min(1,dt*6));
+  recoilYaw=THREE.MathUtils.lerp(recoilYaw,0,Math.min(1,dt*6));
+
+  const finalPitch=THREE.MathUtils.clamp(pitch+recoilPitch,-1.5,1.5);
+  const finalYaw=yaw+recoilYaw;
+
+  camera.rotation.set(finalPitch,finalYaw,0);
 
   const targetFov=player.aiming?save.fov/(weapons[current].scopeZoom||1.35):save.fov;
   camera.fov=THREE.MathUtils.lerp(camera.fov,targetFov,Math.min(1,dt*12));
@@ -1040,7 +1076,8 @@ function move(dt){
 
   if(moving&&footstepTimer<=0){
     footstepTimer=player.sliding?.18:sprinting?.31:player.crouching?.55:.42;
-    beep(player.crouching?95:130,.05,'triangle',.025);
+    const surfacePitch=[95,110,130,150,170][Math.floor(Math.random()*5)];
+    beep(surfacePitch*(player.crouching?.7:1),.05,'triangle',.025*(player.crouching?.6:1));
   }
 
   document.getElementById('stance').textContent=
@@ -1099,6 +1136,10 @@ function makeViewmodel(id){
   muzzleLight=new THREE.PointLight(0xffcc66,0,7,2);
   muzzleLight.position.set(0,.02,-.9);gunGroup.add(muzzleLight);
 
+  const smoke=new THREE.Sprite(new THREE.SpriteMaterial({color:0xaaaaaa,transparent:true,opacity:0,depthWrite:false}));
+  smoke.scale.set(.25,.25,1);smoke.position.set(0,.03,-.95);gunGroup.add(smoke);
+  viewmodel.userData.smoke=smoke;
+
   const blade=new THREE.Mesh(new THREE.BoxGeometry(.016,.05,.32),bladeMat);
   blade.position.set(0,.02,-.19);knifeGroup.add(blade);
   const bladeEdge=new THREE.Mesh(new THREE.BoxGeometry(.006,.026,.32),new THREE.MeshStandardMaterial({color:0xf2f6fa,roughness:.1,metalness:.98}));
@@ -1139,6 +1180,14 @@ function updateViewmodel(dt,moving,sprinting){
   walkCycle+=dt*(moving?10:2.5);
   recoil=Math.max(0,recoil-dt*5);
 
+  /* Breathing sway */
+  breathe+=dt*(player.aiming?1.2:.7);
+  const breatheX=Math.sin(breathe)*(player.aiming?.0012:.003);
+  const breatheY=Math.cos(breathe*1.3)*(player.aiming?.0008:.002);
+
+  swayX=THREE.MathUtils.lerp(swayX,0,Math.min(1,dt*4));
+  swayY=THREE.MathUtils.lerp(swayY,0,Math.min(1,dt*4));
+
   if(knifeActive)return;
 
   let hip;
@@ -1160,14 +1209,21 @@ function updateViewmodel(dt,moving,sprinting){
   const bob=player.aiming?.0025:.012;
 
   viewmodel.position.set(
-    hip.x+Math.sin(walkCycle)*bob-player.lean*.03,
-    hip.y+Math.abs(Math.sin(walkCycle))*(bob*1.1)-recoil*.035,
+    hip.x+Math.sin(walkCycle)*bob-player.lean*.03+swayX+breatheX,
+    hip.y+Math.abs(Math.sin(walkCycle))*(bob*1.1)-recoil*.035+swayY+breatheY,
     hip.z+recoil*.09
   );
 
   viewmodel.rotation.set(0,0,0);
   viewmodel.userData.flash.material.opacity=Math.max(0,viewmodel.userData.flash.material.opacity-dt*18);
   viewmodel.userData.muzzleLight.intensity=Math.max(0,viewmodel.userData.muzzleLight.intensity-dt*90);
+
+  const smoke=viewmodel.userData.smoke;
+  if(smoke){
+    smoke.material.opacity=Math.max(0,smoke.material.opacity-dt*1.2);
+    smoke.scale.multiplyScalar(1+dt*1.5);
+    if(smoke.material.opacity<=0)smoke.scale.set(.25,.25,1);
+  }
 }
 
 /* Weapons */
@@ -1241,7 +1297,8 @@ function initAudio(){
 function beep(f,d=.08,type='square',v=.07){
   initAudio();
   const o=audio.createOscillator(),g=audio.createGain();
-  o.type=type;o.frequency.value=f;g.gain.value=v;
+  o.type=type;o.frequency.value=f;
+  g.gain.value=v*save.volume;
   o.connect(g);g.connect(audio.destination);o.start();
   g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+d);
   o.stop(audio.currentTime+d);
@@ -1252,10 +1309,38 @@ function gunshot(freq=900,d=.15,v=.22){
   const src=audio.createBufferSource();src.buffer=noiseBuffer;
   const filter=audio.createBiquadFilter();filter.type='lowpass';filter.frequency.value=freq;
   const gain=audio.createGain();
-  gain.gain.setValueAtTime(v,audio.currentTime);
+  gain.gain.setValueAtTime(v*save.volume,audio.currentTime);
   gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+d);
   src.connect(filter);filter.connect(gain);gain.connect(audio.destination);
   src.start();src.stop(audio.currentTime+d);
+}
+
+function bulletCrack(){
+  initAudio();
+  const src=audio.createBufferSource();src.buffer=noiseBuffer;
+  const filter=audio.createBiquadFilter();filter.type='highpass';filter.frequency.value=3000;
+  const gain=audio.createGain();
+  gain.gain.setValueAtTime(.12*save.volume,audio.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.08);
+  src.connect(filter);filter.connect(gain);gain.connect(audio.destination);
+  src.start();src.stop(audio.currentTime+.08);
+}
+
+function startAmbience(){
+  if(ambientStarted)return;
+  ambientStarted=true;
+  initAudio();
+
+  const wind=audio.createBufferSource();wind.buffer=noiseBuffer;wind.loop=true;
+  const windFilter=audio.createBiquadFilter();windFilter.type='lowpass';windFilter.frequency.value=300;
+  const windGain=audio.createGain();windGain.gain.value=.03*save.volume;
+  wind.connect(windFilter);windFilter.connect(windGain);windGain.connect(audio.destination);
+  wind.start();
+
+  setInterval(()=>{
+    if(!roundActive||paused)return;
+    if(Math.random()<.5)gunshot(200+Math.random()*200,.4,.05*save.volume);
+  },4000+Math.random()*3000);
 }
 
 /* Blood */
@@ -1392,6 +1477,10 @@ function addCasing(){
 }
 
 function updateEffects(dt){
+  suppression=Math.max(0,suppression-dt*.8);
+  document.getElementById('dmg').style.opacity=
+    Math.max(parseFloat(document.getElementById('dmg').style.opacity)||0,suppression*.5);
+
   for(let i=tracers.length-1;i>=0;i--){
     tracers[i].life-=dt;
     tracers[i].line.material.opacity=Math.max(0,tracers[i].life/.06);
@@ -1628,7 +1717,8 @@ function fireHitscan(){
         const bot=bots.find(b=>b.g===hit.object.parent);
         if(bot){
           const headshot=hit.object===bot.head;
-          const damage=headshot?w.damage*3.2:w.damage;
+          let damage=headshot?w.damage*3.2:w.damage;
+          if(headshot&&Math.random()<.35)damage*=.45;
           bot.hp-=damage;
           bot.flinch=.35;
           if(headshot)player.headshots++;
@@ -1682,8 +1772,11 @@ function shoot(){
   if(w.ammo<=0){reload();return;}
   lastShot=now;w.ammo--;
   recoil=Math.min(.2,recoil+w.recoil);
+  recoilPitch+=w.recoil*1.6;
+  recoilYaw+=(Math.random()-.5)*w.recoil*.8;
   viewmodel.userData.flash.material.opacity=1;
   viewmodel.userData.muzzleLight.intensity=18;
+  viewmodel.userData.smoke.material.opacity=.6;
   addCasing();
   player.shots++;updateHUD();gunshot(w.sound);fireHitscan();
   if(onlineOpponent){
@@ -1693,6 +1786,8 @@ function shoot(){
 }
 
 function damagePlayer(n,fromPosition,attackerName='UNKNOWN ENEMY'){
+  suppression=Math.min(1,suppression+.45);
+
   if(player.armor>0){
     const absorbed=Math.min(player.armor,n*.58);
     player.armor-=absorbed;n-=absorbed;
@@ -1967,6 +2062,7 @@ function botCombat(bot,dt){
     }
 
     if(Math.random()<roundAccuracy){
+      if(Math.random()<.5)bulletCrack();
       if(bot.team==='enemy'){
         damagePlayer(6+Math.random()*7,bot.g.position,bot.name);
       }else{
@@ -2036,6 +2132,7 @@ function startOnlineMatch(){
   document.getElementById('mapName').textContent='ONLINE DUEL';
   updateHUD();
   renderer.domElement.requestPointerLock();
+  startAmbience();
 }
 
 function endOnlineMatch(win){
@@ -2141,10 +2238,14 @@ function renderLobby(){
   document.getElementById('lobbyLevel').textContent=save.level;
   document.getElementById('lobbyXp').textContent=save.xp;
 
+  const xpNeeded=save.level*500;
+  document.getElementById('xpFill').style.width=
+    Math.min(100,save.xp/xpNeeded*100)+'%';
+
   const modeList=document.getElementById('modeList');modeList.innerHTML='';
   Object.entries(modeCatalog).forEach(([id,m])=>{
     const d=document.createElement('div');
-    d.className='mode'+(save.mode===id?' active':'');
+    d.className='modeCard'+(save.mode===id?' active':'');
     d.innerHTML=`<h3>${m.name}</h3><p>${m.desc}</p>`;
     d.onclick=()=>{save.mode=id;persist();renderLobby();};
     modeList.append(d);
@@ -2152,8 +2253,8 @@ function renderLobby(){
 
   const mapList=document.getElementById('mapList');mapList.innerHTML='';
   Object.entries(mapCatalog).forEach(([id,m])=>{
-    const b=document.createElement('button');
-    b.className='choice'+(save.map===id?' active':'');
+    const b=document.createElement('div');
+    b.className='mapCard'+(save.map===id?' active':'');
     b.textContent=m.name;
     b.onclick=()=>{save.map=id;persist();renderLobby();};
     mapList.append(b);
@@ -2162,7 +2263,7 @@ function renderLobby(){
   const difficultyList=document.getElementById('difficultyList');difficultyList.innerHTML='';
   Object.entries(difficultyCatalog).forEach(([id,d])=>{
     const b=document.createElement('button');
-    b.className='choice'+(save.difficulty===id?' active':'');
+    b.className='diffBtn'+(save.difficulty===id?' active':'');
     b.textContent=d.name;
     b.onclick=()=>{save.difficulty=id;persist();renderLobby();};
     difficultyList.append(b);
@@ -2177,15 +2278,43 @@ function renderLobby(){
   document.getElementById('secondaryType').textContent=secondary.type;
 
   document.getElementById('primaryMods').textContent=
-    save.installedMods[save.primary]?.length?save.installedMods[save.primary].map(i=>modCatalog[i].name).join(' • '):'No attachments';
+    save.installedMods[save.primary]?.length
+      ?save.installedMods[save.primary].map(i=>modCatalog[i].name).join(' • ')
+      :'No attachments';
   document.getElementById('secondaryMods').textContent=
-    save.installedMods[save.secondary]?.length?save.installedMods[save.secondary].map(i=>modCatalog[i].name).join(' • '):'No attachments';
+    save.installedMods[save.secondary]?.length
+      ?save.installedMods[save.secondary].map(i=>modCatalog[i].name).join(' • ')
+      :'No attachments';
 
-  document.getElementById('sensVal').textContent=save.sensitivity.toFixed(1);
+  document.getElementById('sensVal').textContent=save.sensitivity.toFixed(2);
   document.getElementById('fovVal').textContent=save.fov;
+  document.getElementById('bloodVal').textContent=Math.round(save.blood*100)+'%';
+  document.getElementById('volVal').textContent=Math.round(save.volume*100)+'%';
+
   document.getElementById('sensSlider').value=save.sensitivity;
   document.getElementById('fovSlider').value=save.fov;
   document.getElementById('bloodSlider').value=save.blood*100;
+  document.getElementById('volSlider').value=save.volume*100;
+
+  document.getElementById('invertToggle').classList.toggle('on',save.invertY);
+  document.getElementById('shakeToggle').classList.toggle('on',save.cameraShake);
+
+  const colors=['#8dffb0','#ffcc33','#ff5d5d','#8fc4ff','#ffffff','#ff8df0'];
+  const colorRow=document.getElementById('crosshairColors');
+  colorRow.innerHTML='';
+
+  colors.forEach(color=>{
+    const dot=document.createElement('div');
+    dot.className='colorDot'+(save.crosshairColor===color?' active':'');
+    dot.style.background=color;
+    dot.onclick=()=>{
+      save.crosshairColor=color;persist();
+      document.querySelectorAll('#crosshair i').forEach(i=>i.style.background=color);
+      renderLobby();
+    };
+    colorRow.append(dot);
+  });
+
   renderShop();
 }
 
@@ -2198,7 +2327,7 @@ function renderShop(){
       const rifleOn=save.installedMods.rifle?.includes(id);
       const pistolOn=save.installedMods.pistol?.includes(id);
 
-      const item=document.createElement('div');item.className='item';
+      const item=document.createElement('div');item.className='shopItem';
       item.innerHTML=`<div><b>${m.name}</b><small>${m.desc}</small></div>`;
       const actions=document.createElement('div');actions.style.display='flex';actions.style.gap='6px';
 
@@ -2221,7 +2350,7 @@ function renderShop(){
     Object.entries(operatorCatalog).forEach(([id,o])=>{
       const owned=save.ownedOperators.includes(id);
       const equipped=save.operator===id;
-      const item=document.createElement('div');item.className='item';
+      const item=document.createElement('div');item.className='shopItem';
       item.innerHTML=`<div><b>${o.name}</b><small>${equipped?'Equipped':owned?'Owned':`CR${o.price}`}</small></div>`;
       const b=document.createElement('button');b.className='buy';
       b.textContent=equipped?'EQUIPPED':owned?'EQUIP':(save.credits>=o.price?'BUY':'LOCKED');
@@ -2264,7 +2393,7 @@ document.getElementById('secondaryBtn').onclick=()=>{
 
 document.getElementById('sensSlider').oninput=e=>{
   save.sensitivity=+e.target.value;
-  document.getElementById('sensVal').textContent=save.sensitivity.toFixed(1);persist();
+  document.getElementById('sensVal').textContent=save.sensitivity.toFixed(2);persist();
 };
 
 document.getElementById('fovSlider').oninput=e=>{
@@ -2273,7 +2402,21 @@ document.getElementById('fovSlider').oninput=e=>{
 };
 
 document.getElementById('bloodSlider').oninput=e=>{
-  save.blood=+e.target.value/100;persist();
+  save.blood=+e.target.value/100;
+  document.getElementById('bloodVal').textContent=e.target.value+'%';persist();
+};
+
+document.getElementById('volSlider').oninput=e=>{
+  save.volume=+e.target.value/100;
+  document.getElementById('volVal').textContent=e.target.value+'%';persist();
+};
+
+document.getElementById('invertToggle').onclick=()=>{
+  save.invertY=!save.invertY;persist();renderLobby();
+};
+
+document.getElementById('shakeToggle').onclick=()=>{
+  save.cameraShake=!save.cameraShake;persist();renderLobby();
 };
 
 document.getElementById('resumeBtn').onclick=()=>{
@@ -2313,9 +2456,12 @@ function deploy(){
   yaw=0;pitch=0;camera.rotation.set(0,0,0);
   knifeActive=false;knifeTime=0;knifeCooldown=0;knifeHitDone=false;
   inspecting=false;inspectTime=0;
+  suppression=0;recoilPitch=0;recoilYaw=0;swayX=0;swayY=0;
 
   weapons=[buildWeapon(save.primary),buildWeapon(save.secondary)];
   current=0;makeViewmodel(save.primary);
+
+  document.querySelectorAll('#crosshair i').forEach(i=>i.style.background=save.crosshairColor);
 
   document.getElementById('lobby').style.display='none';
   document.getElementById('end').style.display='none';
@@ -2336,6 +2482,7 @@ function deploy(){
   document.getElementById('hud').style.display='block';
   updateHUD();
   renderer.domElement.requestPointerLock();
+  startAmbience();
 }
 
 function endMatch(win){
