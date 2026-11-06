@@ -390,14 +390,19 @@ const MAP_LIMIT=72,keys={};
 let score=0,kills=0,round=1,enemiesToSpawn=0,alliesToSpawn=0;
 let streak=0,streakTimer=0,xpGained=0;
 
+/* FIXED mouse look: mouse up = look up, mouse down = look down */
 document.addEventListener('mousemove',e=>{
   if(!mouseLocked||paused)return;
-  const invert=save.invertY?1:-1;
+
   const sens=.0022*save.sensitivity;
+  const invert=save.invertY?-1:1;
+
   yaw-=e.movementX*sens;
   pitch-=e.movementY*sens*invert;
+
   swayX=THREE.MathUtils.clamp(swayX-e.movementX*.0004,-.03,.03);
   swayY=THREE.MathUtils.clamp(swayY+e.movementY*.0004,-.02,.02);
+
   pitch=Math.max(-1.45,Math.min(1.45,pitch));
   camera.rotation.set(pitch,yaw,0);
 });
