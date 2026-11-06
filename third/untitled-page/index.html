@@ -3,17 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>STRIKE OPS 25</title>
+<title>STRIKE OPS 26</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#05080c;color:#eef4f8;font-family:Inter,Arial,sans-serif}
 canvas{display:block}
-#lobby{position:fixed;inset:0;z-index:50;display:flex;background:
+#lobby,#queue{position:fixed;inset:0;z-index:50;display:flex;background:
   radial-gradient(circle at 20% 20%,rgba(40,60,80,.35),transparent 60%),
   radial-gradient(circle at 80% 80%,rgba(60,40,20,.25),transparent 60%),
   #06090d}
-#lobby::before{content:'';position:absolute;inset:0;pointer-events:none;
+#queue{display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+#queue::before{content:'';position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.015) 3px 4px)}
+.queueTitle{font-size:38px;font-weight:900;letter-spacing:6px;color:#ffcc33;text-shadow:0 2px 14px rgba(255,180,40,.3)}
+.queueStatus{font-size:16px;color:#8dffb0;letter-spacing:2px;min-height:24px}
+.queueMap{font-size:22px;font-weight:900;color:#fff;letter-spacing:3px;min-height:30px}
+.queueBar{width:min(420px,80vw);height:6px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+.queueFill{height:100%;width:0%;background:linear-gradient(90deg,#ffcc33,#8dffb0);transition:width .3s}
+.queueBtn{padding:14px 40px;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer;background:#ffcc33;color:#231a03;letter-spacing:2px;text-transform:uppercase}
+.queueBtn.secondary{background:#1e2a34;color:#dce6ee}
+.queuePlayers{font-size:12px;color:#8fa3b0;letter-spacing:1px}
 .lobbyGrid{display:flex;width:100%;pointer-events:auto}
 .lobbyLeft{width:min(520px,48vw);padding:28px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:100vh;border-right:1px solid rgba(255,255,255,.06)}
 .lobbyRight{flex:1;padding:28px;display:flex;flex-direction:column;gap:14px;overflow:auto;max-height:100vh}
@@ -61,10 +70,12 @@ canvas{display:block}
 .tabs{display:flex;gap:6px;margin-bottom:10px}
 .tabBtn{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#b8c6d0;padding:8px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer}
 .tabBtn.active{background:#ffcc33;color:#231a03;border-color:#ffcc33}
-.shop{max-height:200px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.shop{max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:6px}
 .shopItem{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:9px;padding:9px 11px}
 .shopItem b{font-size:12px}
-.shopItem small{display:block;font-size:10px;color:#8fa3b0;margin-top:2px}
+.shopItem small{display:block;font-size:10px;margin-top:2px}
+.shopItem .pro{color:#8dffb0}
+.shopItem .con{color:#ff8d8d}
 .buy{border:none;border-radius:6px;padding:6px 11px;font-weight:800;font-size:11px;cursor:pointer;background:#8dffb0;color:#06120b}
 .buy:disabled{opacity:.35;cursor:not-allowed}
 .buy.ghost{background:#1e2a34;color:#dce6ee}
@@ -118,6 +129,7 @@ canvas{display:block}
 #gunname{font-size:13px;font-weight:800}
 #gunclass{font-size:11px;color:#ffcc33;font-weight:800;letter-spacing:1px}
 #grenades{font-size:13px;color:#8dffb0;font-weight:800;margin-top:3px}
+#streakBox{right:20px;bottom:110px;text-align:right;font-size:12px;color:#8dffb0;font-weight:800}
 #feed{position:absolute;right:20px;top:58px;width:370px;font-size:12px;text-align:right}
 .feed{background:rgba(5,9,13,.72);border-right:3px solid #ff5d5d;padding:5px 9px;margin-bottom:5px}
 #announce{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-size:30px;font-weight:900;color:#ffcc33;opacity:0;text-shadow:0 3px 12px #000}
@@ -153,17 +165,28 @@ canvas{display:block}
 </head>
 <body>
 
+<div id="queue">
+  <div class="queueTitle">MATCHMAKING</div>
+  <div class="queueStatus" id="queueStatus">PRESS FIND MATCH TO SEARCH</div>
+  <div class="queueMap" id="queueMap"></div>
+  <div class="queueBar"><div class="queueFill" id="queueFill"></div></div>
+  <div class="queuePlayers" id="queuePlayers"></div>
+  <button class="queueBtn" id="findMatchBtn">FIND MATCH</button>
+  <button class="queueBtn secondary" id="cancelQueueBtn" style="display:none">CANCEL</button>
+  <button class="queueBtn secondary" id="backToLobbyBtn">BACK TO LOBBY</button>
+</div>
+
 <div id="lobby">
   <div class="lobbyGrid">
     <div class="lobbyLeft">
       <div>
-        <div class="brand">STRIKE<br><span>OPS 25</span></div>
-        <div class="tagline">TACTICAL OPERATIONS • 10 MAPS • ONLINE • V25</div>
+        <div class="brand">STRIKE<br><span>OPS 26</span></div>
+        <div class="tagline">TACTICAL OPERATIONS • 10 MAPS • DRONES • V26</div>
         <div class="sectionLabel">MISSION BRIEFING</div>
         <div class="briefing">
           Hostile forces have occupied the area. Deploy with your squad,
           eliminate all enemy contacts, and complete the objective.
-          <b>Enemies will crouch and slide to flank you.</b>
+          <b>Earn killstreaks to call in UAV recon and attack drones.</b>
         </div>
         <div class="sectionLabel">GAME MODE</div>
         <div class="modeGrid" id="modeList"></div>
@@ -181,6 +204,7 @@ canvas{display:block}
           <div id="netStatus"></div>
         </div>
         <button class="deploy" id="deployBtn">DEPLOY SOLO</button>
+        <button class="deploy" id="queueBtn" style="background:linear-gradient(90deg,#8dffb0,#4dbf7a);margin-top:8px">FIND MATCH (RANDOM MAP)</button>
       </div>
     </div>
 
@@ -257,7 +281,8 @@ canvas{display:block}
       <div class="controlsHint">
         <b>WASD</b> move • <b>SHIFT</b> sprint • <b>C</b> crouch / slide<br>
         <b>Q / E</b> peek • <b>V</b> knife • <b>G</b> grenade • <b>F</b> inspect<br>
-        <b>RMB</b> aim • <b>SPACE</b> jump • <b>R</b> reload • <b>ESC</b> pause
+        <b>RMB</b> aim • <b>SPACE</b> jump • <b>R</b> reload • <b>ESC</b> pause<br>
+        <b>KILLSTREAKS:</b> 3 kills = UAV • 5 kills = Attack Drone
       </div>
     </div>
   </div>
@@ -296,6 +321,7 @@ canvas{display:block}
     <div id="gunclass">ASSAULT RIFLE</div>
     <div id="grenades">GRENADES 2</div>
   </div>
+  <div class="box" id="streakBox">STREAK <span id="streakCount">0</span> • UAV <span id="uavStatus">LOCKED</span> • DRONE <span id="droneStatus">LOCKED</span></div>
   <div id="feed"></div>
 </div>
 
@@ -335,10 +361,10 @@ const save=Object.assign({
   mode:'assault',map:'foundry',operator:'ranger',ownedOperators:['ranger'],
   sensitivity:1,fov:80,blood:1,
   volume:.7,invertY:false,cameraShake:true,crosshairColor:'#8dffb0'
-},JSON.parse(localStorage.getItem('strikeOps25')||'{}'));
+},JSON.parse(localStorage.getItem('strikeOps26')||'{}'));
 
 save.installedMods??={};save.ownedMods??=[];save.ownedOperators??=['ranger'];
-const persist=()=>localStorage.setItem('strikeOps25',JSON.stringify(save));
+const persist=()=>localStorage.setItem('strikeOps26',JSON.stringify(save));
 
 /* Renderer */
 const renderer=new THREE.WebGLRenderer({antialias:true});
@@ -392,6 +418,8 @@ const player={
 const MAP_LIMIT=72,keys={};
 let score=0,kills=0,round=1,enemiesToSpawn=0,alliesToSpawn=0;
 let streak=0,streakTimer=0,xpGained=0;
+let uavActive=false,uavTimer=0,droneActive=false,droneTimer=0;
+let currentMapId='foundry';
 
 /* FIXED mouse look */
 document.addEventListener('mousemove',e=>{
@@ -1230,14 +1258,48 @@ const weaponCatalog={
   revolver:{name:'JUDGE .357',type:'REVOLVER',damage:78,fireRate:.55,mag:6,reserve:30,spread:.005,adsSpread:.3,recoil:.16,auto:false,range:170,pellets:1,moveSpeed:1.06,sound:480,scopeZoom:1.25}
 };
 
+/* Balanced attachments with clear pros and cons */
 const modCatalog={
-  compensator:{name:'Compensator',price:200,desc:'-32% recoil, +4% damage',apply:w=>{w.recoil*=.68;w.damage*=1.04}},
-  laser:{name:'Laser Sight',price:160,desc:'-28% spread',apply:w=>{w.spread*=.72;w.adsSpread*=.85}},
-  extendedMag:{name:'Extended Magazine',price:260,desc:'+55% magazine',apply:w=>{w.mag=Math.round(w.mag*1.55)}},
-  lightweight:{name:'Lightweight Frame',price:180,desc:'+14% movement, -8% damage',apply:w=>{w.moveSpeed*=1.14;w.damage*=.92}},
-  hollowPoint:{name:'Hollow Point',price:300,desc:'+22% damage, -20% range',apply:w=>{w.damage*=1.22;w.range*=.8}},
-  foregrip:{name:'Foregrip',price:220,desc:'-22% recoil, -12% spread',apply:w=>{w.recoil*=.78;w.spread*=.88}},
-  highCaliber:{name:'High-Caliber Rounds',price:380,desc:'+30% damage, -18% magazine',apply:w=>{w.damage*=1.3;w.mag=Math.max(3,Math.round(w.mag*.82))}}
+  compensator:{name:'Compensator',price:200,
+    pro:'+32% recoil control, +4% damage',
+    con:'-6% movement speed',
+    apply:w=>{w.recoil*=.68;w.damage*=1.04;w.moveSpeed*=.94}},
+  laser:{name:'Laser Sight',price:160,
+    pro:'-28% hipfire spread, faster ADS',
+    con:'-15% range, visible laser',
+    apply:w=>{w.spread*=.72;w.range*=.85}},
+  extendedMag:{name:'Extended Magazine',price:260,
+    pro:'+55% magazine size',
+    con:'-12% movement speed, slower reload',
+    apply:w=>{w.mag=Math.round(w.mag*1.55);w.moveSpeed*=.88}},
+  lightweight:{name:'Lightweight Frame',price:180,
+    pro:'+14% movement speed',
+    con:'-8% damage, -20% range',
+    apply:w=>{w.moveSpeed*=1.14;w.damage*=.92;w.range*=.8}},
+  hollowPoint:{name:'Hollow Point',price:300,
+    pro:'+22% damage',
+    con:'-20% range, -10% fire rate',
+    apply:w=>{w.damage*=1.22;w.range*=.8;w.fireRate*=1.1}},
+  foregrip:{name:'Foregrip',price:220,
+    pro:'-22% recoil, -12% spread',
+    con:'-8% movement speed',
+    apply:w=>{w.recoil*=.78;w.spread*=.88;w.moveSpeed*=.92}},
+  highCaliber:{name:'High-Caliber Rounds',price:380,
+    pro:'+30% damage, better wall penetration',
+    con:'-18% magazine, +25% recoil',
+    apply:w=>{w.damage*=1.3;w.mag=Math.max(3,Math.round(w.mag*.82));w.recoil*=1.25}},
+  suppressor:{name:'Suppressor',price:240,
+    pro:'No muzzle flash, quieter shots, hidden on radar',
+    con:'-12% damage, -15% range',
+    apply:w=>{w.damage*=.88;w.range*=.85;w.suppressed=true}},
+  quickdraw:{name:'Quickdraw Grip',price:190,
+    pro:'+30% faster ADS',
+    con:'-10% recoil control',
+    apply:w=>{w.recoil*=1.1;w.quickAds=true}},
+  heavyBarrel:{name:'Heavy Barrel',price:280,
+    pro:'+18% range, +8% damage',
+    con:'-15% movement speed, +20% recoil',
+    apply:w=>{w.range*=1.18;w.damage*=1.08;w.moveSpeed*=.85;w.recoil*=1.2}}
 };
 
 function buildWeapon(id){
@@ -1265,12 +1327,13 @@ function reload(){
   if(reloading||knifeActive||w.ammo===w.mag||w.reserve<=0)return;
   reloading=true;updateHUD();
   beep(240,.08,'square',.05);
+  const reloadTime=w.extendedMag?1.3:1.0;
   setTimeout(()=>{
     const take=Math.min(w.mag-w.ammo,w.reserve);
     w.ammo+=take;w.reserve-=take;
     reloading=false;updateHUD();
     beep(360,.07,'square',.05);
-  },1000);
+  },reloadTime*1000);
 }
 
 /* Audio */
@@ -1749,26 +1812,19 @@ function fireHitscan(){
   }
 }
 
-/* NEW: dead soldiers lie on floor for 10 seconds */
 function killBot(bot,dir,headshot){
   bot.alive=false;
   bot.deadTimer=10;
   bot.state='dead';
-
-  /* Fall animation: rotate to lying flat */
   bot.g.rotation.x=-Math.PI/2*(0.5+Math.random()*0.5);
   bot.g.rotation.z=(Math.random()-.5)*.6;
   bot.g.position.y=groundHeightAt(bot.g.position.x,bot.g.position.z)+.25;
-
-  /* Limbs go limp */
   bot.lUpper.rotation.x=1.2;bot.rUpper.rotation.x=1.2;
   bot.lLower.rotation.x=.4;bot.rLower.rotation.x=.4;
   bot.lUpperLeg.rotation.x=.8;bot.rUpperLeg.rotation.x=.6;
   bot.lLowerLeg.rotation.x=.5;bot.rLowerLeg.rotation.x=.3;
-
   spawnBlood(bot.g.position.clone().setY(1.2),dir.clone(),headshot?34:22,headshot);
   spawnBloodPool(bot.g.position,headshot?1.3:1.1);
-
   const D=difficultyCatalog[save.difficulty];
   const reward=Math.round((headshot?190:115)*D.reward);
   streak++;streakTimer=4;
@@ -1777,10 +1833,98 @@ function killBot(bot,dir,headshot){
   save.credits+=reward;kills++;player.kills++;
   addXp(headshot?95:65);
   feed(`${headshot?'HEADSHOT':'ELIMINATED'} ${bot.name} • ${weapons[current].name} +CR${reward}`);
-  if(streak===3)announce('KILLING SPREE');
-  if(streak===5)announce('RAMPAGE');
+
+  /* NEW: killstreak rewards */
+  if(streak===3){
+    uavActive=true;uavTimer=18;
+    announce('UAV RECON ONLINE');
+    feed('UAV RECON • ENEMIES REVEALED 18s');
+    beep(880,.2,'triangle',.08);
+  }
+  if(streak===5){
+    spawnAttackDrone();
+    announce('ATTACK DRONE DEPLOYED');
+    feed('ATTACK DRONE • AUTO-TARGETING 25s');
+    beep(660,.25,'sawtooth',.09);
+  }
   if(streak===8)announce('UNSTOPPABLE');
   persist();updateHUD();
+}
+
+/* NEW: Attack Drone killstreak */
+let attackDrone=null;
+
+function spawnAttackDrone(){
+  if(attackDrone)return;
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.5,.18,.5),
+    new THREE.MeshStandardMaterial({color:0x2a343c,roughness:.4,metalness:.7}));
+  g.add(body);
+  const rotor1=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.03,12),
+    new THREE.MeshStandardMaterial({color:0x1a1f24,roughness:.5}));
+  rotor1.position.set(.3,.12,0);g.add(rotor1);
+  const rotor2=rotor1.clone();rotor2.position.set(-.3,.12,0);g.add(rotor2);
+  const camera_=new THREE.Mesh(new THREE.SphereGeometry(.08,10,8),
+    new THREE.MeshStandardMaterial({color:0x8dffb0,emissive:0x8dffb0,emissiveIntensity:.8}));
+  camera_.position.set(0,-.12,.2);g.add(camera_);
+  const light=new THREE.PointLight(0x8dffb0,12,10,2);
+  light.position.set(0,-.1,0);g.add(light);
+  g.position.copy(player.position).add(new THREE.Vector3(0,6,0));
+  scene.add(g);
+  attackDrone={g,rotor1,rotor2,timer:25,shootTimer:0,target:null};
+  droneActive=true;droneTimer=25;
+}
+
+function updateDrone(dt){
+  if(!attackDrone)return;
+  droneTimer-=dt;attackDrone.timer-=dt;
+  attackDrone.rotor1.rotation.y+=dt*30;
+  attackDrone.rotor2.rotation.y-=dt*30;
+
+  /* Find nearest enemy */
+  let nearest=null,best=Infinity;
+  bots.forEach(b=>{
+    if(!b.alive||b.team!=='enemy')return;
+    const d=b.g.position.distanceTo(attackDrone.g.position);
+    if(d<best){best=d;nearest=b;}
+  });
+
+  if(nearest){
+    /* Hover above and slightly behind target */
+    const hoverPos=nearest.g.position.clone().add(new THREE.Vector3(0,5,0));
+    attackDrone.g.position.lerp(hoverPos,Math.min(1,dt*2));
+    attackDrone.g.lookAt(nearest.g.position);
+
+    /* Auto-shoot */
+    attackDrone.shootTimer-=dt;
+    if(attackDrone.shootTimer<=0&&best<25){
+      attackDrone.shootTimer=.25;
+      const dir=new THREE.Vector3().subVectors(nearest.g.position.clone().setY(1.2),attackDrone.g.position).normalize();
+      const start=attackDrone.g.position.clone();
+      const end=start.clone().add(dir.clone().multiplyScalar(40));
+      addTracer(start,end);
+      gunshot(1100,.08,.12);
+      nearest.hp-=18;
+      nearest.flinch=.3;
+      spawnBlood(nearest.g.position.clone().setY(1.2),dir,8);
+      if(nearest.hp<=0){
+        killBot(nearest,dir,false);
+        feed('DRONE ELIMINATION +CR80');
+        save.credits+=80;addXp(40);persist();updateHUD();
+      }
+    }
+  }else{
+    /* Circle player if no target */
+    const t=performance.now()*.001;
+    const circlePos=player.position.clone().add(new THREE.Vector3(Math.cos(t)*6,5,Math.sin(t)*6));
+    attackDrone.g.position.lerp(circlePos,Math.min(1,dt*2));
+  }
+
+  if(attackDrone.timer<=0){
+    scene.remove(attackDrone.g);
+    attackDrone=null;droneActive=false;
+    feed('ATTACK DRONE RETURNED');
+  }
 }
 
 function shoot(){
@@ -1791,11 +1935,15 @@ function shoot(){
   recoil=Math.min(.2,recoil+w.recoil);
   recoilPitch+=w.recoil*1.6;
   recoilYaw+=(Math.random()-.5)*w.recoil*.8;
-  viewmodel.userData.flash.material.opacity=1;
-  viewmodel.userData.muzzleLight.intensity=18;
-  viewmodel.userData.smoke.material.opacity=.6;
+  if(!w.suppressed){
+    viewmodel.userData.flash.material.opacity=1;
+    viewmodel.userData.muzzleLight.intensity=18;
+    viewmodel.userData.smoke.material.opacity=.6;
+  }
   addCasing();
-  player.shots++;updateHUD();gunshot(w.sound);fireHitscan();
+  player.shots++;updateHUD();
+  gunshot(w.suppressed?w.sound*.5:w.sound,w.suppressed?.08:.15,w.suppressed?.1:.22);
+  fireHitscan();
   if(onlineOpponent){
     const dir=new THREE.Vector3(0,0,-1).applyEuler(camera.rotation);
     sendNet({t:'shot',origin:camera.position.toArray(),dir:dir.toArray(),weapon:w.name});
@@ -1948,11 +2096,9 @@ function updateKnife(dt){
   }
 }
 
-/* Bot AI with crouch, slide, and better animation */
+/* Bot AI with crouch, slide, better animation */
 function botCombat(bot,dt){
   bot.flinch=Math.max(0,bot.flinch-dt);
-
-  /* Dead body cleanup after 10 seconds */
   if(!bot.alive){
     bot.deadTimer-=dt;
     if(bot.deadTimer<=0){
@@ -1962,45 +2108,33 @@ function botCombat(bot,dt){
     }
     return;
   }
-
   const enemyTargets=bots.filter(b=>b.alive&&b.team!==bot.team).map(b=>b.g.position);
   const targets=bot.team==='enemy'?[player.position,...enemyTargets]:enemyTargets;
   if(!targets.length)return;
-
   let target=targets[0],best=Infinity;
   targets.forEach(t=>{const d=bot.g.position.distanceTo(t);if(d<best){best=d;target=t;}});
-
   const botEye=bot.g.position.clone();botEye.y+=1.68;
   const targetEye=target.clone();targetEye.y+=1.55;
-
   const toTarget=new THREE.Vector3().subVectors(targetEye,botEye);
   const distance=toTarget.length();const direction=toTarget.clone().normalize();
-
   const forward=new THREE.Vector3(0,0,1).applyQuaternion(bot.g.quaternion);
   const facing=forward.dot(direction)>.15;
   const visible=hasLineOfSight(botEye,targetEye)&&facing&&distance<36;
-
   bot.awareness=visible?Math.min(1,bot.awareness+dt*1.7):Math.max(0,bot.awareness-dt*.8);
-
   const dir=new THREE.Vector3(target.x-bot.g.position.x,0,target.z-bot.g.position.z);
   const flatDistance=dir.length();dir.normalize();
-
   const preferredRange=bot.weapon==='shotgun'?9:bot.weapon==='sniper'||bot.weapon==='dmr'?40:18;
 
-  /* NEW: slide attack when closing in fast */
   if(bot.state==='stand'&&flatDistance<16&&flatDistance>6&&visible&&Math.random()<.008){
     bot.state='slide';
     bot.slideTimer=.8;
     bot.slideDir.copy(dir);
     beep(200,.2,'sawtooth',.04);
   }
-
-  /* NEW: crouch when shooting at medium range */
   if(bot.state==='stand'&&visible&&flatDistance>10&&flatDistance<28&&Math.random()<.006){
     bot.state='crouch';
     bot.crouchTimer=2+Math.random()*2;
   }
-
   if(bot.state==='slide'){
     bot.slideTimer-=dt;
     const slideSpeed=12;
@@ -2020,7 +2154,6 @@ function botCombat(bot,dt){
     const side=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar(Math.random()<.5?1:-1);
     moveDirection.add(side.multiplyScalar(1.4)).normalize();
   }
-
   if(bot.state==='stand'&&(!visible||flatDistance>preferredRange)){
     const speed=bot.speed;
     const next=bot.g.position.clone().add(moveDirection.multiplyScalar(speed*dt));
@@ -2037,24 +2170,17 @@ function botCombat(bot,dt){
       if(!blockedAt(flank,1.72))bot.g.position.copy(flank);
     }
   }
-
   bot.g.position.x=THREE.MathUtils.clamp(bot.g.position.x,-MAP_LIMIT,MAP_LIMIT);
   bot.g.position.z=THREE.MathUtils.clamp(bot.g.position.z,-MAP_LIMIT,MAP_LIMIT);
-
   const targetAngle=Math.atan2(target.x-bot.g.position.x,target.z-bot.g.position.z);
   let difference=targetAngle-bot.g.rotation.y;
   while(difference>Math.PI)difference-=Math.PI*2;
   while(difference<-Math.PI)difference+=Math.PI*2;
   bot.g.rotation.y+=difference*Math.min(1,dt*6);
-
-  /* NEW: better animation per state */
   const moving=bot.state==='stand'&&(!visible||flatDistance>preferredRange);
   bot.phase+=dt*(bot.state==='slide'?14:moving?8.5:2.2);
-
   const flinchOffset=bot.flinch>0?Math.sin(bot.flinch*22)*.18:0;
-
   if(bot.state==='slide'){
-    /* Sliding pose: lean back, legs forward */
     bot.g.rotation.x=-.35;
     bot.lUpperLeg.rotation.x=1.1;
     bot.rUpperLeg.rotation.x=.9;
@@ -2065,7 +2191,6 @@ function botCombat(bot,dt){
     bot.lLower.rotation.x=-.8;
     bot.rLower.rotation.x=-.8;
   }else if(bot.state==='crouch'){
-    /* Crouch pose: lower body, bent knees */
     bot.g.position.y=groundHeightAt(bot.g.position.x,bot.g.position.z);
     bot.g.scale.y=.72;
     bot.lUpperLeg.rotation.x=1.2;
@@ -2090,17 +2215,14 @@ function botCombat(bot,dt){
     bot.lLower.rotation.x=-.4;
     bot.rLower.rotation.x=-.4;
   }
-
   const now=performance.now()/1000;
   const D=difficultyCatalog[save.difficulty];
   const roundAccuracy=Math.min(.9,D.accuracy+(round-1)*.015);
-
   if(bot.reloading){
     bot.reloadTimer-=dt;
     if(bot.reloadTimer<=0)bot.reloading=false;
     return;
   }
-
   if(visible&&bot.awareness>=.95&&distance<32&&now-bot.nextShot>D.reaction+Math.random()*.5){
     bot.nextShot=now;bot.burst++;
     if(bot.burst>5){
@@ -2169,6 +2291,7 @@ function startOnlineMatch(){
   weapons=[buildWeapon(save.primary),buildWeapon(save.secondary)];
   current=0;makeViewmodel(save.primary);
   document.getElementById('lobby').style.display='none';
+  document.getElementById('queue').style.display='none';
   document.getElementById('end').style.display='none';
   document.getElementById('pause').style.display='none';
   document.getElementById('hud').style.display='block';
@@ -2224,7 +2347,7 @@ function setupConnection(connection){
 
 document.getElementById('hostBtn').onclick=()=>{
   netCode=randomCode();netStatus('CREATING MATCH...');
-  peer=new Peer(`strike-ops-25-${netCode}`);
+  peer=new Peer(`strike-ops-26-${netCode}`);
   peer.on('open',()=>netStatus(`SHARE CODE: ${netCode}`,'#ffcc33'));
   peer.on('connection',setupConnection);
   peer.on('error',()=>netStatus('COULD NOT CREATE MATCH. TRY AGAIN.','#ff5d5d'));
@@ -2235,7 +2358,7 @@ document.getElementById('joinBtn').onclick=()=>{
   if(!code){netStatus('ENTER A JOIN CODE','#ff5d5d');return;}
   netCode=code;netStatus('CONNECTING...');
   peer=new Peer();
-  peer.on('open',()=>setupConnection(peer.connect(`strike-ops-25-${code}`)));
+  peer.on('open',()=>setupConnection(peer.connect(`strike-ops-26-${code}`)));
   peer.on('error',()=>netStatus('INVALID CODE OR HOST OFFLINE','#ff5d5d'));
 };
 
@@ -2262,6 +2385,67 @@ function showPodium(entries,title,color){
   document.getElementById('endTitle').style.color=color;
 }
 
+/* NEW: Queue screen with random map */
+let queueActive=false,queueTimer=0,queueProgress=0;
+
+function openQueue(){
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('queue').style.display='flex';
+  document.getElementById('queueStatus').textContent='PRESS FIND MATCH TO SEARCH';
+  document.getElementById('queueMap').textContent='';
+  document.getElementById('queueFill').style.width='0%';
+  document.getElementById('queuePlayers').textContent='';
+  document.getElementById('findMatchBtn').style.display='block';
+  document.getElementById('cancelQueueBtn').style.display='none';
+}
+
+function startQueue(){
+  queueActive=true;queueProgress=0;queueTimer=0;
+  document.getElementById('findMatchBtn').style.display='none';
+  document.getElementById('cancelQueueBtn').style.display='block';
+  document.getElementById('queueStatus').textContent='SEARCHING FOR MATCH...';
+  const fakePlayers=Math.floor(Math.random()*6)+3;
+  document.getElementById('queuePlayers').textContent=`${fakePlayers} OPERATORS IN QUEUE`;
+}
+
+function updateQueue(dt){
+  if(!queueActive)return;
+  queueProgress+=dt*22;
+  document.getElementById('queueFill').style.width=Math.min(100,queueProgress)+'%';
+
+  /* Random map reveal at 60% */
+  if(queueProgress>60&&!document.getElementById('queueMap').textContent){
+    const mapIds=Object.keys(mapCatalog);
+    currentMapId=mapIds[Math.floor(Math.random()*mapIds.length)];
+    save.map=currentMapId;persist();
+    document.getElementById('queueMap').textContent=mapCatalog[currentMapId].name.toUpperCase();
+    document.getElementById('queueStatus').textContent='MAP SELECTED • DEPLOYING...';
+    beep(720,.15,'triangle',.07);
+  }
+
+  if(queueProgress>=100){
+    queueActive=false;
+    document.getElementById('queue').style.display='none';
+    deploy();
+  }
+}
+
+document.getElementById('findMatchBtn').onclick=startQueue;
+document.getElementById('cancelQueueBtn').onclick=()=>{
+  queueActive=false;
+  document.getElementById('queueStatus').textContent='SEARCH CANCELLED';
+  document.getElementById('queueMap').textContent='';
+  document.getElementById('queueFill').style.width='0%';
+  document.getElementById('findMatchBtn').style.display='block';
+  document.getElementById('cancelQueueBtn').style.display='none';
+};
+document.getElementById('backToLobbyBtn').onclick=()=>{
+  queueActive=false;
+  document.getElementById('queue').style.display='none';
+  openLobby();
+};
+document.getElementById('queueBtn').onclick=openQueue;
+
 /* Lobby */
 let shopTab='mods';
 
@@ -2271,6 +2455,7 @@ function openLobby(){
   document.getElementById('pause').style.display='none';
   document.getElementById('end').style.display='none';
   document.getElementById('hud').style.display='none';
+  document.getElementById('queue').style.display='none';
   document.getElementById('lobby').style.display='flex';
   renderLobby();
 }
@@ -2356,7 +2541,9 @@ function renderShop(){
       const rifleOn=save.installedMods.rifle?.includes(id);
       const pistolOn=save.installedMods.pistol?.includes(id);
       const item=document.createElement('div');item.className='shopItem';
-      item.innerHTML=`<div><b>${m.name}</b><small>${m.desc}</small></div>`;
+      item.innerHTML=`<div><b>${m.name}</b>
+        <small class="pro">${m.pro}</small>
+        <small class="con">${m.con}</small></div>`;
       const actions=document.createElement('div');actions.style.display='flex';actions.style.gap='6px';
       const buy=document.createElement('button');buy.className='buy';
       buy.textContent=owned?'OWNED':`CR${m.price}`;
@@ -2459,12 +2646,14 @@ function deploy(){
   bloodDecals.forEach(d=>scene.remove(d.mesh));bloodDecals.length=0;
   bloodPools.forEach(p=>scene.remove(p.mesh));bloodPools.length=0;
   grenades.forEach(g=>scene.remove(g.mesh));grenades.length=0;
+  if(attackDrone){scene.remove(attackDrone.g);attackDrone=null;droneActive=false;}
   if(onlineOpponent){scene.remove(onlineOpponent.g);onlineOpponent=null;}
   scene.remove(world);
   world=new THREE.Group();scene.add(world);
   walls=[];platforms=[];solidMeshes=[];pickups=[];
-  mapCatalog[save.map].build();
+  mapCatalog[currentMapId].build();
   score=0;kills=0;round=1;streak=0;xpGained=0;
+  uavActive=false;uavTimer=0;droneActive=false;droneTimer=0;
   player.hp=player.maxHp;player.armor=player.maxArmor;player.stamina=player.maxStamina;
   player.crouching=false;player.sliding=false;player.aiming=false;
   player.lean=0;player.leanTarget=0;
@@ -2480,8 +2669,9 @@ function deploy(){
   current=0;makeViewmodel(save.primary);
   document.querySelectorAll('#crosshair i').forEach(i=>i.style.background=save.crosshairColor);
   document.getElementById('lobby').style.display='none';
+  document.getElementById('queue').style.display='none';
   document.getElementById('end').style.display='none';
-  document.getElementById('mapName').textContent=mapCatalog[save.map].name.toUpperCase();
+  document.getElementById('mapName').textContent=mapCatalog[currentMapId].name.toUpperCase();
   roundActive=true;
   const D=difficultyCatalog[save.difficulty];
   enemiesToSpawn=D.enemySquad;alliesToSpawn=D.squad-1;
@@ -2513,12 +2703,15 @@ function endMatch(win){
      <span>ACCURACY <b>${accuracy}%</b></span>
      <span>XP <b>+${xpGained}</b></span>`;
   document.getElementById('endText').textContent=
-    `${mapCatalog[save.map].name} • ${D.name} • Round ${round} • Score ${score} • Bonus CR${reward}`;
+    `${mapCatalog[currentMapId].name} • ${D.name} • Round ${round} • Score ${score} • Bonus CR${reward}`;
   document.getElementById('hud').style.display='none';
   document.getElementById('end').style.display='flex';
 }
 
-document.getElementById('deployBtn').onclick=deploy;
+document.getElementById('deployBtn').onclick=()=>{
+  currentMapId=save.map;
+  deploy();
+};
 
 document.getElementById('continueBtn').onclick=()=>{
   document.getElementById('end').style.display='none';
@@ -2542,9 +2735,12 @@ function updateHUD(){
     onlineActive?1:bots.filter(b=>b.alive&&b.team==='ally').length+alliesToSpawn;
   document.getElementById('score').textContent=score;
   document.getElementById('hudCredits').textContent=save.credits;
+  document.getElementById('streakCount').textContent=streak;
+  document.getElementById('uavStatus').textContent=uavActive?`${Math.ceil(uavTimer)}s`:'LOCKED';
+  document.getElementById('droneStatus').textContent=droneActive?`${Math.ceil(droneTimer)}s`:'LOCKED';
 }
 
-/* Minimap */
+/* Minimap with UAV reveal */
 const minimapCanvas=document.getElementById('minimapCanvas');
 const minimapContext=minimapCanvas.getContext('2d');
 
@@ -2563,6 +2759,9 @@ function updateMinimap(){
   });
   bots.forEach(b=>{
     if(!b.alive)return;
+    /* UAV reveals all enemies; otherwise only nearby ones */
+    const showEnemy=uavActive||b.g.position.distanceTo(player.position)<30;
+    if(b.team==='enemy'&&!showEnemy)return;
     const [x,z]=toMap(b.g.position.x,b.g.position.z);
     c.fillStyle=b.team==='ally'?'#8dffb0':'#ff5d5d';
     c.beginPath();c.arc(x,z,3.2,0,Math.PI*2);c.fill();
@@ -2607,103 +2806,23 @@ const clock=new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(clock.getDelta(),.05);
+
+  if(document.getElementById('queue').style.display==='flex'){
+    updateQueue(dt);
+    renderer.render(scene,camera);
+    return;
+  }
+
   if(document.getElementById('lobby').style.display!=='none'){
     renderer.render(scene,camera);return;
   }
+
   if(!paused){
+    if(uavActive){
+      uavTimer-=dt;
+      if(uavTimer<=0){uavActive=false;feed('UAV RECON OFFLINE');}
+    }
     if(onlineActive&&onlineOpponent){
       move(dt);
       const moving=keys['KeyW']||keys['KeyA']||keys['KeyS']||keys['KeyD'];
-      const sprinting=keys['ShiftLeft']&&moving&&player.stamina>2&&!player.crouching&&!player.aiming;
-      updateViewmodel(dt,moving,sprinting);
-      updateCrosshair();
-      if(firing&&!knifeActive)shoot();
-      updateKnife(dt);updateGrenades(dt);
-      netTimer-=dt;
-      if(netTimer<=0){
-        netTimer=.05;
-        sendNet({
-          t:'state',
-          p:[player.position.x,player.position.y,player.position.z],
-          yaw,pitch
-        });
-      }
-    }else if(mouseLocked&&roundActive){
-      move(dt);
-      const moving=keys['KeyW']||keys['KeyA']||keys['KeyS']||keys['KeyD'];
-      const sprinting=keys['ShiftLeft']&&moving&&player.stamina>2&&!player.crouching&&!player.aiming;
-      updateViewmodel(dt,moving,sprinting);
-      updateCrosshair();
-      if(firing&&!knifeActive)shoot();
-      updateKnife(dt);updateGrenades(dt);
-      bots.forEach(b=>botCombat(b,dt));
-      pickups.forEach(p=>{
-        if(!p.active){
-          p.respawn-=dt;
-          if(p.respawn<=0){p.active=true;p.mesh.visible=true;}
-          return;
-        }
-        p.mesh.rotation.y+=dt*1.6;
-        if(p.mesh.position.distanceTo(player.position)<1.7){
-          p.active=false;p.mesh.visible=false;p.respawn=18;
-          if(p.type==='health'){player.hp=Math.min(player.maxHp,player.hp+45);feed('HEALTH +45');}
-          if(p.type==='armor'){player.armor=Math.min(player.maxArmor,player.armor+45);feed('ARMOR +45');}
-          if(p.type==='ammo'){
-            weapons.forEach(w=>w.reserve=Math.min(w.reserve+Math.round(w.mag*1.5),w.mag*6));
-            feed('AMMO RESTOCKED');
-          }
-          beep(720,.09,'triangle',.06);updateHUD();
-        }
-      });
-      const enemyAlive=bots.filter(b=>b.alive&&b.team==='enemy').length;
-      const allyAlive=bots.filter(b=>b.alive&&b.team==='ally').length;
-      if(enemyAlive<3&&enemiesToSpawn>0){
-        const ops=Object.keys(operatorCatalog);
-        addBot('enemy',ops[Math.floor(Math.random()*ops.length)],true);
-        enemiesToSpawn--;updateHUD();
-      }
-      if(allyAlive<2&&alliesToSpawn>0){
-        addBot('ally',save.operator,true);alliesToSpawn--;updateHUD();
-      }
-      if(enemyAlive===0&&enemiesToSpawn===0){
-        round++;roundActive=false;
-        const bonus=Math.round(250*difficultyCatalog[save.difficulty].reward);
-        save.credits+=bonus;addXp(180);persist();
-        announce(`ROUND COMPLETE +CR${bonus}`);
-        feed(`ROUND COMPLETE • +CR${bonus} • +180 XP`);
-        setTimeout(()=>{
-          if(!onlineActive){
-            roundActive=true;
-            const D=difficultyCatalog[save.difficulty];
-            enemiesToSpawn=D.enemySquad+Math.floor((round-1)*.7);
-            alliesToSpawn=D.squad-1;
-            updateHUD();
-          }
-        },2500);
-      }
-      streakTimer-=dt;
-      if(streakTimer<=0)streak=0;
-      if(performance.now()-player.lastDamageTime>5200&&player.hp<player.maxHp){
-        player.hp=Math.min(player.maxHp,player.hp+9*dt);updateHUD();
-      }
-      const lowHealth=player.hp<35;
-      document.getElementById('lowHp').style.opacity=lowHealth?.5+Math.sin(performance.now()*.008)*.2:0;
-      if(lowHealth&&Math.random()<.035)beep(65,.14,'sine',.05);
-      updateMinimap();updateCompass();
-    }
-    updateEffects(dt);
-  }
-  renderer.render(scene,camera);
-}
-
-addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-});
-
-openLobby();
-animate();
-</script>
-</body>
-</html>
+      const sprinting=keys['ShiftLeft']&&moving&&player.stamina>2&&!player.crouching&&!player.aiming
