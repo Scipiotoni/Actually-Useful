@@ -3,45 +3,57 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MTB RIDERS — Realistic 3D Mountain Biking</title>
+<title>MTB RIDERS — 3D Mountain Biking</title>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,Arial,sans-serif}
-body{overflow:hidden;background:#04070d;color:#fff}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+body{overflow:hidden;background:#05070d;color:#fff}
 canvas{display:block}
-.screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,#0b1626,#04070d);z-index:20}
+.screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,#0a1626,#04070d);z-index:20}
 .screen.active{display:flex}
-.panel{width:min(1050px,95vw);max-height:92vh;overflow:auto;background:rgba(9,15,26,.94);border:1px solid #22405f;border-radius:20px;padding:30px;box-shadow:0 0 80px #00a2ff22}
-h1{font-size:46px;letter-spacing:4px;color:#4ee1ff;text-shadow:0 0 30px #00b7ff}
-h2{margin:20px 0 10px;color:#9ad9ff}
+.panel{width:min(1100px,96vw);max-height:94vh;overflow:auto;background:rgba(8,14,25,.95);border:1px solid #254a70;border-radius:20px;padding:28px}
+h1{font-size:44px;color:#4ee1ff;text-shadow:0 0 25px #00a2ff}
+h2{margin:18px 0 10px;color:#9ad9ff}
+h3{margin:12px 0 6px;color:#7fd4ff}
 p{color:#b8c7d9;line-height:1.5}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:14px}
-.card{background:#0e182a;border:1px solid #26507a;border-radius:14px;padding:16px}
+.card{background:#0e182a;border:1px solid #26507a;border-radius:14px;padding:15px}
 .card b{color:#4ee1ff}
-button{cursor:pointer;border:0;border-radius:10px;padding:12px 18px;font-weight:700;background:linear-gradient(90deg,#00a2ff,#7b5cff);color:#fff;transition:.2s}
-button:hover{transform:translateY(-2px);box-shadow:0 8px 22px #00a2ff55}
-button:disabled{opacity:.4;cursor:not-allowed;transform:none}
-button.ghost{background:#142238;border:1px solid #2f5c86}
+button{cursor:pointer;border:0;border-radius:10px;padding:12px 18px;font-weight:bold;background:linear-gradient(90deg,#00a2ff,#7b5cff);color:#fff}
+button:hover{filter:brightness(1.15)}
+button.ghost{background:#152439;border:1px solid #2f5c86}
 button.danger{background:#8f1d2c}
-input,select{width:100%;padding:11px;border-radius:9px;border:1px solid #2f5c86;background:#091322;color:#fff;margin-top:6px}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{width:100%;padding:11px;border-radius:9px;border:1px solid #2f5c86;background:#091322;color:#fff;margin-top:6px}
 label{font-size:12px;color:#9fb4cc}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .small{font-size:12px;color:#7f93aa}
 .hidden{display:none!important}
 #hud{position:fixed;inset:0;pointer-events:none;display:none;z-index:5}
 #hud.active{display:block}
-.hudbox{position:absolute;background:rgba(3,9,18,.62);border:1px solid #22405f;border-radius:12px;padding:10px 14px;backdrop-filter:blur(5px)}
-#speed{left:20px;bottom:20px;font-size:32px;font-weight:800;color:#4ee1ff}
-#trick{left:50%;top:75px;transform:translateX(-50%);font-size:28px;color:#ffe45e;text-align:center}
-#score{right:20px;top:20px;font-size:18px}
+.hudbox{position:absolute;background:rgba(3,9,18,.65);border:1px solid #254a70;border-radius:12px;padding:10px 14px}
+#speed{left:20px;bottom:20px;font-size:32px;font-weight:bold;color:#4ee1ff}
+#trick{left:50%;top:70px;transform:translateX(-50%);font-size:27px;color:#ffe45e;text-align:center}
+#score{right:20px;top:20px}
 #mapname{left:20px;top:20px}
 #controls{right:20px;bottom:20px;font-size:12px;color:#b8c7d9;max-width:330px}
-#toasts{position:fixed;right:20px;top:80px;z-index:30;display:flex;flex-direction:column;gap:8px}
+#toasts{position:fixed;right:20px;top:80px;z-index:40;display:flex;flex-direction:column;gap:8px}
 .toast{background:#0b1a2d;border:1px solid #00b7ff;border-radius:10px;padding:10px 14px;animation:fade 4s forwards}
 @keyframes fade{0%{opacity:0;transform:translateX(30px)}10%,80%{opacity:1;transform:none}100%{opacity:0}}
-#editorUI{position:fixed;left:20px;top:20px;z-index:10;display:none;background:rgba(4,10,20,.88);border:1px solid #22405f;border-radius:12px;padding:14px;width:300px}
+#editorUI{position:fixed;left:20px;top:20px;z-index:10;display:none;background:rgba(4,10,20,.88);border:1px solid #254a70;border-radius:12px;padding:14px;width:300px}
 #editorUI.active{display:block}
-#lobbyOptions{margin-top:16px;padding:16px;background:#0a1322;border:1px dashed #2f5c86;border-radius:12px}
-.tag{display:inline-block;background:#12233c;border:1px solid #2b4a75;padding:4px 8px;border-radius:20px;font-size:11px;margin:2px}
+#lobbyTabs{display:flex;gap:8px;margin:16px 0}
+.lobbyTab{padding:10px 16px;border-radius:10px;background:#12233c;border:1px solid #2f5c86;cursor:pointer}
+.lobbyTab.active{background:#00a2ff;color:#04121f;font-weight:bold}
+#playerGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;max-height:330px;overflow:auto}
+.player{background:#0d182a;border:1px solid #26507a;border-radius:12px;padding:10px}
+.player.you{border-color:#00e5ff;box-shadow:0 0 18px #00e5ff33}
+.player.ready{border-color:#22ff88}
+#chat{height:180px;overflow:auto;background:#08111e;border:1px solid #254a70;border-radius:12px;padding:10px;margin-top:10px}
+.chatLine{margin-bottom:6px;font-size:13px}
+.chatLine b{color:#4ee1ff}
 </style>
 </head>
 <body>
@@ -49,28 +61,28 @@ label{font-size:12px;color:#9fb4cc}
 <div id="menu" class="screen active">
   <div class="panel">
     <h1>MTB RIDERS</h1>
-    <p>A more realistic 3D mountain-bike experience: terrain physics, air tricks, career progression, freeride, custom trails and a 50-rider lobby.</p>
+    <p>3D mountain biking with tricks, career, freeride, custom maps and a 50-player lobby.</p>
 
     <div class="grid">
       <div class="card"><b>Rider name</b><input id="username" value="Rider" maxlength="18"></div>
-      <div class="card"><b>Camera</b><select id="cameraMode"><option value="third">Third person</option><option value="first">First person / bars</option></select></div>
-      <div class="card"><b>Graphics</b><select id="quality"><option value="high">High — shadows, fog, dense scenery</option><option value="medium">Medium</option><option value="low">Low — best performance</option></select></div>
+      <div class="card"><b>Camera</b><select id="cameraMode"><option value="third">Third person</option><option value="first">First person</option></select></div>
+      <div class="card"><b>Graphics</b><select id="quality"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
       <div class="card"><b>Difficulty</b><select id="difficulty"><option>Chill</option><option selected>Normal</option><option>Pro</option></select></div>
     </div>
 
     <h2>Play</h2>
     <div class="grid">
-      <div class="card"><b>Career</b><p>Ride 50 progressive maps, earn XP and unlock bikes.</p><button onclick="startGame('career')">Start career</button></div>
-      <div class="card"><b>Freeride</b><p>Explore an open mountain, hit jumps and throw tricks.</p><button onclick="startGame('free')">Enter freeride</button></div>
-      <div class="card"><b>Multiplayer lobby</b><p>Create or join a lobby with up to 50 riders.</p><button class="ghost" onclick="openLobby()">Open lobby</button></div>
-      <div class="card"><b>Map creator</b><p>Build custom trails with jumps, drops, trees and checkpoints.</p><button class="ghost" onclick="startGame('editor')">Open creator</button></div>
+      <div class="card"><b>Career</b><p>Ride 50 progressive maps and earn XP.</p><button id="careerBtn">Start career</button></div>
+      <div class="card"><b>Freeride</b><p>Explore, jump and throw tricks.</p><button id="freeBtn">Enter freeride</button></div>
+      <div class="card"><b>Multiplayer lobby</b><p>Up to 50 riders, ready-up, chat and races.</p><button id="lobbyBtn">Open lobby</button></div>
+      <div class="card"><b>Map creator</b><p>Build custom trails with jumps and checkpoints.</p><button id="editorBtn">Open creator</button></div>
     </div>
 
     <h2>Garage</h2>
     <div id="bikeGarage" class="grid"></div>
 
     <h2>Tricks</h2>
-    <p class="small">Get airborne, hold <b>SHIFT</b>, then press a number key. Release SHIFT before landing to score.</p>
+    <p class="small">Get airborne, hold SHIFT, then press 1-6. Release SHIFT before landing to score.</p>
     <div class="grid">
       <div class="card"><b>Barspin</b><p>SHIFT + 1</p></div>
       <div class="card"><b>360</b><p>SHIFT + 2</p></div>
@@ -85,32 +97,59 @@ label{font-size:12px;color:#9fb4cc}
 <div id="lobby" class="screen">
   <div class="panel">
     <h1>RACE LOBBY</h1>
-    <p>Lobby supports up to 50 riders. This browser-only version fills empty slots with AI riders; true online multiplayer requires a server.</p>
+    <p id="lobbyStatus">Public lobby • 1 / 50 riders</p>
 
-    <div class="row" style="margin-top:16px">
-      <button onclick="startGame('race')">Start race</button>
-      <button class="ghost" onclick="startGame('free')">Freeride together</button>
-      <button class="ghost" onclick="showScreen('menu')">Back</button>
-      <button class="ghost" onclick="toggleLobbyOptions()">⚙ Hidden lobby options</button>
+    <div id="lobbyTabs">
+      <div class="lobbyTab active" data-tab="players">Players</div>
+      <div class="lobbyTab" data-tab="settings">Lobby settings</div>
+      <div class="lobbyTab" data-tab="chat">Lobby chat</div>
+      <div class="lobbyTab" data-tab="race">Race setup</div>
     </div>
 
-    <div id="lobbyOptions" class="hidden">
+    <div id="tab-players">
+      <div class="row">
+        <button id="readyBtn">Ready up</button>
+        <button class="ghost" id="fillBtn">Fill with AI riders</button>
+        <button class="ghost" id="clearBtn">Clear lobby</button>
+        <button class="ghost" id="backBtn">Back</button>
+      </div>
+      <div id="playerGrid" style="margin-top:14px"></div>
+    </div>
+
+    <div id="tab-settings" class="hidden">
       <div class="grid">
         <div class="card"><label>Lobby name</label><input id="lobbyName" value="Shred Squad"></div>
         <div class="card"><label>Max riders</label><select id="maxRiders"><option>10</option><option>20</option><option selected>50</option></select></div>
-        <div class="card"><label>AI difficulty</label><select id="botSkill"><option value=".45">Casual</option><option value=".7" selected>Competitive</option><option value=".92">Insane</option></select></div>
-        <div class="card"><label>Map type</label><select id="lobbyMap"><option value="forest">Forest trail</option><option value="desert">Desert ridge</option><option value="snow">Snow mountain</option></select></div>
+        <div class="card"><label>Lobby type</label><select id="lobbyType"><option value="public">Public</option><option value="private">Private</option></select></div>
+        <div class="card"><label>Join code</label><input id="joinCode" value="MTB-1234"></div>
+        <div class="card"><label>AI skill</label><select id="botSkill"><option value=".45">Casual</option><option value=".7" selected>Competitive</option><option value=".92">Insane</option></select></div>
+        <div class="card"><label>Map theme</label><select id="lobbyMap"><option value="forest">Forest</option><option value="desert">Desert</option><option value="snow">Snow</option></select></div>
       </div>
-      <div class="row" style="margin-top:12px">
-        <button class="ghost" onclick="togglePrivate()">🔒 Make lobby private</button>
-        <button class="ghost" onclick="fillLobby()">Fill with AI riders</button>
-        <button class="danger" onclick="clearLobby()">Clear lobby</button>
+      <div class="row" style="margin-top:14px">
+        <button class="ghost" id="applyLobbyBtn">Apply settings</button>
       </div>
-      <p class="small" id="lobbyStatus">Public lobby • 1 / 50 riders</p>
     </div>
 
-    <h2>Riders</h2>
-    <div id="lobbyList" class="grid"></div>
+    <div id="tab-chat" class="hidden">
+      <div id="chat"></div>
+      <div class="row" style="margin-top:10px">
+        <input id="chatInput" placeholder="Type a message...">
+        <button id="sendChatBtn">Send</button>
+      </div>
+    </div>
+
+    <div id="tab-race" class="hidden">
+      <div class="grid">
+        <div class="card"><label>Race mode</label><select id="raceMode"><option>Checkpoint race</option><option>Trick attack</option><option>Freeride session</option></select></div>
+        <div class="card"><label>Laps</label><select id="raceLaps"><option>1</option><option selected>2</option><option>3</option></select></div>
+        <div class="card"><label>Collisions</label><select id="raceCollisions"><option>Off</option><option selected>On</option></select></div>
+        <div class="card"><label>Countdown</label><select id="raceCountdown"><option>3 seconds</option><option selected>5 seconds</option><option>10 seconds</option></select></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button id="startRaceBtn">Start race</button>
+        <button class="ghost" id="freeRideBtn">Freeride together</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -140,20 +179,21 @@ label{font-size:12px;color:#9fb4cc}
     <option value="rock">Rock</option>
     <option value="checkpoint">Checkpoint</option>
   </select>
-  <p class="small">Left-click: place object<br>Right-click: remove nearest object</p>
+  <p class="small">Left-click: place<br>Right-click: remove nearest</p>
   <div class="row" style="margin-top:10px">
-    <button onclick="saveCustomMap()">Save map</button>
-    <button class="ghost" onclick="exitEditor()">Exit</button>
+    <button id="saveMapBtn">Save map</button>
+    <button class="ghost" id="exitEditorBtn">Exit</button>
   </div>
 </div>
 
 <div id="toasts"></div>
 
 <script type="module">
-import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+import * as THREE from 'three';
 
-const state={mode:'free',username:'Rider',score:0,mapIndex:1,totalMaps:50,editor:false,camera:'third',quality:'high',private:false,lobbyCount:1};
-let selectedBike=0,unlocked=1,xp=0;
+const state={mode:'free',username:'Rider',score:0,mapIndex:1,totalMaps:50,editor:false,camera:'third',quality:'high'};
+let selectedBike=0,unlocked=1,xp=0,ready=false;
+let lobbyRiders=[],lobbySettings={name:'Shred Squad',max:50,type:'public',code:'MTB-1234',skill:.7,map:'forest'};
 
 const bikes=[
  {name:'Trail Ripper',speed:1,handling:1,jump:1,color:0x00a2ff,price:0},
@@ -176,28 +216,25 @@ const achievements=[
 
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.1,1800);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.05;
 document.body.appendChild(renderer.domElement);
 
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
 
-const hemi=new THREE.HemisphereLight(0xbfd8ff,0x3d2f20,.85);
+scene.add(new THREE.HemisphereLight(0xbfd8ff,0x3d2f20,.9));
 const sun=new THREE.DirectionalLight(0xfff2d0,2.4);
 sun.position.set(100,150,70);
 sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);
-sun.shadow.camera.left=-180;sun.shadow.camera.right=180;
-sun.shadow.camera.top=180;sun.shadow.camera.bottom=-180;
-scene.add(hemi,sun);
+scene.add(sun);
 
-const skyGeo=new THREE.SphereGeometry(1200,32,20);
-const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,uniforms:{},vertexShader:`varying vec3 vPos;void main(){vPos=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec3 vPos;void main(){float h=normalize(vPos).y;vec3 top=vec3(.15,.35,.75);vec3 bottom=vec3(.75,.82,.9);gl_FragColor=vec4(mix(bottom,top,max(h,0.)),1.);}`});
-scene.add(new THREE.Mesh(skyGeo,skyMat));
 scene.fog=new THREE.Fog(0x9db8cf,120,900);
 
 const keys={};
@@ -206,13 +243,9 @@ addEventListener('keydown',e=>{
  if(e.code==='KeyC')state.camera=state.camera==='third'?'first':'third';
  if(e.code==='KeyR')respawn();
  if(e.code==='Escape')showScreen('menu');
- if(keys.ShiftLeft||keys.ShiftRight){
-  if(e.code==='Digit1')queueTrick('Barspin');
-  if(e.code==='Digit2')queueTrick('360');
-  if(e.code==='Digit3')queueTrick('Backflip');
-  if(e.code==='Digit4')queueTrick('No-Foot Can');
-  if(e.code==='Digit5')queueTrick('Superman');
-  if(e.code==='Digit6')queueTrick('Tailwhip');
+ if(e.shiftKey){
+  const tricks={Digit1:'Barspin',Digit2:'360',Digit3:'Backflip',Digit4:'No-Foot Can',Digit5:'Superman',Digit6:'Tailwhip'};
+  if(tricks[e.code])queueTrick(tricks[e.code]);
  }
 });
 addEventListener('keyup',e=>keys[e.code]=false);
@@ -225,21 +258,25 @@ function showScreen(id){
 }
 
 function toast(text){
- const t=document.createElement('div');t.className='toast';t.textContent=text;
+ const t=document.createElement('div');
+ t.className='toast';t.textContent=text;
  document.getElementById('toasts').appendChild(t);
  setTimeout(()=>t.remove(),4200);
 }
 
 function buildGarage(){
- const g=document.getElementById('bikeGarage');g.innerHTML='';
+ const g=document.getElementById('bikeGarage');
+ g.innerHTML='';
  bikes.forEach((b,i)=>{
-  const d=document.createElement('div');d.className='card';
-  d.innerHTML=`<b>${b.name}</b><p>Speed ${b.speed.toFixed(2)} • Handling ${b.handling.toFixed(2)} • Air ${b.jump.toFixed(2)}</p><p class="small">${i<unlocked?'Unlocked':'Locked — '+b.price+' XP'}</p>`;
+  const d=document.createElement('div');
+  d.className='card';
+  d.innerHTML=`<b>${b.name}</b><p>Speed ${b.speed} • Handling ${b.handling} • Air ${b.jump}</p><p class="small">${i<unlocked?'Unlocked':'Locked — '+b.price+' XP'}</p>`;
   const btn=document.createElement('button');
   btn.textContent=i<unlocked?(selectedBike===i?'Selected':'Select'):'Locked';
   btn.disabled=i>=unlocked;
   btn.onclick=()=>{selectedBike=i;buildGarage();toast(b.name+' selected')};
-  d.appendChild(btn);g.appendChild(d);
+  d.appendChild(btn);
+  g.appendChild(d);
  });
 }
 buildGarage();
@@ -255,7 +292,6 @@ function terrainHeight(x,z,mapType='forest'){
 let terrain,trackGroup,checkpoints=[],rider,bike;
 let pos=new THREE.Vector3(0,25,0),vel=new THREE.Vector3(),yaw=0;
 let airborne=false,currentTrick='',trickTimer=0,spin=0,flip=0,airTime=0,suspension=0;
-let lobbyRiders=[],lobbySettings={name:'Shred Squad',max:50,skill:.7,map:'forest'};
 
 function clearWorld(){
  if(terrain)scene.remove(terrain);
@@ -263,92 +299,116 @@ function clearWorld(){
  checkpoints=[];
 }
 
-function createWorld(mapType='forest',custom=null){
+function createWorld(mapType='forest'){
  clearWorld();
- trackGroup=new THREE.Group();scene.add(trackGroup);
- const size=custom?320:760;
+ trackGroup=new THREE.Group();
+ scene.add(trackGroup);
+
+ const size=760;
  const seg=state.quality==='low'?80:state.quality==='medium'?130:190;
  const geo=new THREE.PlaneGeometry(size,size,seg,seg);
  geo.rotateX(-Math.PI/2);
  const p=geo.attributes.position;
+
  for(let i=0;i<p.count;i++){
   const x=p.getX(i),z=p.getZ(i);
-  p.setY(i,custom?0:terrainHeight(x,z,mapType));
+  p.setY(i,terrainHeight(x,z,mapType));
  }
  geo.computeVertexNormals();
+
  const color=mapType==='desert'?0xb98a4e:mapType==='snow'?0xe8f0f5:0x4c7f3d;
  terrain=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,roughness:.95,flatShading:true}));
  terrain.receiveShadow=true;
  scene.add(terrain);
 
- const trail=new THREE.Mesh(new THREE.PlaneGeometry(18,size*.92),new THREE.MeshStandardMaterial({color:mapType==='snow'?0xc9d4dc:0x7a5230,roughness:1}));
- trail.rotation.x=-Math.PI/2;trail.position.y=.12;trackGroup.add(trail);
+ const trail=new THREE.Mesh(
+  new THREE.PlaneGeometry(18,size*.92),
+  new THREE.MeshStandardMaterial({color:mapType==='snow'?0xc9d4dc:0x7a5230,roughness:1})
+ );
+ trail.rotation.x=-Math.PI/2;
+ trail.position.y=.12;
+ trackGroup.add(trail);
 
- const objects=custom?custom.objects:[];
- const count=custom?objects.length:state.quality==='low'?45:85;
+ const count=state.quality==='low'?45:85;
  for(let i=0;i<count;i++){
-  const o=custom?objects[i]:{
+  addObject({
    type:['ramp','drop','tree','rock','checkpoint'][Math.floor(Math.random()*5)],
    x:(Math.random()-.5)*(size*.8),
    z:(Math.random()-.5)*(size*.8)
-  };
-  addObject(o,mapType);
+  },mapType);
  }
+
  respawn();
- document.getElementById('mapname').textContent=custom?('CUSTOM: '+custom.name):mapType.toUpperCase()+' FREERIDE';
+ document.getElementById('mapname').textContent=mapType.toUpperCase()+' FREERIDE';
 }
 
 function addObject(o,mapType='forest'){
  let mesh;
  if(o.type==='ramp'){
-  mesh=new THREE.Mesh(new THREE.BoxGeometry(15,1.6,24),new THREE.MeshStandardMaterial({color:0x8a5a30,roughness:.9}));
+  mesh=new THREE.Mesh(new THREE.BoxGeometry(15,1.6,24),new THREE.MeshStandardMaterial({color:0x8a5a30}));
   mesh.rotation.x=-.24;
  }else if(o.type==='drop'){
-  mesh=new THREE.Mesh(new THREE.BoxGeometry(17,9,11),new THREE.MeshStandardMaterial({color:0x6b4526,roughness:1}));
+  mesh=new THREE.Mesh(new THREE.BoxGeometry(17,9,11),new THREE.MeshStandardMaterial({color:0x6b4526}));
  }else if(o.type==='tree'){
   mesh=new THREE.Group();
-  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.65,1,11,7),new THREE.MeshStandardMaterial({color:0x5b3a1e,roughness:1}));
-  const leaves=new THREE.Mesh(new THREE.ConeGeometry(5.5,14,9),new THREE.MeshStandardMaterial({color:mapType==='snow'?0x2d5b40:0x1e6b28,roughness:.85}));
-  leaves.position.y=10;mesh.add(trunk,leaves);
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.65,1,11,7),new THREE.MeshStandardMaterial({color:0x5b3a1e}));
+  const leaves=new THREE.Mesh(new THREE.ConeGeometry(5.5,14,9),new THREE.MeshStandardMaterial({color:mapType==='snow'?0x2d5b40:0x1e6b28}));
+  leaves.position.y=10;
+  mesh.add(trunk,leaves);
  }else if(o.type==='rock'){
-  mesh=new THREE.Mesh(new THREE.DodecahedronGeometry(3.2,0),new THREE.MeshStandardMaterial({color:0x7c7c7c,roughness:1}));
+  mesh=new THREE.Mesh(new THREE.DodecahedronGeometry(3.2,0),new THREE.MeshStandardMaterial({color:0x7c7c7c}));
  }else{
   mesh=new THREE.Mesh(new THREE.TorusGeometry(7,.8,10,28),new THREE.MeshStandardMaterial({color:0x00e5ff,emissive:0x0090aa,emissiveIntensity:1.4}));
   mesh.rotation.x=Math.PI/2;
   checkpoints.push(mesh);
  }
  mesh.position.set(o.x,terrainHeight(o.x,o.z,mapType)+(o.type==='drop'?4.5:0),o.z);
- mesh.castShadow=true;mesh.userData.object=o;
+ mesh.castShadow=true;
+ mesh.userData.object=o;
  trackGroup.add(mesh);
 }
 
 function createRider(){
  if(rider)scene.remove(rider);
  rider=new THREE.Group();
- const bikeColor=bikes[selectedBike].color;
- const frame=new THREE.Mesh(new THREE.BoxGeometry(.55,.28,2.5),new THREE.MeshStandardMaterial({color:bikeColor,metalness:.75,roughness:.25}));
+ const frame=new THREE.Mesh(new THREE.BoxGeometry(.55,.28,2.5),new THREE.MeshStandardMaterial({color:bikes[selectedBike].color,metalness:.75,roughness:.25}));
  const wheels=[];
  for(let i=0;i<2;i++){
-  const w=new THREE.Mesh(new THREE.TorusGeometry(.68,.14,12,32),new THREE.MeshStandardMaterial({color:0x101010,roughness:.7}));
-  w.rotation.y=Math.PI/2;w.position.set(0,.68,i?-.98:.98);wheels.push(w);rider.add(w);
+  const w=new THREE.Mesh(new THREE.TorusGeometry(.68,.14,12,32),new THREE.MeshStandardMaterial({color:0x101010}));
+  w.rotation.y=Math.PI/2;
+  w.position.set(0,.68,i?-.98:.98);
+  wheels.push(w);
+  rider.add(w);
  }
- const body=new THREE.Mesh(new THREE.CapsuleGeometry(.33,1,6,14),new THREE.MeshStandardMaterial({color:0x1d2531,roughness:.6}));
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.33,1,6,14),new THREE.MeshStandardMaterial({color:0x1d2531}));
  body.position.set(0,1.55,-.18);
  const helmet=new THREE.Mesh(new THREE.SphereGeometry(.35,20,16),new THREE.MeshStandardMaterial({color:0xff2d55,metalness:.45,roughness:.25}));
  helmet.position.set(0,2.18,-.12);
- rider.add(frame,body,helmet,wheels[0],wheels[1]);
+ rider.add(frame,body,helmet);
  rider.traverse(m=>{if(m.isMesh)m.castShadow=true});
- scene.add(rider);bike=rider;
+ scene.add(rider);
+ bike=rider;
 }
 
 function respawn(){
  pos.set(0,terrainHeight(0,0)+2,0);
- vel.set(0,0,0);yaw=0;airborne=false;currentTrick='';spin=0;flip=0;
+ vel.set(0,0,0);
+ yaw=0;
+ airborne=false;
+ currentTrick='';
+ spin=0;
+ flip=0;
 }
 
 function queueTrick(name){
- if(!airborne){document.getElementById('trick').textContent='Get airborne first!';return}
- currentTrick=name;trickTimer=1.25;spin=0;flip=0;
+ if(!airborne){
+  document.getElementById('trick').textContent='Get airborne first!';
+  return;
+ }
+ currentTrick=name;
+ trickTimer=1.25;
+ spin=0;
+ flip=0;
  document.getElementById('trick').textContent=name+'!';
 }
 
@@ -356,6 +416,7 @@ function updateRider(dt){
  const b=bikes[selectedBike];
  const forward=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
  let throttle=0;
+
  if(keys.KeyW||keys.ArrowUp)throttle=1;
  if(keys.KeyS||keys.ArrowDown)throttle=-.5;
  if(keys.KeyA||keys.ArrowLeft)yaw+=dt*2.2*b.handling;
@@ -366,22 +427,29 @@ function updateRider(dt){
 
  if(onGround){
   if(!airborne&&keys.Space&&vel.length()>3){
-   vel.y=11*b.jump;airborne=true;airTime=0;
+   vel.y=11*b.jump;
+   airborne=true;
+   airTime=0;
   }
   if(airborne){
    airborne=false;
    if(currentTrick){
     const points={'Barspin':350,'360':500,'Backflip':900,'No-Foot Can':700,'Superman':1100,'Tailwhip':450}[currentTrick]||300;
-    state.score+=points;xp+=Math.round(points/10);
+    state.score+=points;
+    xp+=Math.round(points/10);
     toast(currentTrick+' landed! +'+points+' points');
-    checkAchievements(currentTrick);currentTrick='';
+    checkAchievements(currentTrick);
+    currentTrick='';
    }
   }
   vel.y=0;
   if(keys.Space)vel.multiplyScalar(.92);
   suspension=Math.max(0,suspension-dt*6);
  }else{
-  airborne=true;airTime+=dt;suspension=Math.min(1,suspension+dt*3);
+  airborne=true;
+  airTime+=dt;
+  suspension=Math.min(1,suspension+dt*3);
+
   if(keys.ShiftLeft||keys.ShiftRight){
    if(currentTrick==='Barspin')spin+=dt*10;
    if(currentTrick==='360')yaw+=dt*6.5;
@@ -397,9 +465,15 @@ function updateRider(dt){
 
  if(pos.y<ground){
   pos.y=ground;
-  if(vel.y<-20){toast('Hard landing! -100 points');state.score=Math.max(0,state.score-100)}
-  vel.y=0;vel.multiplyScalar(.94);suspension=.6;
+  if(vel.y<-20){
+   toast('Hard landing! -100 points');
+   state.score=Math.max(0,state.score-100);
+  }
+  vel.y=0;
+  vel.multiplyScalar(.94);
+  suspension=.6;
  }
+
  pos.x=Math.max(-350,Math.min(350,pos.x));
  pos.z=Math.max(-350,Math.min(350,pos.z));
 
@@ -408,13 +482,14 @@ function updateRider(dt){
  bike.rotation.y=yaw;
  bike.rotation.x=flip;
  bike.rotation.z=spin*.25;
- bike.children[2].position.y=currentTrick==='Superman'?2.55:1.55;
- bike.children[2].position.z=currentTrick==='No-Foot Can'?-.85:-.12;
 
  document.getElementById('speed').textContent=Math.round(vel.length()*3.6)+' km/h';
  document.getElementById('score').textContent='Score: '+Math.round(state.score)+' | XP: '+xp;
 
- if(trickTimer>0){trickTimer-=dt;if(trickTimer<=0&&!airborne)currentTrick=''}
+ if(trickTimer>0){
+  trickTimer-=dt;
+  if(trickTimer<=0&&!airborne)currentTrick='';
+ }
  if(airTime>.35)unlock('first_air');
 }
 
@@ -428,48 +503,64 @@ function checkAchievements(t){
 
 function unlock(id){
  const a=achievements.find(a=>a.id===id);
- if(a&&!a.done){a.done=true;toast('🏆 Achievement unlocked: '+a.name)}
+ if(a&&!a.done){
+  a.done=true;
+  toast('🏆 Achievement unlocked: '+a.name);
+ }
 }
 
 function updateCamera(){
  const target=bike.position;
  if(state.camera==='third'){
   const back=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw)).multiplyScalar(10);
-  const desired=new THREE.Vector3(target.x-back.x,target.y+5,target.z-back.z);
-  camera.position.lerp(desired,.16);
+  camera.position.lerp(new THREE.Vector3(target.x-back.x,target.y+5,target.z-back.z),.16);
  }else{
   camera.position.set(target.x+Math.sin(yaw)*.25,target.y+2.25,target.z+Math.cos(yaw)*.25);
  }
  camera.lookAt(target.x,target.y+1.7,target.z);
 }
 
-function openLobby(){showScreen('lobby');fillLobby()}
-function toggleLobbyOptions(){document.getElementById('lobbyOptions').classList.toggle('hidden')}
-function togglePrivate(){
- state.private=!state.private;
- document.getElementById('lobbyStatus').textContent=(state.private?'Private':'Public')+' lobby • '+lobbyRiders.length+' / '+document.getElementById('maxRiders').value+' riders';
- toast(state.private?'Lobby set to private':'Lobby set to public');
+function renderLobby(){
+ const grid=document.getElementById('playerGrid');
+ grid.innerHTML='';
+ lobbyRiders.forEach(r=>{
+  const d=document.createElement('div');
+  d.className='player'+(r.you?' you':'')+(r.ready?' ready':'');
+  d.innerHTML=`<b>${r.name}</b><p class="small">${r.you?'You':'AI rider'} • ${r.ready?'Ready':'Not ready'} • Skill ${Math.round(r.skill*100)}%</p>`;
+  grid.appendChild(d);
+ });
+ document.getElementById('lobbyStatus').textContent=
+  `${lobbySettings.type==='private'?'Private':'Public'} lobby • ${lobbyRiders.length} / ${lobbySettings.max} riders • ${lobbySettings.map} • Code: ${lobbySettings.code}`;
 }
-function clearLobby(){lobbyRiders=[];renderLobby();toast('Lobby cleared')}
+
 function fillLobby(){
  lobbySettings.name=document.getElementById('lobbyName').value||'Shred Squad';
  lobbySettings.max=parseInt(document.getElementById('maxRiders').value);
+ lobbySettings.type=document.getElementById('lobbyType').value;
+ lobbySettings.code=document.getElementById('joinCode').value||'MTB-1234';
  lobbySettings.skill=parseFloat(document.getElementById('botSkill').value);
  lobbySettings.map=document.getElementById('lobbyMap').value;
- lobbyRiders=[{name:state.username||'Rider',you:true,skill:1}];
- for(let i=lobbyRiders.length;i<lobbySettings.max;i++){
-  lobbyRiders.push({name:'Rider_'+(i+1),you:false,skill:lobbySettings.skill*(.65+Math.random()*.35)});
+
+ lobbyRiders=[{name:state.username||'Rider',you:true,ready,skill:1}];
+ for(let i=1;i<lobbySettings.max;i++){
+  lobbyRiders.push({
+   name:'Rider_'+(i+1),
+   you:false,
+   ready:Math.random()>.35,
+   skill:lobbySettings.skill*(.65+Math.random()*.35)
+  });
  }
  renderLobby();
- document.getElementById('lobbyStatus').textContent=(state.private?'Private':'Public')+' lobby • '+lobbyRiders.length+' / '+lobbySettings.max+' riders • '+lobbySettings.map;
+ toast('Lobby filled with '+lobbyRiders.length+' riders');
 }
-function renderLobby(){
- const list=document.getElementById('lobbyList');list.innerHTML='';
- lobbyRiders.forEach(r=>{
-  const d=document.createElement('div');d.className='card';
-  d.innerHTML=`<b>${r.name}</b><p class="small">${r.you?'You':'AI rider'} • Skill ${Math.round(r.skill*100)}%</p>`;
-  list.appendChild(d);
- });
+
+function addChat(name,text){
+ const chat=document.getElementById('chat');
+ const line=document.createElement('div');
+ line.className='chatLine';
+ line.innerHTML=`<b>${name}:</b> ${text}`;
+ chat.appendChild(line);
+ chat.scrollTop=chat.scrollHeight;
 }
 
 function startGame(mode){
@@ -479,34 +570,45 @@ function startGame(mode){
  state.quality=document.getElementById('quality').value;
  state.editor=mode==='editor';
 
- const mapType=mode==='race'||mode==='free'?(document.getElementById('lobbyMap')?.value||'forest'):'forest';
+ const mapType=lobbySettings.map||'forest';
  createWorld(mapType);
  createRider();
  showScreen('hud');
 
- if(mode==='career'){document.getElementById('mapname').textContent='CAREER MAP '+state.mapIndex+' / '+state.totalMaps;toast('Career map '+state.mapIndex+' started')}
- if(mode==='free')toast('Freeride started — ride anywhere');
- if(mode==='race')toast('Race started — '+lobbyRiders.length+' riders in lobby');
+ if(mode==='career'){
+  document.getElementById('mapname').textContent='CAREER MAP '+state.mapIndex+' / '+state.totalMaps;
+  toast('Career map '+state.mapIndex+' started');
+ }
+ if(mode==='free')toast('Freeride started');
+ if(mode==='race')toast('Race started — '+lobbyRiders.length+' riders');
  if(mode==='editor')toast('Map creator active');
 }
 
-function exitEditor(){state.editor=false;showScreen('menu')}
+function exitEditor(){
+ state.editor=false;
+ showScreen('menu');
+}
 
 function saveCustomMap(){
  const objects=[];
- trackGroup.children.forEach(m=>{if(m.userData.object)objects.push(m.userData.object)});
+ trackGroup.children.forEach(m=>{
+  if(m.userData.object)objects.push(m.userData.object);
+ });
  const map={name:'Custom Trail '+(Date.now()%10000),objects};
  const saved=JSON.parse(localStorage.getItem('mtb_custom_maps')||'[]');
  localStorage.setItem('mtb_custom_maps',JSON.stringify([map,...saved].slice(0,25)));
- unlock('creator');toast('Custom map saved locally');
+ unlock('creator');
+ toast('Custom map saved locally');
 }
 
 renderer.domElement.addEventListener('pointerdown',e=>{
  if(!state.editor)return;
  const ndc=new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1);
- const ray=new THREE.Raycaster();ray.setFromCamera(ndc,camera);
+ const ray=new THREE.Raycaster();
+ ray.setFromCamera(ndc,camera);
  const hit=ray.intersectObject(terrain)[0];
  if(!hit)return;
+
  if(e.button===2){
   let closest=null,best=1e9;
   trackGroup.children.forEach(m=>{
@@ -521,6 +623,37 @@ renderer.domElement.addEventListener('pointerdown',e=>{
 });
 renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
 
+document.getElementById('careerBtn').onclick=()=>startGame('career');
+document.getElementById('freeBtn').onclick=()=>startGame('free');
+document.getElementById('lobbyBtn').onclick=()=>{lobbyRiders=[{name:document.getElementById('username').value||'Rider',you:true,ready:false,skill:1}];renderLobby();showScreen('lobby')};
+document.getElementById('editorBtn').onclick=()=>startGame('editor');
+document.getElementById('readyBtn').onclick=()=>{ready=!ready;lobbyRiders[0].ready=ready;renderLobby();toast(ready?'You are ready':'You are not ready')};
+document.getElementById('fillBtn').onclick=fillLobby;
+document.getElementById('clearBtn').onclick=()=>{lobbyRiders=[{name:document.getElementById('username').value||'Rider',you:true,ready:false,skill:1}];renderLobby()};
+document.getElementById('backBtn').onclick=()=>showScreen('menu');
+document.getElementById('applyLobbyBtn').onclick=()=>{fillLobby();toast('Lobby settings applied')};
+document.getElementById('startRaceBtn').onclick=()=>startGame('race');
+document.getElementById('freeRideBtn').onclick=()=>startGame('free');
+document.getElementById('sendChatBtn').onclick=()=>{
+ const input=document.getElementById('chatInput');
+ if(input.value.trim()){
+  addChat(state.username||'Rider',input.value);
+  input.value='';
+ }
+};
+document.getElementById('saveMapBtn').onclick=saveCustomMap;
+document.getElementById('exitEditorBtn').onclick=exitEditor;
+
+document.querySelectorAll('.lobbyTab').forEach(tab=>{
+ tab.onclick=()=>{
+  document.querySelectorAll('.lobbyTab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  ['players','settings','chat','race'].forEach(id=>{
+   document.getElementById('tab-'+id).classList.toggle('hidden',id!==tab.dataset.tab);
+  });
+ };
+});
+
 const clock=new THREE.Clock();
 function animate(){
  requestAnimationFrame(animate);
@@ -528,7 +661,9 @@ function animate(){
  if(document.getElementById('hud').classList.contains('active')){
   updateRider(dt);
   updateCamera();
-  checkpoints.forEach(c=>{if(bike&&bike.position.distanceTo(c.position)<9)c.material.color.set(0x22ff88)});
+  checkpoints.forEach(c=>{
+   if(bike&&bike.position.distanceTo(c.position)<9)c.material.color.set(0x22ff88);
+  });
  }
  renderer.render(scene,camera);
 }
