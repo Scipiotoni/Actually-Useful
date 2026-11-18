@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MTB RIDERS — 3D Mountain Biking</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+  body{overflow:hidden;background:#05070d;color:#fff}
+  canvas{display:block}
+  .screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 20%,#16233d,#05070d 70%);z-index:10}
+  .screen.active{display:flex}
+  .panel{width:min(950px,94vw);max-height:92vh;overflow:auto;background:rgba(10,16,28,.92);border:1px solid #2b4a75;border-radius:18px;padding:28px;box-shadow:0 0 60px #00b7ff33}
+  h1{font-size:44px;letter-spacing:3px;color:#4ee1ff;text-shadow:0 0 25px #00b7ff}
+  h2{margin:18px 0 10px;color:#8fd8ff}
+  p{color:#b8c7d9;line-height:1.5}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}
+  .card{background:#101a2c;border:1px solid #27476e;border-radius:12px;padding:14px}
+  .card b{color:#4ee1ff}
+  button{cursor:pointer;border:0;border-radius:10px;padding:12px 18px;font-weight:bold;background:linear-gradient(90deg,#00a2ff,#7b5cff);color:#fff;transition:.2s}
+  button:hover{transform:translateY(-2px);box-shadow:0 8px 20px #00a2ff55}
+  button.ghost{background:#16233a;border:1px solid #31567f}
+  input,select{width:100%;padding:11px;border-radius:9px;border:1px solid #31567f;background:#0b1322;color:#fff;margin-top:6px}
+  label{font-size:13px;color:#9fb4cc}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .small{font-size:12px;color:#7f93aa}
+  #hud{position:fixed;inset:0;pointer-events:none;display:none;z-index:5}
+  #hud.active{display:block}
+  .hudbox{position:absolute;background:rgba(4,10,20,.65);border:1px solid #2b4a75;border-radius:12px;padding:10px 14px}
+  #speed{left:20px;bottom:20px;font-size:30px;font-weight:bold;color:#4ee1ff}
+  #trick{left:50%;top:70px;transform:translateX(-50%);font-size:26px;color:#ffe45e;text-align:center}
+  #score{right:20px;top:20px;font-size:20px}
+  #mapname{left:20px;top:20px}
+  #controls{right:20px;bottom:20px;font-size:12px;color:#b8c7d9;max-width:330px}
+  #toasts{position:fixed;right:20px;top:80px;z-index:8;display:flex;flex-direction:column;gap:8px}
+  .toast{background:#0d1a2c;border:1px solid #00b7ff;border-radius:10px;padding:10px 14px;animation:fade 4s forwards}
+  @keyframes fade{0%{opacity:0;transform:translateX(30px)}10%,80%{opacity:1;transform:none}100%{opacity:0}}
+  #editorUI{position:fixed;left:20px;top:20px;z-index:6;display:none;background:rgba(5,10,20,.85);border:1px solid #2b4a75;border-radius:12px;padding:14px;width:290px}
+  #editorUI.active{display:block}
+  .tag{display:inline-block;background:#12233c;border:1px solid #2b4a75;padding:4px 8px;border-radius:20px;font-size:11px;margin:2px}
+</style>
+</head>
+<body>
+
+<div id="menu" class="screen active">
+  <div class="panel">
+    <h1>MTB RIDERS</h1>
+    <p>Realistic-style 3D mountain biking: tricks, career, freeride, custom maps and a 50-rider lobby.</p>
+    <div class="grid">
+      <div class="card"><b>Rider name</b><input id="username" placeholder="Enter username" value="Rider"></div>
+      <div class="card"><b>Camera</b><select id="cameraMode"><option value="third">Third person</option><option value="first">First person</option></select></div>
+      <div class="card"><b>Graphics</b><select id="quality"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+      <div class="card"><b>Difficulty</b><select id="difficulty"><option>Chill</option><option selected>Normal</option><option>Pro</option></select></div>
+    </div>
+    <h2>Game modes</h2>
+    <div class="grid">
+      <div class="card"><b>Career</b><p>Progress through 50 staged maps, earn XP and unlock bikes.</p><button onclick="startGame('career')">Start career</button></div>
+      <div class="card"><b>Freeride</b><p>Explore, session jumps and land huge tricks.</p><button class="ghost" onclick="startGame('free')">Enter freeride</button></div>
+      <div class="card"><b>Race lobby</b><p>Up to 50 riders, checkpoint race and live standings.</p><button class="ghost" onclick="startGame('race')">Join lobby</button></div>
+      <div class="card"><b>Map creator</b><p>Build custom trails with ramps, rails, trees and checkpoints.</p><button class="ghost" onclick="startGame('editor')">Open creator</button></div>
+    </div>
+    <h2>Garage</h2>
+    <div class="grid" id="bikeGarage"></div>
+    <h2>Tricks</h2>
+    <p class="small">Hold <b>SHIFT</b> to prep a trick, then press a trick key while airborne. Land cleanly to score.</p>
+    <div class="grid">
+      <div class="card"><b>Barspin</b><p>SHIFT + 1</p></div>
+      <div class="card"><b>360</b><p>SHIFT + 2</p></div>
+      <div class="card"><b>Backflip</b><p>SHIFT + 3</p></div>
+      <div class="card"><b>No-foot can</b><p>SHIFT + 4</p></div>
+      <div class="card"><b>Superman</b><p>SHIFT + 5</p></div>
+      <div class="card"><b>Whip</b><p>SHIFT + 6</p></div>
+    </div>
+  </div>
+</div>
+
+<div id="lobby" class="screen">
+  <div class="panel">
+    <h1>LOBBY</h1>
+    <p>Online-style lobby. Real internet multiplayer requires a server; this build fills the lobby with AI riders.</p>
+    <div class="row">
+      <button onclick="startGame('race')">Start race</button>
+      <button class="ghost" onclick="startGame('free')">Freeride</button>
+      <button class="ghost" onclick="showScreen('menu')">Back</button>
+    </div>
+    <h2>Riders</h2>
+    <div id="lobbyList" class="grid"></div>
+  </div>
+</div>
+
+<div id="hud">
+  <div class="hudbox" id="mapname">MAP</div>
+  <div class="hudbox" id="speed">0 km/h</div>
+  <div class="hudbox" id="score">Score: 0</div>
+  <div class="hudbox" id="trick"></div>
+  <div class="hudbox" id="controls">
+    WASD / arrows — ride<br>
+    SPACE — brake / stop<br>
+    SHIFT + 1-6 — trick<br>
+    C — camera<br>
+    R — reset<br>
+    ESC — menu
+  </div>
+</div>
+
+<div id="editorUI">
+  <b>MAP CREATOR</b>
+  <div class="row" style="margin-top:8px">
+    <select id="objectType">
+      <option value="ramp">Jump ramp</option>
+      <option value="drop">Drop</option>
+      <option value="tree">Tree</option>
+      <option value="rock">Rock</option>
+      <option value="checkpoint">Checkpoint</option>
+    </select>
+  </div>
+  <p class="small">Click terrain to place. Right-click removes nearest object.</p>
+  <div class="row" style="margin-top:10px">
+    <button onclick="saveCustomMap()">Save map</button>
+    <button class="ghost" onclick="exitEditor()">Exit</button>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+const state={mode:'free',username:'Rider',score:0,mapIndex:1,totalMaps:50,editor:false,paused:false,camera:'third',quality:'high'};
+const bikes=[
+ {name:'Trail Ripper',speed:1,handling:1,jump:1,color:0x00a2ff,price:0},
+ {name:'Downhill Beast',speed:1.25,handling:.85,jump:1.15,color:0xff3b3b,price:500},
+ {name:'Slopestyle Pro',speed:1.05,handling:1.15,jump:1.35,color:0xffd400,price:1200},
+ {name:'Enduro Elite',speed:1.15,handling:1.05,jump:1.2,color:0x22ff88,price:2000},
+ {name:'Carbon XC',speed:1.35,handling:1.2,jump:.9,color:0xffffff,price:3500},
+ {name:'Freeride Monster',speed:1.2,handling:.95,jump:1.5,color:0xff7b00,price:5000}
+];
+let selectedBike=0, unlocked=1, xp=0;
+const achievements=[
+ {id:'first_air',name:'First Air',done:false},
+ {id:'backflip',name:'Backflip Master',done:false},
+ {id:'barspin',name:'Barspin Legend',done:false},
+ {id:'superman',name:'Superman',done:false},
+ {id:'nofoot',name:'No-Foot Can',done:false},
+ {id:'score5000',name:'5,000 Points',done:false},
+ {id:'career10',name:'Career Map 10',done:false},
+ {id:'creator',name:'Map Creator',done:false}
+];
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x87b7e8);
+scene.fog=new THREE.Fog(0x87b7e8,80,650);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,1500);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+
+const sun=new THREE.DirectionalLight(0xffffff,2.2);
+sun.position.set(80,140,60);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+scene.add(sun,new THREE.AmbientLight(0xbfd8ff,.8));
+
+const keys={};
+addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyC')state.camera=state.camera==='third'?'first':'third';if(e.code==='KeyR')resetRider();if(e.code==='Escape')showScreen('menu');if(e.code==='Digit1')queueTrick('Barspin');if(e.code==='Digit2')queueTrick('360');if(e.code==='Digit3')queueTrick('Backflip');if(e.code==='Digit4')queueTrick('No-Foot Can');if(e.code==='Digit5')queueTrick('Superman');if(e.code==='Digit6')queueTrick('Whip');});
+addEventListener('keyup',e=>keys[e.code]=false);
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');document.getElementById('hud').classList.toggle('active',id==='hud');document.getElementById('editorUI').classList.toggle('active',id==='hud'&&state.editor);}
+function toast(text){const t=document.createElement('div');t.className='toast';t.textContent=text;document.getElementById('toasts').appendChild(t);setTimeout(()=>t.remove(),4000);}
+
+function buildGarage(){
+ const g=document.getElementById('bikeGarage');g.innerHTML='';
+ bikes.forEach((b,i)=>{
+  const d=document.createElement('div');d.className='card';
+  d.innerHTML=`<b>${b.name}</b><p>Speed ${b.speed} • Handling ${b.handling} • Air ${b.jump}</p><p class="small">${i<unlocked?'Unlocked':'Locked • '+b.price+' XP'}</p>`;
+  const btn=document.createElement('button');btn.textContent=i<unlocked?(selectedBike===i?'Selected':'Select'):'Locked';
+  btn.disabled=i>=unlocked;btn.onclick=()=>{selectedBike=i;buildGarage();toast(b.name+' selected')};
+  d.appendChild(btn);g.appendChild(d);
+ });
+}
+buildGarage();
+
+function noise(x,z){return Math.sin(x*.035)*8+Math.cos(z*.042)*8+Math.sin((x+z)*.018)*14+Math.sin(x*.11)*2+Math.cos(z*.13)*2}
+function heightAt(x,z){return noise(x,z)}
+
+let terrain,trackGroup,checkpoints=[],rider,bike,velocity=new THREE.Vector3(),riderPos=new THREE.Vector3(0,20,0),riderYaw=0,airborne=false,trickQueue=[],trickTimer=0,currentTrick='',spin=0,flip=0,airTime=0;
+
+function createWorld(mapIndex=1,custom=null){
+ if(terrain)scene.remove(terrain);
+ if(trackGroup)scene.remove(trackGroup);
+ trackGroup=new THREE.Group();scene.add(trackGroup);checkpoints=[];
+ const size=custom?300:700,seg=state.quality==='low'?70:state.quality==='medium'?110:160;
+ const geo=new THREE.PlaneGeometry(size,size,seg,seg);
+ geo.rotateX(-Math.PI/2);
+ const pos=geo.attributes.position;
+ for(let i=0;i<pos.count;i++){
+  const x=pos.getX(i),z=pos.getZ(i);
+  let h=noise(x,z);
+  if(custom){h=custom.height?custom.height:0;}
+  pos.setY(i,h);
+ }
+ geo.computeVertexNormals();
+ terrain=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:custom?0x3f7d3f:0x4f8b45,roughness:.9,flatShading:true}));
+ terrain.receiveShadow=true;scene.add(terrain);
+
+ const dirt=new THREE.Mesh(new THREE.PlaneGeometry(16,size*.9),new THREE.MeshStandardMaterial({color:0x7a5230,roughness:1}));
+ dirt.rotation.x=-Math.PI/2;dirt.position.y=.15;trackGroup.add(dirt);
+
+ const objects=custom?custom.objects:[];
+ const count=custom?objects.length:35+mapIndex;
+ for(let i=0;i<count;i++){
+  const o=custom?objects[i]:{type:['ramp','drop','tree','rock','checkpoint'][Math.floor(Math.random()*5)],x:(Math.random()-.5)*500,z:(Math.random()-.5)*500};
+  addObject(o);
+ }
+ riderPos.set(0,heightAt(0,0)+2,0);velocity.set(0,0,0);riderYaw=0;
+ document.getElementById('mapname').textContent=custom?('CUSTOM: '+custom.name):('CAREER MAP '+mapIndex+' / '+state.totalMaps);
+}
+
+function addObject(o){
+ let mesh;
+ if(o.type==='ramp'){
+  mesh=new THREE.Mesh(new THREE.BoxGeometry(14,1.5,22),new THREE.MeshStandardMaterial({color:0x8a5a30}));
+  mesh.rotation.x=-.22;
+ }else if(o.type==='drop'){
+  mesh=new THREE.Mesh(new THREE.BoxGeometry(16,8,10),new THREE.MeshStandardMaterial({color:0x6b4526}));
+ }else if(o.type==='tree'){
+  mesh=new THREE.Group();
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.7,1,10),new THREE.MeshStandardMaterial({color:0x5b3a1e}));
+  const leaves=new THREE.Mesh(new THREE.ConeGeometry(5,12,8),new THREE.MeshStandardMaterial({color:0x1f6b2a}));
+  leaves.position.y=9;mesh.add(trunk,leaves);
+ }else if(o.type==='rock'){
+  mesh=new THREE.Mesh(new THREE.DodecahedronGeometry(3,0),new THREE.MeshStandardMaterial({color:0x777777,roughness:1}));
+ }else{
+  mesh=new THREE.Mesh(new THREE.TorusGeometry(6,.7,8,24),new THREE.MeshStandardMaterial({color:0x00e5ff,emissive:0x0088aa}));
+  mesh.rotation.x=Math.PI/2;checkpoints.push(new THREE.Vector3(o.x,2,o.z));
+ }
+ mesh.position.set(o.x,heightAt(o.x,o.z)+(o.type==='drop'?4:0),o.z);
+ mesh.castShadow=true;mesh.userData.object=o;trackGroup.add(mesh);
+}
+
+function createRider(){
+ if(rider)scene.remove(rider);
+ rider=new THREE.Group();
+ const frame=new THREE.Mesh(new THREE.BoxGeometry(.5,.25,2.4),new THREE.MeshStandardMaterial({color:bikes[selectedBike].color,metalness:.7,roughness:.25}));
+ const wheels=[];
+ for(let i=0;i<2;i++){
+  const w=new THREE.Mesh(new THREE.TorusGeometry(.65,.13,10,28),new THREE.MeshStandardMaterial({color:0x111111}));
+  w.rotation.y=Math.PI/2;w.position.set(0,.65,i?-.95:.95);wheels.push(w);rider.add(w);
+ }
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.32,.9,6,12),new THREE.MeshStandardMaterial({color:0x222a38}));
+ body.position.set(0,1.5,-.15);
+ const helmet=new THREE.Mesh(new THREE.SphereGeometry(.33,18,14),new THREE.MeshStandardMaterial({color:0xff2d55,metalness:.4,roughness:.3}));
+ helmet.position.set(0,2.15,-.1);
+ rider.add(frame,body,helmet,wheels[0],wheels[1]);
+ rider.traverse(m=>{if(m.isMesh)m.castShadow=true});
+ scene.add(rider);bike=rider;
+}
+
+function queueTrick(name){
+ if(!airborne){document.getElementById('trick').textContent='Get airborne first!';return}
+ currentTrick=name;trickTimer=1.2;spin=0;flip=0;
+ document.getElementById('trick').textContent=name+'!';
+}
+
+function resetRider(){riderPos.set(0,heightAt(0,0)+2,0);velocity.set(0,0,0);riderYaw=0;airborne=false;currentTrick='';}
+
+function updateRider(dt){
+ const b=bikes[selectedBike];
+ const forward=new THREE.Vector3(Math.sin(riderYaw),0,Math.cos(riderYaw));
+ let throttle=0;
+ if(keys.KeyW||keys.ArrowUp)throttle=1;
+ if(keys.KeyS||keys.ArrowDown)throttle=-.45;
+ if(keys.KeyA||keys.ArrowLeft)riderYaw+=dt*2.1*b.handling;
+ if(keys.KeyD||keys.ArrowRight)riderYaw-=dt*2.1*b.handling;
+
+ const ground=heightAt(riderPos.x,riderPos.z);
+ const onGround=riderPos.y<=ground+.35;
+ if(onGround){
+  airborne=false;airTime=0;spin=0;flip=0;
+  if(currentTrick){
+   const points={'Barspin':350,'360':500,'Backflip':900,'No-Foot Can':700,'Superman':1100,'Whip':450}[currentTrick]||300;
+   state.score+=points;toast(currentTrick+' landed! +'+points+' points');checkAchievements(currentTrick);currentTrick='';
+  }
+  velocity.y=0;
+  if(keys.Space)velocity.multiplyScalar(.9);
+ }else{
+  airborne=true;airTime+=dt;
+  if(keys.ShiftLeft||keys.ShiftRight){
+   if(currentTrick==='Barspin')spin+=dt*9;
+   if(currentTrick==='360')riderYaw+=dt*6;
+   if(currentTrick==='Backflip')flip+=dt*6;
+   if(currentTrick==='No-Foot Can'||currentTrick==='Superman'||currentTrick==='Whip')bike.rotation.z=Math.sin(airTime*10)*.35;
+  }
+ }
+
+ velocity.addScaledVector(forward,throttle*dt*38*b.speed);
+ velocity.y-=32*dt;
+ riderPos.addScaledVector(velocity,dt);
+
+ if(riderPos.y<ground){riderPos.y=ground;if(velocity.y<-18){toast('Hard landing!');state.score=Math.max(0,state.score-100)}velocity.y=0;velocity.multiplyScalar(.94)}
+ riderPos.x=Math.max(-330,Math.min(330,riderPos.x));riderPos.z=Math.max(-330,Math.min(330,riderPos.z));
+
+ bike.position.copy(riderPos);
+ bike.rotation.y=riderYaw;
+ bike.rotation.x=flip;
+ bike.rotation.z=spin*.2;
+ bike.children[2].position.y=currentTrick==='Superman'?2.4:1.5;
+ bike.children[2].position.z=currentTrick==='No-Foot Can'?-.8:-.1;
+
+ const speed=velocity.length()*3.6;
+ document.getElementById('speed').textContent=Math.round(speed)+' km/h';
+ document.getElementById('score').textContent='Score: '+Math.round(state.score)+' | XP: '+xp;
+
+ if(trickTimer>0){trickTimer-=dt;if(trickTimer<=0&&!airborne)currentTrick=''}
+ if(airTime>0.4&&!state.flags?.air){state.flags={air:true};unlock('first_air','First Air unlocked!')}
+}
+
+function checkAchievements(t){
+ if(t==='Backflip')unlock('backflip');
+ if(t==='Barspin')unlock('barspin');
+ if(t==='Superman')unlock('superman');
+ if(t==='No-Foot Can')unlock('nofoot');
+ if(state.score>=5000)unlock('score5000');
+}
+function unlock(id,msg){const a=achievements.find(a=>a.id===id);if(a&&!a.done){a.done=true;toast('🏆 Achievement: '+a.name)}}
+
+function updateCamera(){
+ const target=bike.position;
+ if(state.camera==='third'){
+  const back=new THREE.Vector3(Math.sin(riderYaw),0,Math.cos(riderYaw)).multiplyScalar(9);
+  camera.position.lerp(new THREE.Vector3(target.x-back.x,target.y+4.5,target.z-back.z),.15);
+ }else{
+  camera.position.copy(target).add(new THREE.Vector3(Math.sin(riderYaw)*.2,2.1,Math.cos(riderYaw)*.2));
+ }
+ camera.lookAt(target.x,target.y+1.6,target.z);
+}
+
+let clock=new THREE.Clock(),raceTime=0,lobbyRiders=[];
+function makeLobby(){
+ lobbyRiders=[];const list=document.getElementById('lobbyList');list.innerHTML='';
+ for(let i=0;i<50;i++){
+  const r={name:i===0?state.username:'Rider_'+(i+1),skill:Math.random()};
+  lobbyRiders.push(r);
+  const d=document.createElement('div');d.className='card';d.innerHTML=`<b>${r.name}</b><p class="small">${i===0?'You':'AI rider'} • Skill ${Math.round(r.skill*100)}%</p>`;list.appendChild(d);
+ }
+}
+
+function startGame(mode){
+ state.mode=mode;state.username=document.getElementById('username').value||'Rider';
+ state.camera=document.getElementById('cameraMode').value;
+ state.quality=document.getElementById('quality').value;
+ if(mode==='lobby'){makeLobby();showScreen('lobby');return}
+ state.editor=mode==='editor';
+ createWorld(mode==='career'?state.mapIndex:1);
+ createRider();
+ showScreen('hud');
+ if(mode==='editor')toast('Map creator active — click terrain to build');
+ if(mode==='career')toast('Career map '+state.mapIndex+' started');
+ if(mode==='race')toast('Race started — 50 riders in lobby');
+}
+
+function exitEditor(){state.editor=false;showScreen('menu')}
+
+function saveCustomMap(){
+ const objects=[];trackGroup.children.forEach(m=>{if(m.userData.object)objects.push(m.userData.object)});
+ const map={name:'Custom Trail '+Date.now()%10000,objects};
+ localStorage.setItem('mtb_custom_maps',JSON.stringify([map,...JSON.parse(localStorage.getItem('mtb_custom_maps')||'[]')].slice(0,20)));
+ unlock('creator','Custom map saved!');
+ toast('Map saved locally');
+}
+
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(!state.editor)return;
+ const ndc=new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1);
+ const ray=new THREE.Raycaster();ray.setFromCamera(ndc,camera);
+ const hit=ray.intersectObject(terrain)[0];
+ if(!hit)return;
+ if(e.button===2){
+  let closest=null,best=1e9;
+  trackGroup.children.forEach(m=>{if(!m.userData.object)return;const d=m.position.distanceTo(hit.point);if(d<best){best=d;closest=m}});
+  if(closest)trackGroup.remove(closest);
+ }else{
+  const type=document.getElementById('objectType').value;
+  addObject({type,x:hit.point.x,z:hit.point.z});
+ }
+});
+renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
+
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.05);
+ if(document.getElementById('hud').classList.contains('active')){
+  updateRider(dt);updateCamera();
+  checkpoints.forEach(c=>{if(bike.position.distanceTo(c)<8){c.material.color.set(0x22ff88)}});
+ }
+ renderer.render(scene,camera);
+}
+animate();
+</script>
+</body>
+</html>
